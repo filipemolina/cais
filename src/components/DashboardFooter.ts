@@ -1,4 +1,4 @@
-import { BoxRenderable, type CliRenderer } from "@opentui/core";
+import { BoxRenderable, type CliRenderer, type KeyEvent } from "@opentui/core";
 import theme from "../theme";
 
 function DashboardFooter(renderer: CliRenderer): BoxRenderable {

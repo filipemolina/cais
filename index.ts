@@ -1,5 +1,4 @@
 import { createCliRenderer } from "@opentui/core";
-import lookForComposeFile from "./src/utils/lookForComposeFile";
 import App from "./src/App";
 
 const renderer = await createCliRenderer({

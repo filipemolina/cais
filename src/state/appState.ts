@@ -1,20 +1,33 @@
 import type COMPOSE_FILE_NAMES from "../consts/COMPOSE_FILE_NAMES";
 import lookForComposeFile from "../utils/lookForComposeFile";
+import Navigation from "./navigation";
+
+type Config = {
+  fileName: (typeof COMPOSE_FILE_NAMES)[number] | null;
+  file: Bun.BunFile | null;
+  fileContents: string;
+  object: unknown | null;
+  wasLoaded: boolean;
+};
 
 export default class AppState {
   // Store the single instance of the class
   private static instance: AppState | null = null;
 
-  configFileName: (typeof COMPOSE_FILE_NAMES)[number] | null = null;
-  configFile: Bun.BunFile | null = null;
-  configFileContents: string = "";
-  configObject: unknown | null = null;
-  wasConfigObjectLoaded: boolean = false;
+  config: Config = {
+    fileName: null,
+    file: null,
+    fileContents: "",
+    object: null,
+    wasLoaded: false,
+  };
+
+  navigation: Navigation = new Navigation();
 
   // Prevent the use of `new AppState`
   private constructor() {}
 
-  // Provide a way to get the single instance
+  // Provide a way to get the singleton instance
   public static getState(): AppState {
     if (!AppState.instance) {
       AppState.instance = new AppState();
@@ -33,15 +46,15 @@ export default class AppState {
   async loadConfiguration(): Promise<boolean> {
     const { file, fileName } = await lookForComposeFile();
 
-    this.configFile = file;
-    this.configFileName = fileName;
+    this.config.file = file;
+    this.config.fileName = fileName;
 
-    if (this.configFile) {
-      this.configFileContents = await this.configFile.text();
+    if (this.config.file) {
+      this.config.fileContents = await this.config.file.text();
 
       try {
-        this.configObject = Bun.YAML.parse(this.configFileContents);
-        this.wasConfigObjectLoaded = true;
+        this.config.object = Bun.YAML.parse(this.config.fileContents);
+        this.config.wasLoaded = true;
 
         return true;
       } catch (error) {
