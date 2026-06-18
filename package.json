@@ -1,0 +1,19 @@
+{
+  "name": "tui",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "bun build --minify --compile --outfile=./dist/stackStitcher ./index.ts",
+    "dev": "bun --watch build --compile --outfile=./dist/stackStitcher ./index.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@opentui/core": "^0.4.1"
+  }
+}
