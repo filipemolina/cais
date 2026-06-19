@@ -7,7 +7,7 @@ import AppState from "./state/appState";
 async function App(renderer: CliRenderer) {
   const state = AppState.getState();
 
-  const wasComposeFileLoaded = await state.loadConfiguration();
+  const wasComposeFileLoaded = await state.config.loadConfiguration();
 
   if (wasComposeFileLoaded) {
     renderer.root.add(Dashboard(renderer));

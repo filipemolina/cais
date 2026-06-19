@@ -2,9 +2,13 @@
 
 // The order here matters. This is the order of priority in which
 // Docker compose loads the files.
-export default [
+const COMPOSE_FILE_NAMES = [
   "compose.yaml",
   "compose.yml",
   "docker-compose.yaml",
   "docker-compose.yml",
 ] as const;
+
+type ComposeFileName = (typeof COMPOSE_FILE_NAMES)[number];
+
+export { COMPOSE_FILE_NAMES, type ComposeFileName };

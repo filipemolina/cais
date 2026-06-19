@@ -1,4 +1,3 @@
-import type { CliRenderer } from "@opentui/core";
 import { MAIN_SECTIONS, type Section } from "../consts/MAIN_SECTIONS";
 
 class Navigation {

@@ -1,7 +1,10 @@
-import COMPOSE_FILE_NAMES from "../consts/COMPOSE_FILE_NAMES";
+import {
+  COMPOSE_FILE_NAMES,
+  type ComposeFileName,
+} from "../consts/COMPOSE_FILE_NAMES";
 
 type ConfigSetup = {
-  fileName: (typeof COMPOSE_FILE_NAMES)[number] | null;
+  fileName: ComposeFileName | null;
   file: Bun.BunFile | null;
 };
 
