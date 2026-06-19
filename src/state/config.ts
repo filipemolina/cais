@@ -1,11 +1,13 @@
 import type { ComposeFileName } from "../consts/COMPOSE_FILE_NAMES";
+import type { DockerComposeFile } from "../types/common";
+import getEmptyConfigObject from "../utils/getEmptyConfigObject";
 import lookForComposeFile from "../utils/lookForComposeFile";
 
 export default class Config {
-  fileName: ComposeFileName | null = null;
-  file: Bun.BunFile | null = null;
-  fileContents: string = "";
-  object: unknown | null = null;
+  private fileName: ComposeFileName | null = null;
+  private file: Bun.BunFile | null = null;
+  private fileContents: string = "";
+  private configObject: DockerComposeFile = getEmptyConfigObject();
 
   /**
    * Looks for the compose file in the current directory and tries
@@ -24,7 +26,9 @@ export default class Config {
       this.fileContents = await this.file.text();
 
       try {
-        this.object = Bun.YAML.parse(this.fileContents);
+        this.configObject = Bun.YAML.parse(
+          this.fileContents,
+        ) as DockerComposeFile;
         return true;
       } catch (error) {
         console.error("Failed to parse YAML:", error);
@@ -32,5 +36,25 @@ export default class Config {
     }
 
     return false;
+  }
+
+  getConfigObject() {
+    return this.configObject;
+  }
+
+  getConfigFileContents() {
+    return this.fileContents;
+  }
+
+  getConfigFile() {
+    return this.file;
+  }
+
+  getConfigFileName() {
+    return this.fileName;
+  }
+
+  getServiceNames() {
+    return Object.keys(this.configObject.services);
   }
 }

@@ -4,13 +4,13 @@ import DashboardBody from "../components/DashboardBody";
 import DashboardFooter from "../components/DashboardFooter";
 import AppState from "../state/appState";
 
-function renderDashboard(renderer: CliRenderer, wrapper: BoxRenderable) {
+async function renderDashboard(renderer: CliRenderer, wrapper: BoxRenderable) {
   for (const child of wrapper.getChildren()) {
     if (child.id) child.destroyRecursively();
   }
 
   const header = DashboardHeader(renderer);
-  const body = DashboardBody(renderer);
+  const body = await DashboardBody(renderer);
   const footer = DashboardFooter(renderer);
 
   wrapper.add(header);

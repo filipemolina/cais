@@ -1,12 +1,16 @@
 const colorAliases = {
   pink: "FF13F0",
-  white: "#ADADAD",
+  white: "#FFFFFF",
+  grey: "#ADADAD",
 };
 
 const theme = {
   colors: {
     primary: colorAliases.pink,
-    text: colorAliases.white,
+    text: {
+      primary: colorAliases.white,
+      secondary: colorAliases.grey,
+    },
   },
 };
 

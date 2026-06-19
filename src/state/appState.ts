@@ -1,4 +1,5 @@
 import Config from "./config";
+import Containers from "./containers";
 import Navigation from "./navigation";
 
 export default class AppState {
@@ -17,6 +18,8 @@ export default class AppState {
     return AppState.singleton;
   }
 
+  // Main state properties
   config: Config = new Config();
   navigation: Navigation = new Navigation();
+  containers: Containers = new Containers(this.config);
 }
