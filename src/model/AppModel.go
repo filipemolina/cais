@@ -1,8 +1,9 @@
 package model
 
 import (
-	"stack-stitcher/src/apptypes"
 	types "stack-stitcher/src/apptypes"
+
+	"charm.land/bubbles/v2/list"
 )
 
 type navigationModel struct {
@@ -14,7 +15,7 @@ type configModel struct {
 }
 
 type containersModel struct {
-	runningContainers []apptypes.DockerContainer
+	runningContainers list.Model
 }
 
 type AppModel struct {
@@ -24,5 +25,14 @@ type AppModel struct {
 }
 
 func GetInitialModel() AppModel {
-	return AppModel{}
+	// Initialize the list with an empty slice so it's ready for messages
+	emptyItems := []list.Item{}
+	runningList := list.New(emptyItems, list.NewDefaultDelegate(), 0, 0)
+	runningList.Title = "Running Containers:"
+
+	return AppModel{
+		containers: containersModel{
+			runningContainers: runningList,
+		},
+	}
 }

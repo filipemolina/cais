@@ -1,8 +1,10 @@
 package model
 
 import (
+	"stack-stitcher/src/appstyles"
 	"stack-stitcher/src/apptypes"
 
+	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 )
 
@@ -18,9 +20,25 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 
+	// This is execute once when the app loads and after every
+	// window resize.
+	case tea.WindowSizeMsg:
+		h, v := appstyles.DocStyle.GetFrameSize()
+
+		m.containers.runningContainers.SetSize(msg.Width-h, msg.Height-v)
+
 	case []apptypes.DockerContainer:
-		m.containers.runningContainers = msg
+		containersList := []list.Item{}
+
+		for _, container := range msg {
+			containersList = append(containersList, apptypes.ContainerListItem(container))
+		}
+
+		m.containers.runningContainers = list.New(containersList, list.NewDefaultDelegate(), 0, 0)
+		m.containers.runningContainers.Title = "Running Containers:"
 	}
 
-	return m, nil
+	var cmd tea.Cmd
+	m.containers.runningContainers, cmd = m.containers.runningContainers.Update(msg)
+	return m, cmd
 }
