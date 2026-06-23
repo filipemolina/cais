@@ -1,12 +1,9 @@
 package model
 
-import types "stack-stitcher/src/types"
-
-type container struct {
-	containerName string
-	state         string
-	status        string
-}
+import (
+	"stack-stitcher/src/apptypes"
+	types "stack-stitcher/src/apptypes"
+)
 
 type navigationModel struct {
 	currentPage types.CurrentPage
@@ -17,7 +14,7 @@ type configModel struct {
 }
 
 type containersModel struct {
-	runningContainers container
+	runningContainers []apptypes.DockerContainer
 }
 
 type AppModel struct {

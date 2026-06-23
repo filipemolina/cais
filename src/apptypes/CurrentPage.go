@@ -1,4 +1,4 @@
-package types
+package apptypes
 
 type CurrentPage int
 
