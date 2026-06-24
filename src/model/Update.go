@@ -24,8 +24,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// window resize.
 	case tea.WindowSizeMsg:
 		h, v := appstyles.DocStyle.GetFrameSize()
+		m.containers.listWidth = msg.Width - h
+		m.containers.listHeight = msg.Height - v
 
-		m.containers.runningContainers.SetSize(msg.Width-h, msg.Height-v)
+		m.containers.runningContainers.SetSize(
+			m.containers.listWidth,
+			m.containers.listHeight,
+		)
 
 	case []apptypes.DockerContainer:
 		containersList := []list.Item{}
@@ -34,7 +39,12 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			containersList = append(containersList, apptypes.ContainerListItem(container))
 		}
 
-		m.containers.runningContainers = list.New(containersList, list.NewDefaultDelegate(), 0, 0)
+		m.containers.runningContainers = list.New(
+			containersList,
+			list.NewDefaultDelegate(),
+			m.containers.listWidth,
+			m.containers.listHeight,
+		)
 		m.containers.runningContainers.Title = "Running Containers:"
 	}
 

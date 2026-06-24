@@ -16,6 +16,8 @@ type configModel struct {
 
 type containersModel struct {
 	runningContainers list.Model
+	listHeight        int
+	listWidth         int
 }
 
 type AppModel struct {
@@ -33,6 +35,8 @@ func GetInitialModel() AppModel {
 	return AppModel{
 		containers: containersModel{
 			runningContainers: runningList,
+			listHeight:        0,
+			listWidth:         0,
 		},
 	}
 }
