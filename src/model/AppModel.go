@@ -1,17 +1,19 @@
 package model
 
 import (
-	types "stack-stitcher/src/apptypes"
+	"stack-stitcher/src/apptypes"
 
 	"charm.land/bubbles/v2/list"
+	"github.com/compose-spec/compose-go/v2/types"
 )
 
 type navigationModel struct {
-	currentPage types.CurrentPage
+	currentPage apptypes.CurrentPage
 }
 
 type configModel struct {
 	configFileName string
+	configProject  *types.Project
 }
 
 type containersModel struct {
@@ -37,6 +39,10 @@ func GetInitialModel() AppModel {
 			runningContainers: runningList,
 			listHeight:        0,
 			listWidth:         0,
+		},
+		config: configModel{
+			configFileName: "",
+			configProject:  nil,
 		},
 	}
 }

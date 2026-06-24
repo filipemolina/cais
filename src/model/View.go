@@ -15,6 +15,13 @@ func (m AppModel) View() tea.View {
 
 	// v := tea.NewView(lipgloss.JoinHorizontal(lipgloss.Top, mainMenu, content))
 	// v.AltScreen = true
+	s := "Services: \n\n"
 
-	return tea.NewView("")
+	if m.config.configProject != nil {
+		for _, service := range m.config.configProject.Services {
+			s += service.Name + "\n"
+		}
+	}
+
+	return tea.NewView(s)
 }

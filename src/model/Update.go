@@ -3,6 +3,7 @@ package model
 import (
 	"stack-stitcher/src/appstyles"
 	"stack-stitcher/src/apptypes"
+	"stack-stitcher/src/cmds"
 
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
@@ -32,7 +33,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.containers.listHeight,
 		)
 
-	case []apptypes.DockerContainer:
+	// Commands from the cmds folder
+	case cmds.GetRunningContainersMsg:
 		containersList := []list.Item{}
 
 		for _, container := range msg {
@@ -46,9 +48,16 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.containers.listHeight,
 		)
 		m.containers.runningContainers.Title = "Running Containers:"
+
+	case cmds.GetConfigMsg:
+		m.config.configFileName = msg.FileName
+		m.config.configProject = msg.Project
 	}
 
 	var cmd tea.Cmd
+	// Fix this. The m.containers.runningContainers is being used as a UI list model.
+	// It should contain the information from docker, but the actual UI list should
+	// be placed somewhere else.
 	m.containers.runningContainers, cmd = m.containers.runningContainers.Update(msg)
 	return m, cmd
 }
