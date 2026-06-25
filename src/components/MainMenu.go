@@ -8,26 +8,20 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-var backGroundColor = lipgloss.Darken(lipgloss.Color(appstyles.PrimaryColor), 0.5)
-var focusedBackgroundColor = lipgloss.Color(appstyles.PrimaryColor)
-
 var menuWrapperStyle = lipgloss.NewStyle().
-	Background(backGroundColor)
+	Background(appstyles.BackgroundColor)
 
 var menuItemStyle = lipgloss.NewStyle().
-	Bold(true).
-	Foreground(lipgloss.Color("#FAFAFA")).
-	Background(backGroundColor).
+	Foreground(appstyles.PrimaryFontColor).
+	Background(appstyles.BackgroundColor).
 	Padding(0, 2)
 
-var focusedMenuItemStyle = menuItemStyle.
-	Background(focusedBackgroundColor)
-
 type MainMenuModel struct {
-	items            []string
-	focusedItemIndex int
-	terminalWidth    int
-	terminalHeight   int
+	items             []string
+	focusedItemIndex  int
+	selectedItemIndex int
+	terminalWidth     int
+	terminalHeight    int
 }
 
 func (m MainMenuModel) Init() tea.Cmd {
@@ -52,6 +46,9 @@ func (m MainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.focusedItemIndex < len(m.items)-1 {
 				m.focusedItemIndex++
 			}
+
+		case "space":
+			m.selectedItemIndex = m.focusedItemIndex
 		}
 	}
 
@@ -62,11 +59,17 @@ func (m MainMenuModel) View() tea.View {
 	var renderedItems []string
 
 	for index, item := range m.items {
-		if index == m.focusedItemIndex {
-			renderedItems = append(renderedItems, focusedMenuItemStyle.Render(item))
-		} else {
-			renderedItems = append(renderedItems, menuItemStyle.Render(item))
+		var itemStyle = menuItemStyle
+
+		if index == m.selectedItemIndex {
+			itemStyle = itemStyle.Bold(true).Underline(true)
 		}
+
+		if index == m.focusedItemIndex {
+			itemStyle = itemStyle.Background(appstyles.FocusedBackgroundColor)
+		}
+
+		renderedItems = append(renderedItems, itemStyle.Render(item))
 	}
 
 	items := lipgloss.JoinHorizontal(lipgloss.Top, renderedItems...)
