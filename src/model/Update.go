@@ -10,6 +10,11 @@ import (
 )
 
 func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// This var contains all the cmds that should be executed
+	// at the end. Those can come from this model or from any of the
+	// nested models in m.components
+	var finalCmds []tea.Cmd
+
 	switch msg := msg.(type) {
 	// Handle keyboard events
 	case tea.KeyPressMsg:
@@ -21,7 +26,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 
-	// This is execute once when the app loads and after every
+	// This is executed once when the app loads and after every
 	// window resize.
 	case tea.WindowSizeMsg:
 		h, v := appstyles.DocStyle.GetFrameSize()
@@ -32,6 +37,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.containers.listWidth,
 			m.containers.listHeight,
 		)
+
+		updatedSideMenu, sideMenuCmd := m.components.SideMenu.Update(msg)
+		m.components.SideMenu = updatedSideMenu
+		finalCmds = append(finalCmds, sideMenuCmd)
 
 	// Commands from the cmds folder
 	case cmds.GetRunningContainersMsg:
@@ -54,10 +63,15 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.config.configProject = msg.Project
 	}
 
-	var cmd tea.Cmd
 	// Fix this. The m.containers.runningContainers is being used as a UI list model.
 	// It should contain the information from docker, but the actual UI list should
 	// be placed somewhere else.
-	m.containers.runningContainers, cmd = m.containers.runningContainers.Update(msg)
-	return m, cmd
+	updatedRunningContainers, runningConainersCmd := m.containers.runningContainers.Update(msg)
+	m.containers.runningContainers = updatedRunningContainers
+
+	finalCmds = append(finalCmds, runningConainersCmd)
+
+	return m, tea.Batch(finalCmds...)
 }
+
+// ALSO: Check if Go has an official Docker lib

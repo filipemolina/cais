@@ -7,5 +7,5 @@ import (
 )
 
 func (m AppModel) Init() tea.Cmd {
-	return cmds.GetConfig
+	return cmds.GetRunningContainers
 }

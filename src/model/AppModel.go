@@ -2,8 +2,10 @@ package model
 
 import (
 	"stack-stitcher/src/apptypes"
+	"stack-stitcher/src/components"
 
 	"charm.land/bubbles/v2/list"
+	tea "charm.land/bubbletea/v2"
 	"github.com/compose-spec/compose-go/v2/types"
 )
 
@@ -22,10 +24,15 @@ type containersModel struct {
 	listWidth         int
 }
 
+type AppComponents struct {
+	SideMenu tea.Model
+}
+
 type AppModel struct {
 	navigation navigationModel
 	config     configModel
 	containers containersModel
+	components AppComponents
 }
 
 func GetInitialModel() AppModel {
@@ -33,6 +40,10 @@ func GetInitialModel() AppModel {
 	emptyItems := []list.Item{}
 	runningList := list.New(emptyItems, list.NewDefaultDelegate(), 0, 0)
 	runningList.Title = "Running Containers:"
+
+	components := AppComponents{
+		SideMenu: components.SideMenu(),
+	}
 
 	return AppModel{
 		containers: containersModel{
@@ -44,5 +55,6 @@ func GetInitialModel() AppModel {
 			configFileName: "",
 			configProject:  nil,
 		},
+		components: components,
 	}
 }

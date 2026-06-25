@@ -22,12 +22,16 @@ func GetComposeFileName() string {
 
 	curDirFileNames := make(map[string]struct{})
 
+	// Populates the curDirFileNames with all file names
+	// in the current directory
 	for _, file := range files {
 		if !file.IsDir() {
 			curDirFileNames[file.Name()] = struct{}{}
 		}
 	}
 
+	// Checks for the existence of a configFileName in the
+	// curDirFileNames map and returns the first one found.
 	for _, fileName := range configFileNames {
 		if _, ok := curDirFileNames[fileName]; ok {
 			mainConfigFile = fileName
