@@ -2,4 +2,6 @@ package appstyles
 
 import "charm.land/lipgloss/v2"
 
-var DocStyle = lipgloss.NewStyle().Margin(1, 2)
+const PrimaryColor = "#7D56F4"
+
+var DocStyle = lipgloss.NewStyle().MarginBottom(1)

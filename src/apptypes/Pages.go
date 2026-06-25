@@ -1,21 +1,21 @@
 package apptypes
 
-type CurrentPage int
+type Page int
 
 const (
-	DashboardPage CurrentPage = iota
+	DashboardPage Page = iota
 	GroupsPage
 	ComposeFilesPage
 	SettingsPage
 )
 
-var currentPageTitles = map[CurrentPage]string{
+var PageTitles = map[Page]string{
 	DashboardPage:    "Dashboard",
 	GroupsPage:       "Groups",
 	ComposeFilesPage: "Compose Files",
 	SettingsPage:     "Settings",
 }
 
-func (c CurrentPage) String() string {
-	return currentPageTitles[c]
+func (c Page) String() string {
+	return PageTitles[c]
 }

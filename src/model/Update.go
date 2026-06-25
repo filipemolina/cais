@@ -18,6 +18,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	// Handle keyboard events
 	case tea.KeyPressMsg:
+		updatedComponent, componentKeyPressCmd := m.components[m.focusedComponent].Update(msg)
+		m.components[m.focusedComponent] = updatedComponent
+		finalCmds = append(finalCmds, componentKeyPressCmd)
 
 		switch msg.String() {
 
@@ -38,9 +41,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.containers.listHeight,
 		)
 
-		updatedSideMenu, sideMenuCmd := m.components.SideMenu.Update(msg)
-		m.components.SideMenu = updatedSideMenu
-		finalCmds = append(finalCmds, sideMenuCmd)
+		updatedMainMenu, mainMenuCmd := m.components["MainMenu"].Update(msg)
+		m.components["MainMenu"] = updatedMainMenu
+		finalCmds = append(finalCmds, mainMenuCmd)
 
 	// Commands from the cmds folder
 	case cmds.GetRunningContainersMsg:

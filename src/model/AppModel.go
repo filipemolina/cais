@@ -10,7 +10,7 @@ import (
 )
 
 type navigationModel struct {
-	currentPage apptypes.CurrentPage
+	currentPage apptypes.Page
 }
 
 type configModel struct {
@@ -24,15 +24,14 @@ type containersModel struct {
 	listWidth         int
 }
 
-type AppComponents struct {
-	SideMenu tea.Model
-}
+type AppComponents map[string]tea.Model
 
 type AppModel struct {
-	navigation navigationModel
-	config     configModel
-	containers containersModel
-	components AppComponents
+	navigation       navigationModel
+	config           configModel
+	containers       containersModel
+	components       AppComponents
+	focusedComponent string
 }
 
 func GetInitialModel() AppModel {
@@ -41,8 +40,8 @@ func GetInitialModel() AppModel {
 	runningList := list.New(emptyItems, list.NewDefaultDelegate(), 0, 0)
 	runningList.Title = "Running Containers:"
 
-	components := AppComponents{
-		SideMenu: components.SideMenu(),
+	components := map[string]tea.Model{
+		"MainMenu": components.MainMenu(),
 	}
 
 	return AppModel{
@@ -55,6 +54,7 @@ func GetInitialModel() AppModel {
 			configFileName: "",
 			configProject:  nil,
 		},
-		components: components,
+		components:       components,
+		focusedComponent: "MainMenu",
 	}
 }
