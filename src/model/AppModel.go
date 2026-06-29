@@ -55,7 +55,7 @@ func GetInitialModel() AppModel {
 		},
 		components: Components{
 			MainMenu:     components.MainMenu(),
-			ServicesList: components.ServicesList(items, 0, 0),
+			ServicesList: components.ServicesList([]list.Item{}, 0, 0),
 		},
 		focusedComponent: "MainMenu",
 

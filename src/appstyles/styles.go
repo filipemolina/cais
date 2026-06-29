@@ -7,9 +7,10 @@ import (
 const primaryColor = "#7D56F4"
 const primaryFontColor = "#FAFAFA"
 
-var DocStyle = lipgloss.NewStyle().MarginBottom(1)
+var DocStyle = lipgloss.NewStyle()
 
+var PrimaryColor = lipgloss.Color(primaryColor)
 var BackgroundColor = lipgloss.Darken(lipgloss.Color(primaryColor), 0.5)
-var FocusedBackgroundColor = lipgloss.Color(primaryColor)
+var FocusedBackgroundColor = PrimaryColor
 var PrimaryFontColor = lipgloss.Color(primaryFontColor)
 var SecondaryFontColor = lipgloss.Darken(PrimaryFontColor, 0.2)

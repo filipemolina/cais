@@ -1,10 +1,8 @@
 package model
 
 import (
-	"stack-stitcher/src/apptypes"
 	"stack-stitcher/src/cmds"
 
-	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 )
 
@@ -31,15 +29,6 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.config.terminalHeight = msg.Height
 
 	// Commands from the cmds folder
-	case cmds.GetRunningContainersMsg:
-		containersList := []list.Item{}
-
-		for _, container := range msg {
-			containersList = append(containersList, apptypes.ContainerListItem(container))
-		}
-
-		m.containers.runningContainers = containersList
-
 	case cmds.GetConfigMsg:
 		m.config.configFileName = msg.FileName
 		m.config.configProject = msg.Project
