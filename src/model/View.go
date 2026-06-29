@@ -9,10 +9,12 @@ import (
 
 func (m AppModel) View() tea.View {
 	mainMenu := appstyles.DocStyle.Render(
-		m.components["MainMenu"].View().Content,
+		m.components.MainMenu.View().Content,
 	)
 
-	v := tea.NewView(lipgloss.JoinVertical(lipgloss.Left, mainMenu))
+	listView := appstyles.DocStyle.Render(m.components.ServicesList.View().Content)
+
+	v := tea.NewView(lipgloss.JoinVertical(lipgloss.Left, mainMenu, listView))
 	v.AltScreen = true
 
 	return v

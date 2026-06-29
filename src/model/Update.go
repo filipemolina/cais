@@ -1,7 +1,6 @@
 package model
 
 import (
-	"stack-stitcher/src/appstyles"
 	"stack-stitcher/src/apptypes"
 	"stack-stitcher/src/cmds"
 
@@ -18,10 +17,6 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	// Handle keyboard events
 	case tea.KeyPressMsg:
-		updatedComponent, componentKeyPressCmd := m.components[m.focusedComponent].Update(msg)
-		m.components[m.focusedComponent] = updatedComponent
-		finalCmds = append(finalCmds, componentKeyPressCmd)
-
 		switch msg.String() {
 
 		// Quit the program on Ctrl+c or q
@@ -32,18 +27,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// This is executed once when the app loads and after every
 	// window resize.
 	case tea.WindowSizeMsg:
-		h, v := appstyles.DocStyle.GetFrameSize()
-		m.containers.listWidth = msg.Width - h
-		m.containers.listHeight = msg.Height - v
-
-		m.containers.runningContainers.SetSize(
-			m.containers.listWidth,
-			m.containers.listHeight,
-		)
-
-		updatedMainMenu, mainMenuCmd := m.components["MainMenu"].Update(msg)
-		m.components["MainMenu"] = updatedMainMenu
-		finalCmds = append(finalCmds, mainMenuCmd)
+		m.config.terminalWidht = msg.Width
+		m.config.terminalHeight = msg.Height
 
 	// Commands from the cmds folder
 	case cmds.GetRunningContainersMsg:
@@ -53,26 +38,22 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			containersList = append(containersList, apptypes.ContainerListItem(container))
 		}
 
-		m.containers.runningContainers = list.New(
-			containersList,
-			list.NewDefaultDelegate(),
-			m.containers.listWidth,
-			m.containers.listHeight,
-		)
-		m.containers.runningContainers.Title = "Running Containers:"
+		m.containers.runningContainers = containersList
 
 	case cmds.GetConfigMsg:
 		m.config.configFileName = msg.FileName
 		m.config.configProject = msg.Project
 	}
 
-	// Fix this. The m.containers.runningContainers is being used as a UI list model.
-	// It should contain the information from docker, but the actual UI list should
-	// be placed somewhere else.
-	updatedRunningContainers, runningConainersCmd := m.containers.runningContainers.Update(msg)
-	m.containers.runningContainers = updatedRunningContainers
+	// Update nested components
 
-	finalCmds = append(finalCmds, runningConainersCmd)
+	var mainMenuCmd tea.Cmd
+	m.components.MainMenu, mainMenuCmd = m.components.MainMenu.Update(msg)
+	finalCmds = append(finalCmds, mainMenuCmd)
+
+	var servicesListCmd tea.Cmd
+	m.components.ServicesList, servicesListCmd = m.components.ServicesList.Update(msg)
+	finalCmds = append(finalCmds, servicesListCmd)
 
 	return m, tea.Batch(finalCmds...)
 }

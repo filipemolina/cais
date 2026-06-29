@@ -10,51 +10,55 @@ import (
 )
 
 type navigationModel struct {
-	currentPage apptypes.Page
+	currentPage string
 }
 
 type configModel struct {
 	configFileName string
 	configProject  *types.Project
+	terminalWidht  int
+	terminalHeight int
 }
 
 type containersModel struct {
-	runningContainers list.Model
-	listHeight        int
-	listWidth         int
+	runningContainers []list.Item
 }
 
-type AppComponents map[string]tea.Model
+type Components struct {
+	MainMenu     tea.Model
+	ServicesList tea.Model
+}
 
 type AppModel struct {
 	navigation       navigationModel
 	config           configModel
 	containers       containersModel
-	components       AppComponents
+	components       Components
 	focusedComponent string
+	list             list.Model
 }
 
 func GetInitialModel() AppModel {
-	// Initialize the list with an empty slice so it's ready for messages
-	emptyItems := []list.Item{}
-	runningList := list.New(emptyItems, list.NewDefaultDelegate(), 0, 0)
-	runningList.Title = "Running Containers:"
-
-	components := map[string]tea.Model{
-		"MainMenu": components.MainMenu(),
+	items := []list.Item{
+		apptypes.ListItem{ItemTitle: "Raspberry Pi’s", ItemDesc: "I have ’em all over my house"},
+		apptypes.ListItem{ItemTitle: "Raspberry Pi’s", ItemDesc: "I have ’em all over my house"},
+		apptypes.ListItem{ItemTitle: "Raspberry Pi’s", ItemDesc: "I have ’em all over my house"},
 	}
 
 	return AppModel{
 		containers: containersModel{
-			runningContainers: runningList,
-			listHeight:        0,
-			listWidth:         0,
+			runningContainers: []list.Item{},
 		},
 		config: configModel{
 			configFileName: "",
 			configProject:  nil,
 		},
-		components:       components,
+		components: Components{
+			MainMenu:     components.MainMenu(),
+			ServicesList: components.ServicesList(items, 0, 0),
+		},
 		focusedComponent: "MainMenu",
+
+		list: list.New(items, list.NewDefaultDelegate(), 0, 0),
 	}
 }
