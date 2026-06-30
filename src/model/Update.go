@@ -44,7 +44,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.components.ServicesList, servicesListCmd = m.components.ServicesList.Update(msg)
 	finalCmds = append(finalCmds, servicesListCmd)
 
+	var detailsPanelCmd tea.Cmd
+	m.components.DetailsPanel, detailsPanelCmd = m.components.DetailsPanel.Update(msg)
+	finalCmds = append(finalCmds, detailsPanelCmd)
+
 	return m, tea.Batch(finalCmds...)
 }
-
-// ALSO: Check if Go has an official Docker lib

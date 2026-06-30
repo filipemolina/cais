@@ -9,11 +9,11 @@ import (
 )
 
 var menuWrapperStyle = lipgloss.NewStyle().
-	Background(appstyles.BackgroundColor)
+	Background(appstyles.PaneColor)
 
 var menuItemStyle = lipgloss.NewStyle().
 	Foreground(appstyles.PrimaryFontColor).
-	Background(appstyles.BackgroundColor).
+	Background(appstyles.PaneColor).
 	Padding(0, 2)
 
 type MainMenuModel struct {
@@ -58,15 +58,23 @@ func (m MainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m MainMenuModel) View() tea.View {
 	var renderedItems []string
 
+	// logoStyle := lipgloss.NewStyle().
+	// 	Foreground(appstyles.PrimaryFontColor).
+	// 	Background(appstyles.PrimaryColor).
+	// 	Bold(true).
+	// 	Padding(0, 2)
+
+	// renderedItems = append(renderedItems, logoStyle.Render(constants.APP_NAME))
+
 	for index, item := range m.items {
 		var itemStyle = menuItemStyle
 
-		if index == m.selectedItemIndex {
-			itemStyle = itemStyle.Bold(true).Underline(true)
+		if index == m.focusedItemIndex {
+			itemStyle = itemStyle.Background(appstyles.FocusedPaneColor)
 		}
 
-		if index == m.focusedItemIndex {
-			itemStyle = itemStyle.Background(appstyles.FocusedBackgroundColor)
+		if index == m.selectedItemIndex {
+			itemStyle = itemStyle.Bold(true).Background(appstyles.PrimaryColor)
 		}
 
 		renderedItems = append(renderedItems, itemStyle.Render(item))
@@ -76,6 +84,7 @@ func (m MainMenuModel) View() tea.View {
 
 	menu := menuWrapperStyle.
 		Width(m.terminalWidth).
+		Align(lipgloss.Center).
 		Render(items)
 
 	return tea.NewView(menu)

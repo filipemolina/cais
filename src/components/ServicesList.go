@@ -6,6 +6,7 @@ import (
 	"stack-stitcher/src/appstyles"
 	"stack-stitcher/src/apptypes"
 	"stack-stitcher/src/cmds"
+	"stack-stitcher/src/constants"
 
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
@@ -18,7 +19,7 @@ import (
 
 type customDelegate struct{}
 
-func (d customDelegate) Height() int                             { return 6 }
+func (d customDelegate) Height() int                             { return 5 }
 func (d customDelegate) Spacing() int                            { return 0 }
 func (d customDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 
@@ -34,7 +35,6 @@ func (d customDelegate) Render(w io.Writer, m list.Model, index int, listItem li
 	isActive := false
 
 	wrapperStyle := lipgloss.NewStyle().
-		MarginBottom(1).
 		Width(m.Width()).
 		Padding(1)
 
@@ -89,9 +89,11 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		h, v := appstyles.DocStyle.GetFrameSize()
+		totalWidth := float32(msg.Width - h)
+		panelWidth := int(totalWidth*constants.LEFT_PANEL_WIDTH - 1)
 
 		m.list.SetSize(
-			((msg.Width-h)*4/10)-1,
+			panelWidth,
 			msg.Height-v-4,
 		)
 	case cmds.GetRunningContainersMsg:
@@ -113,10 +115,7 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m ServicesListModel) View() tea.View {
-	wrapper := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder(), true).
-		BorderForeground(appstyles.PrimaryColor).
-		Padding(0, 1)
+	wrapper := lipgloss.NewStyle().PaddingLeft(1)
 
 	renderedList := wrapper.Render(m.list.View())
 
@@ -130,11 +129,16 @@ func (m ServicesListModel) View() tea.View {
 
 func ServicesList(items []list.Item, width int, height int) tea.Model {
 	servicesList := list.New(items, customDelegate{}, width, height)
-	servicesList.SetShowTitle(false)
 	servicesList.SetShowHelp(false)
 	servicesList.SetShowStatusBar(false)
+
+	servicesList.Title = "Services"
 	servicesList.Paginator.ActiveDot = " ● "
 	servicesList.Paginator.InactiveDot = " ○ "
+	servicesList.Styles.Title = servicesList.
+		Styles.
+		Title.
+		Background(appstyles.PrimaryColor)
 
 	return ServicesListModel{
 		list: servicesList,

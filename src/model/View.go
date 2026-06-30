@@ -8,13 +8,15 @@ import (
 )
 
 func (m AppModel) View() tea.View {
-	mainMenu := appstyles.DocStyle.Render(
-		m.components.MainMenu.View().Content,
-	)
+	mainMenu := m.components.MainMenu.View().Content
+	listView := m.components.ServicesList.View().Content
+	detailsView := m.components.DetailsPanel.View().Content
 
-	listView := appstyles.DocStyle.Render(m.components.ServicesList.View().Content)
+	body := lipgloss.JoinHorizontal(lipgloss.Top, listView, detailsView)
 
-	v := tea.NewView(lipgloss.JoinVertical(lipgloss.Left, mainMenu, listView))
+	layout := lipgloss.JoinVertical(lipgloss.Left, mainMenu, "", body)
+
+	v := tea.NewView(appstyles.DocStyle.Render(layout))
 	v.AltScreen = true
 
 	return v
