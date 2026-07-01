@@ -1,19 +1,15 @@
 package components
 
 import (
-	"image/color"
-	"stack-stitcher/src/appstyles"
-
 	"fmt"
 	"io"
+	"stack-stitcher/src/appstyles"
 	"stack-stitcher/src/apptypes"
 	"stack-stitcher/src/cmds"
 	"stack-stitcher/src/constants"
 
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
-	"github.com/compose-spec/compose-go/v2/types"
-
 	"charm.land/lipgloss/v2"
 )
 
@@ -21,54 +17,44 @@ import (
  * Styling by creating a custom delegate
  */
 
-type servicesListCustomDelegate struct {
+type containersListCustomDelegate struct {
 	isParentFocused bool
-	activeIndex     int
 }
 
-func (d servicesListCustomDelegate) Height() int                             { return 4 }
-func (d servicesListCustomDelegate) Spacing() int                            { return 0 }
-func (d servicesListCustomDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
+func (d containersListCustomDelegate) Height() int                             { return 4 }
+func (d containersListCustomDelegate) Spacing() int                            { return 0 }
+func (d containersListCustomDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 
 // Render handles the actual drawing of the item
-func (d servicesListCustomDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
-	// Cast the generic list.Item back to our specific ServiceListItem
-	item, ok := listItem.(apptypes.ServiceListItem)
+func (d containersListCustomDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
+	// Cast the generic list.Item back to our specific ContainerListItem
+	item, ok := listItem.(apptypes.ContainerListItem)
 	if !ok {
 		return
 	}
 
 	isSelected := index == m.Index()
-	isActive := index == d.activeIndex
-	var titleColor color.Color
-
-	if isActive {
-		titleColor = appstyles.PrimaryFontColor
-	} else {
-		titleColor = appstyles.SecondaryFontColor
-	}
+	isActive := false
 
 	wrapperStyle := lipgloss.NewStyle().
 		Width(m.Width()).
 		Padding(1)
 
-	titleStyle := lipgloss.NewStyle().
-		Bold(isActive).
-		Foreground(titleColor).
-		Width(m.Width())
+	titleStyle := lipgloss.NewStyle().Bold(true).Width(m.Width())
 
-	if isActive {
+	if isSelected && d.isParentFocused {
 		wrapperStyle = wrapperStyle.
 			BorderLeft(true).
 			BorderStyle(lipgloss.ThickBorder()).
 			BorderLeftForeground(appstyles.PrimaryColor).
 			Background(lipgloss.Color("#3F3F3F"))
 
-	} else if isSelected && d.isParentFocused {
+	} else if isActive {
+		// Highlight text if active, but not currently selected
 		wrapperStyle = wrapperStyle.
 			Bold(true).
 			BorderLeft(true).
-			BorderStyle(lipgloss.DoubleBorder()).
+			BorderStyle(lipgloss.NormalBorder()).
 			BorderLeftForeground(appstyles.PrimaryFontColor)
 
 	} else {
@@ -81,7 +67,7 @@ func (d servicesListCustomDelegate) Render(w io.Writer, m list.Model, index int,
 	}
 
 	title := titleStyle.Render(item.Title())
-	description := item.Description(isActive)
+	description := item.Description(isSelected && d.isParentFocused)
 
 	// Print the styled string to the Bubble Tea io.Writer
 	fmt.Fprint(w, wrapperStyle.Render(lipgloss.JoinVertical(lipgloss.Left, title, description)))
@@ -91,20 +77,17 @@ func (d servicesListCustomDelegate) Render(w io.Writer, m list.Model, index int,
  * Implementation of tea.Model
  */
 
-type ServicesListModel struct {
-	list         list.Model
-	listDelegate servicesListCustomDelegate
-	isFocused    bool
-	componentId  int
-	fileName     string
-	project      *types.Project
+type ContainersListModel struct {
+	list        list.Model
+	isFocused   bool
+	componentId int
 }
 
-func (m ServicesListModel) Init() tea.Cmd {
+func (m ContainersListModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m ContainersListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var finalCmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -119,38 +102,23 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			msg.Height-v-6,
 		)
 
-	case tea.KeyPressMsg:
-		switch msg.String() {
-		case "space":
-			if m.isFocused {
-				m.listDelegate.activeIndex = m.list.GlobalIndex()
-				m.list.SetDelegate(m.listDelegate)
-			}
+	case cmds.GetRunningContainersMsg:
+		containersList := []list.Item{}
+
+		for _, container := range msg {
+			containersList = append(containersList, apptypes.ContainerListItem(container))
 		}
 
-	case cmds.GetConfigMsg:
-		servicesList := []list.Item{}
-
-		for _, service := range msg.Project.Services {
-			newService := apptypes.ServiceListItem{
-				Service: service,
-			}
-
-			servicesList = append(servicesList, newService)
-		}
-
-		cmd := m.list.SetItems(servicesList)
+		cmd := m.list.SetItems(containersList)
 		finalCmds = append(finalCmds, cmd)
 
 	case cmds.SetFocusMsg:
 		if int(msg) == m.componentId {
 			m.isFocused = true
-			m.listDelegate.isParentFocused = true
-			m.list.SetDelegate(m.listDelegate)
+			m.list.SetDelegate(containersListCustomDelegate{isParentFocused: true})
 		} else {
 			m.isFocused = false
-			m.listDelegate.isParentFocused = false
-			m.list.SetDelegate(m.listDelegate)
+			m.list.SetDelegate(containersListCustomDelegate{isParentFocused: false})
 		}
 	}
 
@@ -163,7 +131,7 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(finalCmds...)
 }
 
-func (m ServicesListModel) View() tea.View {
+func (m ContainersListModel) View() tea.View {
 	wrapper := lipgloss.NewStyle().
 		Padding(1, 2, 2, 2)
 
@@ -184,9 +152,8 @@ func (m ServicesListModel) View() tea.View {
  * Initializer function
  */
 
-func ServicesList(items []list.Item, width int, height int) tea.Model {
-	listDelegate := servicesListCustomDelegate{}
-	servicesList := list.New(items, listDelegate, width, height)
+func ContainersList(items []list.Item, width int, height int) tea.Model {
+	servicesList := list.New(items, containersListCustomDelegate{}, width, height)
 	servicesList.SetShowHelp(false)
 	servicesList.SetShowStatusBar(false)
 
@@ -198,11 +165,8 @@ func ServicesList(items []list.Item, width int, height int) tea.Model {
 		Title.
 		Background(appstyles.PrimaryColor)
 
-	model := ServicesListModel{
-		list:         servicesList,
-		listDelegate: listDelegate,
-		componentId:  1,
+	return ContainersListModel{
+		list:        servicesList,
+		componentId: 1,
 	}
-
-	return model
 }

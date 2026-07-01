@@ -10,6 +10,7 @@ func (m AppModel) Init() tea.Cmd {
 	initialCommands := []tea.Cmd{
 		cmds.SetFocus(1),
 		cmds.GetRunningContainers,
+		cmds.GetConfig,
 	}
 
 	return tea.Batch(initialCommands...)

@@ -2,6 +2,6 @@ package constants
 
 var FocusableComponents = []string{
 	"Main Menu",
-	"Services List",
+	"Containers List",
 	"Details Panel",
 }

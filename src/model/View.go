@@ -9,10 +9,10 @@ import (
 
 func (m AppModel) View() tea.View {
 	mainMenu := m.components.MainMenu.View().Content
-	listView := m.components.ServicesList.View().Content
+	serviceList := m.components.ServicesList.View().Content
 	detailsView := m.components.DetailsPanel.View().Content
 
-	body := lipgloss.JoinHorizontal(lipgloss.Top, listView, detailsView)
+	body := lipgloss.JoinHorizontal(lipgloss.Top, serviceList, detailsView)
 
 	layout := lipgloss.JoinVertical(lipgloss.Left, mainMenu, body)
 

@@ -49,13 +49,17 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.components.MainMenu, mainMenuCmd = m.components.MainMenu.Update(msg)
 	finalCmds = append(finalCmds, mainMenuCmd)
 
-	var servicesListCmd tea.Cmd
-	m.components.ServicesList, servicesListCmd = m.components.ServicesList.Update(msg)
-	finalCmds = append(finalCmds, servicesListCmd)
+	var containersListCmd tea.Cmd
+	m.components.ContainersList, containersListCmd = m.components.ContainersList.Update(msg)
+	finalCmds = append(finalCmds, containersListCmd)
 
 	var detailsPanelCmd tea.Cmd
 	m.components.DetailsPanel, detailsPanelCmd = m.components.DetailsPanel.Update(msg)
 	finalCmds = append(finalCmds, detailsPanelCmd)
+
+	var servicesListCmd tea.Cmd
+	m.components.ServicesList, containersListCmd = m.components.ServicesList.Update(msg)
+	finalCmds = append(finalCmds, servicesListCmd)
 
 	return m, tea.Batch(finalCmds...)
 }

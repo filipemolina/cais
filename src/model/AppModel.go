@@ -1,7 +1,6 @@
 package model
 
 import (
-	"stack-stitcher/src/apptypes"
 	"stack-stitcher/src/cmds"
 	"stack-stitcher/src/components"
 	"stack-stitcher/src/constants"
@@ -28,6 +27,7 @@ type containersModel struct {
 
 type Components struct {
 	MainMenu,
+	ContainersList,
 	ServicesList,
 	DetailsPanel tea.Model
 }
@@ -38,7 +38,6 @@ type AppModel struct {
 	containers       containersModel
 	components       Components
 	focusedComponent int
-	list             list.Model
 }
 
 func (m *AppModel) ChangeFocus(index *int) tea.Cmd {
@@ -76,12 +75,6 @@ func (m *AppModel) ChangeFocus(index *int) tea.Cmd {
 }
 
 func GetInitialModel() AppModel {
-	items := []list.Item{
-		apptypes.ListItem{ItemTitle: "Raspberry Pi’s", ItemDesc: "I have ’em all over my house"},
-		apptypes.ListItem{ItemTitle: "Raspberry Pi’s", ItemDesc: "I have ’em all over my house"},
-		apptypes.ListItem{ItemTitle: "Raspberry Pi’s", ItemDesc: "I have ’em all over my house"},
-	}
-
 	return AppModel{
 		containers: containersModel{
 			runningContainers: []list.Item{},
@@ -91,10 +84,10 @@ func GetInitialModel() AppModel {
 			configProject:  nil,
 		},
 		components: Components{
-			MainMenu:     components.MainMenu(),
-			ServicesList: components.ServicesList([]list.Item{}, 0, 0),
-			DetailsPanel: components.DetailsPanel(nil),
+			MainMenu:       components.MainMenu(),
+			ContainersList: components.ContainersList([]list.Item{}, 0, 0),
+			ServicesList:   components.ServicesList([]list.Item{}, 0, 0),
+			DetailsPanel:   components.DetailsPanel(nil),
 		},
-		list: list.New(items, list.NewDefaultDelegate(), 0, 0),
 	}
 }
