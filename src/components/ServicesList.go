@@ -19,13 +19,13 @@ import (
 
 type customDelegate struct{}
 
-func (d customDelegate) Height() int                             { return 5 }
+func (d customDelegate) Height() int                             { return 4 }
 func (d customDelegate) Spacing() int                            { return 0 }
 func (d customDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 
 // Render handles the actual drawing of the item
 func (d customDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
-	// Cast the generic list.Item back to our specific myItem
+	// Cast the generic list.Item back to our specific ContainerListItem
 	item, ok := listItem.(apptypes.ContainerListItem)
 	if !ok {
 		return
@@ -39,7 +39,6 @@ func (d customDelegate) Render(w io.Writer, m list.Model, index int, listItem li
 		Padding(1)
 
 	titleStyle := lipgloss.NewStyle().Bold(true).Width(m.Width())
-	descriptionStyle := lipgloss.NewStyle().Foreground(appstyles.SecondaryFontColor)
 
 	if isSelected {
 		wrapperStyle = wrapperStyle.
@@ -65,10 +64,10 @@ func (d customDelegate) Render(w io.Writer, m list.Model, index int, listItem li
 	}
 
 	title := titleStyle.Render(item.Title())
-	description := descriptionStyle.Render(item.Description())
+	description := item.Description(isSelected)
 
 	// Print the styled string to the Bubble Tea io.Writer
-	fmt.Fprint(w, wrapperStyle.Render(lipgloss.JoinVertical(lipgloss.Left, title, "", description)))
+	fmt.Fprint(w, wrapperStyle.Render(lipgloss.JoinVertical(lipgloss.Left, title, description)))
 }
 
 /*
@@ -92,11 +91,12 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		h, v := appstyles.DocStyle.GetFrameSize()
 		totalWidth := float32(msg.Width - h)
-		panelWidth := int(totalWidth*constants.LEFT_PANEL_WIDTH - 1)
+		calculatedWidth := int(totalWidth*constants.LEFT_PANEL_WIDTH - 1)
+		panelWidth := max(constants.MIN_PANEL_WIDTH, calculatedWidth)
 
 		m.list.SetSize(
 			panelWidth,
-			msg.Height-v-4,
+			msg.Height-v-6,
 		)
 
 	case cmds.GetRunningContainersMsg:

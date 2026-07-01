@@ -10,14 +10,19 @@ type ContainerListItem DockerContainer
 
 func (i ContainerListItem) Title() string       { return i.Names }
 func (i ContainerListItem) FilterValue() string { return i.Names }
-func (i ContainerListItem) Description() string {
-	boldStyle := lipgloss.NewStyle().
+func (i ContainerListItem) Description(isSelected bool) string {
+	wrapperStyle := lipgloss.NewStyle()
+
+	if isSelected {
+		wrapperStyle = wrapperStyle.Background(appstyles.PanelBackgroundColor)
+	}
+
+	boldStyle := wrapperStyle.
 		Foreground(appstyles.PrimaryFontColor).
 		Bold(true)
 
-	imageHeader := boldStyle.Render(" Image: ")
-	statusHeader := boldStyle.Render("Status: ")
+	normalStyle := wrapperStyle.Foreground(appstyles.SecondaryFontColor)
+	description := boldStyle.Render("Status: ") + normalStyle.Render(i.Status)
 
-	description := statusHeader + i.Status + imageHeader + i.Image
 	return description
 }

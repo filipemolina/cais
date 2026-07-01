@@ -7,5 +7,10 @@ import (
 )
 
 func (m AppModel) Init() tea.Cmd {
-	return cmds.GetRunningContainers
+	initialCommands := []tea.Cmd{
+		cmds.SetFocus(1),
+		cmds.GetRunningContainers,
+	}
+
+	return tea.Batch(initialCommands...)
 }

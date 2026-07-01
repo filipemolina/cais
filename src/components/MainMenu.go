@@ -1,19 +1,17 @@
 package components
 
 import (
+	"image/color"
 	"stack-stitcher/src/appstyles"
 	"stack-stitcher/src/apptypes"
+	"stack-stitcher/src/cmds"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 )
 
-var menuWrapperStyle = lipgloss.NewStyle().
-	Background(appstyles.PaneColor)
-
 var menuItemStyle = lipgloss.NewStyle().
 	Foreground(appstyles.PrimaryFontColor).
-	Background(appstyles.PaneColor).
 	Padding(0, 2)
 
 type MainMenuModel struct {
@@ -22,6 +20,8 @@ type MainMenuModel struct {
 	selectedItemIndex int
 	terminalWidth     int
 	terminalHeight    int
+	isFocused         bool
+	componentId       int
 }
 
 func (m MainMenuModel) Init() tea.Cmd {
@@ -34,21 +34,29 @@ func (m MainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.terminalWidth = msg.Width
 		m.terminalHeight = msg.Height
 
+	case cmds.SetFocusMsg:
+		if int(msg) == m.componentId {
+			m.isFocused = true
+		} else {
+			m.isFocused = false
+		}
+
 	case tea.KeyPressMsg:
+		if m.isFocused {
+			switch msg.String() {
+			case "left", "h":
+				if m.focusedItemIndex > 0 {
+					m.focusedItemIndex--
+				}
 
-		switch msg.String() {
-		case "left":
-			if m.focusedItemIndex > 0 {
-				m.focusedItemIndex--
+			case "right", "l":
+				if m.focusedItemIndex < len(m.items)-1 {
+					m.focusedItemIndex++
+				}
+
+			case "space":
+				m.selectedItemIndex = m.focusedItemIndex
 			}
-
-		case "right":
-			if m.focusedItemIndex < len(m.items)-1 {
-				m.focusedItemIndex++
-			}
-
-		case "space":
-			m.selectedItemIndex = m.focusedItemIndex
 		}
 	}
 
@@ -57,37 +65,54 @@ func (m MainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m MainMenuModel) View() tea.View {
 	var renderedItems []string
+	var borderColor color.Color
 
-	// logoStyle := lipgloss.NewStyle().
-	// 	Foreground(appstyles.PrimaryFontColor).
-	// 	Background(appstyles.PrimaryColor).
-	// 	Bold(true).
-	// 	Padding(0, 2)
-
-	// renderedItems = append(renderedItems, logoStyle.Render(constants.APP_NAME))
+	if m.isFocused {
+		borderColor = appstyles.PrimaryColor
+	} else {
+		borderColor = lipgloss.Darken(appstyles.SecondaryFontColor, 0.5)
+	}
 
 	for index, item := range m.items {
-		var itemStyle = menuItemStyle
+		prefix := "  "
+		sufix := prefix
 
-		if index == m.focusedItemIndex {
-			itemStyle = itemStyle.Background(appstyles.FocusedPaneColor)
+		itemStyle := menuItemStyle.
+			BorderStyle(appstyles.InactiveTabBorder).
+			BorderForeground(borderColor)
+
+		if m.isFocused && index == m.focusedItemIndex {
+			prefix = "> "
 		}
 
 		if index == m.selectedItemIndex {
-			itemStyle = itemStyle.Bold(true).Background(appstyles.PrimaryColor)
+			itemStyle = itemStyle.
+				Bold(true).
+				BorderStyle(appstyles.ActiveTabBorder)
 		}
 
-		renderedItems = append(renderedItems, itemStyle.Render(item))
+		if !m.isFocused && index != m.selectedItemIndex {
+			itemStyle = itemStyle.Foreground(lipgloss.Darken(appstyles.PrimaryFontColor, 0.5))
+		}
+
+		renderedItems = append(renderedItems, itemStyle.Render(prefix+item+sufix))
 	}
 
 	items := lipgloss.JoinHorizontal(lipgloss.Top, renderedItems...)
+	tabsWidth := lipgloss.Width(items)
 
-	menu := menuWrapperStyle.
-		Width(m.terminalWidth).
-		Align(lipgloss.Center).
-		Render(items)
+	gapWidth := (m.terminalWidth - tabsWidth)
+	gapStyle := lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder(), false, false, true, false).
+		BorderForeground(borderColor).
+		Width(gapWidth).
+		PaddingBottom(1)
 
-	return tea.NewView(menu)
+	gap := gapStyle.Render("")
+
+	tabBar := lipgloss.JoinHorizontal(lipgloss.Left, items, gap)
+
+	return tea.NewView(tabBar)
 }
 
 func MainMenu() tea.Model {

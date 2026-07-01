@@ -8,6 +8,7 @@ import (
 const primaryColor = "#BC3FBC"
 const primaryFontColor = "#FAFAFA"
 const paneColor = "#151520"
+const panelBackgroundColor = "#3F3F3F"
 
 var lightDark = lipgloss.LightDark(false)
 
@@ -16,6 +17,7 @@ var DocStyle = lipgloss.NewStyle()
 var PrimaryColor = lipgloss.Color(primaryColor)
 var ComplementaryColor = lipgloss.Complementary(PrimaryColor)
 var PaneColor = lipgloss.Color(paneColor)
+var PanelBackgroundColor = lipgloss.Color(panelBackgroundColor)
 var SelectedPaneColor = lipgloss.Darken(PrimaryColor, 0.5)
 var FocusedPaneColor = lipgloss.Darken(PrimaryColor, 0.7)
 var BackgroundColor = lipgloss.Darken(PrimaryColor, 0.5)
