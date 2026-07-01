@@ -20,6 +20,15 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Quit the program on Ctrl+c or q
 		case "ctrl+c", "q":
 			return m, tea.Quit
+
+		case "tab":
+			tabCmd := m.ChangeFocus(nil)
+			finalCmds = append(finalCmds, tabCmd)
+
+		case "shift+tab":
+			idx := int(-1)
+			tabCmd := m.ChangeFocus(&idx)
+			finalCmds = append(finalCmds, tabCmd)
 		}
 
 	// This is executed once when the app loads and after every

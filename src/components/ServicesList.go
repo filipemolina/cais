@@ -76,7 +76,9 @@ func (d customDelegate) Render(w io.Writer, m list.Model, index int, listItem li
  */
 
 type ServicesListModel struct {
-	list list.Model
+	list        list.Model
+	isFocused   bool
+	componentId int
 }
 
 func (m ServicesListModel) Init() tea.Cmd {
@@ -96,6 +98,7 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			panelWidth,
 			msg.Height-v-4,
 		)
+
 	case cmds.GetRunningContainersMsg:
 		containersList := []list.Item{}
 
@@ -105,17 +108,34 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		cmd := m.list.SetItems(containersList)
 		finalCmds = append(finalCmds, cmd)
+
+	case cmds.SetFocusMsg:
+		if int(msg) == m.componentId {
+			m.isFocused = true
+		} else {
+			m.isFocused = false
+		}
 	}
 
-	var cmd tea.Cmd
-	m.list, cmd = m.list.Update(msg)
-	finalCmds = append(finalCmds, cmd)
+	if m.isFocused {
+		var cmd tea.Cmd
+		m.list, cmd = m.list.Update(msg)
+		finalCmds = append(finalCmds, cmd)
+	}
 
 	return m, tea.Batch(finalCmds...)
 }
 
 func (m ServicesListModel) View() tea.View {
-	wrapper := lipgloss.NewStyle().PaddingLeft(1)
+	wrapper := lipgloss.NewStyle().
+		Padding(1, 2, 2, 2)
+
+	if m.isFocused {
+		wrapper = wrapper.
+			BorderStyle(lipgloss.RoundedBorder()).
+			BorderForeground(appstyles.PrimaryColor).
+			Padding(0, 1, 1, 1)
+	}
 
 	renderedList := wrapper.Render(m.list.View())
 
@@ -141,6 +161,7 @@ func ServicesList(items []list.Item, width int, height int) tea.Model {
 		Background(appstyles.PrimaryColor)
 
 	return ServicesListModel{
-		list: servicesList,
+		list:        servicesList,
+		componentId: 1,
 	}
 }
