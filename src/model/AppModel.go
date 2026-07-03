@@ -1,6 +1,7 @@
 package model
 
 import (
+	"stack-stitcher/src/apptypes"
 	"stack-stitcher/src/cmds"
 	"stack-stitcher/src/components"
 	"stack-stitcher/src/constants"
@@ -26,10 +27,10 @@ type containersModel struct {
 }
 
 type Components struct {
-	MainMenu,
-	ContainersList,
-	ServicesList,
-	DetailsPanel tea.Model
+	MainMenu       components.MainMenuModel
+	ContainersList components.ContainersListModel
+	ServicesList   components.ServicesListModel
+	DetailsPanel   components.DetailsPanelModel
 }
 
 type AppModel struct {
@@ -85,8 +86,8 @@ func GetInitialModel() AppModel {
 		},
 		components: Components{
 			MainMenu:       components.MainMenu(),
-			ContainersList: components.ContainersList([]list.Item{}, 0, 0),
-			ServicesList:   components.ServicesList([]list.Item{}, 0, 0),
+			ContainersList: components.ContainersList([]apptypes.ContainerListItem{}, 0, 0),
+			ServicesList:   components.ServicesList([]types.ServiceConfig{}, 0, 0),
 			DetailsPanel:   components.DetailsPanel(nil),
 		},
 	}

@@ -28,7 +28,7 @@ func (m MainMenuModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m MainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m MainMenuModel) Update(msg tea.Msg) (MainMenuModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.terminalWidth = msg.Width
@@ -115,7 +115,7 @@ func (m MainMenuModel) View() tea.View {
 	return tea.NewView(tabBar)
 }
 
-func MainMenu() tea.Model {
+func MainMenu() MainMenuModel {
 	items := []string{}
 
 	for _, page := range apptypes.PageTitles {

@@ -1,23 +1,24 @@
 package components
 
 import (
+	"encoding/json"
 	"stack-stitcher/src/appstyles"
-	"stack-stitcher/src/apptypes"
 	"stack-stitcher/src/cmds"
 	"stack-stitcher/src/constants"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/compose-spec/compose-go/v2/types"
 )
 
 var wrapperStyle = lipgloss.NewStyle().
-	Padding(2)
+	Padding(1, 2)
 
 var logoStyle = lipgloss.NewStyle().
 	Align(lipgloss.Center)
 
 type DetailsPanelModel struct {
-	container   *apptypes.DockerContainer
+	container   any
 	panelWidth  int
 	panelHeight int
 	isFocused   bool
@@ -28,7 +29,7 @@ func (m DetailsPanelModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m DetailsPanelModel) Update(msg tea.Msg) (DetailsPanelModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		h, _ := wrapperStyle.GetFrameSize()
@@ -44,36 +45,63 @@ func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			m.isFocused = false
 		}
+
+	case cmds.SetSelectedServiceMsg:
+		service := types.ServiceConfig(msg)
+		m.container = service
 	}
+
 	return m, nil
 }
 
 func (m DetailsPanelModel) View() tea.View {
-	style := wrapperStyle
-	screen := lipgloss.JoinVertical(lipgloss.Left, constants.LOGO, "", "", constants.SLOGAN)
+	style := wrapperStyle.
+		Width(m.panelWidth).
+		Height(m.panelHeight - 1)
+
+	title := appstyles.NormalTitle.Render("Details")
 
 	if m.isFocused {
 		style = style.
 			BorderStyle(lipgloss.RoundedBorder()).
 			BorderForeground(appstyles.PrimaryColor).
-			Padding(1)
+			Padding(0, 1)
 	}
 
-	title := appstyles.NormalTitle.Render("Details")
+	if m.container == nil {
+		screen := lipgloss.JoinVertical(lipgloss.Left, constants.LOGO, "", "", constants.SLOGAN)
 
-	screen = style.
-		Width(m.panelWidth).
-		Height(m.panelHeight - 1).
-		Align(lipgloss.Center).
-		AlignVertical(lipgloss.Center).
-		Render(lipgloss.JoinVertical(lipgloss.Left, title, screen))
+		screen = style.
+			Align(lipgloss.Center).
+			AlignVertical(lipgloss.Center).
+			Render(lipgloss.JoinVertical(lipgloss.Left, title, screen))
+
+		return tea.NewView(screen)
+	}
+
+	containerPrint, err := json.MarshalIndent(m.container, "", " ")
+	if err != nil {
+		panic(err)
+	}
+
+	screen := lipgloss.JoinVertical(lipgloss.Left, title, "", string(containerPrint))
+	screen = style.Render(screen)
 
 	return tea.NewView(screen)
 }
 
-func DetailsPanel(container *apptypes.DockerContainer) tea.Model {
+func DetailsPanel(container any) DetailsPanelModel {
+	service, ok := container.(types.ServiceConfig)
+
+	if ok {
+		return DetailsPanelModel{
+			container:   service,
+			componentId: 2,
+		}
+	}
+
 	return DetailsPanelModel{
-		container:   container,
+		container:   nil,
 		componentId: 2,
 	}
 }

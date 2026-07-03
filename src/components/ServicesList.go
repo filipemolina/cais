@@ -104,7 +104,7 @@ func (m ServicesListModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m ServicesListModel) Update(msg tea.Msg) (ServicesListModel, tea.Cmd) {
 	var finalCmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -125,13 +125,21 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.isFocused {
 				m.listDelegate.activeIndex = m.list.GlobalIndex()
 				m.list.SetDelegate(m.listDelegate)
+
+				selectedItem := m.list.SelectedItem()
+				selectedService, ok := selectedItem.(apptypes.ServiceListItem)
+
+				if ok {
+					selectedServiceCmd := cmds.SetSelectedService(selectedService.Service)
+					finalCmds = append(finalCmds, selectedServiceCmd)
+				}
 			}
 		}
 
-	case cmds.GetConfigMsg:
+	case cmds.SetServicesListMsg:
 		servicesList := []list.Item{}
 
-		for _, service := range msg.Project.Services {
+		for _, service := range msg {
 			newService := apptypes.ServiceListItem{
 				Service: service,
 			}
@@ -184,7 +192,13 @@ func (m ServicesListModel) View() tea.View {
  * Initializer function
  */
 
-func ServicesList(items []list.Item, width int, height int) tea.Model {
+func ServicesList(services []types.ServiceConfig, width int, height int) ServicesListModel {
+	var items []list.Item
+
+	for _, service := range services {
+		items = append(items, apptypes.ServiceListItem{Service: service})
+	}
+
 	listDelegate := servicesListCustomDelegate{}
 	servicesList := list.New(items, listDelegate, width, height)
 	servicesList.SetShowHelp(false)
