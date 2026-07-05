@@ -1,7 +1,6 @@
 package components
 
 import (
-	"encoding/json"
 	"stack-stitcher/src/appstyles"
 	"stack-stitcher/src/cmds"
 	"stack-stitcher/src/constants"
@@ -79,9 +78,11 @@ func (m DetailsPanelModel) View() tea.View {
 		return tea.NewView(screen)
 	}
 
-	containerPrint, err := json.MarshalIndent(m.container, "", " ")
-	if err != nil {
-		panic(err)
+	var basicInfo string
+
+	container, ok := m.container.(types.ServiceConfig)
+	if ok {
+		basicInfo = BasicInfo(container, m.panelWidth)
 	}
 
 	StartButton := Button("Start", "s").View().Content
@@ -94,7 +95,7 @@ func (m DetailsPanelModel) View() tea.View {
 		AlignHorizontal(lipgloss.Right).
 		Render(lipgloss.JoinHorizontal(lipgloss.Left, StartButton, StopButton, RestartButton, PullButton, RemoveButton))
 
-	screen := lipgloss.JoinVertical(lipgloss.Left, title, leftButtons, string(containerPrint))
+	screen := lipgloss.JoinVertical(lipgloss.Left, title, leftButtons, basicInfo)
 	screen = style.Render(screen)
 
 	return tea.NewView(screen)
