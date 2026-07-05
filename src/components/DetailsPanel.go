@@ -84,7 +84,17 @@ func (m DetailsPanelModel) View() tea.View {
 		panic(err)
 	}
 
-	screen := lipgloss.JoinVertical(lipgloss.Left, title, "", string(containerPrint))
+	StartButton := Button("Start", "s").View().Content
+	StopButton := Button("Stop", "t").View().Content
+	RestartButton := Button("Restart", "r").View().Content
+	PullButton := Button("Pull", "p").View().Content
+	RemoveButton := Button("Remove", "x").View().Content
+	leftButtons := lipgloss.NewStyle().
+		Width(m.panelWidth - 5).
+		AlignHorizontal(lipgloss.Right).
+		Render(lipgloss.JoinHorizontal(lipgloss.Left, StartButton, StopButton, RestartButton, PullButton, RemoveButton))
+
+	screen := lipgloss.JoinVertical(lipgloss.Left, title, leftButtons, string(containerPrint))
 	screen = style.Render(screen)
 
 	return tea.NewView(screen)
