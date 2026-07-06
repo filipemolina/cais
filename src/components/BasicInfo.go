@@ -19,6 +19,7 @@ func BasicInfo(service types.ServiceConfig, width int) string {
 	pgidHeader := lipgloss.NewStyle().Bold(true).Render(" PGID: ")
 	imageHeader := lipgloss.NewStyle().Bold(true).Render("Image: ")
 	portsHeader := lipgloss.NewStyle().Bold(true).Render("Ports: ")
+	profilesHeader := lipgloss.NewStyle().Bold(true).Render("Profiles: ")
 	// volumesHeader := lipgloss.NewStyle().Bold(true).Render("Volumes: ")
 
 	ports := service.Ports
@@ -44,8 +45,9 @@ func BasicInfo(service types.ServiceConfig, width int) string {
 	nameLine := lipgloss.JoinHorizontal(lipgloss.Top, nameHeader, service.ContainerName)
 	idLine := lipgloss.JoinHorizontal(lipgloss.Top, puidHeader, puid, pgidHeader, pgid)
 	imageLine := lipgloss.JoinHorizontal(lipgloss.Top, imageHeader, service.Image)
+	profilesLine := lipgloss.JoinHorizontal(lipgloss.Top, profilesHeader, fmt.Sprintf("%+v", service.Profiles))
 
-	info := lipgloss.JoinVertical(lipgloss.Left, nameLine, idLine, imageLine, portsHeader, portContent)
+	info := lipgloss.JoinVertical(lipgloss.Left, nameLine, idLine, imageLine, portsHeader, profilesLine, portContent)
 
 	return wrapper.Render(info)
 }

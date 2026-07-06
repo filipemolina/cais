@@ -7,7 +7,7 @@ import (
 
 type SetSelectedServiceMsg types.ServiceConfig
 
-func SetSelectedService(service types.ServiceConfig) func() tea.Msg {
+func SetSelectedService(service types.ServiceConfig) tea.Cmd {
 	return func() tea.Msg {
 		return SetSelectedServiceMsg(service)
 	}

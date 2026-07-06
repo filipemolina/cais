@@ -7,7 +7,7 @@ import (
 
 type SetServicesListMsg []types.ServiceConfig
 
-func SetServicesList(services []types.ServiceConfig) func() tea.Msg {
+func SetServicesList(services []types.ServiceConfig) tea.Cmd {
 	return func() tea.Msg {
 		return SetServicesListMsg(services)
 	}

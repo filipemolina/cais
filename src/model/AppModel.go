@@ -31,6 +31,7 @@ type Components struct {
 	ContainersList components.ContainersListModel
 	ServicesList   components.ServicesListModel
 	DetailsPanel   components.DetailsPanelModel
+	ProfilesList   components.ProfileListModel
 }
 
 type AppModel struct {
@@ -89,6 +90,7 @@ func GetInitialModel() AppModel {
 			ContainersList: components.ContainersList([]apptypes.ContainerListItem{}, 0, 0),
 			ServicesList:   components.ServicesList([]types.ServiceConfig{}, 0, 0),
 			DetailsPanel:   components.DetailsPanel(nil),
+			ProfilesList:   components.ProfilesList([]string{}, 0, 0),
 		},
 	}
 }
