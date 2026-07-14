@@ -87,7 +87,7 @@ func (m ContainersListModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m ContainersListModel) Update(msg tea.Msg) (ContainersListModel, tea.Cmd) {
+func (m ContainersListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var finalCmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -152,7 +152,7 @@ func (m ContainersListModel) View() tea.View {
  * Initializer function
  */
 
-func ContainersList(containers []apptypes.ContainerListItem, width int, height int) ContainersListModel {
+func ContainersList(containers []apptypes.ContainerListItem, width int, height int) tea.Model {
 	var items []list.Item
 
 	for _, container := range containers {

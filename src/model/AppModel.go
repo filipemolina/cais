@@ -27,17 +27,18 @@ type containersModel struct {
 }
 
 type Components struct {
-	MainMenu       components.MainMenuModel
-	ContainersList components.ContainersListModel
-	ServicesList   components.ServicesListModel
-	DetailsPanel   components.DetailsPanelModel
-	ProfilesList   components.ProfileListModel
+	MainMenu,
+	ContainersList,
+	ServicesList,
+	DetailsPanel,
+	ProfilesList tea.Model
 }
 
 type AppModel struct {
 	navigation       navigationModel
 	config           configModel
 	containers       containersModel
+	pages            map[string][]tea.Model
 	components       Components
 	focusedComponent int
 }
@@ -77,6 +78,18 @@ func (m *AppModel) ChangeFocus(index *int) tea.Cmd {
 }
 
 func GetInitialModel() AppModel {
+	pages := make(map[string][]tea.Model)
+
+	pages["Home"] = []tea.Model{
+		components.ProfilesList([]string{}, 0, 0),
+		components.GroupDetailsPanel(nil),
+	}
+
+	pages["Dashboard"] = []tea.Model{
+		components.ServicesList([]types.ServiceConfig{}, 0, 0),
+		components.DetailsPanel(nil),
+	}
+
 	return AppModel{
 		containers: containersModel{
 			runningContainers: []list.Item{},
@@ -85,6 +98,7 @@ func GetInitialModel() AppModel {
 			configFileName: "",
 			configProject:  nil,
 		},
+		pages: pages,
 		components: Components{
 			MainMenu:       components.MainMenu(),
 			ContainersList: components.ContainersList([]apptypes.ContainerListItem{}, 0, 0),

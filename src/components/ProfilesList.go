@@ -100,7 +100,7 @@ func (m ProfileListModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m ProfileListModel) Update(msg tea.Msg) (ProfileListModel, tea.Cmd) {
+func (m ProfileListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var finalCmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -186,7 +186,7 @@ func (m ProfileListModel) View() tea.View {
  * Initializer function
  */
 
-func ProfilesList(profiles []string, width int, height int) ProfileListModel {
+func ProfilesList(profiles []string, width int, height int) tea.Model {
 	var items []list.Item
 
 	for _, profile := range profiles {

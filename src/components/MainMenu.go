@@ -28,7 +28,9 @@ func (m MainMenuModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m MainMenuModel) Update(msg tea.Msg) (MainMenuModel, tea.Cmd) {
+func (m MainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var finalCmds []tea.Cmd
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.terminalWidth = msg.Width
@@ -47,20 +49,26 @@ func (m MainMenuModel) Update(msg tea.Msg) (MainMenuModel, tea.Cmd) {
 			case "left", "h":
 				if m.focusedItemIndex > 0 {
 					m.focusedItemIndex--
+					setPageCmd := cmds.SetActivePage(m.focusedItemIndex)
+					finalCmds = append(finalCmds, setPageCmd)
 				}
 
 			case "right", "l":
 				if m.focusedItemIndex < len(m.items)-1 {
 					m.focusedItemIndex++
+					setPageCmd := cmds.SetActivePage(m.focusedItemIndex)
+					finalCmds = append(finalCmds, setPageCmd)
 				}
 
 			case "space":
 				m.selectedItemIndex = m.focusedItemIndex
+				setPageCmd := cmds.SetActivePage(m.focusedItemIndex)
+				finalCmds = append(finalCmds, setPageCmd)
 			}
 		}
 	}
 
-	return m, nil
+	return m, tea.Batch(finalCmds...)
 }
 
 func (m MainMenuModel) View() tea.View {
@@ -115,7 +123,7 @@ func (m MainMenuModel) View() tea.View {
 	return tea.NewView(tabBar)
 }
 
-func MainMenu() MainMenuModel {
+func MainMenu() tea.Model {
 	items := []string{}
 
 	for _, page := range apptypes.PageTitles {

@@ -104,7 +104,7 @@ func (m ServicesListModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m ServicesListModel) Update(msg tea.Msg) (ServicesListModel, tea.Cmd) {
+func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var finalCmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -192,7 +192,7 @@ func (m ServicesListModel) View() tea.View {
  * Initializer function
  */
 
-func ServicesList(services []types.ServiceConfig, width int, height int) ServicesListModel {
+func ServicesList(services []types.ServiceConfig, width int, height int) tea.Model {
 	var items []list.Item
 
 	for _, service := range services {

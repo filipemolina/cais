@@ -1,7 +1,7 @@
 package apptypes
 
 var PageTitles = []string{
-	"Groups",
+	"Home",
 	"Dashboard",
 	"Compose Files",
 	"Settings",

@@ -10,7 +10,7 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 )
 
-type DetailsPanelModel struct {
+type GroupDetailsPanelModel struct {
 	container   any
 	panelWidth  int
 	panelHeight int
@@ -18,11 +18,11 @@ type DetailsPanelModel struct {
 	componentId int
 }
 
-func (m DetailsPanelModel) Init() tea.Cmd {
+func (m GroupDetailsPanelModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m GroupDetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		h, _ := wrapperStyle.GetFrameSize()
@@ -47,7 +47,7 @@ func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m DetailsPanelModel) View() tea.View {
+func (m GroupDetailsPanelModel) View() tea.View {
 	style := wrapperStyle.
 		Width(m.panelWidth).
 		Height(m.panelHeight - 1)
@@ -95,17 +95,17 @@ func (m DetailsPanelModel) View() tea.View {
 	return tea.NewView(screen)
 }
 
-func DetailsPanel(container any) tea.Model {
+func GroupDetailsPanel(container any) tea.Model {
 	service, ok := container.(types.ServiceConfig)
 
 	if ok {
-		return DetailsPanelModel{
+		return GroupDetailsPanelModel{
 			container:   service,
 			componentId: 2,
 		}
 	}
 
-	return DetailsPanelModel{
+	return GroupDetailsPanelModel{
 		container:   nil,
 		componentId: 2,
 	}
