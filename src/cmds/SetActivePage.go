@@ -2,10 +2,10 @@ package cmds
 
 import tea "charm.land/bubbletea/v2"
 
-type SetActivePageMsg int
+type SetActivePageMsg string
 
-func SetActivePage(idx int) func() tea.Msg {
+func SetActivePage(pageTitle string) func() tea.Msg {
 	return func() tea.Msg {
-		return SetActivePageMsg(idx)
+		return SetActivePageMsg(pageTitle)
 	}
 }

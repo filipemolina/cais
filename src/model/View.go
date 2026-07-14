@@ -8,17 +8,24 @@ import (
 )
 
 func (m AppModel) View() tea.View {
+	var v tea.View
 	mainMenu := m.components.MainMenu.View().Content
-	// servicesList := m.components.ServicesList.View().Content
-	profilesList := m.components.ProfilesList.View().Content
-	detailsView := m.components.DetailsPanel.View().Content
+	pageComponents, ok := m.pages[m.activePage]
 
-	body := lipgloss.JoinHorizontal(lipgloss.Top, profilesList, detailsView)
+	if ok {
+		var contents []string
 
-	layout := lipgloss.JoinVertical(lipgloss.Left, mainMenu, body)
+		for idx, _ := range pageComponents {
+			contents = append(contents, pageComponents[idx].View().Content)
+		}
 
-	v := tea.NewView(appstyles.DocStyle.Render(layout))
-	v.AltScreen = true
+		body := lipgloss.JoinHorizontal(lipgloss.Top, contents...)
+
+		layout := lipgloss.JoinVertical(lipgloss.Left, mainMenu, body)
+		v = tea.NewView(appstyles.DocStyle.Render(layout))
+
+		v.AltScreen = true
+	}
 
 	return v
 }

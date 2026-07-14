@@ -1,7 +1,6 @@
 package model
 
 import (
-	"stack-stitcher/src/apptypes"
 	"stack-stitcher/src/cmds"
 	"stack-stitcher/src/components"
 	"stack-stitcher/src/constants"
@@ -27,11 +26,7 @@ type containersModel struct {
 }
 
 type Components struct {
-	MainMenu,
-	ContainersList,
-	ServicesList,
-	DetailsPanel,
-	ProfilesList tea.Model
+	MainMenu tea.Model
 }
 
 type AppModel struct {
@@ -39,6 +34,7 @@ type AppModel struct {
 	config           configModel
 	containers       containersModel
 	pages            map[string][]tea.Model
+	activePage       string
 	components       Components
 	focusedComponent int
 }
@@ -77,6 +73,22 @@ func (m *AppModel) ChangeFocus(index *int) tea.Cmd {
 	return func() tea.Msg { return cmds.SetFocusMsg(finalIdx) }
 }
 
+func (m *AppModel) UpdateInnerComponent(activePage string, msg tea.Msg) tea.Cmd {
+	var finalCmds []tea.Cmd
+
+	innerComponents, ok := m.pages[activePage]
+
+	if ok {
+		for idx, _ := range innerComponents {
+			var componentCmd tea.Cmd
+			m.pages[activePage][idx], componentCmd = m.pages[activePage][idx].Update(msg)
+			finalCmds = append(finalCmds, componentCmd)
+		}
+	}
+
+	return tea.Batch(finalCmds...)
+}
+
 func GetInitialModel() AppModel {
 	pages := make(map[string][]tea.Model)
 
@@ -98,13 +110,9 @@ func GetInitialModel() AppModel {
 			configFileName: "",
 			configProject:  nil,
 		},
-		pages: pages,
 		components: Components{
-			MainMenu:       components.MainMenu(),
-			ContainersList: components.ContainersList([]apptypes.ContainerListItem{}, 0, 0),
-			ServicesList:   components.ServicesList([]types.ServiceConfig{}, 0, 0),
-			DetailsPanel:   components.DetailsPanel(nil),
-			ProfilesList:   components.ProfilesList([]string{}, 0, 0),
+			MainMenu: components.MainMenu(),
 		},
+		pages: pages,
 	}
 }
