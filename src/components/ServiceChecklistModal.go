@@ -14,8 +14,8 @@ import (
 
 type serviceChecklistDelegate struct{}
 
-func (d serviceChecklistDelegate) Height() int                            { return 1 }
-func (d serviceChecklistDelegate) Spacing() int                           { return 0 }
+func (d serviceChecklistDelegate) Height() int                             { return 1 }
+func (d serviceChecklistDelegate) Spacing() int                            { return 0 }
 func (d serviceChecklistDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 
 func (d serviceChecklistDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
