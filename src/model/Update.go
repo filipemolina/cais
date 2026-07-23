@@ -2,10 +2,11 @@ package model
 
 import (
 	"cmp"
+	"fmt"
 	"maps"
 	"slices"
 	"stack-stitcher/src/cmds"
-	"stack-stitcher/src/utils"
+	"stack-stitcher/src/components"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/compose-spec/compose-go/v2/types"
@@ -43,14 +44,7 @@ func (m AppModel) configSyncCmds() []tea.Cmd {
 		syncCmds = append(syncCmds, cmds.SetSelectedService(orderedServices[0]))
 	}
 
-	orderedProfiles := make([]string, 0, len(m.config.configProject.Profiles))
-
-	for _, service := range m.config.configProject.Services {
-		orderedProfiles = append(orderedProfiles, service.Profiles...)
-	}
-
-	orderedProfiles = utils.Deduplicate(orderedProfiles)
-	slices.Sort(orderedProfiles)
+	orderedProfiles := m.allProfileNames()
 
 	syncCmds = append(syncCmds, cmds.SetProfilesList(orderedProfiles))
 	if len(orderedProfiles) > 0 {
@@ -65,6 +59,16 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// at the end. Those can come from this model or from any of the
 	// nested models in m.components
 	var finalCmds []tea.Cmd
+
+	// While a modal is open, it owns all key input exclusively - the
+	// underlying panels and Tab/quit handling are frozen until it closes.
+	if m.activeModal != nil {
+		if _, ok := msg.(tea.KeyPressMsg); ok {
+			var modalCmd tea.Cmd
+			m.activeModal, modalCmd = m.activeModal.Update(msg)
+			return m, modalCmd
+		}
+	}
 
 	switch msg := msg.(type) {
 	// Handle keyboard events
@@ -124,6 +128,46 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.config.configFileName = msg.FileName
 		m.config.configProject = msg.Project
 		finalCmds = append(finalCmds, m.configSyncCmds()...)
+
+	case cmds.OpenCreateProfileModalMsg:
+		if m.config.configProject != nil {
+			m.activeModal = components.ProfileNameModal(m.allProfileNames(), m.config.configProject.ServiceNames())
+		}
+
+	case cmds.OpenDeleteProfileModalMsg:
+		profileName := string(msg)
+		m.activeModal = components.ConfirmModal(
+			fmt.Sprintf("Delete profile %q? (y/n)", profileName),
+			cmds.DeleteProfile(profileName),
+		)
+
+	case cmds.CloseModalMsg:
+		m.activeModal = nil
+		if msg.Follow != nil {
+			finalCmds = append(finalCmds, msg.Follow)
+		}
+
+	case cmds.CreateProfileMsg:
+		if msg.Err != nil {
+			m.lastError = msg.Err.Error()
+		} else {
+			m.lastError = ""
+			finalCmds = append(finalCmds, cmds.GetConfig)
+		}
+
+	case cmds.DeleteProfileMsg:
+		if msg.Err != nil {
+			m.lastError = msg.Err.Error()
+		} else {
+			m.lastError = ""
+			finalCmds = append(finalCmds, cmds.GetConfig)
+		}
+	}
+
+	if m.activeModal != nil {
+		var modalCmd tea.Cmd
+		m.activeModal, modalCmd = m.activeModal.Update(msg)
+		finalCmds = append(finalCmds, modalCmd)
 	}
 
 	// Update nested components

@@ -1,9 +1,11 @@
 package model
 
 import (
+	"slices"
 	"stack-stitcher/src/cmds"
 	"stack-stitcher/src/components"
 	"stack-stitcher/src/constants"
+	"stack-stitcher/src/utils"
 
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
@@ -38,6 +40,7 @@ type AppModel struct {
 	components       Components
 	focusedComponent int
 	lastError        string
+	activeModal      tea.Model
 }
 
 func (m *AppModel) ChangeFocus(index *int) tea.Cmd {
@@ -72,6 +75,25 @@ func (m *AppModel) ChangeFocus(index *int) tea.Cmd {
 	}
 
 	return func() tea.Msg { return cmds.SetFocusMsg(finalIdx) }
+}
+
+// allProfileNames returns every distinct profile referenced by any service
+// in the loaded compose project, sorted. Returns nil if no project is
+// loaded yet.
+func (m AppModel) allProfileNames() []string {
+	if m.config.configProject == nil {
+		return nil
+	}
+
+	var profiles []string
+	for _, service := range m.config.configProject.Services {
+		profiles = append(profiles, service.Profiles...)
+	}
+
+	profiles = utils.Deduplicate(profiles)
+	slices.Sort(profiles)
+
+	return profiles
 }
 
 func (m *AppModel) UpdateInnerComponent(activePage string, msg tea.Msg) tea.Cmd {
