@@ -32,10 +32,29 @@ func (m AppModel) View() tea.View {
 		}
 
 		layout := lipgloss.JoinVertical(lipgloss.Left, sections...)
-		v = tea.NewView(appstyles.DocStyle.Render(layout))
+		rendered := appstyles.DocStyle.Render(layout)
 
+		if m.activeModal != nil {
+			rendered = m.renderWithModal(rendered)
+		}
+
+		v = tea.NewView(rendered)
 		v.AltScreen = true
 	}
 
 	return v
+}
+
+// renderWithModal composites the active modal as a centered layer on top
+// of the rest of the screen.
+func (m AppModel) renderWithModal(base string) string {
+	modalContent := m.activeModal.View().Content
+
+	x := max(0, (m.config.terminalWidht-lipgloss.Width(modalContent))/2)
+	y := max(0, (m.config.terminalHeight-lipgloss.Height(modalContent))/2)
+
+	baseLayer := lipgloss.NewLayer(base)
+	modalLayer := lipgloss.NewLayer(modalContent).X(x).Y(y).Z(1)
+
+	return lipgloss.NewCompositor(baseLayer, modalLayer).Render()
 }
