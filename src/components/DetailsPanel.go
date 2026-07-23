@@ -57,6 +57,10 @@ func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				actionCmd := cmds.RunDockerAction(action, m.service.Name, false)
 				finalCmds = append(finalCmds, actionCmd)
 			}
+
+			if msg.String() == "l" {
+				finalCmds = append(finalCmds, cmds.OpenLogsModal(m.service.Name, false))
+			}
 		}
 	}
 
