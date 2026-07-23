@@ -10,7 +10,7 @@ Stack Stitcher reads a Docker **Compose** file and turns it into an interactive 
 
 ## Project status
 
-Stack Stitcher is under **active development**. Compose parsing, navigation, and starting/stopping services (individually or as a whole profile) all work. Editing services, creating/deleting profiles from the TUI, and bootstrapping a compose file from scratch are still on the roadmap. Feedback, issues, and ideas are genuinely welcome and help shape where it goes next.
+Stack Stitcher is under **active development**. Compose parsing, navigation, starting/stopping services (individually or as a whole profile), and creating/deleting profiles all work. Editing services and bootstrapping a compose file from scratch are still on the roadmap. Feedback, issues, and ideas are genuinely welcome and help shape where it goes next.
 
 ![Stack Stitcher demo](./demo/demo.gif)
 
@@ -72,6 +72,8 @@ It auto-detects the compose file in the current directory, checking in order: `c
 | `r` | Restart | A profile or service panel focused |
 | `p` | Pull | A profile or service panel focused |
 | `x` | Remove | A profile or service panel focused |
+| `n` | Create a new profile | Groups panel focused |
+| `d` | Delete the highlighted profile | Groups panel focused |
 | `q` / `Ctrl+C` | Quit | Everywhere |
 
 Start/Stop/Restart/Pull/Remove run `docker compose` under the hood — scoped to just the selected profile (every service tagged with it) on the Home page, or to just the selected service on the Dashboard page.
