@@ -1,0 +1,16 @@
+services:
+  app:
+    image: nginx:alpine
+    profiles: ["core"]
+    ports:
+      - "8085:80"
+
+  db:
+    image: postgres:alpine
+    profiles: ["core"]
+    environment:
+      POSTGRES_PASSWORD: demo
+
+  cache:
+    image: redis:alpine
+    profiles: ["core"]

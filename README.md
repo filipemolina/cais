@@ -10,22 +10,22 @@ Stack Stitcher reads a Docker **Compose** file and turns it into an interactive 
 
 ## Project status
 
-Stack Stitcher is under **active development**. The foundations are in place — Compose parsing, the service view, and navigation — while several actions and edge cases are still being built out and refined. It's ready to explore and experiment with, but not yet feature-complete, so expect some rough edges and occasional breaking changes as it works toward a stable release. Feedback, issues, and ideas are genuinely welcome and help shape where it goes next.
+Stack Stitcher is under **active development**. Compose parsing, navigation, and starting/stopping services (individually or as a whole profile) all work. Editing services, creating/deleting profiles from the TUI, and bootstrapping a compose file from scratch are still on the roadmap. Feedback, issues, and ideas are genuinely welcome and help shape where it goes next.
 
-<!-- TODO: drop a screenshot or a short VHS/asciinema GIF here — a TUI sells itself visually. -->
+![Stack Stitcher demo](./demo/demo.gif)
 
 ## Features
 
 - **Reads standard Compose files.** Uses the official [`compose-go`](https://github.com/compose-spec/compose-go) parser, so it understands the same `compose.yml` your Docker setup already relies on — no custom config format to learn.
 - **Keyboard-first TUI.** Built on [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Bubbles](https://github.com/charmbracelet/bubbles), and [Lip Gloss](https://github.com/charmbracelet/lipgloss) for a responsive, styled terminal experience.
-- **Fuzzy search.** Jump to any service in a large stack by typing part of its name.
-- **Clipboard support.** Copy service details straight to your clipboard.
-<!-- TODO: List the exact actions Stack Stitcher performs on a service (e.g. up / down / restart / view logs / status) and adjust the two lines above to match what's actually implemented. -->
+- **Start/stop a whole profile together.** Compose "profiles" group related services (e.g. everything a self-hosted app needs); Stack Stitcher lets you Start/Stop/Restart/Pull/Remove all of them in one keypress instead of remembering which services belong together.
+- **Start/stop a single service.** The same five actions are available for one service at a time from the Dashboard view.
 
 ## Requirements
 
 - **Go 1.26+** — to build from source.
 - **Docker** with the Compose plugin available on your `PATH`.
+- **`jq`** — used to parse `docker compose ps` output.
 - A **`compose.yml`** (or `docker-compose.yml`) describing your services.
 
 ## Installation
@@ -58,37 +58,46 @@ Run Stack Stitcher from a directory that contains your Compose file:
 stack-stitcher
 ```
 
-<!-- TODO: Document how the file is located — does it auto-detect ./compose.yml, or can the user pass a path/flag? Add that here. -->
+It auto-detects the compose file in the current directory, checking in order: `compose.yaml`, `compose.yml`, `docker-compose.yaml`, `docker-compose.yml`. There's no flag to point at a file elsewhere yet — `cd` into the project directory first.
 
 ### Key bindings
 
-<!-- TODO: Fill in the real key bindings from your Bubble Tea Update() logic, e.g.:
+| Key | Action | Where |
+| --- | --- | --- |
+| `Tab` / `Shift+Tab` | Move focus between panels | Everywhere |
+| `←`/`h` `→`/`l` | Switch page | Main menu focused |
+| `Space` | Select the highlighted profile or service | Profiles/Services list focused |
+| `s` | Start | A profile or service panel focused |
+| `t` | Stop | A profile or service panel focused |
+| `r` | Restart | A profile or service panel focused |
+| `p` | Pull | A profile or service panel focused |
+| `x` | Remove | A profile or service panel focused |
+| `q` / `Ctrl+C` | Quit | Everywhere |
 
-| Key         | Action                        |
-| ----------- | ----------------------------- |
-| `↑` / `↓`   | Navigate services             |
-| `/`         | Fuzzy search                  |
-| `enter`     | Select / run action           |
-| `y`         | Copy to clipboard             |
-| `q`         | Quit                          |
-
--->
+Start/Stop/Restart/Pull/Remove run `docker compose` under the hood — scoped to just the selected profile (every service tagged with it) on the Home page, or to just the selected service on the Dashboard page.
 
 ## Tech stack
 
 - **Language:** Go
 - **TUI:** Bubble Tea, Bubbles, Lip Gloss (Charm)
 - **Compose parsing:** `compose-spec/compose-go`
-- **Extras:** fuzzy matching (`sahilm/fuzzy`), clipboard (`atotto/clipboard`), shell parsing (`go-shellwords`)
+- **Docker actions:** shells out to the `docker compose` CLI (no Docker SDK dependency)
 
 ## Project layout
 
 ```
 .
-├── main.go        # Entry point — starts the Bubble Tea program
+├── main.go            # Entry point — starts the Bubble Tea program
 ├── src/
-│   └── model/     # Bubble Tea model (state, Update, View)
-├── Makefile       # dev / build targets
+│   ├── model/         # Top-level Bubble Tea model (AppModel, Update, View, Init)
+│   ├── components/    # Nested Bubble Tea models — one per panel (lists, details, buttons)
+│   ├── cmds/          # Message types + the tea.Cmds that produce them
+│   ├── apptypes/      # Shared data types (list items, docker container, pages)
+│   ├── utils/         # Non-Bubble Tea logic (compose file loading, docker exec, parsing)
+│   ├── appstyles/     # Lip Gloss colors/styles
+│   └── constants/     # Layout widths, branding, focusable component list
+├── demo/              # VHS script + recorded demo gif
+├── Makefile           # dev / build targets
 ├── go.mod
 └── go.sum
 ```
