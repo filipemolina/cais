@@ -7,11 +7,21 @@ import (
 	tea "charm.land/bubbletea/v2"
 )
 
-type GetRunningContainersMsg []apptypes.DockerContainer
+type GetRunningContainersMsg struct {
+	Containers []apptypes.DockerContainer
+	Err        error
+}
 
 func GetRunningContainers() tea.Msg {
-	commandOutput := utils.DockerPs()
-	containers := utils.ParseContainers(commandOutput)
+	commandOutput, err := utils.DockerComposePs()
+	if err != nil {
+		return GetRunningContainersMsg{Err: err}
+	}
 
-	return GetRunningContainersMsg(containers)
+	containers, err := utils.ParseContainers(commandOutput)
+	if err != nil {
+		return GetRunningContainersMsg{Err: err}
+	}
+
+	return GetRunningContainersMsg{Containers: containers}
 }

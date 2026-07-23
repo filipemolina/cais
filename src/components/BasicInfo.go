@@ -26,8 +26,17 @@ func BasicInfo(service types.ServiceConfig, width int) string {
 	var portLines []string
 
 	for _, port := range ports {
-		// portLines = append(portLines, port.Published+"\\"+strconv.FormatUint(uint64(port.Target), 100))
-		portLines = append(portLines, fmt.Sprintf("%+v", port))
+		protocol := port.Protocol
+		if protocol == "" {
+			protocol = "tcp"
+		}
+
+		portLine := fmt.Sprintf("%d/%s", port.Target, protocol)
+		if port.Published != "" {
+			portLine = port.Published + "->" + portLine
+		}
+
+		portLines = append(portLines, portLine)
 	}
 
 	portContent := lipgloss.JoinVertical(lipgloss.Left, portLines...)
@@ -38,7 +47,7 @@ func BasicInfo(service types.ServiceConfig, width int) string {
 		puid = *value
 	}
 
-	if value, ok := service.Environment["PUID"]; ok {
+	if value, ok := service.Environment["PGID"]; ok {
 		pgid = *value
 	}
 
@@ -47,7 +56,7 @@ func BasicInfo(service types.ServiceConfig, width int) string {
 	imageLine := lipgloss.JoinHorizontal(lipgloss.Top, imageHeader, service.Image)
 	profilesLine := lipgloss.JoinHorizontal(lipgloss.Top, profilesHeader, fmt.Sprintf("%+v", service.Profiles))
 
-	info := lipgloss.JoinVertical(lipgloss.Left, nameLine, idLine, imageLine, portsHeader, profilesLine, portContent)
+	info := lipgloss.JoinVertical(lipgloss.Left, nameLine, idLine, imageLine, profilesLine, portsHeader, portContent)
 
 	return wrapper.Render(info)
 }

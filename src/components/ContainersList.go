@@ -105,7 +105,7 @@ func (m ContainersListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cmds.GetRunningContainersMsg:
 		containersList := []list.Item{}
 
-		for _, container := range msg {
+		for _, container := range msg.Containers {
 			containersList = append(containersList, apptypes.ContainerListItem(container))
 		}
 

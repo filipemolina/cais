@@ -1,11 +1,11 @@
 package utils
 
 import (
-	"log"
+	"fmt"
 	"os"
 )
 
-func GetComposeFileName() string {
+func GetComposeFileName() (string, error) {
 	files, err := os.ReadDir(".")
 	var mainConfigFile string
 
@@ -17,7 +17,7 @@ func GetComposeFileName() string {
 	}
 
 	if err != nil {
-		log.Fatalf("There has been an error while reading the files in the directory: %v", err)
+		return "", fmt.Errorf("failed reading the current directory: %w", err)
 	}
 
 	curDirFileNames := make(map[string]struct{})
@@ -39,5 +39,9 @@ func GetComposeFileName() string {
 		}
 	}
 
-	return mainConfigFile
+	if mainConfigFile == "" {
+		return "", fmt.Errorf("no compose.yaml, compose.yml, docker-compose.yaml or docker-compose.yml found in the current directory")
+	}
+
+	return mainConfigFile, nil
 }

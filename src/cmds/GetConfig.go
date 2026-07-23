@@ -10,11 +10,19 @@ import (
 type GetConfigMsg = struct {
 	FileName string
 	Project  *types.Project
+	Err      error
 }
 
 func GetConfig() tea.Msg {
-	fileName := utils.GetComposeFileName()
-	project := utils.ReadConfigFile(fileName)
+	fileName, err := utils.GetComposeFileName()
+	if err != nil {
+		return GetConfigMsg{Err: err}
+	}
+
+	project, err := utils.ReadConfigFile(fileName)
+	if err != nil {
+		return GetConfigMsg{Err: err}
+	}
 
 	return GetConfigMsg{
 		FileName: fileName,

@@ -37,6 +37,7 @@ type AppModel struct {
 	activePage       string
 	components       Components
 	focusedComponent int
+	lastError        string
 }
 
 func (m *AppModel) ChangeFocus(index *int) tea.Cmd {
@@ -94,7 +95,7 @@ func GetInitialModel() AppModel {
 
 	pages["Home"] = []tea.Model{
 		components.ProfilesList([]string{}, 0, 0),
-		components.GroupDetailsPanel(nil),
+		components.GroupDetailsPanel(),
 	}
 
 	pages["Dashboard"] = []tea.Model{
@@ -114,5 +115,9 @@ func GetInitialModel() AppModel {
 			MainMenu: components.MainMenu(),
 		},
 		pages: pages,
+		// Matches the cmds.SetFocus(1) sent from Init() - keeps the Tab
+		// cycle counter in sync with which component is actually focused
+		// at startup, so the first Tab press doesn't appear to do nothing.
+		focusedComponent: 1,
 	}
 }

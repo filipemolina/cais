@@ -2,18 +2,18 @@ package utils
 
 import (
 	"encoding/json"
-	"log"
+	"fmt"
 	"stack-stitcher/src/apptypes"
 )
 
-func ParseContainers(jsonString string) []apptypes.DockerContainer {
+func ParseContainers(jsonString string) ([]apptypes.DockerContainer, error) {
 	var containers = []apptypes.DockerContainer{}
 
 	err := json.Unmarshal([]byte(jsonString), &containers)
 
 	if err != nil {
-		log.Fatalf("Failed parsing JSON outtup %s", err)
+		return nil, fmt.Errorf("failed parsing docker compose ps output: %w", err)
 	}
 
-	return containers
+	return containers, nil
 }

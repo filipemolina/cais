@@ -1,7 +1,9 @@
 package components
 
 import (
-	"stack-stitcher/src/appstyles"
+	"fmt"
+	"slices"
+	"stack-stitcher/src/apptypes"
 	"stack-stitcher/src/cmds"
 	"stack-stitcher/src/constants"
 
@@ -10,19 +12,53 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 )
 
+var groupDetailsPanelActions = map[string]string{
+	"s": "start",
+	"t": "stop",
+	"r": "restart",
+	"p": "pull",
+	"x": "remove",
+}
+
 type GroupDetailsPanelModel struct {
-	container   any
-	panelWidth  int
-	panelHeight int
-	isFocused   bool
-	componentId int
+	selectedProfile string
+	services        []types.ServiceConfig
+	containers      []apptypes.DockerContainer
+	panelWidth      int
+	panelHeight     int
+	isFocused       bool
+	componentId     int
 }
 
 func (m GroupDetailsPanelModel) Init() tea.Cmd {
 	return nil
 }
 
+func (m GroupDetailsPanelModel) memberServices() []types.ServiceConfig {
+	var members []types.ServiceConfig
+
+	for _, service := range m.services {
+		if slices.Contains(service.Profiles, m.selectedProfile) {
+			members = append(members, service)
+		}
+	}
+
+	return members
+}
+
+func (m GroupDetailsPanelModel) isServiceRunning(serviceName string) bool {
+	for _, container := range m.containers {
+		if container.Service == serviceName {
+			return container.State == "running"
+		}
+	}
+
+	return false
+}
+
 func (m GroupDetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var finalCmds []tea.Cmd
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		h, _ := wrapperStyle.GetFrameSize()
@@ -39,74 +75,61 @@ func (m GroupDetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.isFocused = false
 		}
 
-	case cmds.SetSelectedServiceMsg:
-		service := types.ServiceConfig(msg)
-		m.container = service
+	case cmds.SetSelectedProfileMsg:
+		m.selectedProfile = string(msg)
+
+	case cmds.SetServicesListMsg:
+		m.services = msg
+
+	case cmds.GetRunningContainersMsg:
+		if msg.Err == nil {
+			m.containers = msg.Containers
+		}
+
+	case tea.KeyPressMsg:
+		if m.isFocused && m.selectedProfile != "" {
+			if action, ok := groupDetailsPanelActions[msg.String()]; ok {
+				actionCmd := cmds.RunDockerAction(action, m.selectedProfile, true)
+				finalCmds = append(finalCmds, actionCmd)
+			}
+		}
 	}
 
-	return m, nil
+	return m, tea.Batch(finalCmds...)
 }
 
 func (m GroupDetailsPanelModel) View() tea.View {
-	style := wrapperStyle.
-		Width(m.panelWidth).
-		Height(m.panelHeight - 1)
-
-	title := appstyles.NormalTitle.Render("Details")
-
-	if m.isFocused {
-		style = style.
-			BorderStyle(lipgloss.RoundedBorder()).
-			BorderForeground(appstyles.PrimaryColor).
-			Padding(0, 1)
-	}
-
-	if m.container == nil {
-		screen := lipgloss.JoinVertical(lipgloss.Left, constants.LOGO, "", "", constants.SLOGAN)
-
-		screen = style.
-			Align(lipgloss.Center).
-			AlignVertical(lipgloss.Center).
-			Render(lipgloss.JoinVertical(lipgloss.Left, title, screen))
-
+	if m.selectedProfile == "" {
+		screen := renderPanelFrame("Details", m.isFocused, m.panelWidth, m.panelHeight, "", "")
 		return tea.NewView(screen)
 	}
 
-	var basicInfo string
+	members := m.memberServices()
+	runningCount := 0
 
-	container, ok := m.container.(types.ServiceConfig)
-	if ok {
-		basicInfo = BasicInfo(container, m.panelWidth)
+	memberLines := make([]string, 0, len(members))
+	for _, service := range members {
+		status := "stopped"
+		if m.isServiceRunning(service.Name) {
+			status = "running"
+			runningCount++
+		}
+
+		memberLines = append(memberLines, fmt.Sprintf("%s (%s)", service.Name, status))
 	}
 
-	StartButton := Button("Start", "s").View().Content
-	StopButton := Button("Stop", "t").View().Content
-	RestartButton := Button("Restart", "r").View().Content
-	PullButton := Button("Pull", "p").View().Content
-	RemoveButton := Button("Remove", "x").View().Content
-	leftButtons := lipgloss.NewStyle().
-		Width(m.panelWidth - 5).
-		AlignHorizontal(lipgloss.Right).
-		Render(lipgloss.JoinHorizontal(lipgloss.Left, StartButton, StopButton, RestartButton, PullButton, RemoveButton))
+	header := lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf("Profile: %s", m.selectedProfile))
+	summary := fmt.Sprintf("%d running, %d stopped", runningCount, len(members)-runningCount)
+	body := lipgloss.JoinVertical(lipgloss.Left, append([]string{header, summary, ""}, memberLines...)...)
 
-	screen := lipgloss.JoinVertical(lipgloss.Left, title, leftButtons, basicInfo)
-	screen = style.Render(screen)
+	buttons := renderActionButtons(m.panelWidth)
+	screen := renderPanelFrame("Details", m.isFocused, m.panelWidth, m.panelHeight, body, buttons)
 
 	return tea.NewView(screen)
 }
 
-func GroupDetailsPanel(container any) tea.Model {
-	service, ok := container.(types.ServiceConfig)
-
-	if ok {
-		return GroupDetailsPanelModel{
-			container:   service,
-			componentId: 2,
-		}
-	}
-
+func GroupDetailsPanel() tea.Model {
 	return GroupDetailsPanelModel{
-		container:   nil,
 		componentId: 2,
 	}
 }

@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -9,17 +10,13 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 )
 
-func check(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
-
-func ReadConfigFile(fileName string) *types.Project {
+func ReadConfigFile(fileName string) (*types.Project, error) {
 	projectName := "stack-stitcher"
 	ctx := context.Background()
 	workingDir, wdErr := os.Getwd()
-	check(wdErr)
+	if wdErr != nil {
+		return nil, fmt.Errorf("failed reading working directory: %w", wdErr)
+	}
 
 	path := filepath.Join(workingDir, fileName)
 	options, projectErr := cli.NewProjectOptions(
@@ -28,10 +25,14 @@ func ReadConfigFile(fileName string) *types.Project {
 		cli.WithDotEnv,
 		cli.WithName(projectName),
 	)
-	check(projectErr)
+	if projectErr != nil {
+		return nil, fmt.Errorf("failed reading compose file options: %w", projectErr)
+	}
 
 	project, loadErr := options.LoadProject(ctx)
-	check(loadErr)
+	if loadErr != nil {
+		return nil, fmt.Errorf("failed loading compose file %s: %w", fileName, loadErr)
+	}
 
-	return project
+	return project, nil
 }

@@ -49,6 +49,7 @@ func (m MainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "left", "h":
 				if m.focusedItemIndex > 0 {
 					m.focusedItemIndex--
+					m.selectedItemIndex = m.focusedItemIndex
 					pageTitle := apptypes.PageTitles[m.focusedItemIndex]
 					setPageCmd := cmds.SetActivePage(pageTitle)
 					finalCmds = append(finalCmds, setPageCmd)
@@ -57,6 +58,7 @@ func (m MainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "right", "l":
 				if m.focusedItemIndex < len(m.items)-1 {
 					m.focusedItemIndex++
+					m.selectedItemIndex = m.focusedItemIndex
 					pageTitle := apptypes.PageTitles[m.focusedItemIndex]
 					setPageCmd := cmds.SetActivePage(pageTitle)
 					finalCmds = append(finalCmds, setPageCmd)

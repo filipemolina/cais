@@ -17,6 +17,7 @@ type DockerContainer struct {
 	}
 	Ports      string
 	RunningFor string
+	Service    string
 	Size       string
 	State      string
 	Status     string

@@ -7,6 +7,11 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
+var errorBannerStyle = lipgloss.NewStyle().
+	Foreground(lipgloss.Color("#FAFAFA")).
+	Background(lipgloss.Color("#B33A3A")).
+	Padding(0, 1)
+
 func (m AppModel) View() tea.View {
 	var v tea.View
 	mainMenu := m.components.MainMenu.View().Content
@@ -21,7 +26,12 @@ func (m AppModel) View() tea.View {
 
 		body := lipgloss.JoinHorizontal(lipgloss.Top, contents...)
 
-		layout := lipgloss.JoinVertical(lipgloss.Left, mainMenu, body)
+		sections := []string{mainMenu, body}
+		if m.lastError != "" {
+			sections = []string{errorBannerStyle.Render("Error: " + m.lastError), mainMenu, body}
+		}
+
+		layout := lipgloss.JoinVertical(lipgloss.Left, sections...)
 		v = tea.NewView(appstyles.DocStyle.Render(layout))
 
 		v.AltScreen = true

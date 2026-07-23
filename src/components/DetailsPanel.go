@@ -1,17 +1,23 @@
 package components
 
 import (
-	"stack-stitcher/src/appstyles"
 	"stack-stitcher/src/cmds"
 	"stack-stitcher/src/constants"
 
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/compose-spec/compose-go/v2/types"
 )
 
+var detailsPanelActions = map[string]string{
+	"s": "start",
+	"t": "stop",
+	"r": "restart",
+	"p": "pull",
+	"x": "remove",
+}
+
 type DetailsPanelModel struct {
-	container   any
+	service     *types.ServiceConfig
 	panelWidth  int
 	panelHeight int
 	isFocused   bool
@@ -23,6 +29,8 @@ func (m DetailsPanelModel) Init() tea.Cmd {
 }
 
 func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var finalCmds []tea.Cmd
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		h, _ := wrapperStyle.GetFrameSize()
@@ -41,72 +49,36 @@ func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case cmds.SetSelectedServiceMsg:
 		service := types.ServiceConfig(msg)
-		m.container = service
-	}
+		m.service = &service
 
-	return m, nil
-}
-
-func (m DetailsPanelModel) View() tea.View {
-	style := wrapperStyle.
-		Width(m.panelWidth).
-		Height(m.panelHeight - 1)
-
-	title := appstyles.NormalTitle.Render("Details")
-
-	if m.isFocused {
-		style = style.
-			BorderStyle(lipgloss.RoundedBorder()).
-			BorderForeground(appstyles.PrimaryColor).
-			Padding(0, 1)
-	}
-
-	if m.container == nil {
-		screen := lipgloss.JoinVertical(lipgloss.Left, constants.LOGO, "", "", constants.SLOGAN)
-
-		screen = style.
-			Align(lipgloss.Center).
-			AlignVertical(lipgloss.Center).
-			Render(lipgloss.JoinVertical(lipgloss.Left, title, screen))
-
-		return tea.NewView(screen)
-	}
-
-	var basicInfo string
-
-	container, ok := m.container.(types.ServiceConfig)
-	if ok {
-		basicInfo = BasicInfo(container, m.panelWidth)
-	}
-
-	StartButton := Button("Start", "s").View().Content
-	StopButton := Button("Stop", "t").View().Content
-	RestartButton := Button("Restart", "r").View().Content
-	PullButton := Button("Pull", "p").View().Content
-	RemoveButton := Button("Remove", "x").View().Content
-	leftButtons := lipgloss.NewStyle().
-		Width(m.panelWidth - 5).
-		AlignHorizontal(lipgloss.Right).
-		Render(lipgloss.JoinHorizontal(lipgloss.Left, StartButton, StopButton, RestartButton, PullButton, RemoveButton))
-
-	screen := lipgloss.JoinVertical(lipgloss.Left, title, leftButtons, basicInfo)
-	screen = style.Render(screen)
-
-	return tea.NewView(screen)
-}
-
-func DetailsPanel(container any) tea.Model {
-	service, ok := container.(types.ServiceConfig)
-
-	if ok {
-		return DetailsPanelModel{
-			container:   service,
-			componentId: 2,
+	case tea.KeyPressMsg:
+		if m.isFocused && m.service != nil {
+			if action, ok := detailsPanelActions[msg.String()]; ok {
+				actionCmd := cmds.RunDockerAction(action, m.service.Name, false)
+				finalCmds = append(finalCmds, actionCmd)
+			}
 		}
 	}
 
+	return m, tea.Batch(finalCmds...)
+}
+
+func (m DetailsPanelModel) View() tea.View {
+	if m.service == nil {
+		screen := renderPanelFrame("Details", m.isFocused, m.panelWidth, m.panelHeight, "", "")
+		return tea.NewView(screen)
+	}
+
+	basicInfo := BasicInfo(*m.service, m.panelWidth)
+	buttons := renderActionButtons(m.panelWidth)
+
+	screen := renderPanelFrame("Details", m.isFocused, m.panelWidth, m.panelHeight, basicInfo, buttons)
+	return tea.NewView(screen)
+}
+
+func DetailsPanel(service *types.ServiceConfig) tea.Model {
 	return DetailsPanelModel{
-		container:   nil,
+		service:     service,
 		componentId: 2,
 	}
 }
