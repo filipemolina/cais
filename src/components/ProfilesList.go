@@ -130,6 +130,18 @@ func (m ProfileListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					finalCmds = append(finalCmds, selectedServiceCmd)
 				}
 			}
+
+		case "n":
+			if m.isFocused {
+				finalCmds = append(finalCmds, cmds.OpenCreateProfileModal())
+			}
+
+		case "d":
+			if m.isFocused {
+				if selectedProfile, ok := m.list.SelectedItem().(apptypes.ProfileListItem); ok {
+					finalCmds = append(finalCmds, cmds.OpenDeleteProfileModal(string(selectedProfile)))
+				}
+			}
 		}
 
 	case cmds.SetProfilesListMsg:
