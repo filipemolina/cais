@@ -10,7 +10,7 @@ Stack Stitcher reads a Docker **Compose** file and turns it into an interactive 
 
 ## Project status
 
-Stack Stitcher is under **active development**. Compose parsing, navigation, starting/stopping services (individually or as a whole profile), and creating/deleting profiles all work. Editing services and bootstrapping a compose file from scratch are still on the roadmap. Feedback, issues, and ideas are genuinely welcome and help shape where it goes next.
+Stack Stitcher is under **active development**. Compose parsing, navigation, starting/stopping services (individually or as a whole profile), creating/deleting profiles, and streaming live logs all work. Editing services and bootstrapping a compose file from scratch are still on the roadmap. Feedback, issues, and ideas are genuinely welcome and help shape where it goes next.
 
 ![Stack Stitcher demo](./demo/demo.gif)
 
@@ -20,6 +20,7 @@ Stack Stitcher is under **active development**. Compose parsing, navigation, sta
 - **Keyboard-first TUI.** Built on [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Bubbles](https://github.com/charmbracelet/bubbles), and [Lip Gloss](https://github.com/charmbracelet/lipgloss) for a responsive, styled terminal experience.
 - **Start/stop a whole profile together.** Compose "profiles" group related services (e.g. everything a self-hosted app needs); Stack Stitcher lets you Start/Stop/Restart/Pull/Remove all of them in one keypress instead of remembering which services belong together.
 - **Start/stop a single service.** The same five actions are available for one service at a time from the Dashboard view.
+- **Stream live logs.** Press `l` on a focused service or profile panel to open a full-screen overlay that tails `docker compose logs -f` in real time, with follow-mode and scrollback.
 
 ## Requirements
 
@@ -74,6 +75,10 @@ It auto-detects the compose file in the current directory, checking in order: `c
 | `x` | Remove | A profile or service panel focused |
 | `n` | Create a new profile | Groups panel focused |
 | `d` | Delete the highlighted profile | Groups panel focused |
+| `l` | View live logs (streaming overlay) | A profile or service panel focused |
+| `f` | Toggle follow (auto-scroll) | Logs overlay open |
+| `↑`/`↓` `PgUp`/`PgDn` | Scroll logs | Logs overlay open |
+| `Esc` | Close the logs overlay | Logs overlay open |
 | `q` / `Ctrl+C` | Quit | Everywhere |
 
 Start/Stop/Restart/Pull/Remove run `docker compose` under the hood — scoped to just the selected profile (every service tagged with it) on the Home page, or to just the selected service on the Dashboard page.

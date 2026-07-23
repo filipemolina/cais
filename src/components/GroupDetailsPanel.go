@@ -92,6 +92,10 @@ func (m GroupDetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				actionCmd := cmds.RunDockerAction(action, m.selectedProfile, true)
 				finalCmds = append(finalCmds, actionCmd)
 			}
+
+			if msg.String() == "l" {
+				finalCmds = append(finalCmds, cmds.OpenLogsModal(m.selectedProfile, true))
+			}
 		}
 	}
 

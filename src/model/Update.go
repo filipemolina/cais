@@ -134,6 +134,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.activeModal = components.ProfileNameModal(m.allProfileNames(), m.config.configProject.ServiceNames())
 		}
 
+	case cmds.OpenLogsModalMsg:
+		var startCmd tea.Cmd
+		m.activeModal, startCmd = components.LogsModal(
+			msg.Target, msg.IsProfile,
+			m.config.terminalWidht, m.config.terminalHeight,
+		)
+		finalCmds = append(finalCmds, startCmd)
+
 	case cmds.OpenDeleteProfileModalMsg:
 		profileName := string(msg)
 		m.activeModal = components.ConfirmModal(
