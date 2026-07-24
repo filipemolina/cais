@@ -10,7 +10,7 @@ Stack Stitcher reads a Docker **Compose** file and turns it into an interactive 
 
 ## Project status
 
-Stack Stitcher is under **active development**. Compose parsing, navigation, starting/stopping services (individually or as a whole profile), creating/deleting profiles, and streaming live logs all work. Editing services and bootstrapping a compose file from scratch are still on the roadmap. Feedback, issues, and ideas are genuinely welcome and help shape where it goes next.
+Stack Stitcher is under **active development**. Compose parsing, navigation, starting/stopping services (individually or as a whole profile), creating/deleting profiles, streaming live logs, and bootstrapping a new compose file from inside the TUI all work. Editing existing services is still on the roadmap. Feedback, issues, and ideas are genuinely welcome and help shape where it goes next.
 
 ![Stack Stitcher demo](./demo/demo.gif)
 
