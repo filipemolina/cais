@@ -184,7 +184,7 @@ func WriteNewComposeFile(fileName string, serviceName string, image string) erro
 			&yaml.Node{Kind: yaml.ScalarNode, Value: serviceName},
 			&yaml.Node{
 				Kind: yaml.MappingNode,
-				Tag:   "!!map",
+				Tag:  "!!map",
 				Content: []*yaml.Node{
 					{Kind: yaml.ScalarNode, Value: "image"},
 					{Kind: yaml.ScalarNode, Value: image, Tag: "!!str"},
