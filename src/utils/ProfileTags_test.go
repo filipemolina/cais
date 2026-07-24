@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
@@ -177,5 +178,85 @@ func TestRemoveProfileTag_OneOfSeveral(t *testing.T) {
 	dbGot := readServiceProfiles(t, path, "db")
 	if !slices.Equal(dbGot, []string{"core"}) {
 		t.Errorf("db profiles = %v, want unchanged [core]", dbGot)
+	}
+}
+
+func TestWriteNewComposeFile_Empty(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "compose.yaml")
+
+	if err := WriteNewComposeFile(path, "", ""); err != nil {
+		t.Fatalf("WriteNewComposeFile: %v", err)
+	}
+
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading result file: %v", err)
+	}
+
+	if !strings.Contains(string(raw), "services:") {
+		t.Errorf("expected output to contain a top-level services: key, got:\n%s", raw)
+	}
+}
+
+func TestWriteNewComposeFile_OneService(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "compose.yaml")
+
+	if err := WriteNewComposeFile(path, "app", "nginx:alpine"); err != nil {
+		t.Fatalf("WriteNewComposeFile: %v", err)
+	}
+
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading result file: %v", err)
+	}
+
+	var doc struct {
+		Services map[string]struct {
+			Image string `yaml:"image"`
+		} `yaml:"services"`
+	}
+	if err := yaml.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("parsing result file: %v", err)
+	}
+
+	got, ok := doc.Services["app"]
+	if !ok {
+		t.Fatalf("expected an app service in the output, got:\n%s", raw)
+	}
+	if got.Image != "nginx:alpine" {
+		t.Errorf("app image = %q, want %q", got.Image, "nginx:alpine")
+	}
+}
+
+func TestWriteNewComposeFile_ThenAddProfileTag(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "compose.yaml")
+
+	if err := WriteNewComposeFile(path, "app", "nginx:alpine"); err != nil {
+		t.Fatalf("WriteNewComposeFile: %v", err)
+	}
+
+	if err := AddProfileTag(path, "core", []string{"app"}); err != nil {
+		t.Fatalf("AddProfileTag on freshly written file: %v", err)
+	}
+
+	got := readServiceProfiles(t, path, "app")
+	want := []string{"core"}
+	if !slices.Equal(got, want) {
+		t.Errorf("app profiles = %v, want %v", got, want)
+	}
+}
+
+func TestWriteNewComposeFile_RefusesExisting(t *testing.T) {
+	path := writeFixture(t, baseFixture)
+
+	err := WriteNewComposeFile(path, "app", "nginx:alpine")
+	if err == nil {
+		t.Fatalf("expected error when target file already exists")
+	}
+	if !errors.Is(err, os.ErrExist) {
+		t.Errorf("expected wrapped os.ErrExist, got: %v", err)
 	}
 }

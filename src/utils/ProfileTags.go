@@ -162,3 +162,42 @@ func sequenceContains(sequence *yaml.Node, value string) bool {
 
 	return false
 }
+
+// WriteNewComposeFile creates a brand-new compose file at fileName with a
+// top-level services mapping, optionally pre-seeded with one service. It
+// refuses to overwrite an existing file: the caller is expected to have
+// already shown a validation error in the modal in that case, so we surface
+// os.ErrExist to make the failure mode explicit.
+func WriteNewComposeFile(fileName string, serviceName string, image string) error {
+	if _, err := os.Stat(fileName); err == nil {
+		return fmt.Errorf("refusing to overwrite existing %s: %w", fileName, os.ErrExist)
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("checking %s: %w", fileName, err)
+	}
+
+	doc := &yaml.Node{Kind: yaml.MappingNode}
+
+	servicesValue := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+	if serviceName != "" {
+		serviceMapping := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+		serviceMapping.Content = append(serviceMapping.Content,
+			&yaml.Node{Kind: yaml.ScalarNode, Value: serviceName},
+			&yaml.Node{
+				Kind: yaml.MappingNode,
+				Tag:   "!!map",
+				Content: []*yaml.Node{
+					{Kind: yaml.ScalarNode, Value: "image"},
+					{Kind: yaml.ScalarNode, Value: image, Tag: "!!str"},
+				},
+			},
+		)
+		servicesValue.Content = append(servicesValue.Content, serviceMapping.Content...)
+	}
+
+	doc.Content = []*yaml.Node{
+		{Kind: yaml.ScalarNode, Value: "services"},
+		servicesValue,
+	}
+
+	return writeComposeNode(fileName, doc)
+}
