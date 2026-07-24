@@ -2,11 +2,13 @@ package model
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
 	"stack-stitcher/src/cmds"
 	"stack-stitcher/src/components"
+	"stack-stitcher/src/utils"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/compose-spec/compose-go/v2/types"
@@ -122,6 +124,12 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cmds.GetConfigMsg:
 		if msg.Err != nil {
 			m.lastError = msg.Err.Error()
+			// No compose file in the current directory: offer to create
+			// one in place. The error banner is still set above, so an
+			// Esc from the modal leaves a visible explanation.
+			if errors.Is(msg.Err, utils.ErrNoComposeFile) {
+				m.activeModal = components.CreateComposeFileModal()
+			}
 			break
 		}
 
@@ -164,6 +172,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case cmds.DeleteProfileMsg:
+		if msg.Err != nil {
+			m.lastError = msg.Err.Error()
+		} else {
+			m.lastError = ""
+			finalCmds = append(finalCmds, cmds.GetConfig)
+		}
+
+	case cmds.CreateComposeFileMsg:
 		if msg.Err != nil {
 			m.lastError = msg.Err.Error()
 		} else {
