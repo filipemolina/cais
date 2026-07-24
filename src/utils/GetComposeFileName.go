@@ -1,13 +1,19 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"os"
 )
 
+// ErrNoComposeFile is returned by GetComposeFileName when none of the
+// candidate file names exist in the current directory. The bootstrap flow
+// uses it to distinguish "no file yet" from other load errors and offer to
+// create one.
+var ErrNoComposeFile = errors.New("no compose file found in the current directory")
+
 func GetComposeFileName() (string, error) {
 	files, err := os.ReadDir(".")
-	var mainConfigFile string
 
 	configFileNames := []string{
 		"compose.yaml",
@@ -22,26 +28,17 @@ func GetComposeFileName() (string, error) {
 
 	curDirFileNames := make(map[string]struct{})
 
-	// Populates the curDirFileNames with all file names
-	// in the current directory
 	for _, file := range files {
 		if !file.IsDir() {
 			curDirFileNames[file.Name()] = struct{}{}
 		}
 	}
 
-	// Checks for the existence of a configFileName in the
-	// curDirFileNames map and returns the first one found.
 	for _, fileName := range configFileNames {
 		if _, ok := curDirFileNames[fileName]; ok {
-			mainConfigFile = fileName
-			break
+			return fileName, nil
 		}
 	}
 
-	if mainConfigFile == "" {
-		return "", fmt.Errorf("no compose.yaml, compose.yml, docker-compose.yaml or docker-compose.yml found in the current directory")
-	}
-
-	return mainConfigFile, nil
+	return "", ErrNoComposeFile
 }
