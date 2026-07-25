@@ -25,14 +25,14 @@ records, not a live backlog.
   [design](docs/superpowers/specs/2026-07-25-edit-services-design.md) and
   [plan](docs/superpowers/plans/2026-07-25-edit-services.md).
 
-- [ ] **[S] Blank line after an edited service is lost** — every other blank
-  line in the compose file now survives a write (they round-trip as marker
-  comments, see `src/utils/BlankLines.go`), but one sitting at the very end
-  of an edited service attaches to the last node inside it and goes out with
-  the subtree being replaced, closing the gap before the next service. A fix
-  belongs at a level that can see the whole rendered file, not in the node
-  splice — several attempts through yaml.v3 comments put the blank in the
-  wrong place.
+- [x] **[S] Blank lines are not preserved across writes** — accepted, not
+  fixed. `yaml.v3` round-trips comments but not blank lines, so every write
+  (group tags included, long before edit-services) closes up the spacing
+  between services. Carrying them through as marker comments was built and
+  then deliberately removed: a blank line inside a block scalar (`command: |`)
+  is part of the string, so the trick needs to know where it must not apply,
+  and silently rewriting the user's data is a worse failure than losing their
+  spacing. Don't reintroduce it without a real YAML round-tripping library.
 
 - [ ] **[H] Flaky bootstrap test** — `TestBootstrapModal_SkipServiceWritesEmptyFile`
   fails perhaps one run in ten when the whole `src/model` suite runs, and

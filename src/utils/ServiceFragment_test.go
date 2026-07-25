@@ -62,13 +62,12 @@ func TestExtractServiceFragmentUnknownService(t *testing.T) {
 	}
 }
 
-// A fragment that goes out and comes back untouched should change as little
-// as possible. It is not byte-identical: the blank line at the end of the
-// edited service is lost, because it attaches to the last node inside that
-// service and goes out with the subtree being replaced. Everything else -
-// comments, quoting, key order, and the blank lines around every other
-// service - survives.
-func TestApplyServiceFragmentRoundTripsAlmostUnchanged(t *testing.T) {
+// A fragment that goes out and comes back untouched must not change the
+// file's content. Blank lines are the documented exception: yaml.v3
+// round-trips comments but not blank lines, so re-encoding closes up the
+// spacing between services. That applies to every write the app makes, not
+// just edits.
+func TestApplyServiceFragmentRoundTripsContentUnchanged(t *testing.T) {
 	path := writeFixture(t, fragmentFixture)
 	before := readFile(t, path)
 
@@ -83,34 +82,23 @@ func TestApplyServiceFragmentRoundTripsAlmostUnchanged(t *testing.T) {
 
 	after := readFile(t, path)
 
-	// The one documented difference, and nothing else.
-	if want := strings.Replace(before, "- \"8085:80\"\n\n", "- \"8085:80\"\n", 1); after != want {
-		t.Errorf("a round trip changed more than the trailing blank line:\n--- want ---\n%s\n--- got ---\n%s", want, after)
-	}
-
-	// The blank line before an untouched service is not collateral.
-	if !strings.Contains(after, "profiles: [\"core\"]\n\n  cache:") {
-		t.Errorf("the blank line before an untouched service was lost:\n%s", after)
+	if want := withoutBlankLines(before); after != want {
+		t.Errorf("a round trip changed more than the blank lines:\n--- want ---\n%s\n--- got ---\n%s", want, after)
 	}
 }
 
-// The blank-line preservation is not specific to editing: every write goes
-// through the same encoder, and tagging a group used to strip the spacing
-// out of the whole file.
-func TestTaggingAGroupKeepsBlankLines(t *testing.T) {
-	path := writeFixture(t, fragmentFixture)
-
-	if err := AddGroupTag(path, "extra", []string{"cache"}); err != nil {
-		t.Fatalf("AddGroupTag: %v", err)
-	}
-
-	after := readFile(t, path)
-
-	for _, gap := range []string{"- \"8085:80\"\n\n  db:", "profiles: [\"core\"]\n\n  cache:"} {
-		if !strings.Contains(after, gap) {
-			t.Errorf("tagging a group closed up the spacing around %q:\n%s", gap, after)
+// withoutBlankLines is what a document looks like after a yaml.v3 round
+// trip: everything intact except the spacing.
+func withoutBlankLines(text string) string {
+	var kept []string
+	for _, line := range strings.Split(text, "\n") {
+		if strings.TrimSpace(line) == "" {
+			continue
 		}
+		kept = append(kept, line)
 	}
+
+	return strings.Join(kept, "\n") + "\n"
 }
 
 func TestApplyServiceFragmentWritesTheEdit(t *testing.T) {

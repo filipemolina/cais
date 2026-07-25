@@ -41,7 +41,9 @@ is a field the user cannot edit, and compose has a lot of fields.
 So the user edits **the actual YAML for the service**, and the app's job is
 to put that text in front of them, splice their edit back into the right
 place in the file, and refuse to write anything that doesn't parse. Every
-compose field is editable on day one, and nothing is silently reformatted.
+compose field is editable on day one, and comments, quoting and key order
+are preserved. Blank lines are not - see the note on `yaml.v3` in
+`DESIGN.md`.
 
 ## Three ways to put YAML in front of the user
 
