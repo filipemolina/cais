@@ -194,7 +194,11 @@ which no unit test covers convincingly.
   back and applies it. Cancel without writing when the bytes are unchanged
   or the file is empty. Remove the temp file on every path.
 - [ ] **Step 2.** Result message handled like `CreateGroupMsg`: error to the
-  banner, success queues `cmds.GetConfig`.
+  banner, success queues `cmds.GetConfig`. A parse or validation failure is
+  an ordinary error — the file is untouched, the user is back in a normal
+  TUI, and pressing `e` again is the retry. There is no editor loop and no
+  mode to escape. Make the banner carry the loader's own message, since
+  "invalid compose file" alone doesn't help anyone fix it.
 - [ ] **Step 3.** `DetailsPanel` handles `e`; `KeybindingBar` gains
   `{"e", "edit"}` on the Dashboard details hints.
 - [ ] **Step 4.** An end-to-end test with `$EDITOR` set to a shell script
@@ -202,18 +206,34 @@ which no unit test covers convincingly.
 
 **Verify:** `go build ./... && go vet ./... && go test ./...`.
 
-### Task 2.5: Reopen the editor when validation fails
+### Task 2.5: Drafts — resume a rejected edit
 
-The difference between a usable feature and one that eats your work.
+**Deferred.** Phase 2 is complete and usable without this: a failed
+validation already reports the error, leaves the file untouched, and drops
+the user back into a normal TUI (Task 2.4, Step 2). This task only removes
+the sting of retyping a substantial edit, and can land any time afterwards.
 
-- [ ] **Step 1.** On a validation or parse failure, rewrite the temp file
-  with the error as comments in the header and reopen the editor on it,
-  `visudo`-style, rather than discarding the edit.
-- [ ] **Step 2.** Quitting without saving on the retry abandons the edit and
-  removes the temp file. Guard against an infinite loop — the user must
-  always be able to get out with an unmodified save.
-- [ ] **Step 3.** Test the retry path with a script editor that writes
-  something invalid, then something valid.
+Explicitly **not** a `visudo`-style reopen loop. Leaving must never require
+fixing the text first.
+
+**Files:** new `src/utils/Draft.go`, tests alongside, `src/cmds/EditService.go`.
+
+- [ ] **Step 1.** Store a rejected fragment under
+  `$XDG_CACHE_HOME/stack-stitcher/drafts/` (falling back to
+  `~/.cache/...`), keyed by the compose file's absolute path and the service
+  name. Never beside the compose file — that puts junk in the user's repo.
+- [ ] **Step 2.** Store the fragment the draft was based on alongside it.
+- [ ] **Step 3.** On `e`, if a draft exists and its base still matches the
+  service's current YAML, open the draft and tell the user they're resuming
+  one. If the base no longer matches, the file changed underneath: say so,
+  start from the current file, and leave the draft in place rather than
+  destroying it. Silently resuming a stale draft would revert whatever
+  changed in between.
+- [ ] **Step 4.** Remove the draft on a successful save, and offer an
+  explicit discard.
+- [ ] **Step 5.** Tests: a rejected edit leaves a draft; the next edit
+  resumes it; a successful save clears it; a draft whose base has drifted is
+  not resumed silently.
 
 **Verify:** `go test ./...`.
 

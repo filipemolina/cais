@@ -140,11 +140,40 @@ what the app already requires to display anything at all, so it cannot
 reject a file the app would otherwise have been happy with.
 
 **Nothing is written unless it validates**, which raises the question of
-what happens to the user's work when it doesn't. Losing it is not an option,
-so the flow is `visudo`'s: on a validation failure the editor **reopens on
-the same temp file**, with the error written into the header as comments.
-The user fixes it, or quits without saving to abandon the edit. The temp
-file is removed on every exit path.
+what happens when it doesn't.
+
+The `visudo` answer — reopen the editor on the failed text until it passes —
+is the wrong one here. It decides on the user's behalf that they want to
+keep going, and traps them in an editor at the exact moment they may have
+concluded the edit was a mistake. Getting out should never require fixing
+something first.
+
+So a failed validation **reports the error and returns to the TUI, with the
+compose file untouched**. The error goes to the existing banner, naming what
+the loader objected to. From there the user presses `e` to try again, or
+does something else entirely — the app is in a completely normal state
+either way, and there is no mode to escape.
+
+The cost is that their text is gone, which is fine for a typo and annoying
+for a substantial edit. That is worth fixing, but as its own later step
+rather than by holding the user hostage: **the rejected fragment is kept as
+a draft**, and a subsequent `e` on that service resumes from the draft
+instead of from the file. Discarding is then an explicit choice rather than
+the price of leaving.
+
+Drafts live outside the project — `$XDG_CACHE_HOME/stack-stitcher/drafts/`,
+keyed by the compose file's absolute path and the service name — because
+writing them next to the compose file would put junk in the user's repo. A
+draft is removed on a successful save or an explicit discard.
+
+**A draft can go stale.** The compose file may have changed between the
+failed edit and the retry — the user tagged a group with `n`, or edited the
+file elsewhere. Saving a stale draft would silently revert those changes, so
+the fragment the draft was based on is stored with it. If the service's
+current YAML no longer matches, the draft is not resumed silently: the app
+says the file changed underneath and starts from the current file, keeping
+the draft available rather than destroying it. Letting the user choose
+between the two is a refinement, not the first cut.
 
 **An unchanged or emptied file cancels**, writing nothing — the compare is
 on bytes, so quitting the editor without saving is a reliable cancel.
@@ -167,7 +196,13 @@ handling gates on edit mode before anything else.
 **Save is `ctrl+s`, not `enter`.** `enter` inserts a newline in a multi-line
 editor. `esc` cancels, and confirms first if the text has changed — this is
 the one modal in the app where discarding on `esc` could throw away real
-work.
+work. Once drafts exist, `esc` on changed text should offer to keep one
+rather than only offering to discard.
+
+Inline editing needs the draft mechanism far less than Phase 2 does: a save
+that fails validation simply keeps the editor open with the text still in
+it, because the app never left the screen. The work is only at risk on an
+explicit `esc`.
 
 **Validation is live**, on a status line under the editor: YAML syntax on
 every change (cheap, it's a small document), and the full compose load on
