@@ -40,6 +40,12 @@ func TestShouldPollContainers(t *testing.T) {
 	if m.shouldPollContainers() {
 		t.Error("should not poll while a modal is open")
 	}
+
+	m.activeModal = nil
+	m.externalEditorOpen = true
+	if m.shouldPollContainers() {
+		t.Error("should not poll while an external editor holds the terminal")
+	}
 }
 
 func TestBackgroundPollPreservesActionErrorThatReplacedPollError(t *testing.T) {

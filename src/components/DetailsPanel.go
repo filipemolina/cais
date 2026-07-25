@@ -68,6 +68,10 @@ func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				))
 			case "l":
 				finalCmds = append(finalCmds, cmds.OpenLogsModal(m.service.Name, false))
+			case "E":
+				// The panel doesn't know which compose file is loaded, and
+				// shouldn't - AppModel turns this into the actual command.
+				finalCmds = append(finalCmds, cmds.OpenEditor())
 			}
 		}
 	}

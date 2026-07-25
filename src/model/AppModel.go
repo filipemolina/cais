@@ -61,6 +61,10 @@ type AppModel struct {
 	// it without touching errors from other sources (e.g. a failed action).
 	lastErrorFromPoll bool
 	activeModal       tea.Model
+	// externalEditorOpen is set while an editor has been handed the
+	// terminal. The app is suspended for that whole time, so background work
+	// would only pile up messages to process on resume.
+	externalEditorOpen bool
 }
 
 // ChangeFocus moves focus through constants.FocusableComponents and returns the
