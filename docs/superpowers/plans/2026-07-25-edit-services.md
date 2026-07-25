@@ -152,13 +152,13 @@ worth doing by hand.
 
 **Interface:** `func ExtractServiceFragment(fileName, serviceName string) ([]byte, error)`
 
-- [ ] **Step 1.** `readComposeNode` → `servicesMappingNode` →
+- [x] **Step 1.** `readComposeNode` → `servicesMappingNode` →
   `findMappingValue`. Unknown service errors, matching `AddGroupTag`'s
   wording.
-- [ ] **Step 2.** Encode a single-key mapping — the original key node and
+- [x] **Step 2.** Encode a single-key mapping — the original key node and
   its value node — at indent 2, so the fragment reads exactly as it does in
   the file.
-- [ ] **Step 3.** Tests: comments inside the service survive; neighbouring
+- [x] **Step 3.** Tests: comments inside the service survive; neighbouring
   services do not appear; an unknown service errors.
 
 **Verify:** `go test ./src/utils/`.
@@ -169,11 +169,11 @@ worth doing by hand.
 
 **Interface:** `func ValidateComposeCandidate(dir string, contents []byte) error`
 
-- [ ] **Step 1.** Write `contents` to a temp file in `dir` (not `/tmp` —
+- [x] **Step 1.** Write `contents` to a temp file in `dir` (not `/tmp` —
   compose resolves build contexts and `env_file:` relative to the compose
   file's directory), run `ReadConfigFile` over it, remove the temp file on
   every path.
-- [ ] **Step 2.** Tests: a good document passes; a document whose YAML is
+- [x] **Step 2.** Tests: a good document passes; a document whose YAML is
   fine but whose compose is not (e.g. a service that is a string rather than
   a mapping) is rejected with the loader's message; no temp files are left
   behind either way.
@@ -186,16 +186,16 @@ worth doing by hand.
 
 **Interface:** `func ApplyServiceFragment(fileName, serviceName string, fragment []byte) error`
 
-- [ ] **Step 1.** Parse the fragment. Reject: unparseable YAML; a document
+- [x] **Step 1.** Parse the fragment. Reject: unparseable YAML; a document
   that isn't a single-key mapping; a key that isn't `serviceName` (a rename
   — say so explicitly in the error, and that it isn't supported); a value
   that isn't a mapping.
-- [ ] **Step 2.** Replace the value node in the services mapping, keeping
+- [x] **Step 2.** Replace the value node in the services mapping, keeping
   the original key node so its comments survive.
-- [ ] **Step 3.** Encode the document, run `ValidateComposeCandidate` on the
+- [x] **Step 3.** Encode the document, run `ValidateComposeCandidate` on the
   result, and only then write through `writeComposeNode`. A validation
   failure must leave the file untouched.
-- [ ] **Step 4.** Tests: a valid edit rewrites only that service and leaves
+- [x] **Step 4.** Tests: a valid edit rewrites only that service and leaves
   neighbours, key order and their comments intact; each rejection above
   errors *and* leaves the file byte-identical.
 
@@ -206,19 +206,19 @@ worth doing by hand.
 **Files:** new `src/cmds/EditService.go`, `src/components/DetailsPanel.go`,
 `src/model/Update.go`, `src/components/KeybindingBar.go`.
 
-- [ ] **Step 1.** `cmds.EditService` extracts the fragment to a temp file,
+- [x] **Step 1.** `cmds.EditService` extracts the fragment to a temp file,
   `tea.ExecProcess`es the editor over it, and in the callback reads the file
   back and applies it. Cancel without writing when the bytes are unchanged
   or the file is empty. Remove the temp file on every path.
-- [ ] **Step 2.** Result message handled like `CreateGroupMsg`: error to the
+- [x] **Step 2.** Result message handled like `CreateGroupMsg`: error to the
   banner, success queues `cmds.GetConfig`. A parse or validation failure is
   an ordinary error — the file is untouched, the user is back in a normal
   TUI, and pressing `e` again is the retry. There is no editor loop and no
   mode to escape. Make the banner carry the loader's own message, since
   "invalid compose file" alone doesn't help anyone fix it.
-- [ ] **Step 3.** `DetailsPanel` handles `e`; `KeybindingBar` gains
+- [x] **Step 3.** `DetailsPanel` handles `e`; `KeybindingBar` gains
   `{"e", "edit"}` on the Dashboard details hints.
-- [ ] **Step 4.** An end-to-end test with `$EDITOR` set to a shell script
+- [x] **Step 4.** An end-to-end test with `$EDITOR` set to a shell script
   that rewrites the fragment, asserting the compose file afterwards.
 
 **Verify:** `go build ./... && go vet ./... && go test ./...`.

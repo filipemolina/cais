@@ -15,24 +15,37 @@ records, not a live backlog.
 
 ## Remaining from the original plan
 
-- [ ] **[P] Edit existing services** — the one remaining roadmap item
-  (README: "Editing existing services is still on the roadmap"). Per
-  `DESIGN.md` §6.3 it lands on the **Dashboard** first, not Home. Natural
-  first fields: image tag, ports, env vars. Should reuse the
-  comment-preserving `yaml.Node` edit path in `src/utils/GroupTags.go`.
-  Design and plan written (2026-07-25): the user edits the service's
-  **actual YAML**, not a generated form, so no field is unreachable and
-  nothing is silently reformatted. Phased — whole file in `$EDITOR`, then
-  one service in `$EDITOR`, then inline in the details panel.
-  [design](docs/superpowers/specs/2026-07-25-edit-services-design.md),
-  [plan](docs/superpowers/plans/2026-07-25-edit-services.md). These two are
-  **live**, unlike the completed records beside them.
+- [~] **[P] Edit existing services** — `$EDITOR`-based editing works: `e`
+  opens one service's YAML, `E` opens the whole compose file. Writes are
+  validated against the compose loader and refused (leaving the file
+  untouched) rather than half-applied. The user edits real YAML, not a
+  form, so every compose field is reachable. **Remaining:** Phase 3, editing
+  inline in the details panel with a `textarea`, plus the deferred draft
+  mechanism. See the live
+  [design](docs/superpowers/specs/2026-07-25-edit-services-design.md) and
+  [plan](docs/superpowers/plans/2026-07-25-edit-services.md).
 
-- [x] **[P] Atomic compose-file writes** — `utils.ReplaceFileAtomically`
-  writes a temporary file alongside the target and renames it into place,
-  preserving the original's permissions. A failed write now leaves the
-  compose file untouched instead of truncated. Done before the
-  edit-services feature, which makes writes routine.
+- [ ] **[S] Blank line after an edited service is lost** — every other blank
+  line in the compose file now survives a write (they round-trip as marker
+  comments, see `src/utils/BlankLines.go`), but one sitting at the very end
+  of an edited service attaches to the last node inside it and goes out with
+  the subtree being replaced, closing the gap before the next service. A fix
+  belongs at a level that can see the whole rendered file, not in the node
+  splice — several attempts through yaml.v3 comments put the blank in the
+  wrong place.
+
+- [ ] **[H] Flaky bootstrap test** — `TestBootstrapModal_SkipServiceWritesEmptyFile`
+  fails perhaps one run in ten when the whole `src/model` suite runs, and
+  passes alone. Reproduces on `main`, so it predates the edit-services work.
+  The rig tests are timing-based; this one likely needs a wait rather than a
+  fixed sleep.
+
+- [ ] **[H] Panel keys aren't testable through the rig** — every rig test
+  that sends a key targets a modal, which `AppModel.Update` handles on an
+  early-return path that never reaches a panel. Keys sent to a *panel*
+  through the rig did nothing when tried, so Phase 1/2 keypress coverage sits
+  at the model level instead. Worth closing before Phase 3, which is entirely
+  panel keys.
 
 - [ ] **[P] Compose Files page** — currently a `PlaceholderPanel`. The tab
   label is already "Files". Minimum useful version: show which compose file
