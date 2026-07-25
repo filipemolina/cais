@@ -6,19 +6,19 @@ import (
 	tea "charm.land/bubbletea/v2"
 )
 
-type CreateProfileMsg struct {
+type CreateGroupMsg struct {
 	Err error
 }
 
-// CreateProfile tags each of the given services with a new profile name in
+// CreateGroup tags each of the given services with a new group name in
 // the compose file on disk.
-func CreateProfile(name string, serviceNames []string) tea.Cmd {
+func CreateGroup(name string, serviceNames []string) tea.Cmd {
 	return func() tea.Msg {
 		fileName, err := utils.GetComposeFileName()
 		if err != nil {
-			return CreateProfileMsg{Err: err}
+			return CreateGroupMsg{Err: err}
 		}
 
-		return CreateProfileMsg{Err: utils.AddProfileTag(fileName, name, serviceNames)}
+		return CreateGroupMsg{Err: utils.AddGroupTag(fileName, name, serviceNames)}
 	}
 }

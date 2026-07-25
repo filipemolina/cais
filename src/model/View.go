@@ -63,12 +63,18 @@ func (m AppModel) View() tea.View {
 
 		layout := lipgloss.JoinVertical(lipgloss.Left, sections...)
 
+		// Seal the frame against tier 2. JoinVertical pads the narrower
+		// sections (nav bar, footer, error banner) out to the body width with
+		// unstyled spaces, and the outer style below cannot fix that - it only
+		// paints the padding it adds itself.
+		//
+		// This is the outermost tier, so it must run last: every inner tier has
+		// already sealed its own region, which leaves no unpainted cell inside
+		// a panel for this pass to reach. See appstyles.FillBackground.
+		layout = appstyles.FillBackground(appstyles.BackgroundContent, layout)
+
 		// Wrap the full layout in a style that fills the terminal width
-		// with the tier-2 background.  JoinVertical pads narrower sections
-		// (nav bar, footer) with plain spaces when the body panels are
-		// wider; without an explicit background those padding characters
-		// show the terminal default color, creating thin horizontal
-		// divider lines at the section boundaries.
+		// with the tier-2 background.
 		//
 		// MaxWidth/MaxHeight are the backstop: Width() pads but never
 		// truncates, so any section that renders wider than the terminal

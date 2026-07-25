@@ -1,6 +1,7 @@
 package components
 
 import (
+	"image/color"
 	"stack-stitcher/src/appstyles"
 
 	"charm.land/lipgloss/v2"
@@ -35,3 +36,26 @@ func fitBox(s lipgloss.Style, w, h int) lipgloss.Style {
 var logoStyle = lipgloss.NewStyle().
 	Align(lipgloss.Center).
 	Foreground(appstyles.TextPrimary)
+
+// panelBg is the background tier a body panel renders on: tier 4 when focused,
+// tier 3 otherwise. Focus lifts the whole panel rather than adding a border, so
+// the panel's box stays the same size either way.
+func panelBg(isFocused bool) color.Color {
+	if isFocused {
+		return appstyles.BackgroundElevated
+	}
+
+	return appstyles.BackgroundPanel
+}
+
+// listRowBg is the background a list row renders on. The active row is lifted
+// to the surface tier; every other row sits flush on its panel's tier. Rows
+// need an explicit background (rather than inheriting the panel's) because each
+// row is rendered and sealed on its own - see appstyles.FillBackground.
+func listRowBg(isActive bool, isParentFocused bool) color.Color {
+	if isActive {
+		return appstyles.SurfaceBg
+	}
+
+	return panelBg(isParentFocused)
+}

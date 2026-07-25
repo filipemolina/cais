@@ -3,15 +3,15 @@ package cmds
 import tea "charm.land/bubbletea/v2"
 
 // OpenLogsModalMsg asks AppModel to open the streaming logs overlay for a
-// single service (IsProfile false) or a whole profile (IsProfile true).
+// single service (IsGroup false) or a whole group (IsGroup true).
 type OpenLogsModalMsg struct {
-	Target    string
-	IsProfile bool
+	Target  string
+	IsGroup bool
 }
 
-func OpenLogsModal(target string, isProfile bool) tea.Cmd {
+func OpenLogsModal(target string, isGroup bool) tea.Cmd {
 	return func() tea.Msg {
-		return OpenLogsModalMsg{Target: target, IsProfile: isProfile}
+		return OpenLogsModalMsg{Target: target, IsGroup: isGroup}
 	}
 }
 

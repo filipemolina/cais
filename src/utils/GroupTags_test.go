@@ -49,7 +49,7 @@ func writeFixture(t *testing.T, contents string) string {
 	return path
 }
 
-func readServiceProfiles(t *testing.T, path, service string) []string {
+func readServiceGroups(t *testing.T, path, service string) []string {
 	t.Helper()
 
 	raw, err := os.ReadFile(path)
@@ -70,7 +70,7 @@ func readServiceProfiles(t *testing.T, path, service string) []string {
 	return doc.Services[service].Profiles
 }
 
-func hasProfilesKey(t *testing.T, path, service string) bool {
+func hasGroupsKey(t *testing.T, path, service string) bool {
 	t.Helper()
 
 	raw, err := os.ReadFile(path)
@@ -87,33 +87,33 @@ func hasProfilesKey(t *testing.T, path, service string) bool {
 	return ok
 }
 
-func TestAddProfileTag_NoExistingKey(t *testing.T) {
+func TestAddGroupTag_NoExistingKey(t *testing.T) {
 	path := writeFixture(t, baseFixture)
 
-	if err := AddProfileTag(path, "extra", []string{"cache"}); err != nil {
-		t.Fatalf("AddProfileTag: %v", err)
+	if err := AddGroupTag(path, "extra", []string{"cache"}); err != nil {
+		t.Fatalf("AddGroupTag: %v", err)
 	}
 
-	got := readServiceProfiles(t, path, "cache")
+	got := readServiceGroups(t, path, "cache")
 	want := []string{"extra"}
 
 	if !slices.Equal(got, want) {
-		t.Errorf("cache profiles = %v, want %v", got, want)
+		t.Errorf("cache groups = %v, want %v", got, want)
 	}
 }
 
-func TestAddProfileTag_ExistingKeyPreservesComment(t *testing.T) {
+func TestAddGroupTag_ExistingKeyPreservesComment(t *testing.T) {
 	path := writeFixture(t, baseFixture)
 
-	if err := AddProfileTag(path, "extra", []string{"app"}); err != nil {
-		t.Fatalf("AddProfileTag: %v", err)
+	if err := AddGroupTag(path, "extra", []string{"app"}); err != nil {
+		t.Fatalf("AddGroupTag: %v", err)
 	}
 
-	got := readServiceProfiles(t, path, "app")
+	got := readServiceGroups(t, path, "app")
 	want := []string{"core", "extra"}
 
 	if !slices.Equal(got, want) {
-		t.Errorf("app profiles = %v, want %v", got, want)
+		t.Errorf("app groups = %v, want %v", got, want)
 	}
 
 	raw, err := os.ReadFile(path)
@@ -126,58 +126,58 @@ func TestAddProfileTag_ExistingKeyPreservesComment(t *testing.T) {
 	}
 }
 
-func TestAddProfileTag_Idempotent(t *testing.T) {
+func TestAddGroupTag_Idempotent(t *testing.T) {
 	path := writeFixture(t, baseFixture)
 
-	if err := AddProfileTag(path, "core", []string{"app"}); err != nil {
-		t.Fatalf("AddProfileTag: %v", err)
+	if err := AddGroupTag(path, "core", []string{"app"}); err != nil {
+		t.Fatalf("AddGroupTag: %v", err)
 	}
 
-	got := readServiceProfiles(t, path, "app")
+	got := readServiceGroups(t, path, "app")
 	want := []string{"core"}
 
 	if !slices.Equal(got, want) {
-		t.Errorf("app profiles = %v, want %v (should not duplicate)", got, want)
+		t.Errorf("app groups = %v, want %v (should not duplicate)", got, want)
 	}
 }
 
-func TestRemoveProfileTag_LastTagDropsKey(t *testing.T) {
+func TestRemoveGroupTag_LastTagDropsKey(t *testing.T) {
 	path := writeFixture(t, baseFixture)
 
-	if err := RemoveProfileTag(path, "core"); err != nil {
-		t.Fatalf("RemoveProfileTag: %v", err)
+	if err := RemoveGroupTag(path, "core"); err != nil {
+		t.Fatalf("RemoveGroupTag: %v", err)
 	}
 
-	if hasProfilesKey(t, path, "app") {
+	if hasGroupsKey(t, path, "app") {
 		t.Errorf("expected app's profiles key to be removed entirely")
 	}
 
-	if hasProfilesKey(t, path, "db") {
+	if hasGroupsKey(t, path, "db") {
 		t.Errorf("expected db's profiles key to be removed entirely")
 	}
 }
 
-func TestRemoveProfileTag_OneOfSeveral(t *testing.T) {
+func TestRemoveGroupTag_OneOfSeveral(t *testing.T) {
 	path := writeFixture(t, multiTagFixture)
 
-	if err := RemoveProfileTag(path, "extra"); err != nil {
-		t.Fatalf("RemoveProfileTag: %v", err)
+	if err := RemoveGroupTag(path, "extra"); err != nil {
+		t.Fatalf("RemoveGroupTag: %v", err)
 	}
 
-	got := readServiceProfiles(t, path, "app")
+	got := readServiceGroups(t, path, "app")
 	want := []string{"core"}
 
 	if !slices.Equal(got, want) {
-		t.Errorf("app profiles = %v, want %v", got, want)
+		t.Errorf("app groups = %v, want %v", got, want)
 	}
 
-	if !hasProfilesKey(t, path, "app") {
+	if !hasGroupsKey(t, path, "app") {
 		t.Errorf("expected app's profiles key to survive (still has %q)", "core")
 	}
 
-	dbGot := readServiceProfiles(t, path, "db")
+	dbGot := readServiceGroups(t, path, "db")
 	if !slices.Equal(dbGot, []string{"core"}) {
-		t.Errorf("db profiles = %v, want unchanged [core]", dbGot)
+		t.Errorf("db groups = %v, want unchanged [core]", dbGot)
 	}
 }
 
@@ -230,7 +230,7 @@ func TestWriteNewComposeFile_OneService(t *testing.T) {
 	}
 }
 
-func TestWriteNewComposeFile_ThenAddProfileTag(t *testing.T) {
+func TestWriteNewComposeFile_ThenAddGroupTag(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "compose.yaml")
 
@@ -238,14 +238,14 @@ func TestWriteNewComposeFile_ThenAddProfileTag(t *testing.T) {
 		t.Fatalf("WriteNewComposeFile: %v", err)
 	}
 
-	if err := AddProfileTag(path, "core", []string{"app"}); err != nil {
-		t.Fatalf("AddProfileTag on freshly written file: %v", err)
+	if err := AddGroupTag(path, "core", []string{"app"}); err != nil {
+		t.Fatalf("AddGroupTag on freshly written file: %v", err)
 	}
 
-	got := readServiceProfiles(t, path, "app")
+	got := readServiceGroups(t, path, "app")
 	want := []string{"core"}
 	if !slices.Equal(got, want) {
-		t.Errorf("app profiles = %v, want %v", got, want)
+		t.Errorf("app groups = %v, want %v", got, want)
 	}
 }
 

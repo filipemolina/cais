@@ -2,8 +2,8 @@ package cmds
 
 import tea "charm.land/bubbletea/v2"
 
-type OpenCreateProfileModalMsg struct{}
+type OpenCreateGroupModalMsg struct{}
 
-func OpenCreateProfileModal() tea.Cmd {
-	return func() tea.Msg { return OpenCreateProfileModalMsg{} }
+func OpenCreateGroupModal() tea.Cmd {
+	return func() tea.Msg { return OpenCreateGroupModalMsg{} }
 }

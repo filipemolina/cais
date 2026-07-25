@@ -47,21 +47,24 @@ func (d servicesListCustomDelegate) Render(w io.Writer, m list.Model, index int,
 		titleColor = appstyles.SecondaryFontColor
 	}
 
+	rowBg := listRowBg(isActive, d.isParentFocused)
+
 	wrapperStyle := lipgloss.NewStyle().
 		Width(m.Width()).
-		Padding(1)
+		Padding(1).
+		Background(rowBg)
 
 	titleStyle := lipgloss.NewStyle().
 		Bold(isActive).
 		Foreground(titleColor).
+		Background(rowBg).
 		Width(m.Width())
 
 	if isActive {
 		wrapperStyle = wrapperStyle.
 			BorderLeft(true).
 			BorderStyle(lipgloss.ThickBorder()).
-			BorderLeftForeground(appstyles.PrimaryColor).
-			Background(lipgloss.Color("#3F3F3F"))
+			BorderLeftForeground(appstyles.PrimaryColor)
 
 	} else if isSelected && d.isParentFocused {
 		wrapperStyle = wrapperStyle.
@@ -82,8 +85,15 @@ func (d servicesListCustomDelegate) Render(w io.Writer, m list.Model, index int,
 	title := titleStyle.Render(item.Title())
 	description := item.Description(isActive)
 
+	// Seal the row against its own background before handing it to the list:
+	// JoinVertical pads the description out to the title's width with unstyled
+	// spaces, which would otherwise show the terminal background through the
+	// row. Sealing here (rather than over the whole list) is what keeps the
+	// active row's lighter surface color from being flattened to the panel's.
+	row := appstyles.FillBackground(rowBg, wrapperStyle.Render(lipgloss.JoinVertical(lipgloss.Left, title, description)))
+
 	// Print the styled string to the Bubble Tea io.Writer
-	fmt.Fprint(w, wrapperStyle.Render(lipgloss.JoinVertical(lipgloss.Left, title, description)))
+	fmt.Fprint(w, row)
 }
 
 /*
@@ -184,14 +194,15 @@ func (m ServicesListModel) View() tea.View {
 	// Same 3-tier treatment as the groups list: focus lifts the panel from
 	// tier 3 to tier 4 rather than adding a border, so the panel's box stays
 	// the same size whether or not it is focused.
-	bg := appstyles.BackgroundPanel
-	if m.isFocused {
-		bg = appstyles.BackgroundElevated
-	}
+	bg := panelBg(m.isFocused)
 
 	wrapper := fitBox(listWrapperStyle.Background(bg), m.panelWidth, m.panelHeight)
 
-	v := tea.NewView(wrapper.Render(m.list.View()))
+	// The list joins its title, rows and paginator internally, padding the
+	// short ones with unstyled spaces; seal them against the panel tier. Rows
+	// arrive already sealed against their own background, so this only fills
+	// what the list itself left bare.
+	v := tea.NewView(wrapper.Render(appstyles.FillBackground(bg, m.list.View())))
 	return v
 }
 

@@ -1,6 +1,7 @@
 package components
 
 import (
+	"image/color"
 	"stack-stitcher/src/appstyles"
 
 	"charm.land/lipgloss/v2"
@@ -8,29 +9,57 @@ import (
 
 // renderActionButtons renders the shared Start/Stop/Restart/Pull/Remove row
 // used by both DetailsPanel and GroupDetailsPanel, right-aligned within the
-// panel body width it is given.
-func renderActionButtons(width int) string {
-	startButton := Button("Start", "s").View().Content
-	stopButton := Button("Stop", "t").View().Content
-	restartButton := Button("Restart", "r").View().Content
-	pullButton := Button("Pull", "p").View().Content
-	removeButton := Button("Remove", "x").View().Content
+// panel body width it is given. `bg` is the panel's background tier, which the
+// buttons sit flush on.
+func renderActionButtons(width int, bg color.Color) string {
+	startButton := Button("Start", "s", bg).View().Content
+	stopButton := Button("Stop", "t", bg).View().Content
+	restartButton := Button("Restart", "r", bg).View().Content
+	pullButton := Button("Pull", "p", bg).View().Content
+	removeButton := Button("Remove", "x", bg).View().Content
+
+	row := lipgloss.JoinHorizontal(lipgloss.Left, startButton, stopButton, restartButton, pullButton, removeButton)
+
+	// JoinHorizontal pads each button up to the tallest one with unstyled
+	// spaces, which is the dark band that used to sit behind this row.
+	row = appstyles.FillBackground(bg, row)
 
 	return lipgloss.NewStyle().
 		Width(max(0, width)).
 		AlignHorizontal(lipgloss.Right).
-		Render(lipgloss.JoinHorizontal(lipgloss.Left, startButton, stopButton, restartButton, pullButton, removeButton))
+		Background(bg).
+		Render(row)
+}
+
+// modalSurface wraps a modal's content in the shared modal chrome: an accent
+// rounded border, padding, and a background sealed against `bg` so the modal
+// reads as one opaque surface over the page it is composited onto. Modals in
+// particular cannot afford an unpainted cell - the page shows through it.
+//
+// BorderBackground is set explicitly because lipgloss leaves border cells on
+// the default background otherwise, which outlines the modal in the terminal's
+// color.
+func modalSurface(bg color.Color, content string) string {
+	style := lipgloss.NewStyle().
+		Padding(1, 2).
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(appstyles.PrimaryColor).
+		BorderBackground(bg).
+		Background(bg)
+
+	return appstyles.FillBackground(bg, style.Render(content))
 }
 
 // renderEmptyCard renders a dim, centered, rounded-border card used for the
 // empty / onboarding states. `key` is shown in the accent color inside
 // brackets, `hint` is the trailing description in a dim color. `availHeight`
-// is the vertical space in which the card should be centered.
-func renderEmptyCard(width, availHeight int, title, body, key, hint string) string {
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(appstyles.TextMuted)
-	bodyStyle := lipgloss.NewStyle().Foreground(appstyles.TextDim)
-	keyStyle := lipgloss.NewStyle().Bold(true).Foreground(appstyles.Accent)
-	hintStyle := lipgloss.NewStyle().Foreground(appstyles.TextDim)
+// is the vertical space in which the card should be centered. `bg` is the
+// panel's background tier, which both the card and the space around it sit on.
+func renderEmptyCard(width, availHeight int, bg color.Color, title, body, key, hint string) string {
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(appstyles.TextMuted).Background(bg)
+	bodyStyle := lipgloss.NewStyle().Foreground(appstyles.TextDim).Background(bg)
+	keyStyle := lipgloss.NewStyle().Bold(true).Foreground(appstyles.Accent).Background(bg)
+	hintStyle := lipgloss.NewStyle().Foreground(appstyles.TextDim).Background(bg)
 
 	content := lipgloss.JoinVertical(lipgloss.Left,
 		titleStyle.Render(title),
@@ -56,6 +85,8 @@ func renderEmptyCard(width, availHeight int, title, body, key, hint string) stri
 		Padding(1, 2).
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(appstyles.BorderDefault).
+		BorderBackground(bg).
+		Background(bg).
 		AlignHorizontal(lipgloss.Center).
 		Render(content)
 
@@ -63,10 +94,16 @@ func renderEmptyCard(width, availHeight int, title, body, key, hint string) stri
 		availHeight = 1
 	}
 
+	// The card's inner joins leave unstyled padding on the short lines (the
+	// blank spacer rows, and the hint line built by concatenating two styled
+	// runs), which is the dark block that used to sit beside the card.
+	card = appstyles.FillBackground(bg, card)
+
 	return lipgloss.NewStyle().
 		Width(width).
 		Height(availHeight).
 		MaxHeight(availHeight).
+		Background(bg).
 		AlignHorizontal(lipgloss.Center).
 		AlignVertical(lipgloss.Center).
 		Render(card)
@@ -80,15 +117,20 @@ func renderEmptyCard(width, availHeight int, title, body, key, hint string) stri
 // Callers embed their action buttons at the bottom of `body`, which pins the
 // action row to the bottom of the panel.
 func renderPanelFrame(title string, isFocused bool, width int, height int, body string) string {
-	bg := appstyles.BackgroundPanel
-	if isFocused {
-		bg = appstyles.BackgroundElevated
-	}
+	bg := panelBg(isFocused)
 
 	style := fitBox(wrapperStyle.Background(bg), width, height)
 	titleRendered := appstyles.NormalTitle.Render(title)
 
-	return style.Render(lipgloss.JoinVertical(lipgloss.Left, titleRendered, body))
+	// The panel is where tier 3/4 is established, so it is where the tier's
+	// background has to be sealed in. JoinVertical pads the short title row out
+	// to the body width with unstyled spaces, and the body itself arrives with
+	// whatever gaps its own joins left; FillBackground closes both. Repainting
+	// before fitBox's Width() padding is applied is fine - that padding is
+	// styled by lipgloss already.
+	content := appstyles.FillBackground(bg, lipgloss.JoinVertical(lipgloss.Left, titleRendered, body))
+
+	return style.Render(content)
 }
 
 // panelBodyWidth and panelBodyHeight are the space a panel body gets inside a

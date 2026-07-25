@@ -71,7 +71,7 @@ func (m DetailsPanelModel) View() tea.View {
 	bodyAvail := max(1, panelBodyHeight(m.panelHeight))
 
 	if m.service == nil {
-		body := renderEmptyCard(bodyWidth, bodyAvail, "Select a service",
+		body := renderEmptyCard(bodyWidth, bodyAvail, panelBg(m.isFocused), "Select a service",
 			"Pick a service from the list to see its details.",
 			"↑/↓", "then space")
 		screen := renderPanelFrame("Details", m.isFocused, m.panelWidth, m.panelHeight, body)
@@ -79,7 +79,7 @@ func (m DetailsPanelModel) View() tea.View {
 	}
 
 	basicInfo := BasicInfo(*m.service, bodyWidth)
-	buttons := renderActionButtons(bodyWidth)
+	buttons := renderActionButtons(bodyWidth, panelBg(m.isFocused))
 
 	body := lipgloss.JoinVertical(lipgloss.Left, basicInfo, buttons)
 	body = lipgloss.NewStyle().MaxHeight(bodyAvail).Render(body)
