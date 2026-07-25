@@ -118,6 +118,49 @@ Home is the launchpad. Its body is a two-pane layout:
 The large ASCII logo is no longer rendered here; it remains reserved for a
 future About modal.
 
+### Background tiers, and sealing them
+
+Sections are separated by background color rather than by borders. The tiers
+are defined in `src/appstyles/styles.go`:
+
+| Tier | Token                | Where                                  |
+| ---- | -------------------- | -------------------------------------- |
+| 1    | terminal default     | outside the app — never drawn on        |
+| 2    | `BackgroundContent`  | the frame: header, footer, gutter       |
+| 3    | `BackgroundPanel`    | the body panels                        |
+| 4    | `BackgroundElevated` | the focused panel, and modals           |
+
+Focus is shown by lifting a panel from tier 3 to tier 4, not by a heavier
+border, so a panel's box is the same size whether or not it is focused. Use
+`components.panelBg(isFocused)` rather than repeating that choice.
+
+**Every tier must be sealed with `appstyles.FillBackground`.** A terminal's
+SGR reset clears the background until the next SGR, and lipgloss closes each
+styled run with a reset — so any unstyled text later on the same line renders
+on the terminal's own color. `lipgloss.JoinVertical`/`JoinHorizontal` pad
+shorter blocks out to their widest sibling with exactly that: bare spaces
+carrying no SGR. Several bubbles components join their rows the same way.
+Wrapping the result in a `Background()` style does not help, because a style
+only paints the padding it adds itself.
+
+Two rules follow:
+
+1. **Anything that draws text needs an explicit background**, including
+   buttons, cards and list rows. A run with no background set is the notch.
+   Components that sit inside a panel take that panel's tier as a parameter
+   instead of picking a tint of their own, so they stay flush when focus
+   lifts the panel.
+2. **Seal innermost-first.** Each tier seals its own region, then the next
+   tier out seals what is left. Sealing only at the outer tier would flatten
+   the inner ones — the active list row's lighter surface would be repainted
+   to the panel color. The outermost seal is the tier-2 pass in
+   `AppModel.View`.
+
+`appstyles.HasBackgroundBleed` is the matching assertion, and
+`src/model/background_test.go` applies it to fully rendered frames across
+both pages and their empty, populated, narrow and error-banner states. A new
+component that joins blocks without sealing them fails there.
+
 ## 6. Decision checklist for new features
 
 Before adding a feature, answer these:

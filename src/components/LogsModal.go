@@ -18,10 +18,14 @@ import (
 // can't grow the buffer without bound.
 const maxLogLines = 5000
 
+// BorderBackground matters as much as Background here: without it lipgloss
+// leaves the border cells on the terminal's default color, outlining a
+// near-full-screen overlay in the wrong shade.
 var logsModalWrapper = lipgloss.NewStyle().
 	Padding(0, 1).
 	BorderStyle(lipgloss.RoundedBorder()).
 	BorderForeground(appstyles.PrimaryColor).
+	BorderBackground(appstyles.PaneColor).
 	Background(appstyles.PaneColor)
 
 type LogsModalModel struct {
@@ -125,15 +129,22 @@ func (m LogsModalModel) View() tea.View {
 			Render("Error: " + m.err.Error())
 	}
 
-	content := lipgloss.JoinVertical(lipgloss.Left, title, body, footer)
+	// The title and footer are far shorter than the viewport, so JoinVertical
+	// pads them out with unstyled spaces; seal them against the modal's
+	// background before the wrapper draws its border.
+	content := appstyles.FillBackground(
+		appstyles.PaneColor,
+		lipgloss.JoinVertical(lipgloss.Left, title, body, footer),
+	)
+
 	return tea.NewView(logsModalWrapper.Render(content))
 }
 
 // LogsModal opens a near-full-screen overlay streaming logs for target (a
-// service when isProfile is false, a profile otherwise). It starts the stream
+// service when isGroup is false, a group otherwise). It starts the stream
 // immediately and returns the model plus the initial WaitForLog cmd; on a
 // start failure it returns a model that just displays the error.
-func LogsModal(target string, isProfile bool, termWidth, termHeight int) (tea.Model, tea.Cmd) {
+func LogsModal(target string, isGroup bool, termWidth, termHeight int) (tea.Model, tea.Cmd) {
 	vp := viewport.New()
 
 	m := LogsModalModel{
@@ -143,7 +154,7 @@ func LogsModal(target string, isProfile bool, termWidth, termHeight int) (tea.Mo
 	}
 	m.resize(termWidth, termHeight)
 
-	ch, cancel, err := utils.StreamDockerLogs(target, isProfile)
+	ch, cancel, err := utils.StreamDockerLogs(target, isGroup)
 	if err != nil {
 		m.err = err
 		return m, nil

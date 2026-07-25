@@ -6,19 +6,19 @@ import (
 	tea "charm.land/bubbletea/v2"
 )
 
-type DeleteProfileMsg struct {
+type DeleteGroupMsg struct {
 	Err error
 }
 
-// DeleteProfile removes a profile tag from every service that carries it
+// DeleteGroup removes a group tag from every service that carries it
 // in the compose file on disk.
-func DeleteProfile(name string) tea.Cmd {
+func DeleteGroup(name string) tea.Cmd {
 	return func() tea.Msg {
 		fileName, err := utils.GetComposeFileName()
 		if err != nil {
-			return DeleteProfileMsg{Err: err}
+			return DeleteGroupMsg{Err: err}
 		}
 
-		return DeleteProfileMsg{Err: utils.RemoveProfileTag(fileName, name)}
+		return DeleteGroupMsg{Err: utils.RemoveGroupTag(fileName, name)}
 	}
 }

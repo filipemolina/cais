@@ -8,11 +8,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// AddProfileTag tags each of the given services with profileName in the
+// AddGroupTag tags each of the given services with groupName in the
 // compose file at fileName, preserving the file's existing formatting and
 // comments as much as possible. It's idempotent: a service that already
 // carries the tag is left unchanged.
-func AddProfileTag(fileName string, profileName string, serviceNames []string) error {
+func AddGroupTag(fileName string, groupName string, serviceNames []string) error {
 	doc, err := readComposeNode(fileName)
 	if err != nil {
 		return err
@@ -38,10 +38,10 @@ func AddProfileTag(fileName string, profileName string, serviceNames []string) e
 			)
 		}
 
-		if !sequenceContains(profilesNode, profileName) {
+		if !sequenceContains(profilesNode, groupName) {
 			profilesNode.Content = append(profilesNode.Content, &yaml.Node{
 				Kind:  yaml.ScalarNode,
-				Value: profileName,
+				Value: groupName,
 			})
 		}
 	}
@@ -49,10 +49,10 @@ func AddProfileTag(fileName string, profileName string, serviceNames []string) e
 	return writeComposeNode(fileName, doc)
 }
 
-// RemoveProfileTag strips profileName from every service in the compose
+// RemoveGroupTag strips groupName from every service in the compose
 // file at fileName that carries it. A service's profiles key is removed
 // entirely, rather than left as an empty list, once its last tag is gone.
-func RemoveProfileTag(fileName string, profileName string) error {
+func RemoveGroupTag(fileName string, groupName string) error {
 	doc, err := readComposeNode(fileName)
 	if err != nil {
 		return err
@@ -66,13 +66,13 @@ func RemoveProfileTag(fileName string, profileName string) error {
 	// Mapping content is a flat, alternating slice: Content[0] is a key,
 	// Content[1] is its value, and so on.
 	for i := 0; i+1 < len(servicesNode.Content); i += 2 {
-		removeProfileFromService(servicesNode.Content[i+1], profileName)
+		removeGroupFromService(servicesNode.Content[i+1], groupName)
 	}
 
 	return writeComposeNode(fileName, doc)
 }
 
-func removeProfileFromService(serviceNode *yaml.Node, profileName string) {
+func removeGroupFromService(serviceNode *yaml.Node, groupName string) {
 	for i := 0; i+1 < len(serviceNode.Content); i += 2 {
 		if serviceNode.Content[i].Value != "profiles" {
 			continue
@@ -81,7 +81,7 @@ func removeProfileFromService(serviceNode *yaml.Node, profileName string) {
 		profilesNode := serviceNode.Content[i+1]
 		remaining := profilesNode.Content[:0]
 		for _, item := range profilesNode.Content {
-			if item.Value != profileName {
+			if item.Value != groupName {
 				remaining = append(remaining, item)
 			}
 		}
