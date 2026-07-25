@@ -21,7 +21,6 @@ var groupDetailsPanelActions = map[string]string{
 	"t": "stop",
 	"r": "restart",
 	"p": "pull",
-	"x": "remove",
 }
 
 type GroupDetailsPanelModel struct {
@@ -129,7 +128,15 @@ func (m GroupDetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				finalCmds = append(finalCmds, actionCmd)
 			}
 
-			if msg.String() == "l" {
+			switch msg.String() {
+			case "x":
+				// Remove destroys containers, so it goes through a
+				// confirmation first, unlike the other four actions.
+				finalCmds = append(finalCmds, cmds.OpenConfirmModal(
+					fmt.Sprintf("Remove group %q?\nThis stops and removes its containers. (y/n)", m.selectedGroup),
+					cmds.RunDockerAction("remove", m.selectedGroup, true),
+				))
+			case "l":
 				finalCmds = append(finalCmds, cmds.OpenLogsModal(m.selectedGroup, true))
 			}
 		}

@@ -131,6 +131,29 @@ terminal out of the alternate screen and the app looks like it crashed while
 still running. Pages that aren't implemented yet get a
 `components.PlaceholderPanel`.
 
+### State refresh and destructive actions
+
+`AppModel` owns container-status refreshes as well as terminal layout. A
+successful config load queues a foreground `GetRunningContainers` refresh, and
+page changes refresh only after a project has loaded. This avoids letting a
+failed `docker compose ps` overwrite the useful bootstrap error in an empty
+directory.
+
+`cmds.RefreshContainersTick` re-schedules a five-second poll for the life of
+the app. It dispatches `GetRunningContainersBackground` only while a project is
+loaded and no modal is open. Background results update status without clearing
+an unrelated action/configuration error; a recovered background poll clears its
+own error banner. Keep this distinction if the refresh mechanism changes.
+
+`x` removes containers (`docker compose rm -fs`) and is therefore destructive.
+It must go through `cmds.OpenConfirmModal` / `ConfirmModal`; `y` runs the
+follow-up command and `n` or `Esc` cancels it. Do not dispatch a remove action
+directly from a panel.
+
+`DockerComposePs` invokes `docker compose ps --format json` directly. Its
+parser accepts both a JSON array and legacy NDJSON, so `jq` is deliberately not
+a runtime dependency.
+
 ### Home layout
 
 Home is the launchpad. Its body is a two-pane layout:
@@ -219,9 +242,12 @@ Before adding a feature, answer these:
 
 ## 7. Related documents
 
+- [Current TODO](../TODO.md) — the live worklist and recent completed work.
 - [Create/delete profiles design](superpowers/specs/2026-07-22-create-delete-profiles-design.md) —
-  the design spec for the create/delete-groups flow.
+  completed historical design for the create/delete-groups flow.
 - [Create/delete profiles plan](superpowers/plans/2026-07-22-create-delete-profiles.md) —
-  the implementation plan for that flow.
-- [Bootstrap compose file design](superpowers/specs/) — the design spec for
-  bootstrapping a new compose file from inside the TUI.
+  completed historical implementation plan for that flow.
+- [Bootstrap compose file design](superpowers/specs/2026-07-23-bootstrap-compose-file-design.md) —
+  completed historical design for bootstrapping a compose file from inside the TUI.
+- [Bootstrap compose file plan](superpowers/plans/2026-07-23-bootstrap-compose-file.md) —
+  completed historical implementation plan for that flow.

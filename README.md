@@ -14,7 +14,7 @@ Stack Stitcher reads a Docker **Compose** file and turns it into an interactive 
 
 ## Project status
 
-Stack Stitcher is under **active development**. Compose parsing, navigation, starting/stopping services (individually or as a whole group), creating/deleting groups, streaming live logs, and bootstrapping a new compose file from inside the TUI all work. Editing existing services is still on the roadmap. Feedback, issues, and ideas are genuinely welcome and help shape where it goes next.
+Stack Stitcher is under **active development**. Compose parsing, navigation, starting/stopping services (individually or as a whole group), creating/deleting groups, streaming live logs, and bootstrapping a new compose file from inside the TUI all work. Editing existing services is still on the roadmap. See [TODO.md](TODO.md) for the current worklist and completed recent work. Feedback, issues, and ideas are genuinely welcome and help shape where it goes next.
 
 ![Stack Stitcher demo](./demo/demo.gif)
 
@@ -25,14 +25,14 @@ Stack Stitcher is under **active development**. Compose parsing, navigation, sta
 - **Start/stop a whole group together.** Compose "profiles" group related services (e.g. everything a self-hosted app needs); Stack Stitcher lets you Start/Stop/Restart/Pull/Remove all of them in one keypress instead of remembering which services belong together.
 - **Start/stop a single service.** The same five actions are available for one service at a time from the Dashboard view.
 - **Stream live logs.** Press `l` on a focused service or group panel to open a full-screen overlay that tails `docker compose logs -f` in real time, with follow-mode and scrollback.
+- **Automatically refreshed status.** Container state is rechecked every five seconds while a compose project is loaded and no modal is open, so status panels reflect changes made outside Stack Stitcher.
 - **Full-height, context-aware layout.** The app fills the terminal with a pinned header (wordmark + tabs) and footer (keybinding bar); the body region stretches to use every available row. Tabs show user-facing labels such as **Groups** for Home and **Files** for Compose Files, while the underlying page IDs stay the same.
 
 ## Requirements
 
 - **Go 1.26+** — to build from source.
 - **Docker** with the Compose plugin available on your `PATH`.
-- **`jq`** — used to parse `docker compose ps` output.
-- A **`compose.yml`** (or `docker-compose.yml`) describing your services.
+- A Compose file describing your services: `compose.yaml`, `compose.yml`, `docker-compose.yaml`, or `docker-compose.yml`.
 
 ## Installation
 
@@ -44,10 +44,12 @@ cd stack-stitcher
 make build
 ```
 
-This produces the binary at `dist/stack-stitcher`. Move it somewhere on your `PATH` if you'd like it available everywhere:
+`make build` runs `go install .`, which installs the binary to
+`$(go env GOPATH)/bin` (usually `~/go/bin`). Ensure that directory is on your
+`PATH`; no `sudo` or manual move is needed.
 
 ```bash
-sudo mv dist/stack-stitcher /usr/local/bin/
+command -v stack-stitcher
 ```
 
 To run it during development without building:
@@ -82,7 +84,7 @@ flow control and `Ctrl+D` as end-of-input.
 | `t` | Stop | A group or service panel focused |
 | `r` | Restart | A group or service panel focused |
 | `p` | Pull | A group or service panel focused |
-| `x` | Remove | A group or service panel focused |
+| `x` | Remove (asks for confirmation) | A group or service panel focused |
 | `n` | Create a new group | Groups panel focused |
 | `d` | Delete the highlighted group | Groups panel focused |
 | `l` | View live logs (streaming overlay) | A group or service panel focused |
@@ -126,6 +128,8 @@ The ASCII logo asset is still kept in `src/constants/Branding.go` for a future A
 │   ├── appstyles/     # Lip Gloss colors/styles
 │   └── constants/     # Layout widths, branding, focusable component list
 ├── demo/              # VHS script + recorded demo gif
+├── docs/              # design guidance and completed historical plans
+├── TODO.md            # current worklist and completed recent work
 ├── Makefile           # dev / build targets
 ├── go.mod
 └── go.sum
@@ -134,8 +138,12 @@ The ASCII logo asset is still kept in `src/constants/Branding.go` for a future A
 ## Development
 
 ```bash
-make dev     # run locally
-make build   # compile to dist/stack-stitcher
+make dev           # run locally
+make build         # install to $(go env GOPATH)/bin
+
+go build ./...     # compile every package
+go vet ./...       # static checks
+go test ./...      # test suite
 ```
 
 Contributions, issues, and feature ideas are welcome.
