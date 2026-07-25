@@ -358,6 +358,31 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.externalEditorOpen = true
 		finalCmds = append(finalCmds, cmds.RunEditor(m.config.configFileName))
 
+	case cmds.OpenServiceEditorMsg:
+		if m.config.configFileName == "" {
+			m.lastError = "No compose file to edit"
+			m.lastErrorFromPoll = false
+			break
+		}
+
+		m.externalEditorOpen = true
+		finalCmds = append(finalCmds, cmds.EditService(m.config.configFileName, msg.ServiceName))
+
+	case cmds.ServiceEditedMsg:
+		m.externalEditorOpen = false
+		m.lastErrorFromPoll = false
+
+		if msg.Err != nil {
+			// The compose file is untouched. Carry the underlying message
+			// through - "invalid compose file" on its own tells the user
+			// nothing they can act on.
+			m.lastError = fmt.Sprintf("Editing %s: %s", msg.ServiceName, msg.Err)
+			break
+		}
+
+		m.lastError = ""
+		finalCmds = append(finalCmds, cmds.GetConfig)
+
 	case cmds.EditorClosedMsg:
 		m.externalEditorOpen = false
 		m.lastErrorFromPoll = false

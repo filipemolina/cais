@@ -120,7 +120,8 @@ func (m KeybindingBarModel) hintsFor() []KeyHint {
 				{"p", "pull"},
 				{"x", "remove"},
 				{"l", "logs"},
-				{"E", "edit file"},
+				{"e", "edit"},
+				{"E", "file"},
 				{"tab", "next"},
 			}
 		}
