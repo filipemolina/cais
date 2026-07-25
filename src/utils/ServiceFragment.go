@@ -82,14 +82,6 @@ func ApplyServiceFragment(fileName string, serviceName string, fragment []byte) 
 	replaced := false
 	for i := 0; i+1 < len(servicesNode.Content); i += 2 {
 		if servicesNode.Content[i].Value == serviceName {
-			// Known gap: a blank line that sat at the very end of this
-			// service attaches to whichever node happened to come last
-			// inside it, so it goes out with the subtree being replaced and
-			// the gap before the next service closes up. Every other blank
-			// line in the file survives. Re-attaching it defeated several
-			// attempts - yaml.v3 places a FootComment set here between the
-			// *next* service's key and its first field - and a textual fix
-			// belongs at a level that can see the whole rendered file.
 			servicesNode.Content[i+1] = editedValue
 			replaced = true
 			break
@@ -115,12 +107,8 @@ func ApplyServiceFragment(fileName string, serviceName string, fragment []byte) 
 // parseServiceFragment validates the shape of an edited fragment and
 // returns the service's value node.
 func parseServiceFragment(serviceName string, fragment []byte) (*yaml.Node, error) {
-	// The user may have added blank lines of their own; keep them the same
-	// way the file's are kept.
-	source, _ := markBlankLines(fragment)
-
 	var doc yaml.Node
-	if err := yaml.Unmarshal(source, &doc); err != nil {
+	if err := yaml.Unmarshal(fragment, &doc); err != nil {
 		return nil, fmt.Errorf("edited service is not valid YAML: %w", err)
 	}
 
@@ -210,5 +198,5 @@ func encodeNode(node *yaml.Node) ([]byte, error) {
 		return nil, fmt.Errorf("failed encoding YAML: %w", err)
 	}
 
-	return unmarkBlankLines(buf.Bytes()), nil
+	return buf.Bytes(), nil
 }
