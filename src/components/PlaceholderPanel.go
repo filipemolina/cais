@@ -37,9 +37,12 @@ func (m PlaceholderPanelModel) View() tea.View {
 	bodyWidth := max(1, panelBodyWidth(m.panelWidth))
 	bodyAvail := max(1, panelBodyHeight(m.panelHeight))
 
+	// The panel's title pill already names the page, so the card leads with its
+	// state instead of repeating the name.
+	//
 	// Not focusable, so it always renders on the unfocused panel tier.
 	body := renderEmptyCard(bodyWidth, bodyAvail, panelBg(false),
-		m.title, m.message, "", "")
+		"Not built yet", m.message, "", "")
 
 	return tea.NewView(renderPanelFrame(m.title, false, m.panelWidth, m.panelHeight, body))
 }

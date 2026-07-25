@@ -1,6 +1,8 @@
 package components
 
 import (
+	"image/color"
+	"slices"
 	"stack-stitcher/src/appstyles"
 	"stack-stitcher/src/apptypes"
 	"stack-stitcher/src/cmds"
@@ -10,14 +12,14 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
+// MainMenuModel is the top nav bar. It is not focusable and handles no keys:
+// pages are switched with the global alt+<letter> chords that it advertises by
+// underlining each label's first letter (see apptypes.PageShortcut). All it
+// tracks is which page is active, so it can highlight that tab.
 type MainMenuModel struct {
 	items             []string
-	focusedItemIndex  int
 	selectedItemIndex int
 	terminalWidth     int
-	terminalHeight    int
-	isFocused         bool
-	componentId       int
 }
 
 func (m MainMenuModel) Init() tea.Cmd {
@@ -25,51 +27,35 @@ func (m MainMenuModel) Init() tea.Cmd {
 }
 
 func (m MainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var finalCmds []tea.Cmd
-
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.terminalWidth = msg.Width
-		m.terminalHeight = msg.Height
 
-	case cmds.SetFocusMsg:
-		if int(msg) == m.componentId {
-			m.isFocused = true
-		} else {
-			m.isFocused = false
-		}
-
-	case tea.KeyPressMsg:
-		if m.isFocused {
-			switch msg.String() {
-			case "left", "h":
-				if m.focusedItemIndex > 0 {
-					m.focusedItemIndex--
-					m.selectedItemIndex = m.focusedItemIndex
-					pageTitle := apptypes.PageTitles[m.focusedItemIndex]
-					setPageCmd := cmds.SetActivePage(pageTitle)
-					finalCmds = append(finalCmds, setPageCmd)
-				}
-
-			case "right", "l":
-				if m.focusedItemIndex < len(m.items)-1 {
-					m.focusedItemIndex++
-					m.selectedItemIndex = m.focusedItemIndex
-					pageTitle := apptypes.PageTitles[m.focusedItemIndex]
-					setPageCmd := cmds.SetActivePage(pageTitle)
-					finalCmds = append(finalCmds, setPageCmd)
-				}
-
-			case "space":
-				m.selectedItemIndex = m.focusedItemIndex
-				pageTitle := apptypes.PageTitles[m.focusedItemIndex]
-				setPageCmd := cmds.SetActivePage(pageTitle)
-				finalCmds = append(finalCmds, setPageCmd)
-			}
+	case cmds.SetActivePageMsg:
+		if idx := slices.Index(m.items, string(msg)); idx >= 0 {
+			m.selectedItemIndex = idx
 		}
 	}
 
-	return m, tea.Batch(finalCmds...)
+	return m, nil
+}
+
+// tabLabel renders a page label with its first letter underlined. That letter
+// is the page's alt+<letter> chord (see apptypes.PageShortcut), so underlining
+// it advertises the shortcut in place rather than spending a separate hint on
+// each page.
+func tabLabel(label string, fg color.Color, bold bool) string {
+	runes := []rune(label)
+	if len(runes) == 0 {
+		return label
+	}
+
+	base := lipgloss.NewStyle().
+		Foreground(fg).
+		Background(appstyles.BackgroundContent).
+		Bold(bold)
+
+	return base.Underline(true).Render(string(runes[0])) + base.Render(string(runes[1:]))
 }
 
 func (m MainMenuModel) View() tea.View {
@@ -79,64 +65,57 @@ func (m MainMenuModel) View() tea.View {
 		Background(appstyles.BackgroundContent).
 		Width(m.terminalWidth)
 
-	// Active tab: bold white text on tier 2, with a thick Accent-colored
-	// underline. A `▌` accent bar in front of the text.
-	activeTabStyle := lipgloss.NewStyle().
-		Foreground(appstyles.TextPrimary).
-		Bold(true).
-		Background(appstyles.BackgroundContent).
-		Padding(0, 2, 0, 1) // less left padding to compensate for the external ▌
-
-	// Focused-by-Tab (but not the selected page): white text, no underline.
-	focusedTabStyle := lipgloss.NewStyle().
-		Foreground(appstyles.TextPrimary).
+	// Cell styles carry only the spacing. All text styling - color, bold, and
+	// the shortcut underline - happens in tabLabel, so the underline is not
+	// competing with a foreground set on the enclosing style.
+	cellStyle := lipgloss.NewStyle().
 		Background(appstyles.BackgroundContent).
 		Padding(0, 2)
 
-	// Inactive: dim text on tier 2.
-	inactiveTabStyle := lipgloss.NewStyle().
-		Foreground(appstyles.TextDim).
+	// The active cell has less left padding to compensate for the external ▌.
+	activeCellStyle := cellStyle.Padding(0, 2, 0, 1)
+
+	accentBar := lipgloss.NewStyle().
+		Foreground(appstyles.Accent).
 		Background(appstyles.BackgroundContent).
-		Padding(0, 2)
+		Render("▌")
 
-	accentBar := lipgloss.NewStyle().Foreground(appstyles.Accent).Render("▌")
-
-	// Wordmark badge at the far left, using the accent color on the
-	// same tier-2 bar background.
+	// Wordmark badge, now at the far right, in the accent color on the same
+	// tier-2 bar background.
 	wordmarkStyle := lipgloss.NewStyle().
 		Foreground(appstyles.Accent).
 		Background(appstyles.BackgroundContent).
 		Bold(true).
-		Padding(0, 1)
+		Padding(0, 2)
 
 	var cells []string
 	for index, item := range m.items {
-		label := apptypes.PageLabels[item]
-		if label == "" {
-			label = item
-		}
-
 		isSelected := index == m.selectedItemIndex
-		isTabFocused := m.isFocused && index == m.focusedItemIndex
 
-		var cell string
-		switch {
-		case isSelected:
-			cell = lipgloss.JoinHorizontal(lipgloss.Left, accentBar, activeTabStyle.Render(label))
-		case isTabFocused:
-			cell = focusedTabStyle.Render(label)
-		default:
-			cell = inactiveTabStyle.Render(label)
+		if isSelected {
+			cell := activeCellStyle.Render(tabLabel(apptypes.PageLabel(item), appstyles.TextPrimary, true))
+			cells = append(cells, lipgloss.JoinHorizontal(lipgloss.Left, accentBar, cell))
+			continue
 		}
-		cells = append(cells, cell)
+
+		cells = append(cells, cellStyle.Render(tabLabel(apptypes.PageLabel(item), appstyles.TextDim, false)))
 	}
 
-	badge := wordmarkStyle.Render(constants.WORDMARK)
 	tabs := lipgloss.JoinHorizontal(lipgloss.Left, cells...)
-	menuRow := lipgloss.JoinHorizontal(lipgloss.Left, badge, tabs)
-	nav := navStyle.Render(menuRow)
+	badge := wordmarkStyle.Render(constants.WORDMARK)
 
-	return tea.NewView(nav)
+	// Push the wordmark to the far right. The gap carries the bar background so
+	// the whole row stays tier 2; navStyle's own Width would only pad after the
+	// badge, leaving it stuck to the tabs.
+	gapWidth := max(0, m.terminalWidth-lipgloss.Width(tabs)-lipgloss.Width(badge))
+	gap := lipgloss.NewStyle().
+		Background(appstyles.BackgroundContent).
+		Width(gapWidth).
+		Render("")
+
+	menuRow := lipgloss.JoinHorizontal(lipgloss.Left, tabs, gap, badge)
+
+	return tea.NewView(navStyle.Render(menuRow))
 }
 
 func MainMenu() tea.Model {
