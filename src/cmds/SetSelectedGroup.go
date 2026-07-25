@@ -2,8 +2,8 @@ package cmds
 
 import tea "charm.land/bubbletea/v2"
 
-type SetSelectedProfileMsg string
+type SetSelectedGroupMsg string
 
-func SetSelectedProfile(profile string) tea.Cmd {
-	return func() tea.Msg { return SetSelectedProfileMsg(profile) }
+func SetSelectedGroup(group string) tea.Cmd {
+	return func() tea.Msg { return SetSelectedGroupMsg(group) }
 }

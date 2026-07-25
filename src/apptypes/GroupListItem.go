@@ -1,6 +1,6 @@
 package apptypes
 
-type ProfileListItem string
+type GroupListItem string
 
-func (s ProfileListItem) Title() string       { return string(s) }
-func (s ProfileListItem) FilterValue() string { return string(s) }
+func (s GroupListItem) Title() string       { return string(s) }
+func (s GroupListItem) FilterValue() string { return string(s) }

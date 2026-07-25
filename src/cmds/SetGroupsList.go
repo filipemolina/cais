@@ -2,8 +2,8 @@ package cmds
 
 import tea "charm.land/bubbletea/v2"
 
-type SetProfilesListMsg []string
+type SetGroupsListMsg []string
 
-func SetProfilesList(profiles []string) tea.Cmd {
-	return func() tea.Msg { return SetProfilesListMsg(profiles) }
+func SetGroupsList(groups []string) tea.Cmd {
+	return func() tea.Msg { return SetGroupsListMsg(groups) }
 }

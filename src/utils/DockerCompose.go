@@ -11,7 +11,7 @@ import (
 // Remove uses `rm -fs` rather than `down`: `down` also tears down the
 // project's shared network, which would affect services outside the
 // selected service/profile.
-func RunDockerCompose(action string, target string, isProfile bool) error {
+func RunDockerCompose(action string, target string, isGroup bool) error {
 	subcommand, ok := map[string][]string{
 		"start":   {"up", "-d"},
 		"stop":    {"stop"},
@@ -26,7 +26,7 @@ func RunDockerCompose(action string, target string, isProfile bool) error {
 
 	args := []string{"compose"}
 
-	if isProfile {
+	if isGroup {
 		args = append(args, "--profile", target)
 		args = append(args, subcommand...)
 	} else {
