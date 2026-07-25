@@ -154,17 +154,18 @@ func (m GroupDetailsPanelModel) View() tea.View {
 func (m GroupDetailsPanelModel) renderBody() string {
 	bodyWidth := max(1, panelBodyWidth(m.panelWidth))
 	bodyAvail := max(1, panelBodyHeight(m.panelHeight))
+	bg := panelBg(m.isFocused)
 
 	// No groups exist anywhere yet -> onboarding.
 	if len(m.knownGroups()) == 0 {
-		return renderEmptyCard(bodyWidth, bodyAvail, "Getting started",
+		return renderEmptyCard(bodyWidth, bodyAvail, bg, "Getting started",
 			"Groups are Compose profiles: sets of services you run together. Add a `profiles:` key to a service in your compose file to make one.",
 			"n", "new group")
 	}
 
 	// Groups exist but none is selected.
 	if m.selectedGroup == "" {
-		return renderEmptyCard(bodyWidth, bodyAvail, "Select a group",
+		return renderEmptyCard(bodyWidth, bodyAvail, bg, "Select a group",
 			"Pick a group from the list to see its services.",
 			"↑/↓", "then space")
 	}
@@ -180,7 +181,7 @@ func (m GroupDetailsPanelModel) renderBody() string {
 	stopped := len(members) - running
 
 	headerCard := m.groupHeaderCard(m.selectedGroup, running, stopped, len(members), bodyWidth)
-	buttons := renderActionButtons(bodyWidth)
+	buttons := renderActionButtons(bodyWidth, bg)
 
 	footnoteBlock := ""
 	if running == 0 && len(members) > 0 {
