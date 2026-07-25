@@ -14,7 +14,7 @@ Stack Stitcher reads a Docker **Compose** file and turns it into an interactive 
 
 ## Project status
 
-Stack Stitcher is under **active development**. Compose parsing, navigation, starting/stopping services (individually or as a whole group), creating/deleting groups, streaming live logs, and bootstrapping a new compose file from inside the TUI all work. Editing existing services is still on the roadmap. See [TODO.md](TODO.md) for the current worklist and completed recent work. Feedback, issues, and ideas are genuinely welcome and help shape where it goes next.
+Stack Stitcher is under **active development**. Compose parsing, navigation, starting/stopping services (individually or as a whole group), creating/deleting groups, streaming live logs, and bootstrapping a new compose file from inside the TUI all work. Editing existing services works by handing the YAML to your `$EDITOR` — `e` for one service, `E` for the whole file — rather than by filling in a form, so every compose field is reachable and nothing is silently reformatted. Editing inline in the panel is still on the roadmap. See [TODO.md](TODO.md) for the current worklist and completed recent work. Feedback, issues, and ideas are genuinely welcome and help shape where it goes next.
 
 ![Stack Stitcher demo](./demo/demo.gif)
 
@@ -87,6 +87,8 @@ flow control and `Ctrl+D` as end-of-input.
 | `x` | Remove (asks for confirmation) | A group or service panel focused |
 | `n` | Create a new group | Groups panel focused |
 | `d` | Delete the highlighted group | Groups panel focused |
+| `e` | Edit the service's YAML in `$EDITOR` | Service details panel focused |
+| `E` | Edit the whole compose file in `$EDITOR` | Service details panel focused |
 | `l` | View live logs (streaming overlay) | A group or service panel focused |
 | `f` | Toggle follow (auto-scroll) | Logs overlay open |
 | `↑`/`↓` `PgUp`/`PgDn` | Scroll logs | Logs overlay open |
