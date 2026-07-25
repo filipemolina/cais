@@ -23,10 +23,11 @@ records, not a live backlog.
   This is a full-size feature: write a focused design/implementation plan
   before coding, using whatever workflow best fits the task.
 
-- [ ] **[P] Atomic compose-file writes** — flagged as a follow-up in both
-  specs ("worth reconsidering once write failures are more consequential").
-  Switch `writeComposeNode` to temp-file + rename **before** the
-  edit-services feature lands, since that feature makes writes routine.
+- [x] **[P] Atomic compose-file writes** — `utils.ReplaceFileAtomically`
+  writes a temporary file alongside the target and renames it into place,
+  preserving the original's permissions. A failed write now leaves the
+  compose file untouched instead of truncated. Done before the
+  edit-services feature, which makes writes routine.
 
 - [ ] **[P] Compose Files page** — currently a `PlaceholderPanel`. The tab
   label is already "Files". Minimum useful version: show which compose file
