@@ -77,12 +77,24 @@ func TestBootstrapModal_EscRevealsBanner(t *testing.T) {
 	r.Send(keyPress(teaKeyEsc()))
 	time.Sleep(200 * time.Millisecond)
 
-	afterEsc := r.Latest()
+	// Drop everything rendered so far: repaints queued while the modal was
+	// still open land in this window and would otherwise be read as the
+	// modal surviving the Esc. Then force a full repaint by resizing, and
+	// assert against that settled frame.
+	r.Latest()
+	r.Send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	time.Sleep(200 * time.Millisecond)
 
-	// Loose assertion: the latest frame after Esc should not contain
-	// the modal title. If it does, the modal wasn't dismissed.
-	if strings.Contains(afterEsc, "New compose file") {
-		t.Fatalf("modal title still in latest frame after Esc. afterEsc len=%d", len(afterEsc))
+	settled := r.Latest()
+
+	if strings.Contains(settled, "New compose file") {
+		t.Fatalf("modal title still rendered after Esc. settled frame len=%d", len(settled))
+	}
+
+	// The banner behind the modal must survive the dismissal - that is the
+	// explanation the user is left with.
+	if !strings.Contains(settled, "Error:") {
+		t.Fatalf("error banner missing after the modal was dismissed. settled frame:\n%s", settled)
 	}
 }
 
