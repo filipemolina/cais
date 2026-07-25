@@ -8,125 +8,188 @@
 ## Context
 
 Editing existing services is the last open item from the original roadmap.
-The README has said "Editing existing services is still on the roadmap"
-since the project started, and `DESIGN.md` §6.3 already commits to where it
-lands: **the Dashboard, not Home** — Home is for groups, the Dashboard is
-for per-service work.
+`DESIGN.md` §6.3 already commits to where it lands: **the Dashboard, not
+Home** — Home is for groups, the Dashboard is for per-service work.
 
-Everything needed to write to the compose file already exists. The
+Everything needed to write to the compose file exists. The
 create/delete-groups work built a comment-preserving `yaml.Node` edit path
 (`src/utils/GroupTags.go`), and writes became crash-safe when
 `writeComposeNode` moved to `utils.ReplaceFileAtomically`. What's missing is
 a way to change anything other than a `profiles:` tag.
 
-Today the Dashboard's details panel is read-only: it renders name, PUID/PGID,
-image, groups and ports (`src/components/BasicInfo.go`), and the only keys it
-accepts are the five docker actions plus `l` for logs.
+Today the Dashboard's details panel is read-only: it renders name,
+PUID/PGID, image, groups and ports (`src/components/BasicInfo.go`), and the
+only keys it accepts are the five docker actions plus `l` for logs.
 
-## Goals
+## The shape of the feature: YAML, not a form
 
-- Change a service's **image** from inside the TUI, writing through the same
-  comment-preserving, atomic path the group tags use.
-- Keep the compose file the single source of truth: after a write, reload it
-  from disk via the existing `GetConfig` → `configSyncCmds` path rather than
-  mutating the in-memory project.
-- Establish the pattern — keybinding → modal → command → `yaml.Node` edit →
-  reload — so ports and env vars can follow without re-litigating the design.
+The obvious design is a form — a text input per field, starting with image,
+then ports, then env vars. **That is not what this feature is.**
 
-## Non-goals
+A form has to choose a representation for every field, and for two of the
+three fields the choice is destructive. `ports:` has two valid spellings in
+compose: the short string form (`"8080:80"`) and the long mapping form
+(`target:`/`published:`/`protocol:`). `environment:` likewise: a list of
+`KEY=value` strings or a mapping of `KEY: value`, with values that may be
+quoted, empty, or interpolated (`${VAR}`). Round-tripping a user's file
+through form inputs silently rewrites whichever spelling they chose, and
+throws away their comments and key ordering along the way.
 
-- **Ports and env vars in this phase.** They are the natural next fields
-  (TODO lists all three), but see "Why image first" below.
-- Editing anything that isn't a service field: top-level `volumes:`,
-  `networks:`, `x-` extensions, or the compose version.
-- Adding or deleting whole services. Creating a service exists only in the
-  bootstrap flow today; a general "add service" belongs with the Compose
-  Files page.
-- Applying the change to a running container as a side effect of saving. See
-  "The file is not the container".
+A form is also a permanent tax: every compose field that isn't modelled
+is a field the user cannot edit, and compose has a lot of fields.
 
-## Why image first, not all three fields at once
+So the user edits **the actual YAML for the service**, and the app's job is
+to put that text in front of them, splice their edit back into the right
+place in the file, and refuse to write anything that doesn't parse. Every
+compose field is editable on day one, and nothing is silently reformatted.
 
-The three fields the TODO names are not equally hard, and bundling them
-hides that:
+## Three ways to put YAML in front of the user
 
-- **`image:`** is a scalar. Editing it is `node.Value = newImage` — one
-  unambiguous representation, and a text input is the honest UI for it.
-- **`ports:`** is a sequence with two valid spellings: the short string form
-  (`"8080:80"`) and the long mapping form (`target:`/`published:`/
-  `protocol:`). A user who wrote the long form has done so deliberately, and
-  round-tripping their list through a comma-separated text input would
-  silently rewrite it to short form.
-- **`environment:`** has the same problem twice over: a list of `KEY=value`
-  strings or a mapping of `KEY: value`, and values that may be quoted,
-  empty, or interpolated (`${VAR}`) — which `compose-go` resolves in the
-  parsed project but which must be preserved verbatim in the file.
+In increasing order of difficulty, and increasing order of how good they
+feel:
 
-Image alone exercises the entire path end-to-end while the yaml work stays
-trivially correct. The list-shaped fields need their own editor and their own
-decision about syntax preservation; that decision is better made against
-working code than in advance. **This phase does not build a generic form
-that ports and env vars can slot into**, because a row of text inputs is the
-wrong shape for both of them.
+1. **Open the whole compose file in `$EDITOR`.** No YAML manipulation at
+   all — suspend the TUI, run the editor on the real file, reload on exit.
+2. **Open just that service's YAML in `$EDITOR`.** Extract the service's
+   subtree to a temp file, edit it, splice the result back into the original
+   document, validate, write atomically.
+3. **Edit the YAML inline in the details panel.** A `textarea` in the panel
+   itself, with validation as you type. No suspend, no temp file, and the
+   app never leaves the screen.
 
-## UX
+(3) is the preferred end state. (1) and (2) are not throwaway steps toward
+it: (1) stays useful forever, because editing the whole file is how you add
+a service or touch top-level `volumes:`/`networks:`, which per-service
+editing structurally cannot do. And (2) survives inside (3) as an escape
+hatch — a `textarea` in a half-width panel is a poor place to restructure a
+large service, so the inline editor offers "open this in `$EDITOR`" as a
+key.
 
-**Where.** Dashboard → services list → select a service (`space`) → tab to
-the details panel → `e`.
+They also share their hard part. (2) and (3) both need the same three pure
+functions — extract a fragment, splice a fragment back, validate the
+candidate — and those are the substance of the feature. (1) and (2) share
+the editor-suspension machinery. So the phasing is genuinely incremental:
+nothing built early is discarded later.
 
-`e` is free on both details panels. It is added to the Dashboard's service
-details panel only: `GroupDetailsPanel` operates on a whole group, and
-"edit the group's image" is meaningless.
+## Phase 1 — the whole file in `$EDITOR`
 
-**The modal.** A single-field form titled with the service name, prefilled
-with the current image and the cursor at the end — the common case is
-bumping a tag (`nginx:1.27` → `nginx:1.28`), so the existing value must be
-editable rather than retyped.
+`E` on the Dashboard details panel opens the compose file in the user's
+editor. `tea.ExecProcess` suspends the TUI, hands over the terminal, and
+resumes on exit; the callback queues `cmds.GetConfig`, so the app reloads
+whatever the user saved.
 
+**Editor resolution** follows the usual convention: `$VISUAL`, then
+`$EDITOR`, then `vi`. The value is split on whitespace rather than executed
+through a shell, so `EDITOR="code --wait"` works. A shell would let a
+crafted `$EDITOR` do arbitrary things with the terminal handed to it, and
+buys nothing here.
+
+There is no validation step and nothing to roll back: the user edited the
+real file directly, exactly as they would have outside the app. If they save
+something broken, `GetConfig` fails and the existing error banner says so —
+which is already what happens if the file is broken at startup.
+
+**The background poll is suspended while the editor runs.** It shells out to
+`docker compose ps`, which reads the compose file; more importantly, a
+resumed TUI should not process a backlog of ticks. `shouldPollContainers()`
+gains an "external editor is open" condition alongside its existing modal
+and project checks.
+
+## Phase 2 — one service in `$EDITOR`
+
+`e` on the Dashboard details panel opens **just the selected service**.
+
+**The fragment** is the service as a single-key mapping, exactly as it
+appears in the file:
+
+```yaml
+web:
+  image: nginx:alpine
+  # the app the whole thing exists for
+  ports:
+    - "8080:80"
 ```
-Edit web
 
-Image:
-> nginx:alpine
+Keeping the service name as the top-level key does two things. It gives the
+user the context they'd have in the real file, and it gives us a place to
+put an explanatory header comment that cannot leak into the compose file:
+comments above `web:` attach to the *key* node, and the splice only ever
+takes the *value* node. Comments the user writes inside the body attach to
+nodes within the value, and are preserved.
 
-enter save · esc cancel
-```
+**Splicing back**, in `utils`:
 
-Validation is inline in the modal, in the established convention: form
-errors never reach `m.lastError`, IO errors always do. The rules are
-deliberately thin — non-empty, and no whitespace. Image references have a
-genuinely complicated grammar (registry host, port, namespace, tag, digest)
-and a validator that is stricter than docker's is worse than no validator,
-because it blocks references docker would have accepted.
+- Parse the edited fragment. It must be a mapping with exactly one key.
+- The key must still be the original service name. **A renamed key is an
+  error, not a rename feature** — other services may reference the old name
+  in `depends_on:`, and a rename that leaves those dangling is worse than a
+  refusal. Service rename can be its own item later.
+- Replace the value node in the parent mapping, keeping the original key
+  node so its own comments survive.
+- Encode the whole document and validate it (below) before writing.
+- Write through `writeComposeNode` → `ReplaceFileAtomically`.
 
-**Esc cancels and writes nothing.** Consistent with every other modal in the
-app; the compose file is never half-edited.
+**Validation** is the real advantage over Phase 1, and it has two levels.
+YAML syntax comes free from parsing the fragment. Compose validity needs the
+loader: write the candidate document to a temp file in the compose file's own
+directory and run `utils.ReadConfigFile` over it. The directory matters
+because compose resolves relative paths (build contexts, `env_file:`)
+against it; the file name does not, because `ReadConfigFile` pins the
+project name to `stack-stitcher`. This validation is exactly as strict as
+what the app already requires to display anything at all, so it cannot
+reject a file the app would otherwise have been happy with.
 
-## The file is not the container
+**Nothing is written unless it validates**, which raises the question of
+what happens to the user's work when it doesn't. Losing it is not an option,
+so the flow is `visudo`'s: on a validation failure the editor **reopens on
+the same temp file**, with the error written into the header as comments.
+The user fixes it, or quits without saving to abandon the edit. The temp
+file is removed on every exit path.
 
-Writing `image: nginx:1.28` does not change a running container. This is the
-one place where the feature can mislead, so the modal says so directly, and
-the wording names the key that resolves it:
+**An unchanged or emptied file cancels**, writing nothing — the compare is
+on bytes, so quitting the editor without saving is a reliable cancel.
 
-> Applies on next start (`s`) — restart won't recreate the container.
+## Phase 3 — inline in the details panel
 
-That is accurate: `start` maps to `docker compose up -d`
-(`src/utils/DockerCompose.go`), which recreates a container whose config has
-changed. `restart` maps to `docker compose restart`, which does not.
+`e` becomes an inline editor: the details panel swaps its rendered card for
+a `textarea` holding the same fragment Phase 2 produces, and the Phase 2
+`$EDITOR` path moves to a key *inside* the editor (`ctrl+o`), for when the
+panel is too small for the job.
 
-Offering to recreate the container from the save prompt is deliberately not
-part of this phase — it silently couples a file edit to a destructive
-container operation, and `s` is one keypress away.
+Three things this must get right:
+
+**The panel's action keys must be dead while editing.** `s`, `t`, `r`, `p`,
+`x` and `l` are single-letter docker actions on that panel today. Typing
+`ports:` into an editor that reads `p` as "pull" and `t` as "stop" would be
+a disaster, and `x` opens a container-destroying confirmation. The key
+handling gates on edit mode before anything else.
+
+**Save is `ctrl+s`, not `enter`.** `enter` inserts a newline in a multi-line
+editor. `esc` cancels, and confirms first if the text has changed — this is
+the one modal in the app where discarding on `esc` could throw away real
+work.
+
+**Validation is live**, on a status line under the editor: YAML syntax on
+every change (cheap, it's a small document), and the full compose load on
+save. A save that fails validation keeps the editor open with the error
+shown, which is the inline equivalent of Phase 2's reopen loop and rather
+more pleasant.
+
+**Open question, to settle against working code:** the details panel is the
+right-hand half of the body, which is narrow for YAML. If it proves too
+cramped, the editor can expand to the full body width while active. That is
+a layout change and this design does not commit to it — the inline editor
+should be built first and looked at.
 
 ## A prerequisite: the selection resets on reload
 
-`configSyncCmds` (`src/model/Update.go`) re-broadcasts the services list
+`configSyncCmds` (`src/model/Update.go:118`) re-broadcasts the services list
 after every config reload and always selects `orderedServices[0]` — the
 alphabetically first service, not the one the user was on.
 
 This is pre-existing and mostly invisible today: creating or deleting a
-group reloads the config, and the selection jumping back to the top of the
-list is a minor annoyance on a page the user is about to leave anyway.
+group reloads the config, and the selection jumping to the top of the list
+is a minor annoyance on a page the user is about to leave anyway.
 
 For editing it is disqualifying. The user edits `web`, the write succeeds,
 the config reloads, and the details panel jumps to `api` — so the one thing
@@ -134,58 +197,51 @@ they want to see, their change reflected in the panel, is the one thing they
 don't get. It reads as "the edit didn't work".
 
 So the reload must preserve the current selection when the name still
-exists, falling back to the first entry when it doesn't (the service was
-renamed or removed outside the app). This is a small change to
-`configSyncCmds`, it fixes create/delete-group too, and it lands **before**
-the edit feature rather than as a follow-up.
+exists, falling back to the first entry when it doesn't. This is a small
+change to `configSyncCmds`, it fixes create/delete group too, and it lands
+before any of the three phases.
 
-## Data flow
+## The file is not the container
 
-Unchanged from the create/delete-groups shape:
+Writing to the compose file does not change a running container. The app
+says so wherever an edit is saved:
 
-1. `DetailsPanel` sees `e`, emits `cmds.OpenEditServiceModal(service)`.
-2. `AppModel.Update` sets `activeModal` — the same handling as
-   `OpenConfirmModalMsg`.
-3. The modal validates, then emits
-   `cmds.CloseModal(cmds.SetServiceImage(name, image))`.
-4. `cmds.SetServiceImage` calls `utils.SetServiceImage`, which reads the
-   compose node, edits it, and writes it back atomically.
-5. `SetServiceImageMsg` is handled like `CreateGroupMsg`: an error goes to
-   the banner, a success queues `cmds.GetConfig`, which reloads from disk
-   and re-broadcasts — now preserving the selection.
+> Applies on next start (`s`) — restart won't recreate the container.
 
-## Behavior of the yaml edit
+That is accurate: `start` maps to `docker compose up -d`
+(`src/utils/DockerCompose.go`), which recreates a container whose config has
+changed. `restart` maps to `docker compose restart`, which does not.
 
-`utils.SetServiceImage(fileName, serviceName, image string) error`, living
-alongside the group-tag functions and reusing `readComposeNode`,
-`servicesMappingNode`, `findMappingValue` and `writeComposeNode`.
+Recreating the container as a side effect of saving is deliberately not part
+of any phase — it couples a file edit to a destructive container operation,
+and `s` is one keypress away.
 
-- **Existing `image:` key** — assign to the scalar's `Value` and leave the
-  node otherwise untouched, so the user's quoting style survives.
-- **Missing `image:` key** — append it, mirroring how `AddGroupTag` appends
-  a missing `profiles:` key. A compose service may legitimately have `build:`
-  and no `image:`; adding one names the built image, which is well-defined,
-  and refusing would be a confusing dead end for a service whose Image field
-  the panel renders as blank.
-- **Unknown service** — return an error naming it, as `AddGroupTag` does.
+## Non-goals
 
-**Anchors and merge keys.** A service that inherits `image:` from a YAML
-anchor (`<<: *common`) has no local `image:` key, so the edit appends one.
-That override is correct YAML and correct compose semantics, and it is the
-only reasonable local edit — rewriting the shared anchor would silently
-change every service that uses it. Worth knowing, not worth blocking.
+- **Adding or deleting whole services**, via the per-service editor. Phase 1
+  covers it by editing the file directly; a structured version belongs with
+  the Compose Files page.
+- **Renaming a service.** See Phase 2 — it needs `depends_on:` rewriting to
+  be safe.
+- **Reacting to the compose file changing on disk** while the app runs. The
+  periodic poll refreshes container state, not config. Out of scope
+  throughout, and worth its own item.
+- **A schema-aware YAML editor** — completion, field docs, structural
+  folding. The validation described here is parse-and-load, nothing richer.
 
 ## Testing
 
-- `src/utils/` — unit tests for `SetServiceImage`: replaces an existing
-  image, preserves surrounding comments and formatting, appends when the key
-  is missing, errors on an unknown service. The existing
-  `GroupTags_test.go` fixtures already carry inline comments to assert
-  against.
-- `src/model/` — a selection-preservation test on `configSyncCmds`, and an
-  end-to-end test through the existing in-process rig (`rig_test.go`):
-  select a service, press `e`, type, save, and assert both the file on disk
-  and the refreshed panel.
+- `src/utils/` — the three pure functions carry the feature and take the
+  bulk of the tests: fragment extraction preserves comments and formatting;
+  splicing replaces only the target service and leaves neighbours, key
+  order and comments untouched; a renamed key, a multi-key document, a
+  non-mapping body and unparseable YAML each error; validation rejects a
+  structurally-valid-but-invalid-compose document.
+- `src/model/` — selection preservation across a reload, and edit mode
+  swallowing the docker action keys (Phase 3).
+- The editor phases shell out to `$EDITOR`, which the tests set to a script
+  that rewrites the temp file — the same trick the TODO already proposes for
+  faking `docker` on `PATH`.
 
 ## Related
 
