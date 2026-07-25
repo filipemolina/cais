@@ -128,6 +128,15 @@ func (m AppModel) configSyncCmds() []tea.Cmd {
 	return syncCmds
 }
 
+// shouldPollContainers reports whether the background tick should shell out
+// to `docker compose ps`. It skips while a modal owns the screen (least
+// surprising, and avoids racing the bootstrap/confirm flows), and while no
+// compose project is loaded - without a compose file the poll can only
+// fail, and its error would clobber the bootstrap message in the banner.
+func (m AppModel) shouldPollContainers() bool {
+	return m.activeModal == nil && m.config.configProject != nil
+}
+
 // pageForKey returns the page an alt+<letter> chord jumps to, or "" if the key
 // is not a page shortcut.
 //
@@ -214,19 +223,39 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Refresh container state, and re-sync services/groups, so the
 		// newly active page's components have data to show even if they
-		// weren't active when it was first loaded.
-		finalCmds = append(finalCmds, cmds.GetRunningContainers)
+		// weren't active when it was first loaded. Before config loads,
+		// there is no compose file to query; waiting avoids a failing ps
+		// command racing the bootstrap error on an empty directory.
+		if m.config.configProject != nil {
+			finalCmds = append(finalCmds, cmds.GetRunningContainers)
+		}
 		finalCmds = append(finalCmds, m.configSyncCmds()...)
 		if homeStatsCmd := m.broadcastHomeStats(); homeStatsCmd != nil {
 			finalCmds = append(finalCmds, homeStatsCmd)
 		}
 		finalCmds = append(finalCmds, m.broadcastBodyLayout())
 
+	case cmds.RefreshContainersTickMsg:
+		// Re-issue the tick whether or not this cycle refreshes, so the
+		// poll keeps running for the life of the app.
+		finalCmds = append(finalCmds, cmds.RefreshContainersTick())
+
+		if m.shouldPollContainers() {
+			finalCmds = append(finalCmds, cmds.GetRunningContainersBackground)
+		}
+
 	case cmds.GetRunningContainersMsg:
 		if msg.Err != nil {
 			m.lastError = msg.Err.Error()
+			m.lastErrorFromPoll = msg.Background
 		} else {
-			m.lastError = ""
+			// A background success clears the banner only if the poll itself
+			// put it up; a foreground success (page switch, finished action)
+			// always clears it.
+			if !msg.Background || m.lastErrorFromPoll {
+				m.lastError = ""
+				m.lastErrorFromPoll = false
+			}
 			count := 0
 			for _, container := range msg.Containers {
 				if container.State == "running" {
@@ -243,6 +272,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case cmds.DockerActionMsg:
+		// This result replaces any prior poll error in the banner.
+		m.lastErrorFromPoll = false
 		if msg.Err != nil {
 			m.lastError = msg.Err.Error()
 		} else {
@@ -256,6 +287,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cmds.GetConfigMsg:
 		if msg.Err != nil {
 			m.lastError = msg.Err.Error()
+			m.lastErrorFromPoll = false
 			// No compose file in the current directory: offer to create
 			// one in place. The error banner is still set above, so an
 			// Esc from the modal leaves a visible explanation.
@@ -270,6 +302,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		m.config.configFileName = msg.FileName
 		m.config.configProject = msg.Project
+		finalCmds = append(finalCmds, cmds.GetRunningContainers)
 		finalCmds = append(finalCmds, m.configSyncCmds()...)
 		if homeStatsCmd := m.broadcastHomeStats(); homeStatsCmd != nil {
 			finalCmds = append(finalCmds, homeStatsCmd)
@@ -308,6 +341,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case cmds.CreateGroupMsg:
+		m.lastErrorFromPoll = false
 		if msg.Err != nil {
 			m.lastError = msg.Err.Error()
 		} else {
@@ -319,6 +353,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case cmds.DeleteGroupMsg:
+		m.lastErrorFromPoll = false
 		if msg.Err != nil {
 			m.lastError = msg.Err.Error()
 		} else {
@@ -330,6 +365,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case cmds.CreateComposeFileMsg:
+		m.lastErrorFromPoll = false
 		if msg.Err != nil {
 			m.lastError = msg.Err.Error()
 		} else {

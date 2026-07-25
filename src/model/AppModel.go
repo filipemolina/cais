@@ -46,7 +46,11 @@ type AppModel struct {
 	components       Components
 	focusedComponent int
 	lastError        string
-	activeModal      tea.Model
+	// lastErrorFromPoll records whether the banner is showing an error from
+	// the background container poll, so the next successful poll can clear
+	// it without touching errors from other sources (e.g. a failed action).
+	lastErrorFromPoll bool
+	activeModal       tea.Model
 }
 
 // ChangeFocus moves focus through constants.FocusableComponents and returns the
