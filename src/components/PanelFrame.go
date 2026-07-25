@@ -31,6 +31,25 @@ func renderActionButtons(width int, bg color.Color) string {
 		Render(row)
 }
 
+// modalSurface wraps a modal's content in the shared modal chrome: an accent
+// rounded border, padding, and a background sealed against `bg` so the modal
+// reads as one opaque surface over the page it is composited onto. Modals in
+// particular cannot afford an unpainted cell - the page shows through it.
+//
+// BorderBackground is set explicitly because lipgloss leaves border cells on
+// the default background otherwise, which outlines the modal in the terminal's
+// color.
+func modalSurface(bg color.Color, content string) string {
+	style := lipgloss.NewStyle().
+		Padding(1, 2).
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(appstyles.PrimaryColor).
+		BorderBackground(bg).
+		Background(bg)
+
+	return appstyles.FillBackground(bg, style.Render(content))
+}
+
 // renderEmptyCard renders a dim, centered, rounded-border card used for the
 // empty / onboarding states. `key` is shown in the accent color inside
 // brackets, `hint` is the trailing description in a dim color. `availHeight`

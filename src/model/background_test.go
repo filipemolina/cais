@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"stack-stitcher/src/appstyles"
 	"stack-stitcher/src/cmds"
+	"stack-stitcher/src/utils"
 	"strings"
 	"testing"
 
@@ -98,6 +99,55 @@ func TestNoBackgroundBleedAcrossPages(t *testing.T) {
 
 			if appstyles.HasBackgroundBleed(frame) {
 				t.Errorf("rendered frame has unpainted spaces:\n%s", describeBleed(frame))
+			}
+		})
+	}
+}
+
+// A modal is composited over the page beneath it, so an unpainted cell shows
+// the page through the modal rather than just the terminal color.
+func TestNoBackgroundBleedInModals(t *testing.T) {
+	cases := []struct {
+		name string
+		msgs []tea.Msg
+	}{
+		{
+			name: "create group name prompt",
+			msgs: []tea.Msg{
+				cmds.GetConfigMsg{FileName: "compose.yaml", Project: project()},
+				cmds.OpenCreateGroupModalMsg{},
+			},
+		},
+		{
+			name: "delete group confirmation",
+			msgs: []tea.Msg{
+				cmds.GetConfigMsg{FileName: "compose.yaml", Project: project()},
+				cmds.SetSelectedGroupMsg("frontend"),
+				cmds.OpenDeleteGroupModalMsg("frontend"),
+			},
+		},
+		{
+			// No compose file in the working directory opens the bootstrap
+			// modal off the back of the error.
+			name: "bootstrap compose file",
+			msgs: []tea.Msg{
+				cmds.GetConfigMsg{Err: utils.ErrNoComposeFile},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := applyLayout(drive(startup(120, 40), tc.msgs...))
+
+			if m.activeModal == nil {
+				t.Fatalf("precondition: expected a modal to be open")
+			}
+
+			frame := m.View().Content
+
+			if appstyles.HasBackgroundBleed(frame) {
+				t.Errorf("frame with %s has unpainted spaces:\n%s", tc.name, describeBleed(frame))
 			}
 		})
 	}

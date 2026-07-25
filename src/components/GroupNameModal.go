@@ -11,18 +11,18 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-type ProfileNameModalModel struct {
-	input            textinput.Model
-	existingProfiles []string
-	serviceNames     []string
-	errMsg           string
+type GroupNameModalModel struct {
+	input          textinput.Model
+	existingGroups []string
+	serviceNames   []string
+	errMsg         string
 }
 
-func (m ProfileNameModalModel) Init() tea.Cmd {
+func (m GroupNameModalModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m ProfileNameModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m GroupNameModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
 		switch keyMsg.String() {
 		case "esc":
@@ -32,12 +32,12 @@ func (m ProfileNameModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			name := m.input.Value()
 
 			if name == "" {
-				m.errMsg = "Profile name can't be empty"
+				m.errMsg = "Group name can't be empty"
 				return m, nil
 			}
 
-			if slices.Contains(m.existingProfiles, name) {
-				m.errMsg = fmt.Sprintf("Profile %q already exists", name)
+			if slices.Contains(m.existingGroups, name) {
+				m.errMsg = fmt.Sprintf("Group %q already exists", name)
 				return m, nil
 			}
 
@@ -51,34 +51,31 @@ func (m ProfileNameModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m ProfileNameModalModel) View() tea.View {
-	style := lipgloss.NewStyle().
-		Padding(1, 2).
-		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(appstyles.PrimaryColor).
-		Background(appstyles.PanelBackgroundColor)
-
-	lines := []string{"New profile name:", m.input.View()}
+func (m GroupNameModalModel) View() tea.View {
+	lines := []string{"New group name:", m.input.View()}
 	if m.errMsg != "" {
 		errStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#B33A3A"))
 		lines = append(lines, errStyle.Render(m.errMsg))
 	}
 
-	return tea.NewView(style.Render(lipgloss.JoinVertical(lipgloss.Left, lines...)))
+	return tea.NewView(modalSurface(
+		appstyles.PanelBackgroundColor,
+		lipgloss.JoinVertical(lipgloss.Left, lines...),
+	))
 }
 
-// ProfileNameModal is step 1 of the create-profile flow: prompt for a new,
-// unique profile name. Enter with a valid name advances to
+// GroupNameModal is step 1 of the create-group flow: prompt for a new,
+// unique group name. Enter with a valid name advances to
 // ServiceChecklistModal; Esc cancels the whole flow.
-func ProfileNameModal(existingProfiles []string, serviceNames []string) tea.Model {
+func GroupNameModal(existingGroups []string, serviceNames []string) tea.Model {
 	input := textinput.New()
 	input.Placeholder = "e.g. core"
 	input.SetWidth(30)
 	input.Focus()
 
-	return ProfileNameModalModel{
-		input:            input,
-		existingProfiles: existingProfiles,
-		serviceNames:     serviceNames,
+	return GroupNameModalModel{
+		input:          input,
+		existingGroups: existingGroups,
+		serviceNames:   serviceNames,
 	}
 }

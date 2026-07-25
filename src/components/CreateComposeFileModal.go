@@ -170,12 +170,6 @@ func isValidServiceName(s string) bool {
 }
 
 func (m CreateComposeFileModalModel) View() tea.View {
-	wrapper := lipgloss.NewStyle().
-		Padding(1, 2).
-		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(appstyles.PrimaryColor).
-		Background(appstyles.PanelBackgroundColor)
-
 	errStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#B33A3A"))
 	var lines []string
 
@@ -205,7 +199,10 @@ func (m CreateComposeFileModalModel) View() tea.View {
 		lines = append(lines, errStyle.Render(m.errMsg))
 	}
 
-	return tea.NewView(wrapper.Render(lipgloss.JoinVertical(lipgloss.Left, lines...)))
+	return tea.NewView(modalSurface(
+		appstyles.PanelBackgroundColor,
+		lipgloss.JoinVertical(lipgloss.Left, lines...),
+	))
 }
 
 // CreateComposeFileModal walks the user through creating a brand-new compose
