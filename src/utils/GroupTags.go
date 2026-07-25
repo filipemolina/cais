@@ -109,6 +109,9 @@ func readComposeNode(fileName string) (*yaml.Node, error) {
 	return &doc, nil
 }
 
+// writeComposeNode encodes doc into fileName, replacing it atomically. The
+// document is encoded into memory first, so an encoding failure never
+// reaches the user's compose file at all.
 func writeComposeNode(fileName string, doc *yaml.Node) error {
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)
@@ -121,11 +124,7 @@ func writeComposeNode(fileName string, doc *yaml.Node) error {
 		return fmt.Errorf("failed encoding %s: %w", fileName, err)
 	}
 
-	if err := os.WriteFile(fileName, buf.Bytes(), 0o644); err != nil {
-		return fmt.Errorf("failed writing %s: %w", fileName, err)
-	}
-
-	return nil
+	return ReplaceFileAtomically(fileName, buf.Bytes())
 }
 
 func servicesMappingNode(doc *yaml.Node) (*yaml.Node, error) {
