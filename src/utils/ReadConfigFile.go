@@ -18,7 +18,13 @@ func ReadConfigFile(fileName string) (*types.Project, error) {
 		return nil, fmt.Errorf("failed reading working directory: %w", wdErr)
 	}
 
-	path := filepath.Join(workingDir, fileName)
+	// Callers normally pass a bare name found in the working directory, but
+	// an absolute path must be used as given - joining it onto the working
+	// directory would produce a path that doesn't exist.
+	path := fileName
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(workingDir, fileName)
+	}
 	options, projectErr := cli.NewProjectOptions(
 		[]string{path},
 		cli.WithOsEnv,
