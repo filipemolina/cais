@@ -26,16 +26,16 @@ func layoutMsg(m AppModel) cmds.SetBodyLayoutMsg {
 	return m.config.bodyLayout
 }
 
-// startup replays the real startup sequence. The window size arrives before
-// SetActivePageMsg, which is the ordering that used to leave every panel at
-// width 0: WindowSizeMsg only reaches the active page's components, and no
-// page is active yet.
+// startup replays the relevant startup sequence. The window size arrives
+// before SetActivePageMsg, which is the ordering that used to leave every
+// panel at width 0: WindowSizeMsg only reaches the active page's components,
+// and no page is active yet. Activating Home then emits the focus and layout
+// messages that the runtime routes back into the model.
 func startup(width, height int) AppModel {
-	return drive(GetInitialModel(),
-		tea.WindowSizeMsg{Width: width, Height: height},
-		cmds.SetActivePageMsg("Home"),
-		cmds.SetFocusMsg(1),
-	)
+	m := drive(GetInitialModel(), tea.WindowSizeMsg{Width: width, Height: height})
+	updated, cmd := m.Update(cmds.SetActivePageMsg("Home"))
+
+	return drive(updated, collect(cmd)...)
 }
 
 // applyLayout hands the model's own layout back to its components, standing
