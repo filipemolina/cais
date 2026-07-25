@@ -1,179 +1,281 @@
 # Edit Existing Services Implementation Plan
 
 > **Status — in progress.** Unchecked boxes below are a live worklist, not a
-> historical record. Mark this document completed once every task is done and
-> the TODO item is ticked.
+> historical record. Mark this document completed once every phase is done
+> and the TODO item is ticked.
 
-**Goal:** Let the user change a service's image from the Dashboard's details
-panel, written through the existing comment-preserving, atomic compose-file
-path, with the panel showing the result afterwards.
+**Goal:** Let the user edit a service by editing its actual YAML — never a
+generated form — and splice the result back into the compose file without
+disturbing comments, key order, or the spelling of fields they chose.
 
-**Architecture:** The path established by create/delete-groups, unchanged:
-keybinding on a panel → `cmds.Open*Modal` → `AppModel.activeModal` → modal
-validates → `cmds.CloseModal(follow)` → command calls a pure function in
-`src/utils/` → result message reloads config from disk. The only structural
-change is in `configSyncCmds`, which must stop resetting the selection on
-every reload.
+**Phasing.** Three ways to put the YAML in front of the user, in increasing
+difficulty. Each ships something usable and nothing built early is thrown
+away later:
 
-**Scope:** Image only. Ports and env vars are deliberately out of this
-phase — see "Why image first" in the design.
+| Phase | What it does | Why it survives |
+|---|---|---|
+| 0 | Preserve the selected service across a config reload | Prerequisite; fixes create/delete group too |
+| 1 | `E` opens the whole compose file in `$EDITOR` | Only way to add a service or edit top-level keys |
+| 2 | `e` opens just that service in `$EDITOR` | Becomes `ctrl+o` inside the Phase 3 editor |
+| 3 | `e` edits the service inline in the details panel | The preferred end state |
+
+Phases 2 and 3 share their hard part: three pure functions in `src/utils/`
+(extract a fragment, splice one back, validate the candidate). They are
+built once, in Phase 2, and Phase 3 is a second front-end over them.
 
 **Design reference:** `docs/superpowers/specs/2026-07-25-edit-services-design.md`.
 
 ## Global constraints
 
-- Module `stack-stitcher`, Go 1.26. Bubble Tea v2 / Bubbles v2 / Lip Gloss v2
-  (`charm.land/...`), `compose-go/v2/types`, `gopkg.in/yaml.v3`.
+- Module `stack-stitcher`, Go 1.26. Bubble Tea v2 / Bubbles v2 / Lip Gloss
+  v2 (`charm.land/...`), `compose-go/v2/types`, `gopkg.in/yaml.v3`.
 - Cross-component communication goes through `src/cmds/` message types only.
   Components never call each other directly.
-- Form-validation errors stay inline in the modal; IO errors surface through
-  `AppModel.lastError` and the existing banner.
 - Compose-file writes go through `writeComposeNode` →
   `utils.ReplaceFileAtomically`. Never `os.WriteFile` (`DESIGN.md`).
+- Validation/parse errors from an edit surface through `AppModel.lastError`
+  and the existing banner, except where a phase specifies an inline
+  presentation.
 - One exported constructor per component file, matching the existing
   `Init`/`Update`/`View` shape.
-- Each task should build, vet, and test green on its own, and be its own
-  commit.
+- Each task builds, vets and tests green on its own, and is its own commit.
 
 ---
 
-### Task 1: Preserve the selected service across a config reload
+## Phase 0 — Preserve the selection across a reload
 
-Independent of the rest and worth landing first — it fixes create/delete
-group today, and without it the edit feature looks broken.
+Independent of everything else and worth landing first: it fixes
+create/delete group today, and without it every later phase looks broken.
 
-**Files:** `src/model/Update.go`, `src/model/AppModel.go` (if the selection
-needs to be tracked), new `src/model/selection_test.go`.
+### Task 0.1: Re-select the same service and group after a reload
 
-- [ ] **Step 1.** `configSyncCmds` currently ends with
-  `cmds.SetSelectedService(orderedServices[0])` and the same for groups.
-  Track the currently selected service name on `AppModel` (it is only known
-  to `ServicesList` today) and re-select it when it still exists in the
-  reloaded project, falling back to `orderedServices[0]` when it doesn't.
-- [ ] **Step 2.** Do the same for the selected group, so create/delete group
-  stops jumping to the top of the list.
+**Files:** `src/model/Update.go`, `src/model/AppModel.go`, new
+`src/model/selection_test.go`.
+
+- [ ] **Step 1.** `configSyncCmds` ends with
+  `cmds.SetSelectedService(orderedServices[0])` and the equivalent for
+  groups. Track the selected service and group names on `AppModel` — they
+  are known only to `ServicesList`/`GroupsList` today, so `AppModel` needs
+  to observe the `SetSelectedServiceMsg`/`SetSelectedGroupMsg` it already
+  routes.
+- [ ] **Step 2.** On reload, re-select the tracked name when it still exists
+  in the reloaded project; fall back to the first entry when it doesn't
+  (removed or renamed outside the app); send nothing when the project is
+  empty.
 - [ ] **Step 3.** Tests: a reload preserves a mid-list selection; a reload
-  after the selected service disappears falls back to the first entry; an
-  empty project sends no selection message at all.
+  after the selection disappears falls back to the first entry; an empty
+  project sends no selection message.
 
-**Verify:** `go test ./src/model/`, plus existing group tests still green.
+**Verify:** `go test ./src/model/`, existing group tests still green.
 
 ---
 
-### Task 2: `utils.SetServiceImage`
+## Phase 1 — The whole compose file in `$EDITOR`
 
-**Files:** `src/utils/GroupTags.go` (or a new `src/utils/ServiceFields.go` if
-it reads better — the file is named for group tags and this isn't one),
-`src/utils/ServiceFields_test.go`.
+### Task 1.1: Editor resolution
 
-**Interface:** `func SetServiceImage(fileName, serviceName, image string) error`
+**Files:** new `src/utils/Editor.go`, new `src/utils/Editor_test.go`.
 
-- [ ] **Step 1.** Read the doc with `readComposeNode`, get the services
-  mapping with `servicesMappingNode`, find the service with
-  `findMappingValue`. Unknown service → error naming it, matching
-  `AddGroupTag`'s wording.
-- [ ] **Step 2.** If an `image:` key exists, assign the new value to the
-  existing scalar node — do not replace the node, so its quoting style
-  survives. If it doesn't exist, append a key/value pair the way
-  `AddGroupTag` appends `profiles:`.
-- [ ] **Step 3.** Write via `writeComposeNode`.
-- [ ] **Step 4.** Tests, using a fixture that carries inline comments:
-  replaces an existing image; leaves comments, key order and unrelated
-  services untouched; appends the key when absent; errors on an unknown
-  service.
+**Interface:** `func EditorCommand(path string) (*exec.Cmd, error)`
+
+- [ ] **Step 1.** Resolve `$VISUAL`, then `$EDITOR`, then `vi`. Split the
+  value on whitespace so `EDITOR="code --wait"` works, and build the
+  `exec.Cmd` from the parts — **do not** run it through a shell.
+- [ ] **Step 2.** Tests with `t.Setenv`: `VISUAL` wins over `EDITOR`; a
+  multi-word value becomes command + args; both unset falls back to `vi`;
+  a value that is only whitespace is treated as unset.
 
 **Verify:** `go test ./src/utils/`.
 
----
+### Task 1.2: Suspend the poll while an editor is open
 
-### Task 3: The command layer
+**Files:** `src/model/AppModel.go`, `src/model/Update.go`,
+`src/model/refresh_test.go`.
 
-**Files:** new `src/cmds/SetServiceImage.go`, new
-`src/cmds/OpenEditServiceModal.go`.
+- [ ] **Step 1.** Add an `externalEditorOpen` flag to `AppModel` and a
+  condition to `shouldPollContainers()` alongside the existing modal and
+  project checks.
+- [ ] **Step 2.** Test it the way `refresh_test.go` already tests the modal
+  and no-project conditions.
 
-- [ ] **Step 1.** `SetServiceImage(serviceName, image string) tea.Cmd`
-  returning `SetServiceImageMsg{Err error}` — mirrors `CreateGroup.go`,
-  including the `utils.GetComposeFileName()` lookup.
-- [ ] **Step 2.** `OpenEditServiceModal(service types.ServiceConfig) tea.Cmd`
-  returning `OpenEditServiceModalMsg` — mirrors `OpenConfirmModal.go`. It
-  carries the service so the modal can prefill without reaching into
-  `AppModel`.
+**Verify:** `go test ./src/model/`.
 
-**Verify:** `go build ./...`.
+### Task 1.3: Open the compose file, reload on exit
 
----
+**Files:** new `src/cmds/OpenInEditor.go`, `src/components/DetailsPanel.go`,
+`src/model/Update.go`, `src/components/KeybindingBar.go`.
 
-### Task 4: `EditServiceModal`
+- [ ] **Step 1.** `cmds.OpenInEditor(path string) tea.Cmd` wrapping
+  `tea.ExecProcess`, whose callback returns `EditorClosedMsg{Err error}`.
+- [ ] **Step 2.** `DetailsPanel` handles `E` in the focused key switch
+  alongside `x` and `l`, emitting `cmds.OpenInEditor` for the active compose
+  file. The panel doesn't know the file name — carry it in the command from
+  `AppModel`, or have the panel emit an intent message `AppModel` turns into
+  the command. Prefer the intent message: it keeps the panel ignorant of
+  config state, consistent with every other panel key.
+- [ ] **Step 3.** `AppModel.Update`: set `externalEditorOpen` when the
+  editor opens, clear it on `EditorClosedMsg`, and queue `cmds.GetConfig` so
+  the app picks up whatever was saved. An editor that exits non-zero goes to
+  the banner.
+- [ ] **Step 4.** `KeybindingBar`: `{"E", "edit file"}` on the Dashboard's
+  `COMPONENT_BODY_DETAILS` hints only.
 
-**Files:** new `src/components/EditServiceModal.go`.
-
-- [ ] **Step 1.** A single `textinput` prefilled with the current image,
-  focused, cursor at end (`CursorEnd()`, as `CreateComposeFileModal` does
-  for the filename).
-- [ ] **Step 2.** Keys: `enter` validates and emits
-  `cmds.CloseModal(cmds.SetServiceImage(name, image))`; `esc` emits
-  `cmds.CloseModal(nil)`. Everything else forwards to the input, including
-  non-key messages so the cursor keeps blinking.
-- [ ] **Step 3.** Validation: non-empty, no whitespace. Nothing stricter —
-  see the design. Errors render inline via the existing `errStyle`
-  convention.
-- [ ] **Step 4.** View through `modalSurface`, with the service name in the
-  title and the footer line
-  `Applies on next start (s) — restart won't recreate the container.`
-
-**Verify:** `go build ./...`.
+**Verify:** `go build ./... && go vet ./... && go test ./...`, then run the
+app and edit the file for real — this task is mostly terminal handover,
+which no unit test covers convincingly.
 
 ---
 
-### Task 5: Wire it up
+## Phase 2 — One service in `$EDITOR`
 
-**Files:** `src/components/DetailsPanel.go`, `src/model/Update.go`,
-`src/components/KeybindingBar.go`.
+### Task 2.1: Extract a service fragment
 
-- [ ] **Step 1.** `DetailsPanel`: handle `e` in the existing focused-and-
-  selected key switch, alongside `x` and `l`, emitting
-  `cmds.OpenEditServiceModal(*m.service)`.
-- [ ] **Step 2.** `AppModel.Update`: `OpenEditServiceModalMsg` sets
-  `activeModal`, exactly like `OpenConfirmModalMsg`.
-- [ ] **Step 3.** `AppModel.Update`: `SetServiceImageMsg` handled like
-  `CreateGroupMsg` — clear `lastErrorFromPoll`, error to the banner or
-  success queues `cmds.GetConfig`.
-- [ ] **Step 4.** `KeybindingBar`: add `{"e", "edit"}` to the Dashboard's
-  `COMPONENT_BODY_DETAILS` hints only, not Home's.
+**Files:** new `src/utils/ServiceFragment.go`, new
+`src/utils/ServiceFragment_test.go`.
+
+**Interface:** `func ExtractServiceFragment(fileName, serviceName string) ([]byte, error)`
+
+- [ ] **Step 1.** `readComposeNode` → `servicesMappingNode` →
+  `findMappingValue`. Unknown service errors, matching `AddGroupTag`'s
+  wording.
+- [ ] **Step 2.** Encode a single-key mapping — the original key node and
+  its value node — at indent 2, so the fragment reads exactly as it does in
+  the file.
+- [ ] **Step 3.** Tests: comments inside the service survive; neighbouring
+  services do not appear; an unknown service errors.
+
+**Verify:** `go test ./src/utils/`.
+
+### Task 2.2: Validate a candidate compose document
+
+**Files:** `src/utils/ServiceFragment.go`, tests alongside.
+
+**Interface:** `func ValidateComposeCandidate(dir string, contents []byte) error`
+
+- [ ] **Step 1.** Write `contents` to a temp file in `dir` (not `/tmp` —
+  compose resolves build contexts and `env_file:` relative to the compose
+  file's directory), run `ReadConfigFile` over it, remove the temp file on
+  every path.
+- [ ] **Step 2.** Tests: a good document passes; a document whose YAML is
+  fine but whose compose is not (e.g. a service that is a string rather than
+  a mapping) is rejected with the loader's message; no temp files are left
+  behind either way.
+
+**Verify:** `go test ./src/utils/`.
+
+### Task 2.3: Splice an edited fragment back
+
+**Files:** `src/utils/ServiceFragment.go`, tests alongside.
+
+**Interface:** `func ApplyServiceFragment(fileName, serviceName string, fragment []byte) error`
+
+- [ ] **Step 1.** Parse the fragment. Reject: unparseable YAML; a document
+  that isn't a single-key mapping; a key that isn't `serviceName` (a rename
+  — say so explicitly in the error, and that it isn't supported); a value
+  that isn't a mapping.
+- [ ] **Step 2.** Replace the value node in the services mapping, keeping
+  the original key node so its comments survive.
+- [ ] **Step 3.** Encode the document, run `ValidateComposeCandidate` on the
+  result, and only then write through `writeComposeNode`. A validation
+  failure must leave the file untouched.
+- [ ] **Step 4.** Tests: a valid edit rewrites only that service and leaves
+  neighbours, key order and their comments intact; each rejection above
+  errors *and* leaves the file byte-identical.
+
+**Verify:** `go test ./src/utils/`.
+
+### Task 2.4: Wire `e` to the fragment editor
+
+**Files:** new `src/cmds/EditService.go`, `src/components/DetailsPanel.go`,
+`src/model/Update.go`, `src/components/KeybindingBar.go`.
+
+- [ ] **Step 1.** `cmds.EditService` extracts the fragment to a temp file,
+  `tea.ExecProcess`es the editor over it, and in the callback reads the file
+  back and applies it. Cancel without writing when the bytes are unchanged
+  or the file is empty. Remove the temp file on every path.
+- [ ] **Step 2.** Result message handled like `CreateGroupMsg`: error to the
+  banner, success queues `cmds.GetConfig`.
+- [ ] **Step 3.** `DetailsPanel` handles `e`; `KeybindingBar` gains
+  `{"e", "edit"}` on the Dashboard details hints.
+- [ ] **Step 4.** An end-to-end test with `$EDITOR` set to a shell script
+  that rewrites the fragment, asserting the compose file afterwards.
 
 **Verify:** `go build ./... && go vet ./... && go test ./...`.
 
----
+### Task 2.5: Reopen the editor when validation fails
 
-### Task 6: End-to-end test
+The difference between a usable feature and one that eats your work.
 
-**Files:** `src/model/edit_service_test.go`.
-
-- [ ] **Step 1.** Using the in-process rig (`rig_test.go`), in a temp
-  directory with a fixture compose file: select a service, focus the details
-  panel, press `e`, type a new image, press enter.
-- [ ] **Step 2.** Assert the file on disk has the new image and its comments
-  intact, and that the details panel is still showing the edited service
-  (which is Task 1's behavior, verified end to end here).
-- [ ] **Step 3.** Assert `esc` writes nothing.
+- [ ] **Step 1.** On a validation or parse failure, rewrite the temp file
+  with the error as comments in the header and reopen the editor on it,
+  `visudo`-style, rather than discarding the edit.
+- [ ] **Step 2.** Quitting without saving on the retry abandons the edit and
+  removes the temp file. Guard against an infinite loop — the user must
+  always be able to get out with an unmodified save.
+- [ ] **Step 3.** Test the retry path with a script editor that writes
+  something invalid, then something valid.
 
 **Verify:** `go test ./...`.
 
 ---
 
-### Task 7: Documentation
+## Phase 3 — Inline in the details panel
+
+### Task 3.1: Edit mode in the details panel
+
+**Files:** `src/components/DetailsPanel.go`, new
+`src/components/ServiceEditor.go`.
+
+- [ ] **Step 1.** `e` swaps the rendered card for a `textarea`
+  (`charm.land/bubbles/v2/textarea`) holding the Phase 2 fragment.
+- [ ] **Step 2.** **Gate the panel's key handling on edit mode before
+  anything else.** `s`, `t`, `r`, `p`, `x` and `l` are docker actions on
+  this panel; while editing they must be plain text. Typing `ports:` must
+  not pull and stop the service, and `x` must not open a
+  container-destroying confirmation.
+- [ ] **Step 3.** `ctrl+s` saves through `ApplyServiceFragment`. `esc`
+  cancels, confirming first when the text has changed — the only place in
+  the app where `esc` could discard real work. `ctrl+o` hands off to the
+  Phase 2 `$EDITOR` path for a fragment too big for the panel.
+- [ ] **Step 4.** A test that edit mode swallows every action key.
+
+**Verify:** `go test ./src/model/ ./src/components/`.
+
+### Task 3.2: Live validation
+
+**Files:** `src/components/ServiceEditor.go`.
+
+- [ ] **Step 1.** Parse the buffer on change and show YAML syntax status on
+  a line under the editor. The fragment is small; no debounce needed until
+  measurement says otherwise.
+- [ ] **Step 2.** On save, run the full compose validation and keep the
+  editor open with the error when it fails.
+
+**Verify:** `go test ./...`.
+
+### Task 3.3: Decide the editor's width
+
+- [ ] **Step 1.** Use it. The details panel is the right-hand half of the
+  body, which may be too narrow for YAML.
+- [ ] **Step 2.** If it is, let the editor take the full body width while
+  active and restore the split on exit. **Do not build this speculatively** —
+  the design deliberately leaves it open.
+
+---
+
+## Task 4: Documentation
 
 **Files:** `README.md`, `docs/DESIGN.md`, `TODO.md`, this plan, the design.
 
-- [ ] **Step 1.** README: add `e` to the keybindings table; soften the
-  "Editing existing services is still on the roadmap" line to say that the
-  image can now be edited and that ports/env are next.
-- [ ] **Step 2.** `DESIGN.md`: note in the state/destructive-actions section
-  that service edits go through the same atomic path, and that a file edit
-  does not touch a running container.
-- [ ] **Step 3.** `TODO.md`: tick the edit-services item for image, and add
-  ports and env vars as their own follow-up entries with the syntax-
-  preservation problem recorded, so the reasoning isn't lost.
+- [ ] **Step 1.** README: `e` and `E` in the keybindings table; replace
+  "Editing existing services is still on the roadmap" with what actually
+  ships.
+- [ ] **Step 2.** `DESIGN.md`: record that service editing is YAML-based
+  rather than a form and why, that edits go through the same atomic path,
+  and that a file edit never touches a running container.
+- [ ] **Step 3.** `TODO.md`: tick the item, and record what was
+  deliberately left out — service rename, reacting to on-disk changes,
+  structured add/delete of services.
 - [ ] **Step 4.** Mark this plan and its design completed, matching the
   convention of the other documents in these directories.
 
