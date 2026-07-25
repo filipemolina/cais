@@ -154,6 +154,19 @@ func GetInitialModel() AppModel {
 		components.DetailsPanel(nil),
 	}
 
+	// Every page in apptypes.PageTitles needs an entry here. A page missing
+	// from this map renders an empty body, which used to drop the app out of
+	// the alternate screen and look like a crash.
+	pages["Compose Files"] = []tea.Model{
+		components.PlaceholderPanel("Files",
+			"Browsing and editing compose files from here is not built yet. For now, Stack Stitcher reads the compose file in the directory it was started from."),
+	}
+
+	pages["Settings"] = []tea.Model{
+		components.PlaceholderPanel("Settings",
+			"There is nothing to configure yet. Colors, key bindings and the default compose file will live here."),
+	}
+
 	return AppModel{
 		containers: containersModel{
 			runningContainers: []list.Item{},
