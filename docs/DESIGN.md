@@ -154,6 +154,15 @@ directly from a panel.
 parser accepts both a JSON array and legacy NDJSON, so `jq` is deliberately not
 a runtime dependency.
 
+The compose file is the user's own, and it is the one piece of state the app
+cannot recreate. Every write to it goes through `utils.ReplaceFileAtomically`,
+which writes a temporary file alongside the target and renames it into place,
+carrying the original's permissions across. Nothing may write to a compose file
+with `os.WriteFile` or an `os.Create` truncation: those destroy the original
+before the new contents are safely on disk, so a failure mid-write leaves the
+user with nothing. Encode into memory first, as `writeComposeNode` does, so
+that a serialisation error never reaches the file at all.
+
 ### Home layout
 
 Home is the launchpad. Its body is a two-pane layout:
