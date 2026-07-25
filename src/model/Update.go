@@ -137,11 +137,13 @@ func (m AppModel) configSyncCmds() []tea.Cmd {
 
 // shouldPollContainers reports whether the background tick should shell out
 // to `docker compose ps`. It skips while a modal owns the screen (least
-// surprising, and avoids racing the bootstrap/confirm flows), and while no
-// compose project is loaded - without a compose file the poll can only
-// fail, and its error would clobber the bootstrap message in the banner.
+// surprising, and avoids racing the bootstrap/confirm flows), while an
+// external editor holds the terminal (the app is suspended, so a poll would
+// only queue work for the resume), and while no compose project is loaded -
+// without a compose file the poll can only fail, and its error would clobber
+// the bootstrap message in the banner.
 func (m AppModel) shouldPollContainers() bool {
-	return m.activeModal == nil && m.config.configProject != nil
+	return m.activeModal == nil && !m.externalEditorOpen && m.config.configProject != nil
 }
 
 // pageForKey returns the page an alt+<letter> chord jumps to, or "" if the key
@@ -345,6 +347,30 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case cmds.SetSelectedGroupMsg:
 		m.selection.groupName = string(msg)
+
+	case cmds.OpenEditorMsg:
+		if m.config.configFileName == "" {
+			m.lastError = "No compose file to edit"
+			m.lastErrorFromPoll = false
+			break
+		}
+
+		m.externalEditorOpen = true
+		finalCmds = append(finalCmds, cmds.RunEditor(m.config.configFileName))
+
+	case cmds.EditorClosedMsg:
+		m.externalEditorOpen = false
+		m.lastErrorFromPoll = false
+
+		if msg.Err != nil {
+			m.lastError = msg.Err.Error()
+			break
+		}
+
+		// Reload unconditionally: the user may have saved anything, or
+		// nothing, and re-reading is cheaper than working out which.
+		m.lastError = ""
+		finalCmds = append(finalCmds, cmds.GetConfig)
 
 	case cmds.OpenConfirmModalMsg:
 		m.activeModal = components.ConfirmModal(msg.Message, msg.Follow)
