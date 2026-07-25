@@ -1,6 +1,11 @@
-# Create/Delete Profiles Implementation Plan
+# Create/Delete Profiles Implementation Plan (Completed)
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Historical execution record — implemented.** All numbered tasks in this
+> plan are complete. The unchecked boxes below preserve the original plan and
+> are **not** a current backlog or workflow instruction. The implementation was
+> later renamed from *profile* to **group** in user-facing and Go names;
+> Compose's `profiles:` field remains unchanged. See [README](../../../README.md),
+> [Design](../../DESIGN.md), and [TODO](../../../TODO.md) for current guidance.
 
 **Goal:** Let the user create a new profile (name a group + pick services to tag) and delete an existing one (untag it from every service), from the Home page's Groups panel, persisting both changes to the on-disk compose file.
 
