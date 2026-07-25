@@ -5,7 +5,6 @@ import (
 	"stack-stitcher/src/cmds"
 
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 )
 
 type ConfirmModalModel struct {
@@ -34,13 +33,7 @@ func (m ConfirmModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m ConfirmModalModel) View() tea.View {
-	style := lipgloss.NewStyle().
-		Padding(1, 2).
-		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(appstyles.PrimaryColor).
-		Background(appstyles.PanelBackgroundColor)
-
-	return tea.NewView(style.Render(m.message))
+	return tea.NewView(modalSurface(appstyles.PanelBackgroundColor, m.message))
 }
 
 // ConfirmModal shows message and, if the user presses 'y', runs confirm
