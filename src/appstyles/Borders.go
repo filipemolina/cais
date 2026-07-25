@@ -2,24 +2,10 @@ package appstyles
 
 import "charm.land/lipgloss/v2"
 
-var ActiveTabBorder = lipgloss.Border{
-	Top:         "─",
-	Bottom:      " ",
-	Left:        "│",
-	Right:       "│",
-	TopLeft:     "╭",
-	TopRight:    "╮",
-	BottomLeft:  "┘",
-	BottomRight: "└",
-}
+var ActiveTabBorder = lipgloss.NewStyle().
+	BorderStyle(lipgloss.RoundedBorder()).
+	BorderForeground(BorderFocus)
 
-var InactiveTabBorder = lipgloss.Border{
-	Top:         "─",
-	Bottom:      "─",
-	Left:        "│",
-	Right:       "│",
-	TopLeft:     "╭",
-	TopRight:    "╮",
-	BottomLeft:  "┴",
-	BottomRight: "┴",
-}
+var InactiveTabBorder = lipgloss.NewStyle().
+	BorderStyle(lipgloss.RoundedBorder()).
+	BorderForeground(BorderDefault)
