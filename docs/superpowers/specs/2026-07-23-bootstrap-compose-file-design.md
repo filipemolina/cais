@@ -1,5 +1,12 @@
 # Bootstrap a Compose File — Design
 
+> **Status — implemented / historical.** The bootstrap modal now opens
+> automatically when no compose file exists, and the behavior is covered by
+> `src/model/bootstrap_test.go`. Do not treat the historical "today"
+> statements below as current behavior. See [README](../../../README.md),
+> [Design](../../DESIGN.md), and [TODO](../../../TODO.md) for the current
+> state and backlog.
+
 ## Context
 
 Stack Stitcher's README roadmap lists "bootstrapping a `compose.yml` from scratch" as an open item. Today, running `stack-stitcher` in a directory without a compose file (`utils.GetComposeFileName` — `src/utils/GetComposeFileName.go`) returns `"no compose.yaml, compose.yml, docker-compose.yaml or docker-compose.yml found in the current directory"`, which surfaces in `m.lastError` and leaves the user staring at an empty, non-interactive error banner. The only way out is to quit, hand-write YAML, and re-run.

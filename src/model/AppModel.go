@@ -46,7 +46,11 @@ type AppModel struct {
 	components       Components
 	focusedComponent int
 	lastError        string
-	activeModal      tea.Model
+	// lastErrorFromPoll records whether the banner is showing an error from
+	// the background container poll, so the next successful poll can clear
+	// it without touching errors from other sources (e.g. a failed action).
+	lastErrorFromPoll bool
+	activeModal       tea.Model
 }
 
 // ChangeFocus moves focus through constants.FocusableComponents and returns the
@@ -187,9 +191,9 @@ func GetInitialModel() AppModel {
 			KeybindingBar: components.KeybindingBar(),
 		},
 		pages: pages,
-		// Matches the SetFocus sent from Init() - keeps the Tab cycle in sync
-		// with which component is actually focused at startup, so the first Tab
-		// press doesn't appear to do nothing.
+		// Page activation sends this focus to the active page's components.
+		// Keeping the model in the same initial state makes the first Tab move
+		// to the details panel rather than appearing to do nothing.
 		focusedComponent: constants.COMPONENT_BODY_LIST,
 	}
 }

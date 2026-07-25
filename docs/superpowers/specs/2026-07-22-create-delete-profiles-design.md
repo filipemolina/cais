@@ -1,5 +1,12 @@
 # Create/Delete Profiles — Design
 
+> **Status — implemented / historical.** This design's functionality is live.
+> The UI and current code now use **group** terminology; Compose still calls
+> the underlying `profiles:` field a profile. Do not treat the historical
+> "today" statements below as current behavior. See
+> [README](../../../README.md), [Design](../../DESIGN.md), and
+> [TODO](../../../TODO.md) for the current state and backlog.
+
 ## Context
 
 Stack Stitcher's README roadmap lists "creating/deleting profiles from the TUI" as an open item. Compose "profiles" group related services so they can be started/stopped together; today the app can only read profiles (derived from each service's `profiles:` field) and act on them — it can't create or remove one.
