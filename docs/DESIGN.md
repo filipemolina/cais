@@ -154,6 +154,30 @@ directly from a panel.
 parser accepts both a JSON array and legacy NDJSON, so `jq` is deliberately not
 a runtime dependency.
 
+### Editing services
+
+Service editing hands the user their own YAML rather than a form. A form has
+to pick a representation for every field, and compose accepts two spellings
+for both `ports:` (short string vs. long mapping) and `environment:` (list
+vs. mapping), so round-tripping through inputs would silently rewrite
+whichever the user chose along with their comments and key order. A form is
+also a standing tax: any field nobody modelled is a field nobody can edit.
+
+`e` extracts one service as a single-key mapping, opens it in `$VISUAL`/
+`$EDITOR`, and splices the result back over the same key. `E` opens the
+whole file, which is the only way to add a service or touch top-level keys.
+
+Nothing is written unless the fragment parses, keeps its name, and the whole
+resulting document still loads as compose — validated by writing a candidate
+next to the compose file and running the loader over it. A rejected edit
+reports the loader's message and returns to a normal TUI with the file
+untouched; pressing the key again is the retry. Do not add a
+fix-it-before-you-can-leave loop: being unable to leave is worse than losing
+the text.
+
+Renaming a service through the fragment is refused, because `depends_on:`
+elsewhere in the file may point at the old name.
+
 The compose file is the user's own, and it is the one piece of state the app
 cannot recreate. Every write to it goes through `utils.ReplaceFileAtomically`,
 which writes a temporary file alongside the target and renames it into place,

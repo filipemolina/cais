@@ -130,3 +130,101 @@ func TestAnEditorThatCannotStartDoesNotWedgeTheApp(t *testing.T) {
 		t.Fatal("the app stopped rendering after a failed editor launch")
 	}
 }
+
+// Phase 2 end to end: e opens just the selected service, and what comes
+// back is spliced into the compose file.
+func TestEditingASingleServiceInAnExternalEditor(t *testing.T) {
+	dir := composeProject(t, editorFixture)
+	// The scratch file holds only "web:", so this rewrite cannot touch db.
+	scriptEditor(t, dir, `sed -i 's|nginx:alpine|nginx:1.28|' "$1"`)
+
+	r := newRig(t)
+	if !r.WaitFor("web", 3*time.Second) {
+		t.Fatal("the services never rendered")
+	}
+
+	r.Send(cmds.OpenServiceEditorMsg{ServiceName: "web"})
+
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		saved := readComposeFile(t, dir)
+		if strings.Contains(saved, "nginx:1.28") {
+			if !strings.Contains(saved, "# front door") {
+				t.Errorf("the edit lost the service's comment:\n%s", saved)
+			}
+			if !strings.Contains(saved, "postgres:alpine") {
+				t.Errorf("the edit disturbed a neighbouring service:\n%s", saved)
+			}
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	t.Fatalf("the service was never edited:\n%s", readComposeFile(t, dir))
+}
+
+// A rejected edit has to leave the file alone and leave the app usable.
+func TestAnInvalidServiceEditIsRefused(t *testing.T) {
+	dir := composeProject(t, editorFixture)
+	before := readComposeFile(t, dir)
+	scriptEditor(t, dir, `printf 'web: not-a-mapping\n' > "$1"`)
+
+	r := newRig(t)
+	if !r.WaitFor("web", 3*time.Second) {
+		t.Fatal("the services never rendered")
+	}
+
+	r.Send(cmds.OpenServiceEditorMsg{ServiceName: "web"})
+	time.Sleep(1 * time.Second)
+
+	if after := readComposeFile(t, dir); after != before {
+		t.Errorf("a refused edit changed the file:\n%s", after)
+	}
+
+	// Still alive and rendering, with no editor loop to escape.
+	r.Send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	if !r.WaitFor("web", 3*time.Second) {
+		t.Fatal("the app stopped rendering after a refused edit")
+	}
+}
+
+// Quitting the editor without saving cancels, writing nothing at all.
+func TestAnUnchangedServiceEditWritesNothing(t *testing.T) {
+	dir := composeProject(t, editorFixture)
+	before := readComposeFile(t, dir)
+	scriptEditor(t, dir, `true`)
+
+	r := newRig(t)
+	if !r.WaitFor("web", 3*time.Second) {
+		t.Fatal("the services never rendered")
+	}
+
+	r.Send(cmds.OpenServiceEditorMsg{ServiceName: "web"})
+	time.Sleep(1 * time.Second)
+
+	if after := readComposeFile(t, dir); after != before {
+		t.Errorf("an unchanged edit rewrote the file:\n%s", after)
+	}
+
+	// The scratch file is removed however the edit ends.
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("reading %s: %v", dir, err)
+	}
+	for _, entry := range entries {
+		if strings.HasPrefix(entry.Name(), ".web.") {
+			t.Errorf("the scratch file was left behind: %s", entry.Name())
+		}
+	}
+}
+
+func readComposeFile(t *testing.T, dir string) string {
+	t.Helper()
+
+	contents, err := os.ReadFile(filepath.Join(dir, "compose.yaml"))
+	if err != nil {
+		t.Fatalf("reading the compose file: %v", err)
+	}
+
+	return string(contents)
+}
