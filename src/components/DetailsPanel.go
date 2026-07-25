@@ -2,9 +2,9 @@ package components
 
 import (
 	"stack-stitcher/src/cmds"
-	"stack-stitcher/src/constants"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/compose-spec/compose-go/v2/types"
 )
 
@@ -32,13 +32,12 @@ func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var finalCmds []tea.Cmd
 
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		h, _ := wrapperStyle.GetFrameSize()
-		panelWidth := float32(msg.Width - h)
-		finalWidth := int(panelWidth * constants.RIGHT_PANEL_WIDTH)
-
-		m.panelWidth = int(finalWidth)
-		m.panelHeight = msg.Height - 2
+	// Both dimensions come from AppModel. Deriving them from WindowSizeMsg
+	// here would leave the panel at width 0 whenever the Dashboard wasn't
+	// the active page at resize time.
+	case cmds.SetBodyLayoutMsg:
+		m.panelWidth = msg.RightWidth
+		m.panelHeight = msg.Height
 
 	case cmds.SetFocusMsg:
 		if int(msg) == m.componentId {
@@ -68,15 +67,24 @@ func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m DetailsPanelModel) View() tea.View {
+	bodyWidth := max(1, panelBodyWidth(m.panelWidth))
+	bodyAvail := max(1, panelBodyHeight(m.panelHeight))
+
 	if m.service == nil {
-		screen := renderPanelFrame("Details", m.isFocused, m.panelWidth, m.panelHeight, "", "")
+		body := renderEmptyCard(bodyWidth, bodyAvail, "Select a service",
+			"Pick a service from the list to see its details.",
+			"↑/↓", "then space")
+		screen := renderPanelFrame("Details", m.isFocused, m.panelWidth, m.panelHeight, body)
 		return tea.NewView(screen)
 	}
 
-	basicInfo := BasicInfo(*m.service, m.panelWidth)
-	buttons := renderActionButtons(m.panelWidth)
+	basicInfo := BasicInfo(*m.service, bodyWidth)
+	buttons := renderActionButtons(bodyWidth)
 
-	screen := renderPanelFrame("Details", m.isFocused, m.panelWidth, m.panelHeight, basicInfo, buttons)
+	body := lipgloss.JoinVertical(lipgloss.Left, basicInfo, buttons)
+	body = lipgloss.NewStyle().MaxHeight(bodyAvail).Render(body)
+
+	screen := renderPanelFrame("Details", m.isFocused, m.panelWidth, m.panelHeight, body)
 	return tea.NewView(screen)
 }
 
