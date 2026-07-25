@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 
@@ -101,8 +100,12 @@ func readComposeNode(fileName string) (*yaml.Node, error) {
 		return nil, fmt.Errorf("failed reading %s: %w", fileName, err)
 	}
 
+	// Blank lines become marker comments so they survive re-encoding; see
+	// markBlankLines. encodeNode turns them back.
+	source, _ := markBlankLines(raw)
+
 	var doc yaml.Node
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := yaml.Unmarshal(source, &doc); err != nil {
 		return nil, fmt.Errorf("failed parsing %s: %w", fileName, err)
 	}
 
@@ -113,18 +116,12 @@ func readComposeNode(fileName string) (*yaml.Node, error) {
 // document is encoded into memory first, so an encoding failure never
 // reaches the user's compose file at all.
 func writeComposeNode(fileName string, doc *yaml.Node) error {
-	var buf bytes.Buffer
-	enc := yaml.NewEncoder(&buf)
-	enc.SetIndent(2)
-
-	if err := enc.Encode(doc); err != nil {
-		return fmt.Errorf("failed encoding %s: %w", fileName, err)
-	}
-	if err := enc.Close(); err != nil {
+	contents, err := encodeNode(doc)
+	if err != nil {
 		return fmt.Errorf("failed encoding %s: %w", fileName, err)
 	}
 
-	return ReplaceFileAtomically(fileName, buf.Bytes())
+	return ReplaceFileAtomically(fileName, contents)
 }
 
 func servicesMappingNode(doc *yaml.Node) (*yaml.Node, error) {
