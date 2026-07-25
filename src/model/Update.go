@@ -113,16 +113,23 @@ func (m AppModel) configSyncCmds() []tea.Cmd {
 		return cmp.Compare(a.Name, b.Name)
 	})
 
+	// Re-select what the user had selected before the reload. A missing name
+	// (nothing selected yet, or it was removed or renamed outside the app)
+	// gives -1, and falling back to the first entry is the only answer left.
 	syncCmds = append(syncCmds, cmds.SetServicesList(orderedServices))
 	if len(orderedServices) > 0 {
-		syncCmds = append(syncCmds, cmds.SetSelectedService(orderedServices[0]))
+		index := slices.IndexFunc(orderedServices, func(service types.ServiceConfig) bool {
+			return service.Name == m.selection.serviceName
+		})
+		syncCmds = append(syncCmds, cmds.SetSelectedService(orderedServices[max(0, index)]))
 	}
 
 	orderedGroups := m.allGroupNames()
 
 	syncCmds = append(syncCmds, cmds.SetGroupsList(orderedGroups))
 	if len(orderedGroups) > 0 {
-		syncCmds = append(syncCmds, cmds.SetSelectedGroup(orderedGroups[0]))
+		index := slices.Index(orderedGroups, m.selection.groupName)
+		syncCmds = append(syncCmds, cmds.SetSelectedGroup(orderedGroups[max(0, index)]))
 	}
 
 	return syncCmds
@@ -330,6 +337,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			fmt.Sprintf("Delete group %q? (y/n)", groupName),
 			cmds.DeleteGroup(groupName),
 		)
+
+	// Observed, not handled: these are on their way to the panels, and
+	// AppModel only notes what was picked so a reload can restore it.
+	case cmds.SetSelectedServiceMsg:
+		m.selection.serviceName = types.ServiceConfig(msg).Name
+
+	case cmds.SetSelectedGroupMsg:
+		m.selection.groupName = string(msg)
 
 	case cmds.OpenConfirmModalMsg:
 		m.activeModal = components.ConfirmModal(msg.Message, msg.Follow)

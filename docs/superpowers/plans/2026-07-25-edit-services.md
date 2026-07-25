@@ -52,19 +52,26 @@ create/delete group today, and without it every later phase looks broken.
 **Files:** `src/model/Update.go`, `src/model/AppModel.go`, new
 `src/model/selection_test.go`.
 
-- [ ] **Step 1.** `configSyncCmds` ends with
+- [x] **Step 1.** `configSyncCmds` ends with
   `cmds.SetSelectedService(orderedServices[0])` and the equivalent for
   groups. Track the selected service and group names on `AppModel` — they
   are known only to `ServicesList`/`GroupsList` today, so `AppModel` needs
   to observe the `SetSelectedServiceMsg`/`SetSelectedGroupMsg` it already
   routes.
-- [ ] **Step 2.** On reload, re-select the tracked name when it still exists
+- [x] **Step 2.** On reload, re-select the tracked name when it still exists
   in the reloaded project; fall back to the first entry when it doesn't
   (removed or renamed outside the app); send nothing when the project is
   empty.
-- [ ] **Step 3.** Tests: a reload preserves a mid-list selection; a reload
+- [x] **Step 3.** Tests: a reload preserves a mid-list selection; a reload
   after the selection disappears falls back to the first entry; an empty
   project sends no selection message.
+- [x] **Step 4 (unplanned).** Both lists keyed their highlight on the row
+  number the user pressed space on and never revisited it, so any reload
+  that changed the list highlighted whichever item moved into that row —
+  independently of, and invisible to, the `AppModel` fix above. They now
+  store the name and re-derive the row, and listen for the
+  `SetSelected*Msg` they previously only emitted, so `AppModel` decides and
+  the highlight follows. First tests in `src/components/`.
 
 **Verify:** `go test ./src/model/`, existing group tests still green.
 
