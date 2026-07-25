@@ -99,11 +99,33 @@ func (d GroupsListCustomDelegate) Render(w io.Writer, m list.Model, index int, l
 type GroupListModel struct {
 	list         list.Model
 	listDelegate GroupsListCustomDelegate
-	isFocused    bool
-	componentId  int
-	statsHeader  string
-	panelWidth   int
-	panelHeight  int
+	// activeGroup is the name of the group the user picked with space. See
+	// ServicesListModel.activeService - creating or deleting a group
+	// reshuffles this list, so a stored row number would highlight whichever
+	// group moved into that row.
+	activeGroup string
+	isFocused   bool
+	componentId int
+	statsHeader string
+	panelWidth  int
+	panelHeight int
+}
+
+// syncActiveIndex points the delegate at the row holding activeGroup, or at
+// no row at all when it isn't in the list. Runs on both the list and the
+// selection changing, since they arrive as unordered separate messages.
+func (m *GroupListModel) syncActiveIndex() {
+	active := -1
+
+	for i, item := range m.list.Items() {
+		if group, ok := item.(apptypes.GroupListItem); ok && string(group) == m.activeGroup {
+			active = i
+			break
+		}
+	}
+
+	m.listDelegate.activeIndex = active
+	m.list.SetDelegate(m.listDelegate)
 }
 
 func (m GroupListModel) Init() tea.Cmd {
@@ -146,13 +168,15 @@ func (m GroupListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "space":
 			if m.isFocused {
-				m.listDelegate.activeIndex = m.list.GlobalIndex()
-				m.list.SetDelegate(m.listDelegate)
-
 				selectedItem := m.list.SelectedItem()
 				selectedGroup, ok := selectedItem.(apptypes.GroupListItem)
 
 				if ok {
+					// Highlight on the same frame as the keypress rather
+					// than waiting for the message to come back around.
+					m.activeGroup = string(selectedGroup)
+					m.syncActiveIndex()
+
 					selectedServiceCmd := cmds.SetSelectedGroup(string(selectedGroup))
 					finalCmds = append(finalCmds, selectedServiceCmd)
 				}
@@ -176,6 +200,12 @@ func (m GroupListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// The header appearing takes a row away from the list.
 		m.resizeList()
 
+	// AppModel decides which group is selected after a config reload, so the
+	// list follows that decision rather than keeping its own.
+	case cmds.SetSelectedGroupMsg:
+		m.activeGroup = string(msg)
+		m.syncActiveIndex()
+
 	case cmds.SetGroupsListMsg:
 		groupsList := []list.Item{}
 
@@ -187,6 +217,7 @@ func (m GroupListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		cmd := m.list.SetItems(groupsList)
 		finalCmds = append(finalCmds, cmd)
+		m.syncActiveIndex()
 
 	case cmds.SetFocusMsg:
 		if int(msg) == m.componentId {
@@ -269,7 +300,9 @@ func GroupsList(groups []string, width int, height int) tea.Model {
 		items = append(items, apptypes.GroupListItem(group))
 	}
 
-	listDelegate := GroupsListCustomDelegate{}
+	// -1 rather than the zero value: no group is active until one is
+	// selected, and 0 would render the first row as though one were.
+	listDelegate := GroupsListCustomDelegate{activeIndex: -1}
 	servicesList := list.New(items, listDelegate, width, height)
 	servicesList.SetShowHelp(false)
 	servicesList.SetShowStatusBar(false)
