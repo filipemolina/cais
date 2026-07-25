@@ -19,11 +19,11 @@ const logTailCount = "200"
 // Unlike RunDockerCompose, which captures CombinedOutput() once and returns,
 // this reads stdout+stderr incrementally on a goroutine so the TUI can render
 // lines as they arrive.
-func StreamDockerLogs(target string, isProfile bool) (<-chan string, context.CancelFunc, error) {
+func StreamDockerLogs(target string, isGroup bool) (<-chan string, context.CancelFunc, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	args := []string{"compose"}
-	if isProfile {
+	if isGroup {
 		// Follows the same --profile convention as RunDockerCompose. Note this
 		// also activates no-profile default services, so their lines can appear
 		// too - identical to how start/stop already scope with --profile.

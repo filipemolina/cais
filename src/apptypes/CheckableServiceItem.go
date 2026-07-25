@@ -3,7 +3,7 @@ package apptypes
 import "fmt"
 
 // CheckableServiceItem is a list.Item for the service-selection checklist
-// shown when creating a profile.
+// shown when creating a group.
 type CheckableServiceItem struct {
 	Name    string
 	Checked bool
