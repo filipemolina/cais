@@ -8,13 +8,84 @@ import (
 	"slices"
 	"stack-stitcher/src/cmds"
 	"stack-stitcher/src/components"
+	"stack-stitcher/src/constants"
 	"stack-stitcher/src/utils"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/compose-spec/compose-go/v2/types"
 )
 
-// configSyncCmds re-derives the ordered services/profiles lists from the
+// calculateBodyLayout returns the exact box each body panel must render
+// into: the row count left after the nav, keybinding bar, and optional error
+// banner, split across the two panels so that
+// left + BODY_GUTTER_WIDTH + right == the terminal width.
+//
+// The left panel gets LEFT_PANEL_WIDTH of the row (after the gutter is taken
+// out) and the right panel gets whatever is left, so rounding can never make
+// the two panels overflow or leave a ragged column. Both panels are held at
+// MIN_PANEL_WIDTH where the terminal allows it; below that the row is split
+// evenly and the panels clip their own content.
+func (m AppModel) calculateBodyLayout() cmds.SetBodyLayoutMsg {
+	menuHeight := lipgloss.Height(m.components.MainMenu.View().Content)
+	keybarHeight := lipgloss.Height(m.components.KeybindingBar.View().Content)
+
+	errorBanner := 0
+	if m.lastError != "" {
+		errorBanner = 1
+	}
+
+	height := m.config.terminalHeight - menuHeight - keybarHeight - errorBanner
+	if height < 0 {
+		height = 0
+	}
+
+	available := m.config.terminalWidht - constants.BODY_GUTTER_WIDTH
+	if available < 0 {
+		available = 0
+	}
+
+	var left int
+	switch {
+	case available < 2*constants.MIN_PANEL_WIDTH:
+		left = available / 2
+	default:
+		left = int(float32(available) * constants.LEFT_PANEL_WIDTH)
+		left = max(left, constants.MIN_PANEL_WIDTH)
+		left = min(left, available-constants.MIN_PANEL_WIDTH)
+	}
+
+	return cmds.SetBodyLayoutMsg{
+		LeftWidth:  left,
+		RightWidth: available - left,
+		Height:     height,
+	}
+}
+
+// broadcastBodyLayout returns a command that sends the current body layout
+// to the active page's components.
+func (m AppModel) broadcastBodyLayout() tea.Cmd {
+	return cmds.SetBodyLayout(
+		m.config.bodyLayout.LeftWidth,
+		m.config.bodyLayout.RightWidth,
+		m.config.bodyLayout.Height,
+	)
+}
+
+// rebroadcastBodyLayoutIfChanged recalculates the body layout and, if it
+// differs from the stored value, updates the stored value and returns a
+// command to broadcast it. It is used when the error banner appears or
+// disappears, because the banner consumes one row.
+func (m *AppModel) rebroadcastBodyLayoutIfChanged() tea.Cmd {
+	newLayout := m.calculateBodyLayout()
+	if newLayout == m.config.bodyLayout {
+		return nil
+	}
+	m.config.bodyLayout = newLayout
+	return m.broadcastBodyLayout()
+}
+
+// configSyncCmds re-derives the ordered services/groups lists from the
 // loaded compose project and broadcasts them. Messages only reach the
 // currently active page's components (see UpdateInnerComponent), so this
 // needs to run both right after the config loads AND whenever the active
@@ -46,11 +117,11 @@ func (m AppModel) configSyncCmds() []tea.Cmd {
 		syncCmds = append(syncCmds, cmds.SetSelectedService(orderedServices[0]))
 	}
 
-	orderedProfiles := m.allProfileNames()
+	orderedGroups := m.allGroupNames()
 
-	syncCmds = append(syncCmds, cmds.SetProfilesList(orderedProfiles))
-	if len(orderedProfiles) > 0 {
-		syncCmds = append(syncCmds, cmds.SetSelectedProfile(orderedProfiles[0]))
+	syncCmds = append(syncCmds, cmds.SetGroupsList(orderedGroups))
+	if len(orderedGroups) > 0 {
+		syncCmds = append(syncCmds, cmds.SetSelectedGroup(orderedGroups[0]))
 	}
 
 	return syncCmds
@@ -96,21 +167,40 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.config.terminalWidht = msg.Width
 		m.config.terminalHeight = msg.Height
+		m.config.bodyLayout = m.calculateBodyLayout()
+		finalCmds = append(finalCmds, m.broadcastBodyLayout())
 
 	// Commands from the cmds folder
 	case cmds.SetActivePageMsg:
 		m.activePage = string(msg)
-		// Refresh container state, and re-sync services/profiles, so the
+		// Refresh container state, and re-sync services/groups, so the
 		// newly active page's components have data to show even if they
 		// weren't active when it was first loaded.
 		finalCmds = append(finalCmds, cmds.GetRunningContainers)
 		finalCmds = append(finalCmds, m.configSyncCmds()...)
+		if homeStatsCmd := m.broadcastHomeStats(); homeStatsCmd != nil {
+			finalCmds = append(finalCmds, homeStatsCmd)
+		}
+		finalCmds = append(finalCmds, m.broadcastBodyLayout())
 
 	case cmds.GetRunningContainersMsg:
 		if msg.Err != nil {
 			m.lastError = msg.Err.Error()
 		} else {
 			m.lastError = ""
+			count := 0
+			for _, container := range msg.Containers {
+				if container.State == "running" {
+					count++
+				}
+			}
+			m.containers.runningCount = count
+			if homeStatsCmd := m.broadcastHomeStats(); homeStatsCmd != nil {
+				finalCmds = append(finalCmds, homeStatsCmd)
+			}
+		}
+		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
+			finalCmds = append(finalCmds, bodyCmd)
 		}
 
 	case cmds.DockerActionMsg:
@@ -119,6 +209,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			m.lastError = ""
 			finalCmds = append(finalCmds, cmds.GetRunningContainers)
+		}
+		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
+			finalCmds = append(finalCmds, bodyCmd)
 		}
 
 	case cmds.GetConfigMsg:
@@ -130,31 +223,40 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if errors.Is(msg.Err, utils.ErrNoComposeFile) {
 				m.activeModal = components.CreateComposeFileModal()
 			}
+			if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
+				finalCmds = append(finalCmds, bodyCmd)
+			}
 			break
 		}
 
 		m.config.configFileName = msg.FileName
 		m.config.configProject = msg.Project
 		finalCmds = append(finalCmds, m.configSyncCmds()...)
+		if homeStatsCmd := m.broadcastHomeStats(); homeStatsCmd != nil {
+			finalCmds = append(finalCmds, homeStatsCmd)
+		}
+		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
+			finalCmds = append(finalCmds, bodyCmd)
+		}
 
-	case cmds.OpenCreateProfileModalMsg:
+	case cmds.OpenCreateGroupModalMsg:
 		if m.config.configProject != nil {
-			m.activeModal = components.ProfileNameModal(m.allProfileNames(), m.config.configProject.ServiceNames())
+			m.activeModal = components.GroupNameModal(m.allGroupNames(), m.config.configProject.ServiceNames())
 		}
 
 	case cmds.OpenLogsModalMsg:
 		var startCmd tea.Cmd
 		m.activeModal, startCmd = components.LogsModal(
-			msg.Target, msg.IsProfile,
+			msg.Target, msg.IsGroup,
 			m.config.terminalWidht, m.config.terminalHeight,
 		)
 		finalCmds = append(finalCmds, startCmd)
 
-	case cmds.OpenDeleteProfileModalMsg:
-		profileName := string(msg)
+	case cmds.OpenDeleteGroupModalMsg:
+		groupName := string(msg)
 		m.activeModal = components.ConfirmModal(
-			fmt.Sprintf("Delete profile %q? (y/n)", profileName),
-			cmds.DeleteProfile(profileName),
+			fmt.Sprintf("Delete group %q? (y/n)", groupName),
+			cmds.DeleteGroup(groupName),
 		)
 
 	case cmds.CloseModalMsg:
@@ -163,20 +265,26 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			finalCmds = append(finalCmds, msg.Follow)
 		}
 
-	case cmds.CreateProfileMsg:
+	case cmds.CreateGroupMsg:
 		if msg.Err != nil {
 			m.lastError = msg.Err.Error()
 		} else {
 			m.lastError = ""
 			finalCmds = append(finalCmds, cmds.GetConfig)
 		}
+		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
+			finalCmds = append(finalCmds, bodyCmd)
+		}
 
-	case cmds.DeleteProfileMsg:
+	case cmds.DeleteGroupMsg:
 		if msg.Err != nil {
 			m.lastError = msg.Err.Error()
 		} else {
 			m.lastError = ""
 			finalCmds = append(finalCmds, cmds.GetConfig)
+		}
+		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
+			finalCmds = append(finalCmds, bodyCmd)
 		}
 
 	case cmds.CreateComposeFileMsg:
@@ -185,6 +293,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			m.lastError = ""
 			finalCmds = append(finalCmds, cmds.GetConfig)
+		}
+		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
+			finalCmds = append(finalCmds, bodyCmd)
 		}
 	}
 
@@ -198,8 +309,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var mainMenuCmd tea.Cmd
 	m.components.MainMenu, mainMenuCmd = m.components.MainMenu.Update(msg)
 
+	var keybindingBarCmd tea.Cmd
+	m.components.KeybindingBar, keybindingBarCmd = m.components.KeybindingBar.Update(msg)
+
 	innerComponentsCmd := m.UpdateInnerComponent(m.activePage, msg)
-	finalCmds = append(finalCmds, mainMenuCmd, innerComponentsCmd)
+	finalCmds = append(finalCmds, mainMenuCmd, keybindingBarCmd, innerComponentsCmd)
 
 	return m, tea.Batch(finalCmds...)
 }
