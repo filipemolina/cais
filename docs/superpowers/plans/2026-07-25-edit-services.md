@@ -85,10 +85,10 @@ create/delete group today, and without it every later phase looks broken.
 
 **Interface:** `func EditorCommand(path string) (*exec.Cmd, error)`
 
-- [ ] **Step 1.** Resolve `$VISUAL`, then `$EDITOR`, then `vi`. Split the
+- [x] **Step 1.** Resolve `$VISUAL`, then `$EDITOR`, then `vi`. Split the
   value on whitespace so `EDITOR="code --wait"` works, and build the
   `exec.Cmd` from the parts — **do not** run it through a shell.
-- [ ] **Step 2.** Tests with `t.Setenv`: `VISUAL` wins over `EDITOR`; a
+- [x] **Step 2.** Tests with `t.Setenv`: `VISUAL` wins over `EDITOR`; a
   multi-word value becomes command + args; both unset falls back to `vi`;
   a value that is only whitespace is treated as unset.
 
@@ -99,10 +99,10 @@ create/delete group today, and without it every later phase looks broken.
 **Files:** `src/model/AppModel.go`, `src/model/Update.go`,
 `src/model/refresh_test.go`.
 
-- [ ] **Step 1.** Add an `externalEditorOpen` flag to `AppModel` and a
+- [x] **Step 1.** Add an `externalEditorOpen` flag to `AppModel` and a
   condition to `shouldPollContainers()` alongside the existing modal and
   project checks.
-- [ ] **Step 2.** Test it the way `refresh_test.go` already tests the modal
+- [x] **Step 2.** Test it the way `refresh_test.go` already tests the modal
   and no-project conditions.
 
 **Verify:** `go test ./src/model/`.
@@ -112,24 +112,34 @@ create/delete group today, and without it every later phase looks broken.
 **Files:** new `src/cmds/OpenInEditor.go`, `src/components/DetailsPanel.go`,
 `src/model/Update.go`, `src/components/KeybindingBar.go`.
 
-- [ ] **Step 1.** `cmds.OpenInEditor(path string) tea.Cmd` wrapping
+- [x] **Step 1.** `cmds.OpenInEditor(path string) tea.Cmd` wrapping
   `tea.ExecProcess`, whose callback returns `EditorClosedMsg{Err error}`.
-- [ ] **Step 2.** `DetailsPanel` handles `E` in the focused key switch
+- [x] **Step 2.** `DetailsPanel` handles `E` in the focused key switch
   alongside `x` and `l`, emitting `cmds.OpenInEditor` for the active compose
   file. The panel doesn't know the file name — carry it in the command from
   `AppModel`, or have the panel emit an intent message `AppModel` turns into
   the command. Prefer the intent message: it keeps the panel ignorant of
   config state, consistent with every other panel key.
-- [ ] **Step 3.** `AppModel.Update`: set `externalEditorOpen` when the
+- [x] **Step 3.** `AppModel.Update`: set `externalEditorOpen` when the
   editor opens, clear it on `EditorClosedMsg`, and queue `cmds.GetConfig` so
   the app picks up whatever was saved. An editor that exits non-zero goes to
   the banner.
-- [ ] **Step 4.** `KeybindingBar`: `{"E", "edit file"}` on the Dashboard's
+- [x] **Step 4.** `KeybindingBar`: `{"E", "edit file"}` on the Dashboard's
   `COMPONENT_BODY_DETAILS` hints only.
 
 **Verify:** `go build ./... && go vet ./... && go test ./...`, then run the
 app and edit the file for real — this task is mostly terminal handover,
 which no unit test covers convincingly.
+
+**Done, with a caveat.** Covered by a rig test that runs a real editor
+process through `tea.ExecProcess` and asserts the file and the reload, which
+is the handover working headless. Panel keypresses driven through the rig
+are *not* exercised anywhere in the suite and did not work when tried — every
+existing rig key test targets a modal, which takes the early-return path and
+never reaches a panel. So the keypress half is covered at the model level
+instead, and the two meet at `OpenEditorMsg`. Worth closing that harness gap
+before Phase 3, which is all panel keys. A check in a real TTY is still
+worth doing by hand.
 
 ---
 
