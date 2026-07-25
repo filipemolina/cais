@@ -54,12 +54,15 @@ func modalSurface(bg color.Color, content string) string {
 // empty / onboarding states. `key` is shown in the accent color inside
 // brackets, `hint` is the trailing description in a dim color. `availHeight`
 // is the vertical space in which the card should be centered. `bg` is the
-// panel's background tier, which both the card and the space around it sit on.
+// panel's background tier, which the space around the card sits on; the card
+// itself is recessed below that tier so it reads as inset into the panel.
 func renderEmptyCard(width, availHeight int, bg color.Color, title, body, key, hint string) string {
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(appstyles.TextMuted).Background(bg)
-	bodyStyle := lipgloss.NewStyle().Foreground(appstyles.TextDim).Background(bg)
-	keyStyle := lipgloss.NewStyle().Bold(true).Foreground(appstyles.Accent).Background(bg)
-	hintStyle := lipgloss.NewStyle().Foreground(appstyles.TextDim).Background(bg)
+	cardBg := appstyles.BackgroundRecessed
+
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(appstyles.TextMuted).Background(cardBg)
+	bodyStyle := lipgloss.NewStyle().Foreground(appstyles.TextDim).Background(cardBg)
+	keyStyle := lipgloss.NewStyle().Bold(true).Foreground(appstyles.Accent).Background(cardBg)
+	hintStyle := lipgloss.NewStyle().Foreground(appstyles.TextDim).Background(cardBg)
 
 	content := lipgloss.JoinVertical(lipgloss.Left,
 		titleStyle.Render(title),
@@ -80,13 +83,16 @@ func renderEmptyCard(width, availHeight int, bg color.Color, title, body, key, h
 		cardWidth = 20
 	}
 
+	// The border ring carries the card's own background, so the recessed
+	// surface reads as one solid block rather than a dark fill outlined in the
+	// panel color.
 	card := lipgloss.NewStyle().
 		Width(cardWidth).
 		Padding(1, 2).
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(appstyles.BorderDefault).
-		BorderBackground(bg).
-		Background(bg).
+		BorderForeground(appstyles.BorderCard).
+		BorderBackground(cardBg).
+		Background(cardBg).
 		AlignHorizontal(lipgloss.Center).
 		Render(content)
 
@@ -96,8 +102,9 @@ func renderEmptyCard(width, availHeight int, bg color.Color, title, body, key, h
 
 	// The card's inner joins leave unstyled padding on the short lines (the
 	// blank spacer rows, and the hint line built by concatenating two styled
-	// runs), which is the dark block that used to sit beside the card.
-	card = appstyles.FillBackground(bg, card)
+	// runs). Seal against the card's surface, not the panel's - this runs
+	// before the panel seals the space around it.
+	card = appstyles.FillBackground(cardBg, card)
 
 	return lipgloss.NewStyle().
 		Width(width).

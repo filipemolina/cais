@@ -34,9 +34,20 @@ var BackgroundContent = lipgloss.Lighten(PanelBg, 0.04)
 var BackgroundPanel = lipgloss.Lighten(PanelBg, 0.08)
 var BackgroundElevated = lipgloss.Lighten(PanelBg, 0.12)
 
+// BackgroundRecessed runs the other way: a surface that sits *below* the panel
+// tier, for insets like the empty-state cards, which should read as cut into
+// the panel rather than raised off it. It is the unlightened base color, so it
+// stays darker than every tier above it including a focused panel's tier 4.
+var BackgroundRecessed = PanelBg
+
 // Border tokens.
 var BorderDefault = lipgloss.Darken(PanelBg, 0.3)
 var BorderFocus = Accent
+
+// BorderCard rims a recessed surface. It has to be lighter than the surface it
+// wraps, which is why BorderDefault does not work here: that token is darker
+// than PanelBg and disappears against a BackgroundRecessed fill.
+var BorderCard = lipgloss.Lighten(PanelBg, 0.18)
 
 // Status tokens.
 var StatusRunning = lipgloss.Color("#67C58A")
