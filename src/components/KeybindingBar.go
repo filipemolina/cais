@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"stack-stitcher/src/appstyles"
 	"stack-stitcher/src/cmds"
+	"stack-stitcher/src/constants"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -72,13 +73,7 @@ func (m KeybindingBarModel) hintsFor() []KeyHint {
 	switch m.activePage {
 	case "Home":
 		switch m.focusedComponent {
-		case 0: // Main Menu
-			return []KeyHint{
-				{"←/→", "page"},
-				{"space", "select"},
-				{"tab", "next"},
-			}
-		case 1: // Groups List
+		case constants.COMPONENT_BODY_LIST: // Groups List
 			hints := []KeyHint{
 				{"n", "new"},
 				{"↑/↓", "navigate"},
@@ -89,7 +84,7 @@ func (m KeybindingBarModel) hintsFor() []KeyHint {
 				hints = append(hints[:2], append([]KeyHint{{"d", "delete"}}, hints[2:]...)...)
 			}
 			return hints
-		case 2: // Group Details
+		case constants.COMPONENT_BODY_DETAILS: // Group Details
 			if m.selectedGroup == "" {
 				return []KeyHint{{"tab", "next"}}
 			}
@@ -105,13 +100,7 @@ func (m KeybindingBarModel) hintsFor() []KeyHint {
 		}
 	case "Dashboard":
 		switch m.focusedComponent {
-		case 0:
-			return []KeyHint{
-				{"←/→", "page"},
-				{"space", "select"},
-				{"tab", "next"},
-			}
-		case 1: // Services List
+		case constants.COMPONENT_BODY_LIST: // Services List
 			hints := []KeyHint{
 				{"↑/↓", "navigate"},
 				{"tab", "next"},
@@ -120,7 +109,7 @@ func (m KeybindingBarModel) hintsFor() []KeyHint {
 				hints = append([]KeyHint{{"space", "select"}}, hints...)
 			}
 			return hints
-		case 2: // Service Details
+		case constants.COMPONENT_BODY_DETAILS: // Service Details
 			if !m.selectedService {
 				return []KeyHint{{"tab", "next"}}
 			}
@@ -134,7 +123,13 @@ func (m KeybindingBarModel) hintsFor() []KeyHint {
 				{"tab", "next"},
 			}
 		}
+
+	// Placeholder pages hold nothing focusable, so offering "tab next" there
+	// would advertise a key that visibly does nothing.
+	case "Compose Files", "Settings":
+		return nil
 	}
+
 	return []KeyHint{{"tab", "next"}}
 }
 
@@ -152,7 +147,14 @@ func (m KeybindingBarModel) View() tea.View {
 		leftParts = append(leftParts, fmt.Sprintf("%s %s", keyStyle.Render(h.Key), dimStyle.Render(h.Desc)))
 	}
 
-	rightHint := fmt.Sprintf("%s %s", keyStyle.Render("q"), dimStyle.Render("quit"))
+	// The page chords are global, so they sit on the right with quit rather
+	// than in the context-dependent hints. The nav underlines which letter
+	// belongs to which page; this is the reminder that alt is the modifier.
+	rightHint := fmt.Sprintf("%s %s%s%s %s",
+		keyStyle.Render("alt+·"), dimStyle.Render("page"),
+		dimStyle.Render(" · "),
+		keyStyle.Render("q"), dimStyle.Render("quit"),
+	)
 
 	width := m.terminalWidth
 	if width <= 0 {
@@ -179,7 +181,7 @@ func (m KeybindingBarModel) View() tea.View {
 
 func KeybindingBar() tea.Model {
 	return KeybindingBarModel{
-		focusedComponent:  0,
+		focusedComponent:  constants.COMPONENT_BODY_LIST,
 		activePage:        "Home",
 		groupsListEmpty:   true,
 		servicesListEmpty: true,

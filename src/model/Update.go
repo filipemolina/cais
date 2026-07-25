@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"stack-stitcher/src/apptypes"
 	"stack-stitcher/src/cmds"
 	"stack-stitcher/src/components"
 	"stack-stitcher/src/constants"
@@ -127,6 +128,23 @@ func (m AppModel) configSyncCmds() []tea.Cmd {
 	return syncCmds
 }
 
+// pageForKey returns the page an alt+<letter> chord jumps to, or "" if the key
+// is not a page shortcut.
+//
+// It matches on the modifier field rather than on msg.String(), because
+// String() returns the printable text for a key ("g") and only falls back to
+// the keystroke form ("alt+g") when there is none. Requiring Mod to be exactly
+// ModAlt also means ctrl+alt+g and alt+shift+g are left alone.
+func pageForKey(msg tea.KeyPressMsg) string {
+	key := msg.Key()
+
+	if key.Mod != tea.ModAlt {
+		return ""
+	}
+
+	return apptypes.PageForShortcut(string(key.Code))
+}
+
 func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// This var contains all the cmds that should be executed
 	// at the end. Those can come from this model or from any of the
@@ -146,6 +164,20 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	// Handle keyboard events
 	case tea.KeyPressMsg:
+		// alt+<letter> jumps straight to a page. Handled here rather than in
+		// MainMenu because the nav is not focusable, so it never sees keys.
+		//
+		// alt, not ctrl: ctrl+s is eaten by terminal flow control (XOFF) and
+		// ctrl+d is EOF, so ctrl chords on those letters are unreliable at
+		// best. This runs after the modal check above, so typing in a text
+		// input cannot navigate away.
+		if page := pageForKey(msg); page != "" {
+			if page != m.activePage {
+				finalCmds = append(finalCmds, cmds.SetActivePage(page))
+			}
+			break
+		}
+
 		switch msg.String() {
 
 		// Quit the program on Ctrl+c or q

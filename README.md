@@ -68,10 +68,15 @@ It auto-detects the compose file in the current directory, checking in order: `c
 
 ### Key bindings
 
+Pages are switched with `Alt` plus the underlined letter in each nav tab — the
+nav itself never takes keyboard focus, so `Tab` is free to move between the two
+body panels. `Alt` rather than `Ctrl` because terminals intercept `Ctrl+S` as
+flow control and `Ctrl+D` as end-of-input.
+
 | Key | Action | Where |
 | --- | --- | --- |
-| `Tab` / `Shift+Tab` | Move focus between panels | Everywhere |
-| `←`/`h` `→`/`l` | Switch page | Main menu focused |
+| `Alt`+`G` `D` `F` `S` | Jump to Groups / Dashboard / Files / Settings | Everywhere |
+| `Tab` / `Shift+Tab` | Move focus between the two body panels | Everywhere |
 | `Space` | Select the highlighted group or service | Groups/Services list focused |
 | `s` | Start | A group or service panel focused |
 | `t` | Stop | A group or service panel focused |
