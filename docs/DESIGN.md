@@ -178,6 +178,14 @@ the text.
 Renaming a service through the fragment is refused, because `depends_on:`
 elsewhere in the file may point at the old name.
 
+Every write re-encodes through `yaml.v3`, which round-trips comments but not
+blank lines, so the spacing between services is lost. This is accepted rather
+than worked around. The obvious trick - carrying blank lines through as
+marker comments - was built and then removed: a blank line inside a block
+scalar (`command: |`) is part of the string, so the transformation has to
+know where it must not apply, and quietly rewriting the user's data is a
+worse failure than closing up their spacing.
+
 The compose file is the user's own, and it is the one piece of state the app
 cannot recreate. Every write to it goes through `utils.ReplaceFileAtomically`,
 which writes a temporary file alongside the target and renames it into place,

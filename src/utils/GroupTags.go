@@ -100,12 +100,8 @@ func readComposeNode(fileName string) (*yaml.Node, error) {
 		return nil, fmt.Errorf("failed reading %s: %w", fileName, err)
 	}
 
-	// Blank lines become marker comments so they survive re-encoding; see
-	// markBlankLines. encodeNode turns them back.
-	source, _ := markBlankLines(raw)
-
 	var doc yaml.Node
-	if err := yaml.Unmarshal(source, &doc); err != nil {
+	if err := yaml.Unmarshal(raw, &doc); err != nil {
 		return nil, fmt.Errorf("failed parsing %s: %w", fileName, err)
 	}
 
