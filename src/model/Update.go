@@ -205,6 +205,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Commands from the cmds folder
 	case cmds.SetActivePageMsg:
 		m.activePage = string(msg)
+
+		// Each page starts at its primary (left) panel. Set activePage first so
+		// the deferred focus message is routed to the page we just opened,
+		// rather than the one we left.
+		leftPanel := constants.COMPONENT_BODY_LIST
+		finalCmds = append(finalCmds, m.ChangeFocus(&leftPanel))
+
 		// Refresh container state, and re-sync services/groups, so the
 		// newly active page's components have data to show even if they
 		// weren't active when it was first loaded.

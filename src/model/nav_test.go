@@ -48,6 +48,39 @@ func activePageFrom(msgs []tea.Msg) string {
 	return ""
 }
 
+// focusedComponentFrom returns the component requested by a SetFocusMsg.
+func focusedComponentFrom(msgs []tea.Msg) (int, bool) {
+	for _, msg := range msgs {
+		if component, ok := msg.(cmds.SetFocusMsg); ok {
+			return int(component), true
+		}
+	}
+
+	return 0, false
+}
+
+// Init activates the first page, and page activation owns focus assignment.
+// This guarantees the focus message is delivered after there is an active
+// page to receive it, rather than racing the initial SetActivePageMsg.
+func TestInitialPageActivationFocusesLeftPanel(t *testing.T) {
+	m := GetInitialModel()
+
+	updated, cmd := m.Update(cmds.SetActivePageMsg(apptypes.PageTitles[0]))
+	m = updated.(AppModel)
+
+	if got, want := m.focusedComponent, constants.COMPONENT_BODY_LIST; got != want {
+		t.Fatalf("startup focus: got %d, want %d", got, want)
+	}
+
+	got, ok := focusedComponentFrom(collect(cmd))
+	if !ok {
+		t.Fatal("initial page activation did not send a focus message")
+	}
+	if want := constants.COMPONENT_BODY_LIST; got != want {
+		t.Errorf("initial page focus: got %d, want %d", got, want)
+	}
+}
+
 func TestAltLetterSwitchesPage(t *testing.T) {
 	for _, page := range apptypes.PageTitles {
 		letter := []rune(apptypes.PageShortcut(page))[0]
@@ -61,12 +94,54 @@ func TestAltLetterSwitchesPage(t *testing.T) {
 
 			m := applyLayout(drive(startup(120, 40), cmds.SetActivePageMsg(from)))
 
-			_, cmd := m.Update(altKey(letter))
+			// Leave the current page with its details panel focused. A page
+			// shortcut must reset that state for the page it opens.
+			rightPanel := constants.COMPONENT_BODY_DETAILS
+			m = drive(m, collect(m.ChangeFocus(&rightPanel))...)
 
+			updated, cmd := m.Update(altKey(letter))
+			m = updated.(AppModel)
 			if got := activePageFrom(collect(cmd)); got != page {
 				t.Errorf("alt+%c from %q switched to %q, want %q", letter, from, got, page)
 			}
+
+			// The keyboard command queues SetActivePageMsg. Process it as the
+			// Bubble Tea runtime would, then inspect the command it returns.
+			updated, pageCmd := m.Update(cmds.SetActivePageMsg(page))
+			m = updated.(AppModel)
+
+			if got, want := m.focusedComponent, constants.COMPONENT_BODY_LIST; got != want {
+				t.Errorf("alt+%c page focus: got %d, want %d", letter, got, want)
+			}
+
+			got, ok := focusedComponentFrom(collect(pageCmd))
+			if !ok {
+				t.Errorf("alt+%c page switch did not send a focus message", letter)
+			} else if want := constants.COMPONENT_BODY_LIST; got != want {
+				t.Errorf("alt+%c page focus message: got %d, want %d", letter, got, want)
+			}
 		})
+	}
+}
+
+func TestPageChangeResetsFocusToLeftPanel(t *testing.T) {
+	m := applyLayout(startup(120, 40))
+	rightPanel := constants.COMPONENT_BODY_DETAILS
+	m = drive(m, collect(m.ChangeFocus(&rightPanel))...)
+
+	updated, cmd := m.Update(cmds.SetActivePageMsg("Dashboard"))
+	m = updated.(AppModel)
+
+	if got, want := m.focusedComponent, constants.COMPONENT_BODY_LIST; got != want {
+		t.Fatalf("page switch focus: got %d, want %d", got, want)
+	}
+
+	got, ok := focusedComponentFrom(collect(cmd))
+	if !ok {
+		t.Fatal("page switch did not send a focus message")
+	}
+	if want := constants.COMPONENT_BODY_LIST; got != want {
+		t.Errorf("page switch focus message: got %d, want %d", got, want)
 	}
 }
 
