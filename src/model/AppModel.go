@@ -32,6 +32,15 @@ type containersModel struct {
 	runningCount      int
 }
 
+// selectionModel remembers what the user had selected, by name, so a config
+// reload can put it back. Reloads happen after every write to the compose
+// file, and re-selecting the first service each time would throw the user
+// back to the top of the list the moment they changed anything.
+type selectionModel struct {
+	serviceName string
+	groupName   string
+}
+
 type Components struct {
 	MainMenu      tea.Model
 	KeybindingBar tea.Model
@@ -41,6 +50,7 @@ type AppModel struct {
 	navigation       navigationModel
 	config           configModel
 	containers       containersModel
+	selection        selectionModel
 	pages            map[string][]tea.Model
 	activePage       string
 	components       Components

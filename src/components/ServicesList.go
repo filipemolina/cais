@@ -103,12 +103,39 @@ func (d servicesListCustomDelegate) Render(w io.Writer, m list.Model, index int,
 type ServicesListModel struct {
 	list         list.Model
 	listDelegate servicesListCustomDelegate
-	isFocused    bool
-	componentId  int
-	fileName     string
-	project      *types.Project
-	panelWidth   int
-	panelHeight  int
+	// activeService is the name of the service the user picked with space.
+	// The delegate can only compare row numbers while rendering, but a row
+	// number goes stale as soon as the list changes: a reload that adds or
+	// removes a service would leave the highlight sitting on whatever moved
+	// into that row. The name survives, so the index is re-derived from it.
+	activeService string
+	isFocused     bool
+	componentId   int
+	fileName      string
+	project       *types.Project
+	panelWidth    int
+	panelHeight   int
+}
+
+// syncActiveIndex points the delegate at the row holding activeService, or
+// at no row at all when it isn't in the list.
+//
+// It runs on both the list and the selection changing, because the two
+// arrive as separate messages and tea.Batch makes no promise about their
+// order. Re-deriving from the name on each means the pair converges on the
+// right row whichever lands first.
+func (m *ServicesListModel) syncActiveIndex() {
+	active := -1
+
+	for i, item := range m.list.Items() {
+		if service, ok := item.(apptypes.ServiceListItem); ok && service.Service.Name == m.activeService {
+			active = i
+			break
+		}
+	}
+
+	m.listDelegate.activeIndex = active
+	m.list.SetDelegate(m.listDelegate)
 }
 
 func (m ServicesListModel) Init() tea.Cmd {
@@ -142,18 +169,27 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "space":
 			if m.isFocused {
-				m.listDelegate.activeIndex = m.list.GlobalIndex()
-				m.list.SetDelegate(m.listDelegate)
-
 				selectedItem := m.list.SelectedItem()
 				selectedService, ok := selectedItem.(apptypes.ServiceListItem)
 
 				if ok {
+					// Highlight straight away rather than waiting for the
+					// message to come back around, so the row responds on
+					// the same frame as the keypress.
+					m.activeService = selectedService.Service.Name
+					m.syncActiveIndex()
+
 					selectedServiceCmd := cmds.SetSelectedService(selectedService.Service)
 					finalCmds = append(finalCmds, selectedServiceCmd)
 				}
 			}
 		}
+
+	// AppModel decides which service is selected after a config reload, so
+	// the list follows that decision rather than keeping its own.
+	case cmds.SetSelectedServiceMsg:
+		m.activeService = types.ServiceConfig(msg).Name
+		m.syncActiveIndex()
 
 	case cmds.SetServicesListMsg:
 		servicesList := []list.Item{}
@@ -168,6 +204,7 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		cmd := m.list.SetItems(servicesList)
 		finalCmds = append(finalCmds, cmd)
+		m.syncActiveIndex()
 
 	case cmds.SetFocusMsg:
 		if int(msg) == m.componentId {
@@ -217,7 +254,9 @@ func ServicesList(services []types.ServiceConfig, width int, height int) tea.Mod
 		items = append(items, apptypes.ServiceListItem{Service: service})
 	}
 
-	listDelegate := servicesListCustomDelegate{}
+	// -1 rather than the zero value: no service is active until one is
+	// selected, and 0 would render the first row as though one were.
+	listDelegate := servicesListCustomDelegate{activeIndex: -1}
 	servicesList := list.New(items, listDelegate, width, height)
 	servicesList.SetShowHelp(false)
 	servicesList.SetShowStatusBar(false)
