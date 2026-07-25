@@ -291,6 +291,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds.DeleteGroup(groupName),
 		)
 
+	case cmds.OpenConfirmModalMsg:
+		m.activeModal = components.ConfirmModal(msg.Message, msg.Follow)
+
 	case cmds.CloseModalMsg:
 		m.activeModal = nil
 		if msg.Follow != nil {
