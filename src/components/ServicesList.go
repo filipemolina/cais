@@ -8,7 +8,6 @@ import (
 	"io"
 	"stack-stitcher/src/apptypes"
 	"stack-stitcher/src/cmds"
-	"stack-stitcher/src/constants"
 
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
@@ -98,26 +97,36 @@ type ServicesListModel struct {
 	componentId  int
 	fileName     string
 	project      *types.Project
+	panelWidth   int
+	panelHeight  int
 }
 
 func (m ServicesListModel) Init() tea.Cmd {
 	return nil
 }
 
+// resizeList sizes the inner list to the space left inside the panel box
+// after the wrapper padding.
+func (m *ServicesListModel) resizeList() {
+	h, v := listWrapperStyle.GetFrameSize()
+
+	m.list.SetSize(
+		max(0, m.panelWidth-h),
+		max(0, m.panelHeight-v),
+	)
+}
+
 func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var finalCmds []tea.Cmd
 
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		h, v := appstyles.DocStyle.GetFrameSize()
-		totalWidth := float32(msg.Width - h)
-		calculatedWidth := int(totalWidth*constants.LEFT_PANEL_WIDTH - 1)
-		panelWidth := max(constants.MIN_PANEL_WIDTH, calculatedWidth)
-
-		m.list.SetSize(
-			panelWidth,
-			msg.Height-v-6,
-		)
+	// Sizing comes from AppModel, not WindowSizeMsg: the Dashboard is never
+	// the active page when the terminal is first measured, so a resize-derived
+	// height left this list a few rows tall showing a single service.
+	case cmds.SetBodyLayoutMsg:
+		m.panelWidth = msg.LeftWidth
+		m.panelHeight = msg.Height
+		m.resizeList()
 
 	case tea.KeyPressMsg:
 		switch msg.String() {
@@ -172,19 +181,17 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m ServicesListModel) View() tea.View {
-	wrapper := lipgloss.NewStyle().
-		Padding(1, 2, 2, 2)
-
+	// Same 3-tier treatment as the groups list: focus lifts the panel from
+	// tier 3 to tier 4 rather than adding a border, so the panel's box stays
+	// the same size whether or not it is focused.
+	bg := appstyles.BackgroundPanel
 	if m.isFocused {
-		wrapper = wrapper.
-			BorderStyle(lipgloss.RoundedBorder()).
-			BorderForeground(appstyles.PrimaryColor).
-			Padding(0, 1, 1, 1)
+		bg = appstyles.BackgroundElevated
 	}
 
-	renderedList := wrapper.Render(m.list.View())
+	wrapper := fitBox(listWrapperStyle.Background(bg), m.panelWidth, m.panelHeight)
 
-	v := tea.NewView(renderedList)
+	v := tea.NewView(wrapper.Render(m.list.View()))
 	return v
 }
 
