@@ -46,21 +46,24 @@ func (d GroupsListCustomDelegate) Render(w io.Writer, m list.Model, index int, l
 		titleColor = appstyles.SecondaryFontColor
 	}
 
+	rowBg := listRowBg(isActive, d.isParentFocused)
+
 	wrapperStyle := lipgloss.NewStyle().
 		Width(m.Width()).
-		Padding(1)
+		Padding(1).
+		Background(rowBg)
 
 	titleStyle := lipgloss.NewStyle().
 		Bold(isActive).
 		Foreground(titleColor).
+		Background(rowBg).
 		Width(m.Width())
 
 	if isActive {
 		wrapperStyle = wrapperStyle.
 			BorderLeft(true).
 			BorderStyle(lipgloss.ThickBorder()).
-			BorderLeftForeground(appstyles.PrimaryColor).
-			Background(lipgloss.Color("#3F3F3F"))
+			BorderLeftForeground(appstyles.PrimaryColor)
 
 	} else if isSelected && d.isParentFocused {
 		wrapperStyle = wrapperStyle.
@@ -80,8 +83,13 @@ func (d GroupsListCustomDelegate) Render(w io.Writer, m list.Model, index int, l
 
 	title := titleStyle.Render(item.Title())
 
+	// Seal the row against its own background before handing it to the list, so
+	// the active row keeps its lighter surface color instead of being flattened
+	// to the panel's when the list is sealed - see appstyles.FillBackground.
+	row := appstyles.FillBackground(rowBg, wrapperStyle.Render(lipgloss.JoinVertical(lipgloss.Left, title)))
+
 	// Print the styled string to the Bubble Tea io.Writer
-	fmt.Fprint(w, wrapperStyle.Render(lipgloss.JoinVertical(lipgloss.Left, title)))
+	fmt.Fprint(w, row)
 }
 
 /*
@@ -205,10 +213,7 @@ func (m GroupListModel) View() tea.View {
 	// 3-tier background system: tier 3 (panel) when unfocused,
 	// tier 4 (elevated) when focused. The focus state is shown by the
 	// background lifting, not by a border.
-	bg := appstyles.BackgroundPanel
-	if m.isFocused {
-		bg = appstyles.BackgroundElevated
-	}
+	bg := panelBg(m.isFocused)
 
 	// The panel fills exactly the box AppModel handed it, so the tier-3
 	// background covers the full body region and both panels are the same
@@ -244,7 +249,12 @@ func (m GroupListModel) View() tea.View {
 		sections = append(sections, m.list.View())
 	}
 
-	v := tea.NewView(wrapper.Render(lipgloss.JoinVertical(lipgloss.Left, sections...)))
+	// JoinVertical pads the shorter of the stats header / list out to the
+	// widest with unstyled spaces, so seal the joined block against the panel
+	// tier. Rows arrive already sealed against their own background.
+	content := appstyles.FillBackground(bg, lipgloss.JoinVertical(lipgloss.Left, sections...))
+
+	v := tea.NewView(wrapper.Render(content))
 	return v
 }
 
