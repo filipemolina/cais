@@ -72,9 +72,10 @@ use the dashboard (or a future dedicated page).
 The UI is a full-height TUI. The terminal is divided into three stacked
 regions:
 
-1. **Header** — the wordmark (`▌ Stack Stitcher`) plus page tabs. Tabs are
-   decoupled from page IDs via `apptypes.PageLabels`: *Home* is displayed as
-   **Groups**, *Compose Files* as **Files**.
+1. **Header** — the page tabs on the left, the wordmark (`▌ Stack Stitcher`)
+   pinned to the right. Tabs are decoupled from page IDs via
+   `apptypes.PageLabels`: *Home* is displayed as **Groups**, *Compose Files* as
+   **Files**.
 2. **Body** — the remaining rows after the header and footer. The exact box
    for each of the two panels is computed by `AppModel`
    (`calculateBodyLayout`) and broadcast as `cmds.SetBodyLayoutMsg` on every
@@ -99,7 +100,36 @@ regions:
    the terminal gets wrapped by the terminal itself.
 3. **Footer** — the `KeybindingBar`, which is updated by `AppModel` and
    shows selection-aware hints (action keys are hidden when no group or
-   service is selected, and list-empty keys are suppressed).
+   service is selected, and list-empty keys are suppressed). The global keys
+   (page chords, quit) sit on the right, apart from the context-dependent ones.
+
+### Navigation and focus
+
+**Pages are switched with `alt`+letter; the nav is not focusable.** The letter
+is the first letter of the tab's label, which the nav underlines, so the tab
+advertises its own shortcut. `apptypes.PageShortcut` derives the letter from the
+label rather than reading a table, so the underline and the binding cannot drift
+apart; `TestPageShortcutsAreUnique` guards against two labels sharing a letter.
+
+`alt` and not `ctrl`: terminals intercept `ctrl+s` as XOFF flow control and
+`ctrl+d` as end-of-input, so those chords are unreliable on two of the four
+pages. The chords are handled in `AppModel.Update`, after the modal check, so
+typing in a text field can never navigate away.
+
+Because the nav takes no focus, `constants.FocusableComponents` holds only the
+two body panels, and `Tab`/`Shift+Tab` alternate between them. Component ids are
+part of the focus protocol (a component compares its id against
+`cmds.SetFocusMsg`), so they are *not* positions in the focus cycle — the nav is
+id 0 but is absent from the cycle. `ChangeFocus` derives the cycle position from
+the currently focused id so the two cannot disagree.
+
+**Every page in `apptypes.PageTitles` needs an entry in `AppModel.pages`.** The
+map drives rendering, the layout broadcast and the focus cycle. A page listed in
+the nav but missing from the map renders an empty body; `View` guards that case
+by always setting `AltScreen`, because returning the zero `tea.View` drops the
+terminal out of the alternate screen and the app looks like it crashed while
+still running. Pages that aren't implemented yet get a
+`components.PlaceholderPanel`.
 
 ### Home layout
 

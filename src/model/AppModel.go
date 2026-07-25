@@ -49,38 +49,45 @@ type AppModel struct {
 	activeModal      tea.Model
 }
 
+// ChangeFocus moves focus through constants.FocusableComponents and returns the
+// command that tells the components which of them is now focused.
+//
+// Pass nil to advance (Tab), or -1 to go back (Shift+Tab). Any other value is
+// treated as a component id to focus directly, and is ignored if that component
+// is not focusable.
+//
+// The cycle position is derived from m.focusedComponent rather than tracked
+// separately, so the two can never disagree. They are not the same number: the
+// nav is component 0 but is not in the cycle, so the ids are not the cycle
+// indices.
 func (m *AppModel) ChangeFocus(index *int) tea.Cmd {
-	length := len(constants.FocusableComponents)
-	var finalIdx int
-
-	if index != nil {
-		finalIdx = *index
-
-		// This happens on shift+tab
-		if finalIdx == -1 {
-			if m.focusedComponent > 0 {
-				m.focusedComponent--
-				finalIdx = m.focusedComponent
-			} else {
-				m.focusedComponent = length - 1
-				finalIdx = m.focusedComponent
-			}
-		}
-
-		if 0 <= finalIdx && finalIdx <= length-1 {
-			m.focusedComponent = finalIdx
-		}
-	} else {
-		if m.focusedComponent < length-1 {
-			m.focusedComponent++
-			finalIdx = m.focusedComponent
-		} else {
-			m.focusedComponent = 0
-			finalIdx = 0
-		}
+	order := constants.FocusableComponents
+	if len(order) == 0 {
+		return nil
 	}
 
-	return func() tea.Msg { return cmds.SetFocusMsg(finalIdx) }
+	// A component id that is not in the cycle (or an unset one) reads as
+	// position 0, so the first Tab lands on the first focusable component.
+	cursor := max(0, slices.Index(order, m.focusedComponent))
+
+	switch {
+	case index == nil:
+		cursor = (cursor + 1) % len(order)
+
+	case *index == -1:
+		cursor = (cursor - 1 + len(order)) % len(order)
+
+	default:
+		if !slices.Contains(order, *index) {
+			return nil
+		}
+		cursor = slices.Index(order, *index)
+	}
+
+	m.focusedComponent = order[cursor]
+	focused := m.focusedComponent
+
+	return func() tea.Msg { return cmds.SetFocusMsg(focused) }
 }
 
 // allGroupNames returns every distinct group referenced by any service
@@ -154,6 +161,19 @@ func GetInitialModel() AppModel {
 		components.DetailsPanel(nil),
 	}
 
+	// Every page in apptypes.PageTitles needs an entry here. A page missing
+	// from this map renders an empty body, which used to drop the app out of
+	// the alternate screen and look like a crash.
+	pages["Compose Files"] = []tea.Model{
+		components.PlaceholderPanel("Files",
+			"Browsing and editing compose files from here is not built yet. For now, Stack Stitcher reads the compose file in the directory it was started from."),
+	}
+
+	pages["Settings"] = []tea.Model{
+		components.PlaceholderPanel("Settings",
+			"There is nothing to configure yet. Colors, key bindings and the default compose file will live here."),
+	}
+
 	return AppModel{
 		containers: containersModel{
 			runningContainers: []list.Item{},
@@ -167,9 +187,9 @@ func GetInitialModel() AppModel {
 			KeybindingBar: components.KeybindingBar(),
 		},
 		pages: pages,
-		// Matches the cmds.SetFocus(1) sent from Init() - keeps the Tab
-		// cycle counter in sync with which component is actually focused
-		// at startup, so the first Tab press doesn't appear to do nothing.
-		focusedComponent: 1,
+		// Matches the SetFocus sent from Init() - keeps the Tab cycle in sync
+		// with which component is actually focused at startup, so the first Tab
+		// press doesn't appear to do nothing.
+		focusedComponent: constants.COMPONENT_BODY_LIST,
 	}
 }
