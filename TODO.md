@@ -20,8 +20,10 @@ records, not a live backlog.
   `DESIGN.md` §6.3 it lands on the **Dashboard** first, not Home. Natural
   first fields: image tag, ports, env vars. Should reuse the
   comment-preserving `yaml.Node` edit path in `src/utils/GroupTags.go`.
-  This is a full-size feature: write a focused design/implementation plan
-  before coding, using whatever workflow best fits the task.
+  Design and plan written (2026-07-25), phased to land the image field
+  first: [design](docs/superpowers/specs/2026-07-25-edit-services-design.md),
+  [plan](docs/superpowers/plans/2026-07-25-edit-services.md). These two are
+  **live**, unlike the completed records beside them.
 
 - [x] **[P] Atomic compose-file writes** — `utils.ReplaceFileAtomically`
   writes a temporary file alongside the target and renames it into place,
