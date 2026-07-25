@@ -134,6 +134,16 @@ Focus is shown by lifting a panel from tier 3 to tier 4, not by a heavier
 border, so a panel's box is the same size whether or not it is focused. Use
 `components.panelBg(isFocused)` rather than repeating that choice.
 
+One surface runs the other way. `BackgroundRecessed` sits *below* the panel
+tier — it is the unlightened `PanelBg` — and is used for insets like the
+empty-state cards, which read as cut into the panel rather than raised off it.
+Because it is a fixed color rather than a lightening of its parent, it stays
+darker than every tier above it, including a focused panel's tier 4.
+
+A recessed surface needs `BorderCard`, not `BorderDefault`: a rim has to be
+lighter than the surface it wraps, and `BorderDefault` is darker than
+`PanelBg`, so it disappears against a recessed fill.
+
 **Every tier must be sealed with `appstyles.FillBackground`.** A terminal's
 SGR reset clears the background until the next SGR, and lipgloss closes each
 styled run with a reset — so any unstyled text later on the same line renders
