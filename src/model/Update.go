@@ -312,6 +312,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.config.configFileName = msg.FileName
 		m.config.configProject = msg.Project
 		finalCmds = append(finalCmds, cmds.GetRunningContainers)
+		// The footer starts out saying no file is loaded, so only a successful
+		// load has anything to report - a failed one leaves the previous answer
+		// standing, which is still the file the docker commands would act on.
+		finalCmds = append(finalCmds, cmds.SetComposeFile(msg.FileName))
 		finalCmds = append(finalCmds, m.configSyncCmds()...)
 		if homeStatsCmd := m.broadcastHomeStats(); homeStatsCmd != nil {
 			finalCmds = append(finalCmds, homeStatsCmd)

@@ -117,16 +117,30 @@ records, not a live backlog.
   `KeyMap` on both lists, and treat a filtering list as an overlay that owns
   the keyboard.
 
-- [ ] **[S] Show the parsed compose file in the footer** — `AppModel` already
-  knows which file it resolved (`config.configFileName`) and never tells the
-  user. Broadcast it and render it dimmed next to the global keys, degrading
-  full path → basename → dropped as the terminal narrows. Docker's file
-  priority is fixed and matches Docker's own on purpose (making it
-  configurable would desync the panel from the `docker compose` calls, which
-  pass no `-f`), so *saying which file won* is the fix, not a setting.
+- [x] **[S] Show the parsed compose file in the footer** — `AppModel`
+  broadcasts the file it resolved as `cmds.SetComposeFileMsg`, and
+  `KeybindingBar` renders it dimmed immediately left of the global keys,
+  degrading full path → basename → dropped as the terminal narrows.
+  Docker's file priority stays fixed and identical to Docker's on purpose
+  (making it configurable would desync the panel from the `docker compose`
+  calls, which pass no `-f`), so *saying which file won* was the fix, not a
+  setting. See *Which compose file* in `docs/DESIGN.md`. **Remaining:** when
+  several candidate names exist in the directory, mark it (`compose.yaml +2`)
+  and list the rest — `GetComposeFileName` returns only the winner today, and
+  the natural home for the list is the `?` overlay.
 
 - [ ] **[S] `?` help overlay** — rendered from `src/keys` so it cannot drift
-  from the handlers, grouped by scope, unavailable bindings dimmed.
+  from the handlers, grouped by scope, unavailable bindings dimmed. Also the
+  home for the other compose-file candidates, above.
+
+- [ ] **[S] The footer wraps on a narrow terminal** — predates the compose
+  file segment (which drops itself rather than contributing to this). Below
+  roughly 60 columns the context hints plus the global keys exceed the width,
+  and the bar wraps to two or three lines, eating body rows. The bar needs to
+  shed hints in priority order the way the file name already does. Same
+  terminals show two other overflows worth fixing together: the group details
+  table collides its column headers (`NAMEIMAGSTATHEALT…`) and the action
+  buttons wrap into each other.
 
 - [ ] **[S] Centralize color into a `Theme`** — `src/appstyles/styles.go` has
   good semantic tokens, but they are package-level `var`s built at init, so
