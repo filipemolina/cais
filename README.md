@@ -70,7 +70,7 @@ Run Stack Stitcher from a directory that contains your Compose file:
 stack-stitcher
 ```
 
-It auto-detects the compose file in the current directory, checking in order: `compose.yaml`, `compose.yml`, `docker-compose.yaml`, `docker-compose.yml`. There's no flag to point at a file elsewhere yet — `cd` into the project directory first.
+It auto-detects the compose file in the current directory, checking in order: `compose.yaml`, `compose.yml`, `docker-compose.yaml`, `docker-compose.yml` — the same order Docker itself uses, since the `docker compose` commands Stack Stitcher runs resolve the file themselves. Whichever file won is named in the footer, so you can always see what you are acting on. There's no flag to point at a file elsewhere yet — `cd` into the project directory first.
 
 ### Key bindings
 
@@ -113,7 +113,7 @@ they follow.
 
 ### UI overview
 
-Stack Stitcher fills the terminal. The top bar shows the `▌ Stack Stitcher` wordmark and page tabs; the body stretches to use all remaining rows, and the keybinding bar at the bottom is context-aware (action hints are hidden until a group or service is selected).
+Stack Stitcher fills the terminal. The top bar shows the `▌ Stack Stitcher` wordmark and page tabs; the body stretches to use all remaining rows, and the keybinding bar at the bottom is context-aware (action hints are hidden until a group or service is selected). The bar also names the compose file in use, dimmed on the right next to the global keys, shortening it and then dropping it as the terminal narrows.
 
 On **Home** the body is a two-pane layout: the Groups list on the left and the Group Details panel on the right. The Group Details panel no longer renders the large ASCII logo. Instead it shows:
 
