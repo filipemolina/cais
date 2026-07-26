@@ -142,6 +142,13 @@ func (m ServicesListModel) Init() tea.Cmd {
 	return nil
 }
 
+// OwnsKeyboard reports whether the list is taking every keystroke for itself,
+// which it does while a filter is being typed. Same rule as the groups list -
+// see GroupListModel.OwnsKeyboard.
+func (m ServicesListModel) OwnsKeyboard() bool {
+	return m.list.FilterState() == list.Filtering
+}
+
 // resizeList sizes the inner list to the space left inside the panel box
 // after the wrapper padding.
 func (m *ServicesListModel) resizeList() {
@@ -156,6 +163,10 @@ func (m *ServicesListModel) resizeList() {
 func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var finalCmds []tea.Cmd
 
+	// See GroupListModel.Update: the footer's keys depend on this, so a change
+	// has to be broadcast.
+	filterStateBefore := m.list.FilterState()
+
 	switch msg := msg.(type) {
 	// Sizing comes from AppModel, not WindowSizeMsg: the Services page is never
 	// the active page when the terminal is first measured, so a resize-derived
@@ -166,7 +177,9 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.resizeList()
 
 	case tea.KeyPressMsg:
-		if m.isFocused && key.Matches(msg, keys.List.Select) {
+		// While a filter is being typed the keystrokes are text, so select
+		// waits; the inner list below still receives them.
+		if m.isFocused && !m.OwnsKeyboard() && key.Matches(msg, keys.List.Select) {
 			selectedItem := m.list.SelectedItem()
 			selectedService, ok := selectedItem.(apptypes.ServiceListItem)
 
@@ -221,6 +234,10 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		finalCmds = append(finalCmds, cmd)
 	}
 
+	if state := m.list.FilterState(); state != filterStateBefore {
+		finalCmds = append(finalCmds, cmds.SetListFilterState(state))
+	}
+
 	return m, tea.Batch(finalCmds...)
 }
 
@@ -257,6 +274,9 @@ func ServicesList(services []types.ServiceConfig, width int, height int) tea.Mod
 	servicesList := list.New(items, listDelegate, width, height)
 	servicesList.SetShowHelp(false)
 	servicesList.SetShowStatusBar(false)
+	// See keys.ListKeyMap: the default map's letter aliases for paging collide
+	// with the panel verbs.
+	servicesList.KeyMap = keys.ListKeyMap()
 
 	servicesList.Title = "Services"
 	servicesList.Paginator.ActiveDot = " ● "

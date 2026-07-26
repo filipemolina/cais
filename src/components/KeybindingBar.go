@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
@@ -35,6 +36,7 @@ type KeybindingBarModel struct {
 	groupsListEmpty   bool
 	servicesListEmpty bool
 	composeFile       string
+	filterState       list.FilterState
 }
 
 func (m KeybindingBarModel) Init() tea.Cmd { return nil }
@@ -70,6 +72,9 @@ func (m KeybindingBarModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case cmds.SetComposeFileMsg:
 		m.composeFile = string(msg)
+
+	case cmds.SetListFilterStateMsg:
+		m.filterState = list.FilterState(msg)
 	}
 	return m, nil
 }
@@ -92,6 +97,7 @@ func (m KeybindingBarModel) hintsFor() []KeyHint {
 		Focused:   m.focusedComponent,
 		ListEmpty: listEmpty,
 		Selected:  selected,
+		Filter:    m.filterState,
 	}))
 }
 
