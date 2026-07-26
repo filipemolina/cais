@@ -3,6 +3,7 @@ package components
 import (
 	"fmt"
 	"image/color"
+	"path/filepath"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
@@ -33,6 +34,7 @@ type KeybindingBarModel struct {
 	selectedService   bool
 	groupsListEmpty   bool
 	servicesListEmpty bool
+	composeFile       string
 }
 
 func (m KeybindingBarModel) Init() tea.Cmd { return nil }
@@ -65,6 +67,9 @@ func (m KeybindingBarModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.servicesListEmpty {
 			m.selectedService = false
 		}
+
+	case cmds.SetComposeFileMsg:
+		m.composeFile = string(msg)
 	}
 	return m, nil
 }
@@ -136,6 +141,39 @@ func renderKeyHints(hints []KeyHint, descColor color.Color) string {
 	return lipgloss.JoinHorizontal(lipgloss.Left, parts...)
 }
 
+// composeFileSegment renders which compose file the app resolved, dimmed, to
+// sit immediately left of the global keys. Docker picks the file itself, so
+// this reports rather than configures - see cmds.SetComposeFileMsg.
+//
+// spare is the room left over once the hints on both sides have taken theirs.
+// The keys matter more than the file name, so the name degrades instead of
+// pushing them off the bar: full path, then basename, then dropped.
+func (m KeybindingBarModel) composeFileSegment(spare int) string {
+	name := m.composeFile
+	if name == "" {
+		name = "no compose file"
+	}
+
+	// The separator travels with the name so dropping one drops both.
+	const separator = " · "
+
+	candidates := []string{name}
+	if base := filepath.Base(name); base != name {
+		candidates = append(candidates, base)
+	}
+
+	style := lipgloss.NewStyle().Foreground(appstyles.TextDim)
+
+	for _, candidate := range candidates {
+		segment := candidate + separator
+		if lipgloss.Width(segment) <= spare {
+			return style.Render(segment)
+		}
+	}
+
+	return ""
+}
+
 func (m KeybindingBarModel) View() tea.View {
 	hints := m.hintsFor()
 
@@ -150,13 +188,20 @@ func (m KeybindingBarModel) View() tea.View {
 	}
 
 	left := renderKeyHints(hints, appstyles.TextDim)
-	gapWidth := width - lipgloss.Width(left) - lipgloss.Width(rightHint) - 4
+
+	// The 4 is the bar's horizontal padding; the 1 is the narrowest gap the
+	// two hint groups will accept between them. What survives that is what the
+	// file name has to fit into.
+	fixed := lipgloss.Width(left) + lipgloss.Width(rightHint) + 4
+	file := m.composeFileSegment(width - fixed - 1)
+
+	gapWidth := width - fixed - lipgloss.Width(file)
 	if gapWidth < 1 {
 		gapWidth = 1
 	}
 	gap := lipgloss.NewStyle().Width(gapWidth).Render("")
 
-	bar := lipgloss.JoinHorizontal(lipgloss.Left, left, gap, rightHint)
+	bar := lipgloss.JoinHorizontal(lipgloss.Left, left, gap, file, rightHint)
 
 	rendered := lipgloss.NewStyle().
 		Background(appstyles.BackgroundContent).
