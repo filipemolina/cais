@@ -108,14 +108,15 @@ records, not a live backlog.
   replaced by one `dockerActionFor`. See *Where keybindings live* in
   `docs/DESIGN.md`.
 
-- [ ] **[S] The lists don't own their keymaps** — `list.New` installs
-  `list.DefaultKeyMap()`, and both lists hand every key to it while focused,
-  *after* matching their own. That map binds `d f l b u h g G / esc q ?`, so
-  today `d` opens the delete-group confirm **and** pages the list backwards,
-  and `/` starts a filter the app never acknowledges: while filtering, `n`
-  still opens the new-group modal and `q` still quits. Set an explicit
-  `KeyMap` on both lists, and treat a filtering list as an overlay that owns
-  the keyboard.
+- [x] **[S] The lists don't own their keymaps** — both lists now install
+  `keys.ListKeyMap()` instead of `list.DefaultKeyMap()`, keeping only cursor
+  movement, `g`/`G` and `/`, so `d` no longer pages the list while opening the
+  delete confirm. Filtering is a supported mode and behaves as an overlay: the
+  list reports `OwnsKeyboard()`, `AppModel` stands down from its own keys while
+  it does, and the footer advertises the filter's keys instead of inert ones.
+  `ctrl+c` became its own binding so it beats every claim on the keyboard —
+  it did not quit while a modal was open before. See *The lists do not get to
+  keep `list.DefaultKeyMap`* in `docs/DESIGN.md`.
 
 - [x] **[S] Show the parsed compose file in the footer** — `AppModel`
   broadcasts the file it resolved as `cmds.SetComposeFileMsg`, and
