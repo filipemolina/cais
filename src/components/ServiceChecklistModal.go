@@ -82,8 +82,30 @@ func (m ServiceChecklistModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(finalCmds...)
 }
 
+// checklistHints is the modal's own help line. The footer bar is hidden
+// behind the modal while this is open, so the keys it takes over - space,
+// enter, esc - have to be advertised here or nowhere. Two lines rather than
+// one so the modal stays as narrow as its list.
+//
+// TextMuted, not the bar's TextDim: this sits on the modal's light surface,
+// where TextDim barely separates from the background.
+func checklistHints() string {
+	return lipgloss.JoinVertical(lipgloss.Left,
+		renderKeyHints([]KeyHint{
+			{"↑/↓", "navigate"},
+			{"space", "toggle"},
+		}, appstyles.TextMuted),
+		renderKeyHints([]KeyHint{
+			{"enter", "create group"},
+			{"esc", "cancel"},
+		}, appstyles.TextMuted),
+	)
+}
+
 func (m ServiceChecklistModalModel) View() tea.View {
-	return tea.NewView(modalSurface(appstyles.PanelBackgroundColor, m.list.View()))
+	content := lipgloss.JoinVertical(lipgloss.Left, m.list.View(), "", checklistHints())
+
+	return tea.NewView(modalSurface(appstyles.PanelBackgroundColor, content))
 }
 
 // ServiceChecklistModal is step 2 of the create-group flow: pick which
@@ -96,10 +118,16 @@ func ServiceChecklistModal(groupName string, serviceNames []string) tea.Model {
 		items = append(items, apptypes.CheckableServiceItem{Name: name})
 	}
 
+	// +2 for the title row and the blank row under it, which is what the list
+	// leaves for its items. Without the pagination row switched off, the list
+	// spends a row on a paginator that this modal has no use for - it is sized
+	// to show every service at once - and takes that row out of the items,
+	// silently pushing the last services onto an unreachable second page.
 	checklist := list.New(items, serviceChecklistDelegate{}, 40, len(items)+2)
 	checklist.Title = fmt.Sprintf("Select services for %q", groupName)
 	checklist.SetShowHelp(false)
 	checklist.SetShowStatusBar(false)
+	checklist.SetShowPagination(false)
 	checklist.Styles.Title = checklist.Styles.Title.Background(appstyles.PrimaryColor)
 
 	return ServiceChecklistModalModel{
