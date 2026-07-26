@@ -46,12 +46,14 @@ type GlobalKeys struct {
 // here, and are declared anyway so the footer advertises them from the same
 // place as everything else. See ListKeyMap.
 type ListKeys struct {
-	Navigate    key.Binding
-	Select      key.Binding
-	New         key.Binding
-	Delete      key.Binding
-	Filter      key.Binding
-	ClearFilter key.Binding
+	Navigate     key.Binding
+	Select       key.Binding
+	New          key.Binding
+	Delete       key.Binding
+	Filter       key.Binding
+	ClearFilter  key.Binding
+	ApplyFilter  key.Binding
+	CancelFilter key.Binding
 }
 
 // DetailsKeys act on whatever the body's right panel is showing. The first six
@@ -103,6 +105,12 @@ var List = ListKeys{
 	Delete:      key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "delete")),
 	Filter:      key.NewBinding(key.WithKeys("/"), key.WithHelp("/", "filter")),
 	ClearFilter: key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "clear filter")),
+	// The same keystrokes as Overlay.Submit and Overlay.Cancel, because a
+	// filtering list is an overlay. They are declared separately only so the
+	// help text can say what enter and esc do to a filter rather than the
+	// generic confirm/cancel a modal shows.
+	ApplyFilter:  key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "apply")),
+	CancelFilter: key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "cancel")),
 }
 
 var Details = DetailsKeys{
@@ -158,10 +166,12 @@ func ListKeyMap() list.KeyMap {
 		Filter:      List.Filter,
 		ClearFilter: List.ClearFilter,
 
-		// The filtering list is an overlay, so it answers the overlay keys:
-		// enter confirms and esc cancels, exactly as they do in every modal.
-		CancelWhileFiltering: Overlay.Cancel,
-		AcceptWhileFiltering: Overlay.Submit,
+		// The filtering list is an overlay, so it answers the overlay keystrokes:
+		// enter confirms and esc cancels, exactly as they do in every modal. The
+		// default map also accepted on tab and the arrows, which made tab both
+		// apply the filter and move panels.
+		CancelWhileFiltering: List.CancelFilter,
+		AcceptWhileFiltering: List.ApplyFilter,
 
 		// The app's, all of them: ? opens the help overlay, q and ctrl+c quit
 		// through AppModel, and esc above is the only esc the list needs.
@@ -182,6 +192,36 @@ type Context struct {
 	// group on Home, a chosen service on Services. Without one, the action
 	// keys do nothing and are not offered.
 	Selected bool
+	// Filter is the focused list's filter state. Its zero value is
+	// list.Unfiltered, so a caller that has no list to report about gets the
+	// ordinary keys.
+	Filter list.FilterState
+}
+
+// listKeys are the left panel's keys in the order the footer shows them, with
+// the filter slot resolved: while a filter is being typed the list has the
+// keyboard and nothing else is pressable, and once one is applied the slot
+// becomes the esc that clears it - a key that would otherwise go unmentioned.
+func listKeys(ctx Context, own ...key.Binding) []key.Binding {
+	if ctx.Filter == list.Filtering {
+		return []key.Binding{List.ApplyFilter, List.CancelFilter}
+	}
+
+	bindings := make([]key.Binding, 0, len(own)+4)
+	if !ctx.ListEmpty {
+		bindings = append(bindings, List.Select)
+	}
+	bindings = append(bindings, own...)
+
+	switch {
+	case ctx.Filter == list.FilterApplied:
+		bindings = append(bindings, List.ClearFilter)
+	case !ctx.ListEmpty:
+		// Nothing to filter in an empty list.
+		bindings = append(bindings, List.Filter)
+	}
+
+	return append(bindings, List.Navigate, Global.NextPanel)
 }
 
 // Active returns the bindings the user can press right now, in the order they
@@ -196,16 +236,14 @@ func Active(ctx Context) []key.Binding {
 	case "Home":
 		switch ctx.Focused {
 		case constants.COMPONENT_BODY_LIST:
-			bindings := make([]key.Binding, 0, 5)
+			// New is offered even with no groups - it is how the first one gets
+			// made - but Delete needs something to delete.
+			own := []key.Binding{List.New}
 			if !ctx.ListEmpty {
-				bindings = append(bindings, List.Select)
-			}
-			bindings = append(bindings, List.New)
-			if !ctx.ListEmpty {
-				bindings = append(bindings, List.Delete)
+				own = append(own, List.Delete)
 			}
 
-			return append(bindings, List.Navigate, Global.NextPanel)
+			return listKeys(ctx, own...)
 
 		case constants.COMPONENT_BODY_DETAILS:
 			if !ctx.Selected {
@@ -222,12 +260,9 @@ func Active(ctx Context) []key.Binding {
 	case "Services":
 		switch ctx.Focused {
 		case constants.COMPONENT_BODY_LIST:
-			bindings := make([]key.Binding, 0, 3)
-			if !ctx.ListEmpty {
-				bindings = append(bindings, List.Select)
-			}
-
-			return append(bindings, List.Navigate, Global.NextPanel)
+			// The services list is read-only: services are created by editing
+			// the compose file, not from here.
+			return listKeys(ctx)
 
 		case constants.COMPONENT_BODY_DETAILS:
 			if !ctx.Selected {

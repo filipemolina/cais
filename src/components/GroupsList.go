@@ -191,6 +191,10 @@ func (m *GroupListModel) resizeList() {
 func (m GroupListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var finalCmds []tea.Cmd
 
+	// The footer advertises different keys depending on this, so the transition
+	// has to be announced. Taken before the inner list sees the message.
+	filterStateBefore := m.list.FilterState()
+
 	switch msg := msg.(type) {
 	// The panel's box comes from AppModel; the inner list is sized to what
 	// is left inside the wrapper's padding.
@@ -272,6 +276,10 @@ func (m GroupListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.list, cmd = m.list.Update(msg)
 		finalCmds = append(finalCmds, cmd)
+	}
+
+	if state := m.list.FilterState(); state != filterStateBefore {
+		finalCmds = append(finalCmds, cmds.SetListFilterState(state))
 	}
 
 	return m, tea.Batch(finalCmds...)

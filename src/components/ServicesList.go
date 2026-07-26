@@ -163,6 +163,10 @@ func (m *ServicesListModel) resizeList() {
 func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var finalCmds []tea.Cmd
 
+	// See GroupListModel.Update: the footer's keys depend on this, so a change
+	// has to be broadcast.
+	filterStateBefore := m.list.FilterState()
+
 	switch msg := msg.(type) {
 	// Sizing comes from AppModel, not WindowSizeMsg: the Services page is never
 	// the active page when the terminal is first measured, so a resize-derived
@@ -228,6 +232,10 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.list, cmd = m.list.Update(msg)
 		finalCmds = append(finalCmds, cmd)
+	}
+
+	if state := m.list.FilterState(); state != filterStateBefore {
+		finalCmds = append(finalCmds, cmds.SetListFilterState(state))
 	}
 
 	return m, tea.Batch(finalCmds...)
