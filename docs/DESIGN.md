@@ -398,6 +398,8 @@ Before adding a feature, answer these:
 
 ## 7. Related documents
 
+- [Roadmap](ROADMAP.md) — the ordered plan to a first alpha, the decisions
+  already taken with the owner, and which phase is next. Live.
 - [Current TODO](../TODO.md) — the live worklist and recent completed work.
 - [Create/delete profiles design](superpowers/specs/2026-07-22-create-delete-profiles-design.md) —
   completed historical design for the create/delete-groups flow.
