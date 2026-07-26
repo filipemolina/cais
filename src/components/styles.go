@@ -2,9 +2,9 @@ package components
 
 import (
 	"image/color"
-	"stack-stitcher/src/appstyles"
 
 	"charm.land/lipgloss/v2"
+	"github.com/filipemolina/stack-stitcher/src/appstyles"
 )
 
 var wrapperStyle = lipgloss.NewStyle().

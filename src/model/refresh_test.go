@@ -4,9 +4,9 @@ import (
 	"errors"
 	"testing"
 
-	"stack-stitcher/src/apptypes"
-	"stack-stitcher/src/cmds"
-	"stack-stitcher/src/components"
+	"github.com/filipemolina/stack-stitcher/src/apptypes"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/components"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/compose-spec/compose-go/v2/types"

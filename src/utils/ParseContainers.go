@@ -6,7 +6,7 @@ import (
 	"io"
 	"strings"
 
-	"stack-stitcher/src/apptypes"
+	"github.com/filipemolina/stack-stitcher/src/apptypes"
 )
 
 // ParseContainers turns `docker compose ps --format json` output into a

@@ -6,15 +6,15 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	"stack-stitcher/src/apptypes"
-	"stack-stitcher/src/cmds"
-	"stack-stitcher/src/components"
-	"stack-stitcher/src/constants"
-	"stack-stitcher/src/utils"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/compose-spec/compose-go/v2/types"
+	"github.com/filipemolina/stack-stitcher/src/apptypes"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/components"
+	"github.com/filipemolina/stack-stitcher/src/constants"
+	"github.com/filipemolina/stack-stitcher/src/utils"
 )
 
 // calculateBodyLayout returns the exact box each body panel must render
@@ -91,7 +91,7 @@ func (m *AppModel) rebroadcastBodyLayoutIfChanged() tea.Cmd {
 // currently active page's components (see UpdateInnerComponent), so this
 // needs to run both right after the config loads AND whenever the active
 // page changes - otherwise a page that wasn't active at load time (e.g.
-// Dashboard, since Home is active first) would never receive its services.
+// Services, since Home is active first) would never receive its services.
 func (m AppModel) configSyncCmds() []tea.Cmd {
 	if m.config.configProject == nil {
 		return nil

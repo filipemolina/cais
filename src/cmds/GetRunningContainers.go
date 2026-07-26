@@ -1,8 +1,8 @@
 package cmds
 
 import (
-	"stack-stitcher/src/apptypes"
-	"stack-stitcher/src/utils"
+	"github.com/filipemolina/stack-stitcher/src/apptypes"
+	"github.com/filipemolina/stack-stitcher/src/utils"
 
 	tea "charm.land/bubbletea/v2"
 )

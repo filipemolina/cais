@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"stack-stitcher/src/appstyles"
-	"stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"

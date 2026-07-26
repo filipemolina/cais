@@ -3,12 +3,12 @@ package components
 import (
 	"fmt"
 	"slices"
-	"stack-stitcher/src/appstyles"
-	"stack-stitcher/src/cmds"
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
 )
 
 type GroupNameModalModel struct {

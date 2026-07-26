@@ -30,7 +30,7 @@ Sleep 4s
 Type "t"
 Sleep 1s
 
-# Tab onto the Main Menu, switch to the Dashboard page.
+# Switch to the Services page.
 Tab
 Sleep 500ms
 Right
