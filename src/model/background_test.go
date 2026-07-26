@@ -2,9 +2,9 @@ package model
 
 import (
 	"fmt"
-	"stack-stitcher/src/appstyles"
-	"stack-stitcher/src/cmds"
-	"stack-stitcher/src/utils"
+	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/utils"
 	"strings"
 	"testing"
 

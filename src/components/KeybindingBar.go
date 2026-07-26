@@ -3,12 +3,12 @@ package components
 import (
 	"fmt"
 	"image/color"
-	"stack-stitcher/src/appstyles"
-	"stack-stitcher/src/cmds"
-	"stack-stitcher/src/constants"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/constants"
 )
 
 // KeyHint represents a single keybinding for display in the bottom bar.

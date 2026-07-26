@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"stack-stitcher/src/utils"
+	"github.com/filipemolina/stack-stitcher/src/utils"
 
 	tea "charm.land/bubbletea/v2"
 )

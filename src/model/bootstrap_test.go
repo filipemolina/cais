@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"stack-stitcher/src/cmds"
-	"stack-stitcher/src/utils"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/utils"
 
 	tea "charm.land/bubbletea/v2"
 )

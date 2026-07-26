@@ -1,8 +1,8 @@
 package components
 
 import (
-	"stack-stitcher/src/appstyles"
-	"stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
 
 	tea "charm.land/bubbletea/v2"
 )
