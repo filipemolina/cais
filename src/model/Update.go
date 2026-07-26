@@ -7,6 +7,7 @@ import (
 	"maps"
 	"slices"
 
+	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/compose-spec/compose-go/v2/types"
@@ -14,6 +15,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/components"
 	"github.com/filipemolina/stack-stitcher/src/constants"
+	"github.com/filipemolina/stack-stitcher/src/keys"
 	"github.com/filipemolina/stack-stitcher/src/utils"
 )
 
@@ -196,17 +198,15 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			break
 		}
 
-		switch msg.String() {
-
-		// Quit the program on Ctrl+c or q
-		case "ctrl+c", "q":
+		switch {
+		case key.Matches(msg, keys.Global.Quit):
 			return m, tea.Quit
 
-		case "tab":
+		case key.Matches(msg, keys.Global.NextPanel):
 			tabCmd := m.ChangeFocus(nil)
 			finalCmds = append(finalCmds, tabCmd)
 
-		case "shift+tab":
+		case key.Matches(msg, keys.Global.PrevPanel):
 			idx := int(-1)
 			tabCmd := m.ChangeFocus(&idx)
 			finalCmds = append(finalCmds, tabCmd)
