@@ -5,17 +5,12 @@ import (
 
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 
+	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/compose-spec/compose-go/v2/types"
+	"github.com/filipemolina/stack-stitcher/src/keys"
 )
-
-var detailsPanelActions = map[string]string{
-	"s": "start",
-	"t": "stop",
-	"r": "restart",
-	"p": "pull",
-}
 
 type DetailsPanelModel struct {
 	service     *types.ServiceConfig
@@ -52,29 +47,34 @@ func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.service = &service
 
 	case tea.KeyPressMsg:
-		if m.isFocused && m.service != nil {
-			if action, ok := detailsPanelActions[msg.String()]; ok {
-				actionCmd := cmds.RunDockerAction(action, m.service.Name, false)
-				finalCmds = append(finalCmds, actionCmd)
-			}
+		if !m.isFocused || m.service == nil {
+			break
+		}
 
-			switch msg.String() {
-			case "x":
-				// Remove destroys containers, so it goes through a
-				// confirmation first, unlike the other four actions.
-				finalCmds = append(finalCmds, cmds.OpenConfirmModal(
-					fmt.Sprintf("Remove service %q?\nThis stops and removes its containers. (y/n)", m.service.Name),
-					cmds.RunDockerAction("remove", m.service.Name, false),
-				))
-			case "l":
-				finalCmds = append(finalCmds, cmds.OpenLogsModal(m.service.Name, false))
-			case "e":
-				finalCmds = append(finalCmds, cmds.OpenServiceEditor(m.service.Name))
-			case "E":
-				// The panel doesn't know which compose file is loaded, and
-				// shouldn't - AppModel turns these into the actual commands.
-				finalCmds = append(finalCmds, cmds.OpenEditor())
-			}
+		if action, ok := dockerActionFor(msg); ok {
+			actionCmd := cmds.RunDockerAction(action, m.service.Name, false)
+			finalCmds = append(finalCmds, actionCmd)
+		}
+
+		switch {
+		case key.Matches(msg, keys.Details.Remove):
+			// Remove destroys containers, so it goes through a
+			// confirmation first, unlike the other four actions.
+			finalCmds = append(finalCmds, cmds.OpenConfirmModal(
+				fmt.Sprintf("Remove service %q?\nThis stops and removes its containers. (y/n)", m.service.Name),
+				cmds.RunDockerAction("remove", m.service.Name, false),
+			))
+
+		case key.Matches(msg, keys.Details.Logs):
+			finalCmds = append(finalCmds, cmds.OpenLogsModal(m.service.Name, false))
+
+		case key.Matches(msg, keys.Details.EditService):
+			finalCmds = append(finalCmds, cmds.OpenServiceEditor(m.service.Name))
+
+		case key.Matches(msg, keys.Details.EditFile):
+			// The panel doesn't know which compose file is loaded, and
+			// shouldn't - AppModel turns these into the actual commands.
+			finalCmds = append(finalCmds, cmds.OpenEditor())
 		}
 	}
 

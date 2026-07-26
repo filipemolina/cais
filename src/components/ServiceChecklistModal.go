@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"io"
 
+	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
 type serviceChecklistDelegate struct{}
@@ -57,18 +59,18 @@ func (m ServiceChecklistModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var finalCmds []tea.Cmd
 
 	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
-		switch keyMsg.String() {
-		case "esc":
+		switch {
+		case key.Matches(keyMsg, keys.Overlay.Cancel):
 			return m, cmds.CloseModal(nil)
 
-		case "space":
+		case key.Matches(keyMsg, keys.Overlay.Toggle):
 			index := m.list.GlobalIndex()
 			if item, ok := m.list.SelectedItem().(apptypes.CheckableServiceItem); ok {
 				item.Checked = !item.Checked
 				finalCmds = append(finalCmds, m.list.SetItem(index, item))
 			}
 
-		case "enter":
+		case key.Matches(keyMsg, keys.Overlay.Submit):
 			if checked := m.checkedServiceNames(); len(checked) > 0 {
 				return m, cmds.CloseModal(cmds.CreateGroup(m.groupName, checked))
 			}
@@ -92,12 +94,14 @@ func (m ServiceChecklistModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func checklistHints() string {
 	return lipgloss.JoinVertical(lipgloss.Left,
 		renderKeyHints([]KeyHint{
-			{"↑/↓", "navigate"},
-			{"space", "toggle"},
+			hintFor(keys.List.Navigate),
+			hintFor(keys.Overlay.Toggle),
 		}, appstyles.TextMuted),
 		renderKeyHints([]KeyHint{
-			{"enter", "create group"},
-			{"esc", "cancel"},
+			// Enter is "confirm" everywhere; here what it confirms is worth
+			// naming, since it is the step that writes to the compose file.
+			hintAs(keys.Overlay.Submit, "create group"),
+			hintFor(keys.Overlay.Cancel),
 		}, appstyles.TextMuted),
 	)
 }

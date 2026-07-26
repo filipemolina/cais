@@ -9,9 +9,11 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/utils"
 
+	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
 // maxLogLines caps the in-memory scrollback so a long-running, chatty service
@@ -66,14 +68,14 @@ func (m LogsModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyPressMsg:
-		switch msg.String() {
-		case "esc":
+		switch {
+		case key.Matches(msg, keys.Overlay.Cancel):
 			if m.cancel != nil {
 				m.cancel()
 			}
 			return m, cmds.CloseModal(nil)
 
-		case "f":
+		case key.Matches(msg, keys.Overlay.Follow):
 			m.follow = !m.follow
 			if m.follow {
 				m.viewport.GotoBottom()
@@ -114,13 +116,20 @@ func (m LogsModalModel) View() tea.View {
 	if m.follow {
 		followState = "on"
 	}
-	hint := fmt.Sprintf("↑↓ scroll · f follow (%s) · esc quit", followState)
+
+	// Built from the bindings rather than written out, so rebinding follow or
+	// cancel cannot leave this line advertising the old key.
+	footer := renderKeyHints([]KeyHint{
+		hintAs(keys.List.Navigate, "scroll"),
+		hintAs(keys.Overlay.Follow, fmt.Sprintf("follow (%s)", followState)),
+		hintAs(keys.Overlay.Cancel, "quit"),
+	}, appstyles.SecondaryFontColor)
+
 	if m.ended {
-		hint = "stream ended · " + hint
+		footer = lipgloss.NewStyle().
+			Foreground(appstyles.SecondaryFontColor).
+			Render("stream ended · ") + footer
 	}
-	footer := lipgloss.NewStyle().
-		Foreground(appstyles.SecondaryFontColor).
-		Render(hint)
 
 	body := m.viewport.View()
 	if m.err != nil {

@@ -5,12 +5,14 @@ import (
 	"image/color"
 	"io"
 
+	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
 /*
@@ -189,33 +191,31 @@ func (m GroupListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.resizeList()
 
 	case tea.KeyPressMsg:
-		switch msg.String() {
-		case "space":
-			if m.isFocused {
-				selectedItem := m.list.SelectedItem()
-				selectedGroup, ok := selectedItem.(apptypes.GroupListItem)
+		if !m.isFocused {
+			break
+		}
 
-				if ok {
-					// Highlight on the same frame as the keypress rather
-					// than waiting for the message to come back around.
-					m.activeGroup = string(selectedGroup)
-					m.syncActiveIndex()
+		switch {
+		case key.Matches(msg, keys.List.Select):
+			selectedItem := m.list.SelectedItem()
+			selectedGroup, ok := selectedItem.(apptypes.GroupListItem)
 
-					selectedServiceCmd := cmds.SetSelectedGroup(string(selectedGroup))
-					finalCmds = append(finalCmds, selectedServiceCmd)
-				}
+			if ok {
+				// Highlight on the same frame as the keypress rather
+				// than waiting for the message to come back around.
+				m.activeGroup = string(selectedGroup)
+				m.syncActiveIndex()
+
+				selectedServiceCmd := cmds.SetSelectedGroup(string(selectedGroup))
+				finalCmds = append(finalCmds, selectedServiceCmd)
 			}
 
-		case "n":
-			if m.isFocused {
-				finalCmds = append(finalCmds, cmds.OpenCreateGroupModal())
-			}
+		case key.Matches(msg, keys.List.New):
+			finalCmds = append(finalCmds, cmds.OpenCreateGroupModal())
 
-		case "d":
-			if m.isFocused {
-				if selectedGroup, ok := m.list.SelectedItem().(apptypes.GroupListItem); ok {
-					finalCmds = append(finalCmds, cmds.OpenDeleteGroupModal(string(selectedGroup)))
-				}
+		case key.Matches(msg, keys.List.Delete):
+			if selectedGroup, ok := m.list.SelectedItem().(apptypes.GroupListItem); ok {
+				finalCmds = append(finalCmds, cmds.OpenDeleteGroupModal(string(selectedGroup)))
 			}
 		}
 

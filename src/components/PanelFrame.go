@@ -3,9 +3,32 @@ package components
 import (
 	"image/color"
 
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/stack-stitcher/src/keys"
 )
+
+// dockerActionFor returns the `docker compose` action a keypress asks for.
+// Both details panels read it, which is what makes "s starts a group" and
+// "s starts a service" the same fact rather than two switch statements that
+// happen to agree. Remove is absent on purpose: it is destructive, so it goes
+// through a confirmation instead of straight to a command.
+func dockerActionFor(msg tea.KeyPressMsg) (string, bool) {
+	switch {
+	case key.Matches(msg, keys.Details.Start):
+		return "start", true
+	case key.Matches(msg, keys.Details.Stop):
+		return "stop", true
+	case key.Matches(msg, keys.Details.Restart):
+		return "restart", true
+	case key.Matches(msg, keys.Details.Pull):
+		return "pull", true
+	}
+
+	return "", false
+}
 
 // renderActionButtons renders the shared Start/Stop/Restart/Pull/Remove row
 // used by both DetailsPanel and GroupDetailsPanel, right-aligned within the

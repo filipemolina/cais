@@ -10,18 +10,13 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 
+	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/compose-spec/compose-go/v2/types"
+	"github.com/filipemolina/stack-stitcher/src/keys"
 	"github.com/mattn/go-runewidth"
 )
-
-var groupDetailsPanelActions = map[string]string{
-	"s": "start",
-	"t": "stop",
-	"r": "restart",
-	"p": "pull",
-}
 
 type GroupDetailsPanelModel struct {
 	selectedGroup string
@@ -122,23 +117,26 @@ func (m GroupDetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.KeyPressMsg:
-		if m.isFocused && m.selectedGroup != "" {
-			if action, ok := groupDetailsPanelActions[msg.String()]; ok {
-				actionCmd := cmds.RunDockerAction(action, m.selectedGroup, true)
-				finalCmds = append(finalCmds, actionCmd)
-			}
+		if !m.isFocused || m.selectedGroup == "" {
+			break
+		}
 
-			switch msg.String() {
-			case "x":
-				// Remove destroys containers, so it goes through a
-				// confirmation first, unlike the other four actions.
-				finalCmds = append(finalCmds, cmds.OpenConfirmModal(
-					fmt.Sprintf("Remove group %q?\nThis stops and removes its containers. (y/n)", m.selectedGroup),
-					cmds.RunDockerAction("remove", m.selectedGroup, true),
-				))
-			case "l":
-				finalCmds = append(finalCmds, cmds.OpenLogsModal(m.selectedGroup, true))
-			}
+		if action, ok := dockerActionFor(msg); ok {
+			actionCmd := cmds.RunDockerAction(action, m.selectedGroup, true)
+			finalCmds = append(finalCmds, actionCmd)
+		}
+
+		switch {
+		case key.Matches(msg, keys.Details.Remove):
+			// Remove destroys containers, so it goes through a
+			// confirmation first, unlike the other four actions.
+			finalCmds = append(finalCmds, cmds.OpenConfirmModal(
+				fmt.Sprintf("Remove group %q?\nThis stops and removes its containers. (y/n)", m.selectedGroup),
+				cmds.RunDockerAction("remove", m.selectedGroup, true),
+			))
+
+		case key.Matches(msg, keys.Details.Logs):
+			finalCmds = append(finalCmds, cmds.OpenLogsModal(m.selectedGroup, true))
 		}
 	}
 
