@@ -158,6 +158,15 @@ func (m GroupListModel) Init() tea.Cmd {
 	return nil
 }
 
+// OwnsKeyboard reports whether the list is taking every keystroke for itself,
+// which it does while the user is typing a filter: n, d and q are letters then,
+// not commands. Only while typing - once a filter is applied and the cursor is
+// back in the rows, the panel keys mean what they always mean, and esc clears
+// the filter. See model.AppModel.keyboardOwned.
+func (m GroupListModel) OwnsKeyboard() bool {
+	return m.list.FilterState() == list.Filtering
+}
+
 // footerHeight is the rows the stats line takes below the list.
 func (m GroupListModel) footerHeight() int {
 	if !m.hasStats {
@@ -182,6 +191,10 @@ func (m *GroupListModel) resizeList() {
 func (m GroupListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var finalCmds []tea.Cmd
 
+	// The footer advertises different keys depending on this, so the transition
+	// has to be announced. Taken before the inner list sees the message.
+	filterStateBefore := m.list.FilterState()
+
 	switch msg := msg.(type) {
 	// The panel's box comes from AppModel; the inner list is sized to what
 	// is left inside the wrapper's padding.
@@ -191,7 +204,10 @@ func (m GroupListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.resizeList()
 
 	case tea.KeyPressMsg:
-		if !m.isFocused {
+		// The inner list still gets the key below - that is where the filter
+		// input lives - but none of the panel's own verbs fire while it is
+		// being typed into.
+		if !m.isFocused || m.OwnsKeyboard() {
 			break
 		}
 
@@ -260,6 +276,10 @@ func (m GroupListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.list, cmd = m.list.Update(msg)
 		finalCmds = append(finalCmds, cmd)
+	}
+
+	if state := m.list.FilterState(); state != filterStateBefore {
+		finalCmds = append(finalCmds, cmds.SetListFilterState(state))
 	}
 
 	return m, tea.Batch(finalCmds...)
@@ -337,6 +357,9 @@ func GroupsList(groups []string, width int, height int) tea.Model {
 	servicesList := list.New(items, listDelegate, width, height)
 	servicesList.SetShowHelp(false)
 	servicesList.SetShowStatusBar(false)
+	// Without this the list keeps list.DefaultKeyMap, which claims d, f, l, h,
+	// b, u, q, esc and ? - keys this app spends elsewhere. See keys.ListKeyMap.
+	servicesList.KeyMap = keys.ListKeyMap()
 
 	servicesList.Title = "Groups"
 	servicesList.Paginator.ActiveDot = " ● "

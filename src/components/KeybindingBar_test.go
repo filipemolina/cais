@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -37,7 +38,19 @@ func TestFooterHints(t *testing.T) {
 		{
 			name:  "groups list with groups",
 			model: KeybindingBarModel{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST},
-			want:  "space select · n new · d delete · ↑/↓ navigate · tab next",
+			want:  "space select · n new · d delete · / filter · ↑/↓ navigate · tab next",
+		},
+		{
+			// The list has the keyboard: every other key is a letter.
+			name:  "groups list while a filter is being typed",
+			model: KeybindingBarModel{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST, filterState: list.Filtering},
+			want:  "enter apply · esc cancel",
+		},
+		{
+			// The filter slot becomes the way out of the filter.
+			name:  "groups list with a filter applied",
+			model: KeybindingBarModel{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST, filterState: list.FilterApplied},
+			want:  "space select · n new · d delete · esc clear filter · ↑/↓ navigate · tab next",
 		},
 		{
 			name:  "groups list while empty",
@@ -57,7 +70,12 @@ func TestFooterHints(t *testing.T) {
 		{
 			name:  "services list with services",
 			model: KeybindingBarModel{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_LIST},
-			want:  "space select · ↑/↓ navigate · tab next",
+			want:  "space select · / filter · ↑/↓ navigate · tab next",
+		},
+		{
+			name:  "services list while a filter is being typed",
+			model: KeybindingBarModel{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_LIST, filterState: list.Filtering},
+			want:  "enter apply · esc cancel",
 		},
 		{
 			name:  "services list while empty",

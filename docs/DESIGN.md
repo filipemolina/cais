@@ -165,10 +165,12 @@ The tiers:
 
 | Tier | Keys | Rule |
 | --- | --- | --- |
-| Global | `alt`+letter, `tab` / `shift+tab`, `q`, `ctrl+c` | Same meaning everywhere, never contextual |
+| Global | `alt`+letter, `tab` / `shift+tab`, `q` | Same meaning everywhere, never contextual — but they yield to whatever owns the keyboard |
+| Force quit | `ctrl+c` | Yields to nothing, checked before the modal handoff |
 | Panel | lowercase letters (`s t r p x l e n d`) | Act on the focused panel's selection; one verb, one key, on every panel |
 | Destructive | `x`, `d` | Always through `ConfirmModal`; never dispatched straight from a panel |
 | Overlay | `esc` cancel, `enter` confirm, `y` / `n`, plus overlay-local letters | The overlay owns the keyboard while it is open |
+| List | cursor keys, `g` / `G`, `/` | The list's own, and the only keys `list.KeyMap` is allowed to claim |
 
 **There is no prefix key**, and this is deliberate. Prefixes (tmux `ctrl+b`,
 zellij `ctrl+p`) exist because those programs host another program that owns the
@@ -183,6 +185,42 @@ Because an overlay hides the footer bar while it is open, **an overlay advertise
 its own keys**. It builds that line from the same bindings, through
 `components.renderKeyHints`, so a modal's help and the footer read alike; pass a
 lighter description color when the modal sits on a lighter surface than the bar.
+
+#### The lists do not get to keep `list.DefaultKeyMap`
+
+A bubbles `list.Model` installs `list.DefaultKeyMap()`, which is written for a
+list that *is* the whole program. It binds `d` and `f` to next-page, `h`, `b` and
+`u` to previous-page, and takes `q`, `esc` and `?` for itself. Both body lists
+hand every key to the inner list while focused, *after* matching their own, so
+those keys did two jobs at once: `d` opened the delete-group confirm **and**
+paged the list out from under it.
+
+So the lists install `keys.ListKeyMap()` instead. It keeps only what the list
+alone can answer — cursor movement, `g`/`G`, and `/` — and leaves every key the
+app owns bound to nothing. `components.TestDeleteKeyDoesNotAlsoPageTheList` and
+`TestPanelLettersDoNotPageTheList` fail against the default map.
+
+**A list being filtered is an overlay.** While a filter is being typed the
+keystrokes are text: `n` is not "new group", `q` is not "quit". The list says so
+through `OwnsKeyboard()`, `AppModel.keyboardOwned()` asks every component on the
+active page, and `Update` drops out of its own key handling when the answer is
+yes — dropping out rather than returning, because the component below still needs
+the keystroke for the filter input. That is an interface rather than a broadcast
+because the answer has to be right on the very keystroke that changes it.
+
+Two consequences worth keeping:
+
+- **`ctrl+c` is its own binding** (`keys.Global.ForceQuit`), matched before the
+  modal handoff, so it quits whatever owns the keyboard. `q` is the one that
+  yields. Previously the two shared a binding and `ctrl+c` did not quit while a
+  modal was open.
+- **The footer follows the filter.** The lists broadcast
+  `cmds.SetListFilterStateMsg` on the transition, so filtering advertises only
+  the keys that end it, and an applied filter turns the `/` slot into the `esc`
+  that clears it. Otherwise the bar would go on offering `n`, `d` and `space`
+  while all three were letters — the drift `src/keys` exists to prevent.
+  `esc` is also the reason the list keeps a key the app otherwise owns: without
+  it an applied filter has no way out.
 
 ### Which compose file
 
