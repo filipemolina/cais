@@ -257,6 +257,9 @@ func ServicesList(services []types.ServiceConfig, width int, height int) tea.Mod
 	servicesList := list.New(items, listDelegate, width, height)
 	servicesList.SetShowHelp(false)
 	servicesList.SetShowStatusBar(false)
+	// See keys.ListKeyMap: the default map's letter aliases for paging collide
+	// with the panel verbs.
+	servicesList.KeyMap = keys.ListKeyMap()
 
 	servicesList.Title = "Services"
 	servicesList.Paginator.ActiveDot = " ● "

@@ -18,6 +18,7 @@ package keys
 
 import (
 	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/list"
 
 	"github.com/filipemolina/stack-stitcher/src/constants"
 )
@@ -36,11 +37,17 @@ type GlobalKeys struct {
 // ListKeys act on the body's left panel: the groups list and the services
 // list. New and Delete only mean something on the groups list, which is the
 // only list whose contents the app can create.
+//
+// Filter and ClearFilter belong to the bubbles list rather than to a handler
+// here, and are declared anyway so the footer advertises them from the same
+// place as everything else. See ListKeyMap.
 type ListKeys struct {
-	Navigate key.Binding
-	Select   key.Binding
-	New      key.Binding
-	Delete   key.Binding
+	Navigate    key.Binding
+	Select      key.Binding
+	New         key.Binding
+	Delete      key.Binding
+	Filter      key.Binding
+	ClearFilter key.Binding
 }
 
 // DetailsKeys act on whatever the body's right panel is showing. The first six
@@ -82,10 +89,12 @@ var Global = GlobalKeys{
 var List = ListKeys{
 	// Matched by the bubbles list itself; declared here so the footer can
 	// advertise it from the same place as everything else.
-	Navigate: key.NewBinding(key.WithHelp("↑/↓", "navigate")),
-	Select:   key.NewBinding(key.WithKeys("space"), key.WithHelp("space", "select")),
-	New:      key.NewBinding(key.WithKeys("n"), key.WithHelp("n", "new")),
-	Delete:   key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "delete")),
+	Navigate:    key.NewBinding(key.WithHelp("↑/↓", "navigate")),
+	Select:      key.NewBinding(key.WithKeys("space"), key.WithHelp("space", "select")),
+	New:         key.NewBinding(key.WithKeys("n"), key.WithHelp("n", "new")),
+	Delete:      key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "delete")),
+	Filter:      key.NewBinding(key.WithKeys("/"), key.WithHelp("/", "filter")),
+	ClearFilter: key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "clear filter")),
 }
 
 var Details = DetailsKeys{
@@ -107,6 +116,52 @@ var Overlay = OverlayKeys{
 	Yes:       key.NewBinding(key.WithKeys("y", "Y"), key.WithHelp("y", "yes")),
 	No:        key.NewBinding(key.WithKeys("n", "N"), key.WithHelp("n", "no")),
 	Follow:    key.NewBinding(key.WithKeys("f"), key.WithHelp("f", "follow")),
+}
+
+// ListKeyMap is the keymap the two body lists install on their inner bubbles
+// list, replacing list.DefaultKeyMap.
+//
+// The default map is written for a list that is the whole program, so it claims
+// keys this app spends elsewhere: d and f page forward while d deletes a group,
+// h, l, b and u page while l opens logs, and q, esc and ? are the app's. The
+// results were visible - pressing d both opened the delete confirm and paged
+// the list backwards - so the list has to be told which keys are not its own.
+//
+// What stays is what only the list can answer: where its cursor is, and the
+// filter. Filtering is worth keeping with forty services, and while it is
+// active the list owns the keyboard the way a modal does.
+//
+// Keys the app owns are left with no keystrokes rather than removed, because
+// list.Model reads every field: an empty binding matches nothing, which is the
+// intent, whereas a missing one would be a nil-safe accident.
+func ListKeyMap() list.KeyMap {
+	unbound := key.NewBinding()
+
+	return list.KeyMap{
+		CursorUp:   key.NewBinding(key.WithKeys("up", "k"), key.WithHelp("↑/k", "up")),
+		CursorDown: key.NewBinding(key.WithKeys("down", "j"), key.WithHelp("↓/j", "down")),
+		// pgup/pgdown and the arrows only; the letter aliases (h/l/b/u/f/d)
+		// are the ones that collided with the panel verbs.
+		PrevPage:  key.NewBinding(key.WithKeys("left", "pgup"), key.WithHelp("←/pgup", "prev page")),
+		NextPage:  key.NewBinding(key.WithKeys("right", "pgdown"), key.WithHelp("→/pgdn", "next page")),
+		GoToStart: key.NewBinding(key.WithKeys("home", "g"), key.WithHelp("g/home", "go to start")),
+		GoToEnd:   key.NewBinding(key.WithKeys("end", "G"), key.WithHelp("G/end", "go to end")),
+
+		Filter:      List.Filter,
+		ClearFilter: List.ClearFilter,
+
+		// The filtering list is an overlay, so it answers the overlay keys:
+		// enter confirms and esc cancels, exactly as they do in every modal.
+		CancelWhileFiltering: Overlay.Cancel,
+		AcceptWhileFiltering: Overlay.Submit,
+
+		// The app's, all of them: ? opens the help overlay, q and ctrl+c quit
+		// through AppModel, and esc above is the only esc the list needs.
+		ShowFullHelp:  unbound,
+		CloseFullHelp: unbound,
+		Quit:          unbound,
+		ForceQuit:     unbound,
+	}
 }
 
 // Context is what the footer knows about the screen: enough to decide which

@@ -337,6 +337,9 @@ func GroupsList(groups []string, width int, height int) tea.Model {
 	servicesList := list.New(items, listDelegate, width, height)
 	servicesList.SetShowHelp(false)
 	servicesList.SetShowStatusBar(false)
+	// Without this the list keeps list.DefaultKeyMap, which claims d, f, l, h,
+	// b, u, q, esc and ? - keys this app spends elsewhere. See keys.ListKeyMap.
+	servicesList.KeyMap = keys.ListKeyMap()
 
 	servicesList.Title = "Groups"
 	servicesList.Paginator.ActiveDot = " ● "
