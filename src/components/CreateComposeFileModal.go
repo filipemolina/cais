@@ -9,9 +9,11 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 
+	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
 type createStep int
@@ -68,10 +70,10 @@ func (m CreateComposeFileModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m CreateComposeFileModalModel) updateFilename(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "esc":
+	switch {
+	case key.Matches(msg, keys.Overlay.Cancel):
 		return m, cmds.CloseModal(nil)
-	case "enter":
+	case key.Matches(msg, keys.Overlay.Submit):
 		name := strings.TrimSpace(m.filename.Value())
 		if name == "" {
 			m.errMsg = "Filename can't be empty"
@@ -99,14 +101,14 @@ func (m CreateComposeFileModalModel) updateFilename(msg tea.KeyPressMsg) (tea.Mo
 }
 
 func (m CreateComposeFileModalModel) updateAddServicePrompt(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "esc":
+	switch {
+	case key.Matches(msg, keys.Overlay.Cancel):
 		return m, cmds.CloseModal(nil)
-	case "y", "Y":
+	case key.Matches(msg, keys.Overlay.Yes):
 		m.errMsg = ""
 		m.step = stepServiceFields
 		return m, m.serviceName.Focus()
-	case "n", "N":
+	case key.Matches(msg, keys.Overlay.No):
 		return m, cmds.CloseModal(cmds.CreateComposeFile(strings.TrimSpace(m.filename.Value()), "", ""))
 	}
 
@@ -114,17 +116,17 @@ func (m CreateComposeFileModalModel) updateAddServicePrompt(msg tea.KeyPressMsg)
 }
 
 func (m CreateComposeFileModalModel) updateServiceFields(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "esc":
+	switch {
+	case key.Matches(msg, keys.Overlay.Cancel):
 		return m, cmds.CloseModal(nil)
-	case "tab":
+	case key.Matches(msg, keys.Overlay.NextField):
 		if m.serviceName.Focused() {
 			m.serviceName.Blur()
 			return m, m.image.Focus()
 		}
 		m.image.Blur()
 		return m, m.serviceName.Focus()
-	case "enter":
+	case key.Matches(msg, keys.Overlay.Submit):
 		name := strings.TrimSpace(m.serviceName.Value())
 		image := strings.TrimSpace(m.image.Value())
 		if name == "" {

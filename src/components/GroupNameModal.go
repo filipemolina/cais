@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"slices"
 
+	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
 type GroupNameModalModel struct {
@@ -24,11 +26,11 @@ func (m GroupNameModalModel) Init() tea.Cmd {
 
 func (m GroupNameModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
-		switch keyMsg.String() {
-		case "esc":
+		switch {
+		case key.Matches(keyMsg, keys.Overlay.Cancel):
 			return m, cmds.CloseModal(nil)
 
-		case "enter":
+		case key.Matches(keyMsg, keys.Overlay.Submit):
 			name := m.input.Value()
 
 			if name == "" {
