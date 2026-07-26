@@ -1,9 +1,11 @@
 package model
 
 import (
+	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/components"
@@ -106,6 +108,26 @@ func TestForceQuitBeatsEveryClaimOnTheKeyboard(t *testing.T) {
 			t.Error("ctrl+c did not quit the idle app")
 		}
 	})
+}
+
+// The footer has to follow the filter, or it goes straight back to advertising
+// keys that do nothing - the drift the central keymap exists to prevent.
+func TestFooterFollowsTheFilterState(t *testing.T) {
+	m := homeWithGroups(t)
+
+	updated, cmd := m.Update(letter('/'))
+	m = drive(updated, collect(cmd)...)
+
+	footer := ansi.Strip(m.components.KeybindingBar.View().Content)
+
+	if !strings.Contains(footer, "apply") {
+		t.Errorf("the footer does not offer a way to apply the filter: %q", footer)
+	}
+	for _, inert := range []string{"new", "delete", "select"} {
+		if strings.Contains(footer, inert) {
+			t.Errorf("the footer still advertises %q while the filter is being typed: %q", inert, footer)
+		}
+	}
 }
 
 // Once the filter is applied the list is back to being a list: the cursor is in
