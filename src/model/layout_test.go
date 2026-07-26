@@ -71,7 +71,7 @@ func TestBodyLayoutFillsTerminalWidthExactly(t *testing.T) {
 }
 
 func TestPanelsRenderAtTheirBroadcastSize(t *testing.T) {
-	for _, page := range []string{"Home", "Dashboard"} {
+	for _, page := range []string{"Home", "Services"} {
 		m := applyLayout(drive(startup(120, 40), cmds.SetActivePageMsg(page)))
 		layout := layoutMsg(m)
 
@@ -94,9 +94,9 @@ func TestPanelsRenderAtTheirBroadcastSize(t *testing.T) {
 // so its components only ever learn their size from the layout broadcast that
 // follows the page switch.
 func TestPanelsAreSizedAfterSwitchingPageWithoutAResize(t *testing.T) {
-	m := applyLayout(drive(startup(120, 40), cmds.SetActivePageMsg("Dashboard")))
+	m := applyLayout(drive(startup(120, 40), cmds.SetActivePageMsg("Services")))
 
-	for idx, component := range m.pages["Dashboard"] {
+	for idx, component := range m.pages["Services"] {
 		if got := lipgloss.Width(component.View().Content); got < constants.MIN_PANEL_WIDTH {
 			t.Errorf("dashboard panel %d: width %d, want >= %d (never received its size)",
 				idx, got, constants.MIN_PANEL_WIDTH)
@@ -108,7 +108,7 @@ func TestRenderedViewNeverExceedsTerminalWidth(t *testing.T) {
 	sizes := []struct{ width, height int }{{120, 40}, {80, 24}, {64, 20}}
 
 	for _, size := range sizes {
-		for _, page := range []string{"Home", "Dashboard"} {
+		for _, page := range []string{"Home", "Services"} {
 			m := applyLayout(drive(startup(size.width, size.height), cmds.SetActivePageMsg(page)))
 
 			for i, line := range strings.Split(m.View().Content, "\n") {

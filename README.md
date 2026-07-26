@@ -23,7 +23,7 @@ Stack Stitcher is under **active development**. Compose parsing, navigation, sta
 - **Reads standard Compose files.** Uses the official [`compose-go`](https://github.com/compose-spec/compose-go) parser, so it understands the same `compose.yml` your Docker setup already relies on — no custom config format to learn.
 - **Keyboard-first TUI.** Built on [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Bubbles](https://github.com/charmbracelet/bubbles), and [Lip Gloss](https://github.com/charmbracelet/lipgloss) for a responsive, styled terminal experience.
 - **Start/stop a whole group together.** Compose "profiles" group related services (e.g. everything a self-hosted app needs); Stack Stitcher lets you Start/Stop/Restart/Pull/Remove all of them in one keypress instead of remembering which services belong together.
-- **Start/stop a single service.** The same five actions are available for one service at a time from the Dashboard view.
+- **Start/stop a single service.** The same five actions are available for one service at a time from the Services page.
 - **Stream live logs.** Press `l` on a focused service or group panel to open a full-screen overlay that tails `docker compose logs -f` in real time, with follow-mode and scrollback.
 - **Automatically refreshed status.** Container state is rechecked every five seconds while a compose project is loaded and no modal is open, so status panels reflect changes made outside Stack Stitcher.
 - **Full-height, context-aware layout.** The app fills the terminal with a pinned header (wordmark + tabs) and footer (keybinding bar); the body region stretches to use every available row. Tabs show user-facing labels such as **Groups** for Home and **Files** for Compose Files, while the underlying page IDs stay the same.
@@ -81,7 +81,7 @@ flow control and `Ctrl+D` as end-of-input.
 
 | Key | Action | Where |
 | --- | --- | --- |
-| `Alt`+`G` `D` `F` `S` | Jump to Groups / Dashboard / Files / Settings | Everywhere |
+| `Alt`+`G` `S` `F` | Jump to Groups / Services / Files | Everywhere |
 | `Tab` / `Shift+Tab` | Move focus between the two body panels | Everywhere |
 | `Space` | Select the highlighted group or service | Groups/Services list focused |
 | `s` | Start | A group or service panel focused |
@@ -99,7 +99,7 @@ flow control and `Ctrl+D` as end-of-input.
 | `Esc` | Close the logs overlay | Logs overlay open |
 | `q` / `Ctrl+C` | Quit | Everywhere |
 
-Start/Stop/Restart/Pull/Remove run `docker compose` under the hood — scoped to the selected group (every service tagged with it) on the Home page, or to just the selected service on the Dashboard page.
+Start/Stop/Restart/Pull/Remove run `docker compose` under the hood — scoped to the selected group (every service tagged with it) on the Home page, or to just the selected service on the Services page.
 
 ### UI overview
 

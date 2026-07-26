@@ -129,7 +129,7 @@ func TestPageChangeResetsFocusToLeftPanel(t *testing.T) {
 	rightPanel := constants.COMPONENT_BODY_DETAILS
 	m = drive(m, collect(m.ChangeFocus(&rightPanel))...)
 
-	updated, cmd := m.Update(cmds.SetActivePageMsg("Dashboard"))
+	updated, cmd := m.Update(cmds.SetActivePageMsg("Services"))
 	m = updated.(AppModel)
 
 	if got, want := m.focusedComponent, constants.COMPONENT_BODY_LIST; got != want {

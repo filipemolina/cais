@@ -155,7 +155,7 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var finalCmds []tea.Cmd
 
 	switch msg := msg.(type) {
-	// Sizing comes from AppModel, not WindowSizeMsg: the Dashboard is never
+	// Sizing comes from AppModel, not WindowSizeMsg: the Services page is never
 	// the active page when the terminal is first measured, so a resize-derived
 	// height left this list a few rows tall showing a single service.
 	case cmds.SetBodyLayoutMsg:
