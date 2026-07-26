@@ -94,11 +94,46 @@ records, not a live backlog.
   `docker compose ps --format json` directly. Go parses both JSON-array and
   legacy NDJSON output, so `jq` is no longer a runtime requirement.
 
-- [ ] **[S] Rename the module for distribution** — `go.mod` says
-  `module stack-stitcher`, so `go install
-  github.com/filipemolina/stack-stitcher@latest` can't work. Rename the
-  module to the repo path, then add version stamping (`-ldflags -X`) and
-  show it in the header/About modal.
+- [x] **[S] Rename the module for distribution** — `go.mod` is now
+  `module github.com/filipemolina/stack-stitcher`, so
+  `go install github.com/filipemolina/stack-stitcher@latest` can work.
+  **Remaining:** version stamping (`-ldflags -X`), `--version`, and showing it
+  in the header/About modal — tracked under CI + releases below.
+
+- [x] **[S] One keymap** — every binding now lives once in `src/keys`.
+  Components match with `key.Matches`; `KeybindingBar` asks `keys.Active` which
+  bindings are live instead of hand-listing them, so the footer can no longer
+  advertise a key no handler implements. `TestFooterHints` pins all ten
+  contexts. The duplicated key→action maps in both details panels are gone,
+  replaced by one `dockerActionFor`. See *Where keybindings live* in
+  `docs/DESIGN.md`.
+
+- [ ] **[S] The lists don't own their keymaps** — `list.New` installs
+  `list.DefaultKeyMap()`, and both lists hand every key to it while focused,
+  *after* matching their own. That map binds `d f l b u h g G / esc q ?`, so
+  today `d` opens the delete-group confirm **and** pages the list backwards,
+  and `/` starts a filter the app never acknowledges: while filtering, `n`
+  still opens the new-group modal and `q` still quits. Set an explicit
+  `KeyMap` on both lists, and treat a filtering list as an overlay that owns
+  the keyboard.
+
+- [ ] **[S] Show the parsed compose file in the footer** — `AppModel` already
+  knows which file it resolved (`config.configFileName`) and never tells the
+  user. Broadcast it and render it dimmed next to the global keys, degrading
+  full path → basename → dropped as the terminal narrows. Docker's file
+  priority is fixed and matches Docker's own on purpose (making it
+  configurable would desync the panel from the `docker compose` calls, which
+  pass no `-f`), so *saying which file won* is the fix, not a setting.
+
+- [ ] **[S] `?` help overlay** — rendered from `src/keys` so it cannot drift
+  from the handlers, grouped by scope, unavailable bindings dimmed.
+
+- [ ] **[S] Centralize color into a `Theme`** — `src/appstyles/styles.go` has
+  good semantic tokens, but they are package-level `var`s built at init, so
+  they freeze one palette; five other files still carry stray hexes
+  (`#B33A3A`, `#FAFAFA`, `#3F3F3F`). Make them a `Theme` value with a
+  registry, which is what a theme picker later needs, and run the existing
+  background-bleed suites over every registered theme.
 
 - [ ] **[S] CI + releases** — GitHub Actions: `go build`, `go vet`,
   `go test` on push/PR. Add GoReleaser for tagged releases once the module
