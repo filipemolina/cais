@@ -148,6 +148,31 @@ func (m AppModel) shouldPollContainers() bool {
 	return m.activeModal == nil && !m.externalEditorOpen && m.config.configProject != nil
 }
 
+// keyboardOwner is implemented by a component that takes every keystroke for
+// itself while it is in some state - today only a list with a filter being typed
+// into it, where n, d and q are letters rather than commands.
+//
+// It is an interface rather than a message the component broadcasts because the
+// answer has to be true on the very keystroke that changes it: the / that starts
+// a filter and the letters typed after it arrive before any command the list
+// returned has been run.
+type keyboardOwner interface {
+	OwnsKeyboard() bool
+}
+
+// keyboardOwned reports whether a component on the active page has taken over
+// the keyboard, in which case AppModel keeps its hands off the letter keys the
+// same way it does while a modal is open.
+func (m AppModel) keyboardOwned() bool {
+	for _, component := range m.pages[m.activePage] {
+		if owner, ok := component.(keyboardOwner); ok && owner.OwnsKeyboard() {
+			return true
+		}
+	}
+
+	return false
+}
+
 // pageForKey returns the page an alt+<letter> chord jumps to, or "" if the key
 // is not a page shortcut.
 //
@@ -171,6 +196,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// nested models in m.components
 	var finalCmds []tea.Cmd
 
+	// ctrl+c quits from anywhere, ahead of every other claim on the keyboard:
+	// a modal, a text input, a filter being typed. It is the one key nothing
+	// gets to swallow, which is why it is a binding of its own and not part of
+	// Global.Quit.
+	if keyMsg, ok := msg.(tea.KeyPressMsg); ok && key.Matches(keyMsg, keys.Global.ForceQuit) {
+		return m, tea.Quit
+	}
+
 	// While a modal is open, it owns all key input exclusively - the
 	// underlying panels and Tab/quit handling are frozen until it closes.
 	if m.activeModal != nil {
@@ -184,6 +217,19 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	// Handle keyboard events
 	case tea.KeyPressMsg:
+		// A filtering list owns the keyboard the way a modal does, with one
+		// difference: the component below still has to receive the keystroke,
+		// because it is the filter input. So this drops out of AppModel's own
+		// key handling rather than returning, and the panels are updated as
+		// usual at the bottom of this function.
+		//
+		// Tab is included in what AppModel gives up, so it does nothing while a
+		// filter is being typed. Enter applies the filter and esc abandons it;
+		// after either, tab moves panels again.
+		if m.keyboardOwned() {
+			break
+		}
+
 		// alt+<letter> jumps straight to a page. Handled here rather than in
 		// MainMenu because the nav is not focusable, so it never sees keys.
 		//

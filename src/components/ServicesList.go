@@ -142,6 +142,13 @@ func (m ServicesListModel) Init() tea.Cmd {
 	return nil
 }
 
+// OwnsKeyboard reports whether the list is taking every keystroke for itself,
+// which it does while a filter is being typed. Same rule as the groups list -
+// see GroupListModel.OwnsKeyboard.
+func (m ServicesListModel) OwnsKeyboard() bool {
+	return m.list.FilterState() == list.Filtering
+}
+
 // resizeList sizes the inner list to the space left inside the panel box
 // after the wrapper padding.
 func (m *ServicesListModel) resizeList() {
@@ -166,7 +173,9 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.resizeList()
 
 	case tea.KeyPressMsg:
-		if m.isFocused && key.Matches(msg, keys.List.Select) {
+		// While a filter is being typed the keystrokes are text, so select
+		// waits; the inner list below still receives them.
+		if m.isFocused && !m.OwnsKeyboard() && key.Matches(msg, keys.List.Select) {
 			selectedItem := m.list.SelectedItem()
 			selectedService, ok := selectedItem.(apptypes.ServiceListItem)
 

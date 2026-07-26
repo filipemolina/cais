@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 )
@@ -120,6 +121,74 @@ func TestPanelLettersDoNotPageTheList(t *testing.T) {
 				t.Errorf("%q moved the list from page %d to page %d", keystroke, startPage, after.list.Paginator.Page)
 			}
 		})
+	}
+}
+
+// Filtering is the one list feature that takes over the keyboard, and the panel
+// verbs have to stand down while it does - otherwise typing "nginx" into the
+// filter opens the new-group modal on the n.
+func TestFilteringOwnsTheKeyboard(t *testing.T) {
+	groups := focusedGroupsList(t, 12)
+
+	if groups.OwnsKeyboard() {
+		t.Fatal("a list with no filter should not own the keyboard")
+	}
+
+	model, _ := press(t, groups, "/")
+	filtering, ok := model.(GroupListModel)
+	if !ok {
+		t.Fatalf("expected a GroupListModel, got %T", model)
+	}
+	if filtering.list.FilterState() != list.Filtering {
+		t.Fatalf("/ did not start a filter, state is %v", filtering.list.FilterState())
+	}
+	if !filtering.OwnsKeyboard() {
+		t.Error("a list being filtered should own the keyboard")
+	}
+
+	// n would create a group, d would delete one and space would select: typed
+	// into a filter they are three letters of "nd ".
+	model, msgs := press(t, filtering, "n")
+	for _, msg := range msgs {
+		switch msg.(type) {
+		case cmds.OpenCreateGroupModalMsg, cmds.OpenDeleteGroupModalMsg, cmds.SetSelectedGroupMsg:
+			t.Errorf("n acted as a command (%T) while the filter was being typed", msg)
+		}
+	}
+
+	// The rest are driven without draining commands: the filter input returns a
+	// cursor-blink command that costs half a second to run.
+	for _, keystroke := range []string{"d", " "} {
+		model, _ = model.Update(tea.KeyPressMsg{Code: rune(keystroke[0]), Text: keystroke})
+	}
+
+	typed, ok := model.(GroupListModel)
+	if !ok {
+		t.Fatalf("expected a GroupListModel, got %T", model)
+	}
+	if got := typed.list.FilterValue(); got != "nd " {
+		t.Errorf("the filter holds %q, so the keystrokes did not all land as text", got)
+	}
+}
+
+// Esc has to get out of a filter, which is the reason the list keeps esc at all
+// while the app owns it everywhere else: without this there is no way back out
+// of a filtered list.
+func TestEscapeLeavesTheFilter(t *testing.T) {
+	groups := focusedGroupsList(t, 12)
+
+	model, _ := press(t, groups, "/")
+	model, _ = model.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+
+	after, ok := model.(GroupListModel)
+	if !ok {
+		t.Fatalf("expected a GroupListModel, got %T", model)
+	}
+	if after.list.FilterState() != list.Unfiltered {
+		t.Errorf("esc left the list in filter state %v", after.list.FilterState())
+	}
+	if after.OwnsKeyboard() {
+		t.Error("the list still owns the keyboard after esc")
 	}
 }
 
