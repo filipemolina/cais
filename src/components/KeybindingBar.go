@@ -2,6 +2,7 @@ package components
 
 import (
 	"fmt"
+	"image/color"
 	"stack-stitcher/src/appstyles"
 	"stack-stitcher/src/cmds"
 	"stack-stitcher/src/constants"
@@ -135,19 +136,31 @@ func (m KeybindingBarModel) hintsFor() []KeyHint {
 	return []KeyHint{{"tab", "next"}}
 }
 
+// renderKeyHints renders hints as "key desc · key desc": the key bold in the
+// primary text color, the description in descColor. Modals render their own
+// help lines through this so they read the same as the footer bar, passing a
+// lighter descColor when they sit on a lighter surface than the bar does.
+func renderKeyHints(hints []KeyHint, descColor color.Color) string {
+	descStyle := lipgloss.NewStyle().Foreground(descColor)
+	sepStyle := lipgloss.NewStyle().Foreground(appstyles.TextDim)
+	keyStyle := lipgloss.NewStyle().Foreground(appstyles.TextPrimary).Bold(true)
+
+	parts := make([]string, 0, len(hints)*2)
+	for i, h := range hints {
+		if i > 0 {
+			parts = append(parts, sepStyle.Render(" · "))
+		}
+		parts = append(parts, fmt.Sprintf("%s %s", keyStyle.Render(h.Key), descStyle.Render(h.Desc)))
+	}
+
+	return lipgloss.JoinHorizontal(lipgloss.Left, parts...)
+}
+
 func (m KeybindingBarModel) View() tea.View {
 	hints := m.hintsFor()
 
 	dimStyle := lipgloss.NewStyle().Foreground(appstyles.TextDim)
 	keyStyle := lipgloss.NewStyle().Foreground(appstyles.TextPrimary).Bold(true)
-
-	leftParts := make([]string, 0, len(hints)*2)
-	for i, h := range hints {
-		if i > 0 {
-			leftParts = append(leftParts, dimStyle.Render(" · "))
-		}
-		leftParts = append(leftParts, fmt.Sprintf("%s %s", keyStyle.Render(h.Key), dimStyle.Render(h.Desc)))
-	}
 
 	// The page chords are global, so they sit on the right with quit rather
 	// than in the context-dependent hints. The nav underlines which letter
@@ -163,7 +176,7 @@ func (m KeybindingBarModel) View() tea.View {
 		width = 80
 	}
 
-	left := lipgloss.JoinHorizontal(lipgloss.Left, leftParts...)
+	left := renderKeyHints(hints, appstyles.TextDim)
 	gapWidth := width - lipgloss.Width(left) - lipgloss.Width(rightHint) - 4
 	if gapWidth < 1 {
 		gapWidth = 1
