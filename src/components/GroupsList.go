@@ -116,12 +116,25 @@ type GroupListModel struct {
 // columns. It has to fit on one row: it is the panel's last line, so wrapping
 // it eats into the padding below instead of just pushing the list down.
 func statsLine(stats cmds.SetHomeStatsMsg, width int) string {
-	full := fmt.Sprintf("%d groups · %d services · %d running", stats.Groups, stats.Services, stats.Running)
+	full := fmt.Sprintf("%d %s · %d %s · %d running",
+		stats.Groups, plural(stats.Groups, "group"),
+		stats.Services, plural(stats.Services, "service"),
+		stats.Running)
 	if lipgloss.Width(full) <= width {
 		return full
 	}
 
 	return fmt.Sprintf("%d grp · %d svc · %d run", stats.Groups, stats.Services, stats.Running)
+}
+
+// plural is the naive English plural of word for n: enough for the handful of
+// countable nouns the UI puts in front of a number.
+func plural(n int, word string) string {
+	if n == 1 {
+		return word
+	}
+
+	return word + "s"
 }
 
 // syncActiveIndex points the delegate at the row holding activeGroup, or at
