@@ -27,7 +27,11 @@ import (
 type GlobalKeys struct {
 	NextPanel key.Binding
 	PrevPanel key.Binding
+	// Quit is q, and it is the one global key that yields: a modal or a
+	// filtering list needs the letter for typing. ForceQuit is separate from it
+	// precisely so that ctrl+c yields to nothing.
 	Quit      key.Binding
+	ForceQuit key.Binding
 	// Page is advertised but not matched: the page chords are recognised by
 	// their alt modifier rather than by keystroke, so that alt+shift+g and
 	// ctrl+alt+g are left alone. See model.pageForKey.
@@ -82,7 +86,11 @@ type OverlayKeys struct {
 var Global = GlobalKeys{
 	NextPanel: key.NewBinding(key.WithKeys("tab"), key.WithHelp("tab", "next")),
 	PrevPanel: key.NewBinding(key.WithKeys("shift+tab"), key.WithHelp("shift+tab", "prev")),
-	Quit:      key.NewBinding(key.WithKeys("q", "ctrl+c"), key.WithHelp("q", "quit")),
+	Quit:      key.NewBinding(key.WithKeys("q"), key.WithHelp("q", "quit")),
+	// Not advertised: ctrl+c is the escape hatch every terminal program has,
+	// and the footer already says q. It carries no help text so Globals stays
+	// the same two hints it was.
+	ForceQuit: key.NewBinding(key.WithKeys("ctrl+c")),
 	Page:      key.NewBinding(key.WithHelp("alt+·", "page")),
 }
 
