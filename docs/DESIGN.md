@@ -102,7 +102,9 @@ regions:
    keys are hidden when no group or service is selected, and list-empty keys
    are suppressed). It does not decide that itself: it tracks the state and
    asks `keys.Active` — see *Where keybindings live* below. The global keys
-   (page chords, quit) sit on the right, apart from the context-dependent ones.
+   (page chords, quit) sit on the right, apart from the context-dependent ones,
+   with the resolved compose file dimmed just left of them — see *Which compose
+   file* below.
 
 ### Navigation and focus
 
@@ -181,6 +183,30 @@ Because an overlay hides the footer bar while it is open, **an overlay advertise
 its own keys**. It builds that line from the same bindings, through
 `components.renderKeyHints`, so a modal's help and the footer read alike; pass a
 lighter description color when the modal sits on a lighter surface than the bar.
+
+### Which compose file
+
+**The file priority order is fixed, matches Docker's, and is not a setting.**
+`utils.GetComposeFileName` tries `compose.yaml`, `compose.yml`,
+`docker-compose.yaml`, `docker-compose.yml` in that order — the same order
+Docker uses, because `utils.DockerCompose`, `utils.DockerComposePs` and
+`utils.DockerLogs` all shell out to `docker compose …` **without `-f`** and let
+Docker resolve the file itself. The TUI and the commands it runs agree today by
+duplicating that order. Making it configurable would break that agreement: the
+panel would describe `compose.yaml` while `docker compose start` acted on
+`docker-compose.yml`.
+
+What was missing is not a setting but an answer to "which file?", so
+`AppModel` broadcasts the name it resolved as `cmds.SetComposeFileMsg` and the
+footer reports it. It degrades as the terminal narrows — full path, then
+basename, then dropped — because the keys beside it are worth more than the
+name; `components.TestFooterComposeFile` pins that ladder, and
+`TestFooterComposeFileNeverCrowdsOutTheKeys` pins the part that matters, that
+adding the name never costs the bar a line or a key.
+
+**This constrains the planned `-f`/`--file` flag.** The flag is only safe once
+every docker invocation passes the resolved path; threading it through those
+three `utils` call sites is a prerequisite of the flag, not a follow-up.
 
 ### State refresh and destructive actions
 
