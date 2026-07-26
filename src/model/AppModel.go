@@ -2,14 +2,14 @@ package model
 
 import (
 	"slices"
-	"stack-stitcher/src/cmds"
-	"stack-stitcher/src/components"
-	"stack-stitcher/src/constants"
-	"stack-stitcher/src/utils"
 
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"github.com/compose-spec/compose-go/v2/types"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/components"
+	"github.com/filipemolina/stack-stitcher/src/constants"
+	"github.com/filipemolina/stack-stitcher/src/utils"
 )
 
 type navigationModel struct {

@@ -6,15 +6,15 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	"stack-stitcher/src/apptypes"
-	"stack-stitcher/src/cmds"
-	"stack-stitcher/src/components"
-	"stack-stitcher/src/constants"
-	"stack-stitcher/src/utils"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/compose-spec/compose-go/v2/types"
+	"github.com/filipemolina/stack-stitcher/src/apptypes"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/components"
+	"github.com/filipemolina/stack-stitcher/src/constants"
+	"github.com/filipemolina/stack-stitcher/src/utils"
 )
 
 // calculateBodyLayout returns the exact box each body panel must render

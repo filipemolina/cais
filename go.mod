@@ -1,4 +1,4 @@
-module stack-stitcher
+module github.com/filipemolina/stack-stitcher
 
 go 1.26.4
 

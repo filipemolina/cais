@@ -3,7 +3,7 @@ package components
 import (
 	"fmt"
 
-	"stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"

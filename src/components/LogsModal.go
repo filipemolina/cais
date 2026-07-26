@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"stack-stitcher/src/appstyles"
-	"stack-stitcher/src/cmds"
-	"stack-stitcher/src/utils"
+	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/utils"
 
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"

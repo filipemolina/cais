@@ -1,9 +1,9 @@
 package model
 
 import (
-	"stack-stitcher/src/apptypes"
-	"stack-stitcher/src/cmds"
-	"stack-stitcher/src/constants"
+	"github.com/filipemolina/stack-stitcher/src/apptypes"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/constants"
 	"strings"
 	"testing"
 

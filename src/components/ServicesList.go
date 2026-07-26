@@ -1,19 +1,17 @@
 package components
 
 import (
-	"image/color"
-	"stack-stitcher/src/appstyles"
-
 	"fmt"
+	"image/color"
 	"io"
-	"stack-stitcher/src/apptypes"
-	"stack-stitcher/src/cmds"
 
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
-	"github.com/compose-spec/compose-go/v2/types"
-
 	"charm.land/lipgloss/v2"
+	"github.com/compose-spec/compose-go/v2/types"
+	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/stack-stitcher/src/apptypes"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
 )
 
 /*

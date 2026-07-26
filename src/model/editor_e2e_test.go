@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"stack-stitcher/src/cmds"
-	"stack-stitcher/src/constants"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/constants"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/compose-spec/compose-go/v2/types"

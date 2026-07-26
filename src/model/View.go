@@ -1,8 +1,8 @@
 package model
 
 import (
-	"stack-stitcher/src/appstyles"
-	"stack-stitcher/src/constants"
+	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/stack-stitcher/src/constants"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"

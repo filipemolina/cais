@@ -36,7 +36,11 @@ Stack Stitcher is under **active development**. Compose parsing, navigation, sta
 
 ## Installation
 
-Clone the repository and build the binary:
+```bash
+go install github.com/filipemolina/stack-stitcher@latest
+```
+
+Or clone the repository and build the binary:
 
 ```bash
 git clone https://github.com/filipemolina/stack-stitcher.git

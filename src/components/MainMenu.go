@@ -3,13 +3,13 @@ package components
 import (
 	"image/color"
 	"slices"
-	"stack-stitcher/src/appstyles"
-	"stack-stitcher/src/apptypes"
-	"stack-stitcher/src/cmds"
-	"stack-stitcher/src/constants"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/stack-stitcher/src/apptypes"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/constants"
 )
 
 // MainMenuModel is the top nav bar. It is not focusable and handles no keys:
