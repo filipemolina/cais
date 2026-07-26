@@ -4,6 +4,10 @@ import (
 	"strings"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
@@ -88,6 +92,117 @@ func TestFooterHints(t *testing.T) {
 				t.Errorf("footer hints\n got: %s\nwant: %s", got, tc.want)
 			}
 		})
+	}
+}
+
+// TestFooterComposeFile pins the degradation ladder. The name is worth less
+// than the keys next to it, so as the room runs out it gives up detail and
+// then gives up entirely, rather than pushing the keys off the bar.
+func TestFooterComposeFile(t *testing.T) {
+	const path = "/srv/homelab/compose.yaml"
+
+	tests := []struct {
+		name  string
+		file  string
+		spare int
+		want  string
+	}{
+		{
+			name:  "the full path when it fits",
+			file:  path,
+			spare: 40,
+			want:  path + " · ",
+		},
+		{
+			name:  "the basename when only that fits",
+			file:  path,
+			spare: 20,
+			want:  "compose.yaml · ",
+		},
+		{
+			name:  "nothing when even the basename does not fit",
+			file:  path,
+			spare: 8,
+			want:  "",
+		},
+		{
+			name:  "nothing when there is no room at all",
+			file:  path,
+			spare: -3,
+			want:  "",
+		},
+		{
+			name:  "a bare file name is already its own basename",
+			file:  "docker-compose.yml",
+			spare: 25,
+			want:  "docker-compose.yml · ",
+		},
+		{
+			name:  "no file loaded says so",
+			file:  "",
+			spare: 25,
+			want:  "no compose file · ",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			model := KeybindingBarModel{composeFile: tc.file}
+
+			if got := ansi.Strip(model.composeFileSegment(tc.spare)); got != tc.want {
+				t.Errorf("compose file segment at spare=%d\n got: %q\nwant: %q", tc.spare, got, tc.want)
+			}
+		})
+	}
+}
+
+// The file name arrives by broadcast, the same way every other piece of state
+// the bar shows does.
+func TestFooterTakesTheComposeFileFromTheBroadcast(t *testing.T) {
+	var model tea.Model = KeybindingBar()
+	model, _ = model.Update(cmds.SetComposeFileMsg("compose.yaml"))
+
+	bar := ansi.Strip(model.View().Content)
+	if !strings.Contains(bar, "compose.yaml") {
+		t.Errorf("footer does not name the compose file: %q", bar)
+	}
+}
+
+// The reason the name degrades at all: it is an addition to a bar that was
+// already laid out, so it must never cost the bar a line or a key. Each width
+// is measured against the same bar without a file loaded - the bar wraps on its
+// own once the two hint groups outgrow the terminal, which is a separate
+// problem, so the assertion is that the name makes it no worse.
+func TestFooterComposeFileNeverCrowdsOutTheKeys(t *testing.T) {
+	renderAt := func(t *testing.T, width int, file string) string {
+		t.Helper()
+
+		var model tea.Model = KeybindingBar()
+		if file != "" {
+			model, _ = model.Update(cmds.SetComposeFileMsg(file))
+		}
+		model, _ = model.Update(tea.WindowSizeMsg{Width: width, Height: 24})
+
+		return model.View().Content
+	}
+
+	for _, width := range []int{200, 120, 80, 60, 40, 30, 20} {
+		withFile := renderAt(t, width, "/srv/homelab/compose.yaml")
+		baseline := renderAt(t, width, "")
+
+		gotLines := strings.Count(withFile, "\n")
+		wantLines := strings.Count(baseline, "\n")
+
+		if gotLines > wantLines {
+			t.Errorf("at width %d the file name cost the bar a line:\n got: %q\nwant no worse than: %q",
+				width, ansi.Strip(withFile), ansi.Strip(baseline))
+		}
+		if got := lipgloss.Width(withFile); got != width {
+			t.Errorf("bar at width %d rendered %d columns wide", width, got)
+		}
+		if bar := ansi.Strip(withFile); !strings.Contains(bar, "quit") {
+			t.Errorf("bar at width %d dropped the global keys: %q", width, bar)
+		}
 	}
 }
 
