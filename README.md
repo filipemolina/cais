@@ -94,10 +94,16 @@ flow control and `Ctrl+D` as end-of-input.
 | `e` | Edit the service's YAML in `$EDITOR` | Service details panel focused |
 | `E` | Edit the whole compose file in `$EDITOR` | Service details panel focused |
 | `l` | View live logs (streaming overlay) | A group or service panel focused |
+| `↑`/`↓` `k`/`j` | Move the cursor | Groups/Services list focused |
+| `g` / `G` | Jump to the first / last row | Groups/Services list focused |
+| `/` | Filter the list by name | Groups/Services list focused |
+| `Enter` / `Esc` | Apply / abandon the filter you are typing | Filtering a list |
+| `Esc` | Clear an applied filter | A filtered list focused |
 | `f` | Toggle follow (auto-scroll) | Logs overlay open |
 | `↑`/`↓` `PgUp`/`PgDn` | Scroll logs | Logs overlay open |
 | `Esc` | Close the logs overlay | Logs overlay open |
-| `q` / `Ctrl+C` | Quit | Everywhere |
+| `q` | Quit | Everywhere except while typing |
+| `Ctrl+C` | Quit, whatever is on screen | Everywhere |
 | `Enter` | Confirm | Any modal |
 | `Esc` | Cancel / close | Any modal |
 | `y` / `n` | Answer a confirmation | Confirmation modal open |
@@ -110,6 +116,10 @@ The panels match against it and the footer bar renders from it, so changing a ke
 there changes it everywhere and the footer follows. If you are adding a key,
 that's the file — see [docs/DESIGN.md](docs/DESIGN.md) for the tiers and the rules
 they follow.
+
+While you are typing a filter the list has the whole keyboard, so `n`, `d` and
+`q` are letters rather than commands; `Enter` applies the filter and `Esc`
+abandons it. `Ctrl+C` is the exception that always quits, whatever is on screen.
 
 ### UI overview
 
