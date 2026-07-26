@@ -1,19 +1,17 @@
 package components
 
 import (
-	"image/color"
-	"stack-stitcher/src/appstyles"
-
 	"fmt"
+	"image/color"
 	"io"
-	"stack-stitcher/src/apptypes"
-	"stack-stitcher/src/cmds"
 
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
-	"github.com/compose-spec/compose-go/v2/types"
-
 	"charm.land/lipgloss/v2"
+	"github.com/compose-spec/compose-go/v2/types"
+	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/stack-stitcher/src/apptypes"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
 )
 
 /*
@@ -157,7 +155,7 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var finalCmds []tea.Cmd
 
 	switch msg := msg.(type) {
-	// Sizing comes from AppModel, not WindowSizeMsg: the Dashboard is never
+	// Sizing comes from AppModel, not WindowSizeMsg: the Services page is never
 	// the active page when the terminal is first measured, so a resize-derived
 	// height left this list a few rows tall showing a single service.
 	case cmds.SetBodyLayoutMsg:

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
 )
 
 // The command returned for OpenEditorMsg is a tea.ExecProcess that would

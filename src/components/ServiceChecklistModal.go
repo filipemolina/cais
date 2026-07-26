@@ -3,13 +3,13 @@ package components
 import (
 	"fmt"
 	"io"
-	"stack-stitcher/src/appstyles"
-	"stack-stitcher/src/apptypes"
-	"stack-stitcher/src/cmds"
 
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/stack-stitcher/src/apptypes"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
 )
 
 type serviceChecklistDelegate struct{}

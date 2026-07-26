@@ -2,7 +2,7 @@ package components
 
 import (
 	"fmt"
-	"stack-stitcher/src/appstyles"
+	"github.com/filipemolina/stack-stitcher/src/appstyles"
 
 	"charm.land/lipgloss/v2"
 	"github.com/compose-spec/compose-go/v2/types"

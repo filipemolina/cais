@@ -7,23 +7,23 @@ data model.
 
 ## 1. The groups-first principle
 
-**The home page operates on groups of services. The dashboard operates on
+**The home page operates on groups of services. The Services page operates on
 individual services. This is a navigation rule, not just a feature.**
 
 A *group* in stack-stitcher is a set of services that share a Compose
 `profiles:` tag in the user's `compose.yml`. The user starts, stops, and
 otherwise acts on *groups* from the home page — never on individual
-services. The dashboard exists for the rare case where you need to act on
+services. The Services page exists for the rare case where you need to act on
 one service in isolation.
 
 When in doubt about which page a feature belongs on, ask:
 
 - "Is this about a group of services, or a single service?"
-  Group → home. Service → dashboard.
+  Group → home. Service → Services.
 - "Does the user pick a thing, then act on a whole set?"
   Group. Home.
 - "Does the user need to see the inner workings of one service?"
-  Service. Dashboard.
+  Service. The Services page.
 
 ## 2. Terminology: group vs profile
 
@@ -65,7 +65,7 @@ graphs, or get notifications. It is a launchpad: pick a group, do an action
 on the whole group, move on.
 
 For per-service introspection, monitoring, or editing existing services,
-use the dashboard (or a future dedicated page).
+use the Services page (or a future dedicated page).
 
 ## 5. Layout and navigation contract
 
@@ -275,10 +275,10 @@ Before adding a feature, answer these:
    it fits the home page's mental model. If no, it may need a different
    mechanism.
 3. **Does it require editing existing services?** That capability is
-   currently a roadmap item. The first place to add it is the dashboard,
+   currently a roadmap item. The first place to add it is the Services page,
    not home — home is for groups.
-4. **Does it conflict with the dashboard's role?** If a feature would
-   duplicate dashboard functionality, prefer to extend the dashboard unless
+4. **Does it conflict with the Services page's role?** If a feature would
+   duplicate Services-page functionality, prefer to extend that page unless
    there's a clear group-level reason.
 
 ## 7. Related documents

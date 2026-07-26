@@ -3,12 +3,12 @@ package components
 import (
 	"fmt"
 	"image/color"
-	"stack-stitcher/src/appstyles"
-	"stack-stitcher/src/cmds"
-	"stack-stitcher/src/constants"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/constants"
 )
 
 // KeyHint represents a single keybinding for display in the bottom bar.
@@ -99,7 +99,7 @@ func (m KeybindingBarModel) hintsFor() []KeyHint {
 				{"tab", "next"},
 			}
 		}
-	case "Dashboard":
+	case "Services":
 		switch m.focusedComponent {
 		case constants.COMPONENT_BODY_LIST: // Services List
 			hints := []KeyHint{
@@ -129,7 +129,7 @@ func (m KeybindingBarModel) hintsFor() []KeyHint {
 
 	// Placeholder pages hold nothing focusable, so offering "tab next" there
 	// would advertise a key that visibly does nothing.
-	case "Compose Files", "Settings":
+	case "Compose Files":
 		return nil
 	}
 

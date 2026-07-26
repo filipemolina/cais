@@ -2,9 +2,9 @@ package model
 
 import (
 	"fmt"
-	"stack-stitcher/src/appstyles"
-	"stack-stitcher/src/cmds"
-	"stack-stitcher/src/utils"
+	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/utils"
 	"strings"
 	"testing"
 
@@ -67,7 +67,7 @@ func TestNoBackgroundBleedAcrossPages(t *testing.T) {
 		{
 			name: "dashboard empty",
 			msgs: []tea.Msg{
-				cmds.SetActivePageMsg("Dashboard"),
+				cmds.SetActivePageMsg("Services"),
 			},
 			width: 120,
 		},
@@ -75,7 +75,7 @@ func TestNoBackgroundBleedAcrossPages(t *testing.T) {
 			name: "dashboard with a service selected",
 			msgs: []tea.Msg{
 				cmds.GetConfigMsg{FileName: "compose.yaml", Project: project()},
-				cmds.SetActivePageMsg("Dashboard"),
+				cmds.SetActivePageMsg("Services"),
 				cmds.SetSelectedServiceMsg(types.ServiceConfig{
 					Name:  "web",
 					Image: "nginx:latest",

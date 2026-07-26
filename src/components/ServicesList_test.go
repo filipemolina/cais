@@ -3,7 +3,7 @@ package components
 import (
 	"testing"
 
-	"stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/compose-spec/compose-go/v2/types"

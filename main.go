@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
-	"stack-stitcher/src/model"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/filipemolina/stack-stitcher/src/model"
 )
 
 func main() {

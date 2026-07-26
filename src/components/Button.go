@@ -2,10 +2,10 @@ package components
 
 import (
 	"image/color"
-	"stack-stitcher/src/appstyles"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/filipemolina/stack-stitcher/src/appstyles"
 )
 
 type ButtonModel struct {

@@ -52,9 +52,11 @@ records, not a live backlog.
   is loaded and a read-only, syntax-highlighted view of it. Fuller version:
   browse multiple compose files in the directory and switch the active one.
 
-- [ ] **[P] Settings page** — currently a `PlaceholderPanel` ("Colors, key
-  bindings and the default compose file will live here"). Persist to a
-  config file (e.g. `~/.config/stack-stitcher/config.yaml`).
+- [x] **[P] Settings page** — dropped as a page. The tab was a placeholder with
+  two rows of content in it, and each of those settings has a better home:
+  the compose file is a `--file` flag (per run, explicit), and the theme is a
+  picker modal once colors are centralized. What persists goes to
+  `~/.config/stack-stitcher/config.yaml` with no page to maintain.
 
 - [ ] **[P] About modal** — the ASCII `LOGO` in `src/constants/Branding.go`
   is explicitly reserved for this. Include version, license, repo link.
