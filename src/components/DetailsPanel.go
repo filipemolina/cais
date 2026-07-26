@@ -34,7 +34,7 @@ func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	// Both dimensions come from AppModel. Deriving them from WindowSizeMsg
-	// here would leave the panel at width 0 whenever the Dashboard wasn't
+	// here would leave the panel at width 0 whenever the Services page wasn't
 	// the active page at resize time.
 	case cmds.SetBodyLayoutMsg:
 		m.panelWidth = msg.RightWidth

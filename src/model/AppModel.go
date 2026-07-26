@@ -174,7 +174,7 @@ func GetInitialModel() AppModel {
 		components.GroupDetailsPanel(),
 	}
 
-	pages["Dashboard"] = []tea.Model{
+	pages["Services"] = []tea.Model{
 		components.ServicesList([]types.ServiceConfig{}, 0, 0),
 		components.DetailsPanel(nil),
 	}
@@ -185,11 +185,6 @@ func GetInitialModel() AppModel {
 	pages["Compose Files"] = []tea.Model{
 		components.PlaceholderPanel("Files",
 			"Browsing and editing compose files from here is not built yet. For now, Stack Stitcher reads the compose file in the directory it was started from."),
-	}
-
-	pages["Settings"] = []tea.Model{
-		components.PlaceholderPanel("Settings",
-			"There is nothing to configure yet. Colors, key bindings and the default compose file will live here."),
 	}
 
 	return AppModel{

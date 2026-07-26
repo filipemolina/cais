@@ -91,7 +91,7 @@ func (m *AppModel) rebroadcastBodyLayoutIfChanged() tea.Cmd {
 // currently active page's components (see UpdateInnerComponent), so this
 // needs to run both right after the config loads AND whenever the active
 // page changes - otherwise a page that wasn't active at load time (e.g.
-// Dashboard, since Home is active first) would never receive its services.
+// Services, since Home is active first) would never receive its services.
 func (m AppModel) configSyncCmds() []tea.Cmd {
 	if m.config.configProject == nil {
 		return nil

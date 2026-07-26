@@ -58,7 +58,7 @@ func composeProject(t *testing.T, contents string) string {
 // the editor. Driven through the model rather than the rig, because the two
 // halves meet at this message and this half needs no timing at all.
 func TestPressingEAsksForTheEditor(t *testing.T) {
-	m := drive(applyLayout(startup(120, 40)), cmds.SetActivePageMsg("Dashboard"))
+	m := drive(applyLayout(startup(120, 40)), cmds.SetActivePageMsg("Services"))
 	m = drive(m,
 		cmds.SetServicesListMsg([]types.ServiceConfig{{Name: "web"}}),
 		cmds.SetSelectedServiceMsg(types.ServiceConfig{Name: "web"}),
