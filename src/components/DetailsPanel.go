@@ -89,7 +89,7 @@ func (m DetailsPanelModel) View() tea.View {
 		body := renderEmptyCard(bodyWidth, bodyAvail, panelBg(m.isFocused), "Select a service",
 			"Pick a service from the list to see its details.",
 			"↑/↓", "then space")
-		screen := renderPanelFrame("Details", m.isFocused, m.panelWidth, m.panelHeight, body)
+		screen := renderPanelFrame("Details", "", m.isFocused, m.panelWidth, m.panelHeight, body)
 		return tea.NewView(screen)
 	}
 
@@ -99,7 +99,7 @@ func (m DetailsPanelModel) View() tea.View {
 	body := lipgloss.JoinVertical(lipgloss.Left, basicInfo, buttons)
 	body = lipgloss.NewStyle().MaxHeight(bodyAvail).Render(body)
 
-	screen := renderPanelFrame("Details", m.isFocused, m.panelWidth, m.panelHeight, body)
+	screen := renderPanelFrame("Details", "", m.isFocused, m.panelWidth, m.panelHeight, body)
 	return tea.NewView(screen)
 }
 

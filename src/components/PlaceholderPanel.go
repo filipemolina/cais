@@ -44,7 +44,7 @@ func (m PlaceholderPanelModel) View() tea.View {
 	body := renderEmptyCard(bodyWidth, bodyAvail, panelBg(false),
 		"Not built yet", m.message, "", "")
 
-	return tea.NewView(renderPanelFrame(m.title, false, m.panelWidth, m.panelHeight, body))
+	return tea.NewView(renderPanelFrame(m.title, "", false, m.panelWidth, m.panelHeight, body))
 }
 
 // PlaceholderPanel returns a page body that says the page is not built yet.
