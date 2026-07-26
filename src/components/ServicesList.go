@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"io"
 
+	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -12,6 +13,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
 /*
@@ -164,22 +166,19 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.resizeList()
 
 	case tea.KeyPressMsg:
-		switch msg.String() {
-		case "space":
-			if m.isFocused {
-				selectedItem := m.list.SelectedItem()
-				selectedService, ok := selectedItem.(apptypes.ServiceListItem)
+		if m.isFocused && key.Matches(msg, keys.List.Select) {
+			selectedItem := m.list.SelectedItem()
+			selectedService, ok := selectedItem.(apptypes.ServiceListItem)
 
-				if ok {
-					// Highlight straight away rather than waiting for the
-					// message to come back around, so the row responds on
-					// the same frame as the keypress.
-					m.activeService = selectedService.Service.Name
-					m.syncActiveIndex()
+			if ok {
+				// Highlight straight away rather than waiting for the
+				// message to come back around, so the row responds on
+				// the same frame as the keypress.
+				m.activeService = selectedService.Service.Name
+				m.syncActiveIndex()
 
-					selectedServiceCmd := cmds.SetSelectedService(selectedService.Service)
-					finalCmds = append(finalCmds, selectedServiceCmd)
-				}
+				selectedServiceCmd := cmds.SetSelectedService(selectedService.Service)
+				finalCmds = append(finalCmds, selectedServiceCmd)
 			}
 		}
 
