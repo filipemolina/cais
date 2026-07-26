@@ -4,7 +4,9 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 
+	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
 type ConfirmModalModel struct {
@@ -22,10 +24,10 @@ func (m ConfirmModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	switch keyMsg.String() {
-	case "y":
+	switch {
+	case key.Matches(keyMsg, keys.Overlay.Yes):
 		return m, cmds.CloseModal(m.confirm)
-	case "n", "esc":
+	case key.Matches(keyMsg, keys.Overlay.No, keys.Overlay.Cancel):
 		return m, cmds.CloseModal(nil)
 	}
 

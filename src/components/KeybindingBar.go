@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"image/color"
 
+	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/constants"
+	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
 // KeyHint represents a single keybinding for display in the bottom bar.
@@ -68,72 +70,50 @@ func (m KeybindingBarModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // hintsFor returns the keybinding hints for the current page and focused
-// component. The page-aware mapping keeps the bar accurate as the user
-// tabs through components and switches pages.
+// component. Which keys are live is keys.Active's decision, not the bar's: the
+// bar only supplies the screen state that decision needs, so the footer and the
+// handlers cannot disagree about what is pressable.
 func (m KeybindingBarModel) hintsFor() []KeyHint {
-	switch m.activePage {
-	case "Home":
-		switch m.focusedComponent {
-		case constants.COMPONENT_BODY_LIST: // Groups List
-			hints := []KeyHint{
-				{"n", "new"},
-				{"↑/↓", "navigate"},
-				{"tab", "next"},
-			}
-			if !m.groupsListEmpty {
-				hints = append([]KeyHint{{"space", "select"}}, hints...)
-				hints = append(hints[:2], append([]KeyHint{{"d", "delete"}}, hints[2:]...)...)
-			}
-			return hints
-		case constants.COMPONENT_BODY_DETAILS: // Group Details
-			if m.selectedGroup == "" {
-				return []KeyHint{{"tab", "next"}}
-			}
-			return []KeyHint{
-				{"s", "start"},
-				{"t", "stop"},
-				{"r", "restart"},
-				{"p", "pull"},
-				{"x", "remove"},
-				{"l", "logs"},
-				{"tab", "next"},
-			}
-		}
-	case "Services":
-		switch m.focusedComponent {
-		case constants.COMPONENT_BODY_LIST: // Services List
-			hints := []KeyHint{
-				{"↑/↓", "navigate"},
-				{"tab", "next"},
-			}
-			if !m.servicesListEmpty {
-				hints = append([]KeyHint{{"space", "select"}}, hints...)
-			}
-			return hints
-		case constants.COMPONENT_BODY_DETAILS: // Service Details
-			if !m.selectedService {
-				return []KeyHint{{"tab", "next"}}
-			}
-			return []KeyHint{
-				{"s", "start"},
-				{"t", "stop"},
-				{"r", "restart"},
-				{"p", "pull"},
-				{"x", "remove"},
-				{"l", "logs"},
-				{"e", "edit"},
-				{"E", "file"},
-				{"tab", "next"},
-			}
-		}
+	listEmpty := m.groupsListEmpty
+	selected := m.selectedGroup != ""
 
-	// Placeholder pages hold nothing focusable, so offering "tab next" there
-	// would advertise a key that visibly does nothing.
-	case "Compose Files":
-		return nil
+	if m.activePage == "Services" {
+		listEmpty = m.servicesListEmpty
+		selected = m.selectedService
 	}
 
-	return []KeyHint{{"tab", "next"}}
+	return hintsFrom(keys.Active(keys.Context{
+		Page:      m.activePage,
+		Focused:   m.focusedComponent,
+		ListEmpty: listEmpty,
+		Selected:  selected,
+	}))
+}
+
+// hintsFrom turns bindings into footer hints, using the help text each binding
+// carries.
+func hintsFrom(bindings []key.Binding) []KeyHint {
+	hints := make([]KeyHint, 0, len(bindings))
+
+	for _, binding := range bindings {
+		hints = append(hints, hintFor(binding))
+	}
+
+	return hints
+}
+
+// hintFor is one binding as a hint. hintAs overrides the description for the
+// places where a shared key does something more specific than its general help
+// text says - Enter is "confirm" everywhere, but "create group" in the
+// checklist that creates a group.
+func hintFor(binding key.Binding) KeyHint {
+	help := binding.Help()
+
+	return KeyHint{help.Key, help.Desc}
+}
+
+func hintAs(binding key.Binding, desc string) KeyHint {
+	return KeyHint{binding.Help().Key, desc}
 }
 
 // renderKeyHints renders hints as "key desc · key desc": the key bold in the
@@ -159,17 +139,10 @@ func renderKeyHints(hints []KeyHint, descColor color.Color) string {
 func (m KeybindingBarModel) View() tea.View {
 	hints := m.hintsFor()
 
-	dimStyle := lipgloss.NewStyle().Foreground(appstyles.TextDim)
-	keyStyle := lipgloss.NewStyle().Foreground(appstyles.TextPrimary).Bold(true)
-
 	// The page chords are global, so they sit on the right with quit rather
 	// than in the context-dependent hints. The nav underlines which letter
 	// belongs to which page; this is the reminder that alt is the modifier.
-	rightHint := fmt.Sprintf("%s %s%s%s %s",
-		keyStyle.Render("alt+·"), dimStyle.Render("page"),
-		dimStyle.Render(" · "),
-		keyStyle.Render("q"), dimStyle.Render("quit"),
-	)
+	rightHint := renderKeyHints(hintsFrom(keys.Globals()), appstyles.TextDim)
 
 	width := m.terminalWidth
 	if width <= 0 {
