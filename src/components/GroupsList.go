@@ -106,9 +106,22 @@ type GroupListModel struct {
 	activeGroup string
 	isFocused   bool
 	componentId int
-	statsHeader string
+	stats       cmds.SetHomeStatsMsg
+	hasStats    bool
 	panelWidth  int
 	panelHeight int
+}
+
+// statsLine is the counts footer, in the longest form that fits `width`
+// columns. It has to fit on one row: it is the panel's last line, so wrapping
+// it eats into the padding below instead of just pushing the list down.
+func statsLine(stats cmds.SetHomeStatsMsg, width int) string {
+	full := fmt.Sprintf("%d groups · %d services · %d running", stats.Groups, stats.Services, stats.Running)
+	if lipgloss.Width(full) <= width {
+		return full
+	}
+
+	return fmt.Sprintf("%d grp · %d svc · %d run", stats.Groups, stats.Services, stats.Running)
 }
 
 // syncActiveIndex points the delegate at the row holding activeGroup, or at
@@ -132,9 +145,9 @@ func (m GroupListModel) Init() tea.Cmd {
 	return nil
 }
 
-// headerHeight is the rows the stats header takes above the list.
-func (m GroupListModel) headerHeight() int {
-	if m.statsHeader == "" {
+// footerHeight is the rows the stats line takes below the list.
+func (m GroupListModel) footerHeight() int {
+	if !m.hasStats {
 		return 0
 	}
 
@@ -142,14 +155,14 @@ func (m GroupListModel) headerHeight() int {
 }
 
 // resizeList sizes the inner list to the space left inside the panel box
-// after the wrapper padding and the stats header. Called whenever either the
-// box or the header changes.
+// after the wrapper padding and the stats footer. Called whenever either the
+// box or the footer changes.
 func (m *GroupListModel) resizeList() {
 	h, v := listWrapperStyle.GetFrameSize()
 
 	m.list.SetSize(
 		max(0, m.panelWidth-h),
-		max(0, m.panelHeight-v-m.headerHeight()),
+		max(0, m.panelHeight-v-m.footerHeight()),
 	)
 }
 
@@ -196,8 +209,9 @@ func (m GroupListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case cmds.SetHomeStatsMsg:
-		m.statsHeader = fmt.Sprintf("%d groups · %d services · %d running", msg.Groups, msg.Services, msg.Running)
-		// The header appearing takes a row away from the list.
+		m.stats = msg
+		m.hasStats = true
+		// The footer appearing takes a row away from the list.
 		m.resizeList()
 
 	// AppModel decides which group is selected after a config reload, so the
@@ -258,14 +272,6 @@ func (m GroupListModel) View() tea.View {
 
 	var sections []string
 
-	if m.statsHeader != "" {
-		headerStyle := lipgloss.NewStyle().
-			Foreground(appstyles.TextDim).
-			Background(bg).
-			Padding(0, 1)
-		sections = append(sections, fitBox(headerStyle, contentWidth, 0).Render(m.statsHeader))
-	}
-
 	if len(m.list.Items()) == 0 {
 		emptyStyle := lipgloss.NewStyle().
 			Foreground(appstyles.TextMuted).
@@ -273,14 +279,28 @@ func (m GroupListModel) View() tea.View {
 			Padding(2, 2)
 		// Width-constrained so the hint wraps inside the panel instead of
 		// widening it past its box.
-		sections = append(sections, fitBox(emptyStyle, contentWidth, max(0, contentHeight-m.headerHeight())).Render(
+		sections = append(sections, fitBox(emptyStyle, contentWidth, max(0, contentHeight-m.footerHeight())).Render(
 			"No groups yet.\nPress n to create one, or add profiles to services in your compose file.",
 		))
 	} else {
 		sections = append(sections, m.list.View())
 	}
 
-	// JoinVertical pads the shorter of the stats header / list out to the
+	// The stats sit on the panel's last row rather than above the list title:
+	// as a header they crowded the title chip, and they read as a summary of
+	// what is above them anyway. The list fills the height it was given, so
+	// appending the line here pins it to the bottom of the panel.
+	if m.hasStats {
+		footerStyle := lipgloss.NewStyle().
+			Foreground(appstyles.TextDim).
+			Background(bg).
+			Padding(0, 1)
+
+		frameW, _ := footerStyle.GetFrameSize()
+		sections = append(sections, fitBox(footerStyle, contentWidth, 0).Render(statsLine(m.stats, contentWidth-frameW)))
+	}
+
+	// JoinVertical pads the shorter of the stats footer / list out to the
 	// widest with unstyled spaces, so seal the joined block against the panel
 	// tier. Rows arrive already sealed against their own background.
 	content := appstyles.FillBackground(bg, lipgloss.JoinVertical(lipgloss.Left, sections...))
