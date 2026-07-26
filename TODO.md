@@ -34,11 +34,15 @@ records, not a live backlog.
   and silently rewriting the user's data is a worse failure than losing their
   spacing. Don't reintroduce it without a real YAML round-tripping library.
 
-- [ ] **[H] Flaky bootstrap test** — `TestBootstrapModal_SkipServiceWritesEmptyFile`
-  fails perhaps one run in ten when the whole `src/model` suite runs, and
-  passes alone. Reproduces on `main`, so it predates the edit-services work.
-  The rig tests are timing-based; this one likely needs a wait rather than a
-  fixed sleep.
+- [ ] **[H] Flaky bootstrap tests** — `TestBootstrapModal_SkipServiceWritesEmptyFile`
+  and `TestBootstrapModal_EmptyFilenameShowsInlineError` both fail perhaps one
+  run in ten when the whole `src/model` suite runs, and pass alone (20/20).
+  Reproduces on `main`, so it predates the edit-services work.
+  The rig tests are timing-based; both end in a fixed `time.Sleep` followed by
+  an assertion on `r.Latest()`, which reads only the bytes rendered since the
+  previous call — so a frame arriving late lands in the wrong window. They want
+  `r.WaitFor` instead. Worth fixing together with making panel keypresses
+  testable through the rig, below.
 
 - [ ] **[H] Panel keys aren't testable through the rig** — every rig test
   that sends a key targets a modal, which `AppModel.Update` handles on an
