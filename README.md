@@ -98,8 +98,18 @@ flow control and `Ctrl+D` as end-of-input.
 | `↑`/`↓` `PgUp`/`PgDn` | Scroll logs | Logs overlay open |
 | `Esc` | Close the logs overlay | Logs overlay open |
 | `q` / `Ctrl+C` | Quit | Everywhere |
+| `Enter` | Confirm | Any modal |
+| `Esc` | Cancel / close | Any modal |
+| `y` / `n` | Answer a confirmation | Confirmation modal open |
+| `Space` | Toggle the highlighted service | Service checklist modal open |
 
 Start/Stop/Restart/Pull/Remove run `docker compose` under the hood — scoped to the selected group (every service tagged with it) on the Home page, or to just the selected service on the Services page.
+
+Every binding above is declared once, in [`src/keys/Keys.go`](src/keys/Keys.go).
+The panels match against it and the footer bar renders from it, so changing a key
+there changes it everywhere and the footer follows. If you are adding a key,
+that's the file — see [docs/DESIGN.md](docs/DESIGN.md) for the tiers and the rules
+they follow.
 
 ### UI overview
 
@@ -130,6 +140,7 @@ The ASCII logo asset is still kept in `src/constants/Branding.go` for a future A
 │   ├── components/    # Nested Bubble Tea models — one per panel (lists, details, buttons)
 │   ├── cmds/          # Message types + the tea.Cmds that produce them
 │   ├── apptypes/      # Shared data types (list items, docker container, pages)
+│   ├── keys/          # Every keybinding, declared once — components and the footer both read it
 │   ├── utils/         # Non-Bubble Tea logic (compose file loading, docker exec, parsing)
 │   ├── appstyles/     # Lip Gloss colors/styles
 │   └── constants/     # Layout widths, branding, focusable component list

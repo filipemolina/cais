@@ -98,9 +98,10 @@ regions:
    `Width`/`Height` to fill it and `MaxWidth`/`MaxHeight` to clip, because
    lipgloss `Width()` pads but does not truncate, and anything wider than
    the terminal gets wrapped by the terminal itself.
-3. **Footer** — the `KeybindingBar`, which is updated by `AppModel` and
-   shows selection-aware hints (action keys are hidden when no group or
-   service is selected, and list-empty keys are suppressed). The global keys
+3. **Footer** — the `KeybindingBar`, which shows selection-aware hints (action
+   keys are hidden when no group or service is selected, and list-empty keys
+   are suppressed). It does not decide that itself: it tracks the state and
+   asks `keys.Active` — see *Where keybindings live* below. The global keys
    (page chords, quit) sit on the right, apart from the context-dependent ones.
 
 ### Navigation and focus
@@ -130,6 +131,56 @@ by always setting `AltScreen`, because returning the zero `tea.View` drops the
 terminal out of the alternate screen and the app looks like it crashed while
 still running. Pages that aren't implemented yet get a
 `components.PlaceholderPanel`.
+
+### Where keybindings live
+
+**Every key is declared exactly once, in `src/keys`.** A key used to live in two
+places — the component that handled it, and the hand-written list in
+`KeybindingBar` that advertised it — with nothing holding the two together, so
+the bar could promise a key no handler implemented, or stay silent about one
+that did. Components now match with `key.Matches(msg, keys.Details.Start)`, and
+the footer renders the help text the binding itself carries.
+
+Two rules follow, and they are the reason the package exists:
+
+1. **One verb is one binding.** `s` starts a group and starts a service because
+   both panels read `keys.Details.Start` — not because two switch statements
+   happen to agree. The shared docker verbs resolve through
+   `components.dockerActionFor`.
+2. **The footer asks the keymap; it does not keep a list.**
+   `keys.Active(keys.Context{…})` takes the page, the focused component, whether
+   the list is empty and whether anything is selected, and returns the bindings
+   that are live, in display order. The bar supplies the screen state, the keymap
+   makes the decision, so the two cannot disagree.
+   `components.TestFooterHints` pins every context.
+
+`Active` returns a *filtered slice* rather than calling `SetEnabled` on the
+bindings it wants to hide. `key.Binding.Enabled` gates matching as well as help,
+and these are package-level values shared with the components: disabling one to
+tidy the footer would stop the key working everywhere.
+
+The tiers:
+
+| Tier | Keys | Rule |
+| --- | --- | --- |
+| Global | `alt`+letter, `tab` / `shift+tab`, `q`, `ctrl+c` | Same meaning everywhere, never contextual |
+| Panel | lowercase letters (`s t r p x l e n d`) | Act on the focused panel's selection; one verb, one key, on every panel |
+| Destructive | `x`, `d` | Always through `ConfirmModal`; never dispatched straight from a panel |
+| Overlay | `esc` cancel, `enter` confirm, `y` / `n`, plus overlay-local letters | The overlay owns the keyboard while it is open |
+
+**There is no prefix key**, and this is deliberate. Prefixes (tmux `ctrl+b`,
+zellij `ctrl+p`) exist because those programs host another program that owns the
+keyboard; the prefix is how you address the host without stealing keys from the
+guest. Stack Stitcher has no guest — the only things needing raw keys are text
+inputs, and those live in modals that capture everything. A prefix would add a
+mode to teach, render and exit, and would resolve no conflict. The comparable
+tools (lazydocker, lazygit, k9s) don't use one either: they use one global tier,
+one panel-scoped tier, and a `?` overlay listing both.
+
+Because an overlay hides the footer bar while it is open, **an overlay advertises
+its own keys**. It builds that line from the same bindings, through
+`components.renderKeyHints`, so a modal's help and the footer read alike; pass a
+lighter description color when the modal sits on a lighter surface than the bar.
 
 ### State refresh and destructive actions
 
