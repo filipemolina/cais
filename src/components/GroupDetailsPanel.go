@@ -151,9 +151,34 @@ func (m GroupDetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // the panel.
 func (m GroupDetailsPanelModel) View() tea.View {
 	body := m.renderBody()
-	screen := renderPanelFrame("Details", m.isFocused, m.panelWidth, m.panelHeight, body)
+	screen := renderPanelFrame("Details", m.titlePill(), m.isFocused, m.panelWidth, m.panelHeight, body)
 
 	return tea.NewView(screen)
+}
+
+// titlePill is the selected group's status pill, which rides on the panel's
+// title row. Empty while the panel is showing an empty state: there is no
+// group whose status it could report.
+func (m GroupDetailsPanelModel) titlePill() string {
+	if m.selectedGroup == "" || len(m.knownGroups()) == 0 {
+		return ""
+	}
+
+	members := m.memberServices()
+
+	return statusPill(m.runningCount(members), len(members))
+}
+
+func (m GroupDetailsPanelModel) runningCount(members []types.ServiceConfig) int {
+	running := 0
+
+	for _, svc := range members {
+		if m.isServiceRunning(svc.Name) {
+			running++
+		}
+	}
+
+	return running
 }
 
 // renderBody builds the panel body for the current state: onboarding,
@@ -179,12 +204,7 @@ func (m GroupDetailsPanelModel) renderBody() string {
 
 	// A group is selected: header card + member table + actions.
 	members := m.memberServices()
-	running := 0
-	for _, svc := range members {
-		if m.isServiceRunning(svc.Name) {
-			running++
-		}
-	}
+	running := m.runningCount(members)
 	stopped := len(members) - running
 
 	headerCard := m.groupHeaderCard(m.selectedGroup, running, stopped, len(members), bodyWidth)
@@ -225,23 +245,15 @@ func (m GroupDetailsPanelModel) renderBody() string {
 	return bodyContent
 }
 
-// groupHeaderCard renders the selected group's name, a status pill, and a
+// groupHeaderCard renders the selected group's name and a
 // running/stopped/total summary, separated from the table by a thin rule.
+// The status pill sits on the panel's title row - see titlePill.
 func (m GroupDetailsPanelModel) groupHeaderCard(name string, running, stopped, total int, width int) string {
-	pill := statusPill(running, total)
-	pillWidth := lipgloss.Width(pill)
-
-	nameW := width - pillWidth
-	if nameW < 1 {
-		nameW = 1
-	}
-
-	nameCell := lipgloss.NewStyle().
+	nameRow := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(appstyles.TextPrimary).
-		Width(nameW).
-		Render(truncate(name, nameW))
-	topRow := lipgloss.JoinHorizontal(lipgloss.Top, nameCell, pill)
+		Width(width).
+		Render(truncate(name, width))
 
 	summary := fmt.Sprintf("%d running · %d stopped · %d services", running, stopped, total)
 	summaryRow := lipgloss.NewStyle().
@@ -254,7 +266,7 @@ func (m GroupDetailsPanelModel) groupHeaderCard(name string, running, stopped, t
 		Width(width).
 		Render(strings.Repeat("─", max(width, 0)))
 
-	return lipgloss.JoinVertical(lipgloss.Left, topRow, summaryRow, rule)
+	return lipgloss.JoinVertical(lipgloss.Left, nameRow, summaryRow, rule)
 }
 
 // statusPill renders a filled pill whose color reflects the group's state:

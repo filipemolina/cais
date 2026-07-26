@@ -121,13 +121,28 @@ func renderEmptyCard(width, availHeight int, bg color.Color, title, body, key, h
 // given. The 3-tier background system handles focus: tier 3 (panel) when
 // unfocused, tier 4 (elevated) when focused.
 //
+// `titleRight` is an optional accessory pinned to the right end of the title
+// row - the group status pill uses it. A blank row separates the title row
+// from the body, so the panel's own label doesn't read as part of whatever
+// the body starts with; panelBodyHeight accounts for both rows.
+//
 // Callers embed their action buttons at the bottom of `body`, which pins the
 // action row to the bottom of the panel.
-func renderPanelFrame(title string, isFocused bool, width int, height int, body string) string {
+func renderPanelFrame(title string, titleRight string, isFocused bool, width int, height int, body string) string {
 	bg := panelBg(isFocused)
 
 	style := fitBox(wrapperStyle.Background(bg), width, height)
-	titleRendered := appstyles.NormalTitle.Render(title)
+	titleRow := appstyles.NormalTitle.Render(title)
+
+	if titleRight != "" {
+		gap := max(0, panelBodyWidth(width)-lipgloss.Width(titleRow)-lipgloss.Width(titleRight))
+
+		titleRow = lipgloss.JoinHorizontal(lipgloss.Top,
+			titleRow,
+			lipgloss.NewStyle().Background(bg).Width(gap).Render(""),
+			titleRight,
+		)
+	}
 
 	// The panel is where tier 3/4 is established, so it is where the tier's
 	// background has to be sealed in. JoinVertical pads the short title row out
@@ -135,7 +150,7 @@ func renderPanelFrame(title string, isFocused bool, width int, height int, body 
 	// whatever gaps its own joins left; FillBackground closes both. Repainting
 	// before fitBox's Width() padding is applied is fine - that padding is
 	// styled by lipgloss already.
-	content := appstyles.FillBackground(bg, lipgloss.JoinVertical(lipgloss.Left, titleRendered, body))
+	content := appstyles.FillBackground(bg, lipgloss.JoinVertical(lipgloss.Left, titleRow, "", body))
 
 	return style.Render(content)
 }
@@ -154,5 +169,5 @@ func panelBodyWidth(total int) int {
 func panelBodyHeight(total int) int {
 	_, frameH := wrapperStyle.GetFrameSize()
 
-	return max(0, total-frameH-1) // -1 for the title row
+	return max(0, total-frameH-2) // -2 for the title row and the blank row under it
 }
