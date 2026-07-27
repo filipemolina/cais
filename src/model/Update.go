@@ -410,7 +410,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// there is no compose file to query; waiting avoids a failing ps
 		// command racing the bootstrap error on an empty directory.
 		if m.config.configProject != nil {
-			finalCmds = append(finalCmds, cmds.GetRunningContainers)
+			finalCmds = append(finalCmds, cmds.GetRunningContainers(m.config.configFileName))
 		}
 		finalCmds = append(finalCmds, m.configSyncCmds()...)
 		if homeStatsCmd := m.broadcastHomeStats(); homeStatsCmd != nil {
@@ -424,7 +424,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		finalCmds = append(finalCmds, cmds.RefreshContainersTick())
 
 		if m.shouldPollContainers() {
-			finalCmds = append(finalCmds, cmds.GetRunningContainersBackground)
+			finalCmds = append(finalCmds, cmds.GetRunningContainersBackground(m.config.configFileName))
 		}
 
 	case cmds.GetRunningContainersMsg:
@@ -454,6 +454,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			finalCmds = append(finalCmds, bodyCmd)
 		}
 
+	case cmds.RunDockerActionMsg:
+		// The panel asked for the action; AppModel is what knows which compose
+		// file it has to run against.
+		finalCmds = append(finalCmds, cmds.RunDockerAction(
+			msg.Action, msg.Target, msg.IsGroup, m.config.configFileName,
+		))
+
 	case cmds.DockerActionMsg:
 		// This result replaces any prior poll error in the banner.
 		m.lastErrorFromPoll = false
@@ -461,7 +468,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.lastError = msg.Err.Error()
 		} else {
 			m.lastError = ""
-			finalCmds = append(finalCmds, cmds.GetRunningContainers)
+			finalCmds = append(finalCmds, cmds.GetRunningContainers(m.config.configFileName))
 		}
 		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
 			finalCmds = append(finalCmds, bodyCmd)
@@ -471,11 +478,17 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Err != nil {
 			m.lastError = msg.Err.Error()
 			m.lastErrorFromPoll = false
-			// No compose file in the current directory: offer to create
-			// one in place. The error banner is still set above, so an
-			// Esc from the modal leaves a visible explanation.
-			if errors.Is(msg.Err, utils.ErrNoComposeFile) {
-				m.activeModal = components.CreateComposeFileModal()
+			// No compose file where we looked: offer to create one there.
+			// The error banner is still set above, so an Esc from the modal
+			// leaves a visible explanation.
+			//
+			// Only when nothing else owns the screen. A second failed load
+			// arriving while this modal is up would otherwise replace it with
+			// a fresh one, wiping out a filename half-typed into it - and a
+			// modal the user opened deliberately is not something a
+			// background reload gets to close.
+			if errors.Is(msg.Err, utils.ErrNoComposeFile) && m.activeModal == nil {
+				m.activeModal = components.CreateComposeFileModal(m.config.source.Dir)
 			}
 			if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
 				finalCmds = append(finalCmds, bodyCmd)
@@ -491,7 +504,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if len(m.config.configFiles) == 0 && msg.FileName != "" {
 			m.config.configFiles = []string{msg.FileName}
 		}
-		finalCmds = append(finalCmds, cmds.GetRunningContainers)
+		finalCmds = append(finalCmds, cmds.GetRunningContainers(m.config.configFileName))
 		// The footer starts out saying no file is loaded, so only a successful
 		// load has anything to report - a failed one leaves the previous answer
 		// standing, which is still the file the docker commands would act on.
@@ -516,7 +529,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cmds.OpenLogsModalMsg:
 		var startCmd tea.Cmd
 		m.activeModal, startCmd = components.LogsModal(
-			msg.Target, msg.IsGroup,
+			msg.Target, msg.IsGroup, m.config.configFileName,
 			m.config.terminalWidht, m.config.terminalHeight,
 		)
 		finalCmds = append(finalCmds, startCmd)
@@ -525,7 +538,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		groupName := string(msg)
 		m.activeModal = components.ConfirmModal(
 			fmt.Sprintf("Delete group %q? (y/n)", groupName),
-			cmds.DeleteGroup(groupName),
+			cmds.DeleteGroup(m.config.configFileName, groupName),
 		)
 
 	// Observed, not handled: these are on their way to the panels, and
@@ -569,7 +582,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		m.lastError = ""
-		finalCmds = append(finalCmds, cmds.GetConfig)
+		finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
 
 	case cmds.EditorClosedMsg:
 		m.externalEditorOpen = false
@@ -583,7 +596,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Reload unconditionally: the user may have saved anything, or
 		// nothing, and re-reading is cheaper than working out which.
 		m.lastError = ""
-		finalCmds = append(finalCmds, cmds.GetConfig)
+		finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
 
 	case cmds.OpenHelpModalMsg:
 		m.activeModal = components.HelpOverlay(
@@ -601,13 +614,20 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			finalCmds = append(finalCmds, msg.Follow)
 		}
 
+	case cmds.CreateGroupRequestMsg:
+		// Same split as RunDockerActionMsg: the modal knows the group, AppModel
+		// knows the file it has to be written into.
+		finalCmds = append(finalCmds, cmds.CreateGroup(
+			m.config.configFileName, msg.Name, msg.Services,
+		))
+
 	case cmds.CreateGroupMsg:
 		m.lastErrorFromPoll = false
 		if msg.Err != nil {
 			m.lastError = msg.Err.Error()
 		} else {
 			m.lastError = ""
-			finalCmds = append(finalCmds, cmds.GetConfig)
+			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
 		}
 		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
 			finalCmds = append(finalCmds, bodyCmd)
@@ -619,7 +639,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.lastError = msg.Err.Error()
 		} else {
 			m.lastError = ""
-			finalCmds = append(finalCmds, cmds.GetConfig)
+			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
 		}
 		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
 			finalCmds = append(finalCmds, bodyCmd)
@@ -631,7 +651,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.lastError = msg.Err.Error()
 		} else {
 			m.lastError = ""
-			finalCmds = append(finalCmds, cmds.GetConfig)
+			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
 		}
 		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
 			finalCmds = append(finalCmds, bodyCmd)

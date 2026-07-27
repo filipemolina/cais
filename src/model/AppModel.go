@@ -17,6 +17,10 @@ type navigationModel struct {
 }
 
 type configModel struct {
+	// source is where to look for the compose file, as the flags left it.
+	// Every reload re-resolves from it rather than reusing configFileName, so
+	// a file created after startup (the bootstrap flow) is found.
+	source         utils.ComposeSource
 	configFileName string
 	// configFiles is every compose-file candidate that exists in the
 	// directory, in Docker's priority order (configFileName is the first).
@@ -171,7 +175,10 @@ func (m *AppModel) UpdateInnerComponent(activePage string, msg tea.Msg) tea.Cmd 
 	return tea.Batch(finalCmds...)
 }
 
-func GetInitialModel() AppModel {
+// GetInitialModel builds the app's starting state. source is what the -f/-d
+// flags resolved to; the zero value means "the compose file in the current
+// directory", which is what a bare run gets.
+func GetInitialModel(source utils.ComposeSource) AppModel {
 	pages := make(map[string][]tea.Model)
 
 	pages["Home"] = []tea.Model{
@@ -197,6 +204,7 @@ func GetInitialModel() AppModel {
 			runningContainers: []list.Item{},
 		},
 		config: configModel{
+			source:         source,
 			configFileName: "",
 			configProject:  nil,
 		},

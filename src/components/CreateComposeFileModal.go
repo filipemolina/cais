@@ -25,11 +25,20 @@ const (
 )
 
 type CreateComposeFileModalModel struct {
-	step        createStep
+	step createStep
+	// dir is the directory the app was told to look in (--dir), so the file
+	// is created where it will then be found. Empty is the current directory.
+	dir         string
 	filename    textinput.Model
 	serviceName textinput.Model
 	image       textinput.Model
 	errMsg      string
+}
+
+// path is the file this modal would create: the typed name, in the directory
+// the app is working in.
+func (m CreateComposeFileModalModel) path() string {
+	return filepath.Join(m.dir, strings.TrimSpace(m.filename.Value()))
 }
 
 func (m CreateComposeFileModalModel) Init() tea.Cmd {
@@ -83,7 +92,7 @@ func (m CreateComposeFileModalModel) updateFilename(msg tea.KeyPressMsg) (tea.Mo
 			m.errMsg = "Filename must end in .yaml or .yml"
 			return m, nil
 		}
-		if _, err := os.Stat(name); err == nil {
+		if _, err := os.Stat(filepath.Join(m.dir, name)); err == nil {
 			m.errMsg = fmt.Sprintf("%s already exists in this directory", name)
 			return m, nil
 		} else if !os.IsNotExist(err) {
@@ -109,7 +118,7 @@ func (m CreateComposeFileModalModel) updateAddServicePrompt(msg tea.KeyPressMsg)
 		m.step = stepServiceFields
 		return m, m.serviceName.Focus()
 	case key.Matches(msg, keys.Overlay.No):
-		return m, cmds.CloseModal(cmds.CreateComposeFile(strings.TrimSpace(m.filename.Value()), "", ""))
+		return m, cmds.CloseModal(cmds.CreateComposeFile(m.path(), "", ""))
 	}
 
 	return m, nil
@@ -141,7 +150,7 @@ func (m CreateComposeFileModalModel) updateServiceFields(msg tea.KeyPressMsg) (t
 			m.errMsg = fmt.Sprintf("%q is not a valid service name", name)
 			return m, nil
 		}
-		return m, cmds.CloseModal(cmds.CreateComposeFile(strings.TrimSpace(m.filename.Value()), name, image))
+		return m, cmds.CloseModal(cmds.CreateComposeFile(m.path(), name, image))
 	}
 
 	if m.serviceName.Focused() {
@@ -211,7 +220,11 @@ func (m CreateComposeFileModalModel) View() tea.View {
 // file in the current directory: a filename (with a sane default and basic
 // validation) and an optional one-service seed. Esc cancels the whole flow
 // at any point - the file is never half-created.
-func CreateComposeFileModal() tea.Model {
+// CreateComposeFileModal is the bootstrap flow for a directory with no
+// compose file in it. dir is the directory to create it in - the same one the
+// app resolved in and found nothing, so the file it writes is the file the
+// reload afterwards picks up.
+func CreateComposeFileModal(dir string) tea.Model {
 	filename := textinput.New()
 	filename.Placeholder = "compose.yaml"
 	filename.SetWidth(40)
@@ -230,6 +243,7 @@ func CreateComposeFileModal() tea.Model {
 
 	return CreateComposeFileModalModel{
 		step:        stepFilename,
+		dir:         dir,
 		filename:    filename,
 		serviceName: serviceName,
 		image:       image,

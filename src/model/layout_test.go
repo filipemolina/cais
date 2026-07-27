@@ -3,6 +3,7 @@ package model
 import (
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/constants"
+	"github.com/filipemolina/stack-stitcher/src/utils"
 	"strings"
 	"testing"
 
@@ -32,7 +33,7 @@ func layoutMsg(m AppModel) cmds.SetBodyLayoutMsg {
 // and no page is active yet. Activating Home then emits the focus and layout
 // messages that the runtime routes back into the model.
 func startup(width, height int) AppModel {
-	m := drive(GetInitialModel(), tea.WindowSizeMsg{Width: width, Height: height})
+	m := drive(GetInitialModel(utils.ComposeSource{}), tea.WindowSizeMsg{Width: width, Height: height})
 	updated, cmd := m.Update(cmds.SetActivePageMsg("Home"))
 
 	return drive(updated, collect(cmd)...)

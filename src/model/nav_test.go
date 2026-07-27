@@ -8,6 +8,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/constants"
+	"github.com/filipemolina/stack-stitcher/src/utils"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -71,7 +72,7 @@ func focusedComponentFrom(msgs []tea.Msg) (int, bool) {
 // This guarantees the focus message is delivered after there is an active
 // page to receive it, rather than racing the initial SetActivePageMsg.
 func TestInitialPageActivationFocusesLeftPanel(t *testing.T) {
-	m := GetInitialModel()
+	m := GetInitialModel(utils.ComposeSource{})
 
 	updated, cmd := m.Update(cmds.SetActivePageMsg(apptypes.PageTitles[0]))
 	m = updated.(AppModel)

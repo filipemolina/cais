@@ -156,10 +156,11 @@ func (m LogsModalModel) View() tea.View {
 }
 
 // LogsModal opens a near-full-screen overlay streaming logs for target (a
-// service when isGroup is false, a group otherwise). It starts the stream
-// immediately and returns the model plus the initial WaitForLog cmd; on a
-// start failure it returns a model that just displays the error.
-func LogsModal(target string, isGroup bool, termWidth, termHeight int) (tea.Model, tea.Cmd) {
+// service when isGroup is false, a group otherwise), from composeFile. It
+// starts the stream immediately and returns the model plus the initial
+// WaitForLog cmd; on a start failure it returns a model that just displays
+// the error.
+func LogsModal(target string, isGroup bool, composeFile string, termWidth, termHeight int) (tea.Model, tea.Cmd) {
 	vp := viewport.New()
 
 	m := LogsModalModel{
@@ -169,7 +170,7 @@ func LogsModal(target string, isGroup bool, termWidth, termHeight int) (tea.Mode
 	}
 	m.resize(termWidth, termHeight)
 
-	ch, cancel, err := utils.StreamDockerLogs(target, isGroup)
+	ch, cancel, err := utils.StreamDockerLogs(target, isGroup, composeFile)
 	if err != nil {
 		m.err = err
 		return m, nil
