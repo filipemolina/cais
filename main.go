@@ -7,12 +7,21 @@ import (
 	"os"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/model"
 	"github.com/filipemolina/stack-stitcher/src/utils"
 )
 
+// errVersionRequested is how parseFlags reports --version. It is not a
+// failure, and it is not a ComposeSource either: the run ends after printing.
+var errVersionRequested = errors.New("version requested")
+
 func main() {
 	source, err := parseFlags(os.Args[1:])
+	if errors.Is(err, errVersionRequested) {
+		fmt.Println("stack-stitcher", constants.Version())
+		os.Exit(0)
+	}
 	if err != nil {
 		// -h/--help has already printed the usage text, and asking for help
 		// is not a failure.
@@ -53,8 +62,16 @@ func parseFlags(args []string) (utils.ComposeSource, error) {
 	flags.StringVar(&source.Dir, "dir", "", "directory to look for a compose file in")
 	flags.StringVar(&source.Dir, "d", "", "shorthand for --dir")
 
+	var showVersion bool
+	flags.BoolVar(&showVersion, "version", false, "print the version and exit")
+	flags.BoolVar(&showVersion, "v", false, "shorthand for --version")
+
 	if err := flags.Parse(args); err != nil {
 		return utils.ComposeSource{}, err
+	}
+
+	if showVersion {
+		return utils.ComposeSource{}, errVersionRequested
 	}
 
 	// --file names the file outright and --dir says where to go looking for
@@ -95,6 +112,7 @@ Usage:
 Flags:
   -f, --file PATH   open this compose file
   -d, --dir  PATH   look for a compose file in this directory
+  -v, --version     print the version and exit
   -h, --help        show this help
 
 With no flags, the compose file is resolved in the current directory, in

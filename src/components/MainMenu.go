@@ -23,6 +23,11 @@ type MainMenuModel struct {
 	terminalWidth     int
 }
 
+// versionGutter is the breathing room the version needs between the last tab
+// and the wordmark. Below it the two would read as one word, so the version
+// is dropped instead.
+const versionGutter = 4
+
 func (m MainMenuModel) Init() tea.Cmd {
 	return nil
 }
@@ -108,16 +113,29 @@ func (m MainMenuModel) View() tea.View {
 	tabs := lipgloss.JoinHorizontal(lipgloss.Left, cells...)
 	badge := wordmarkStyle.Render(constants.WORDMARK)
 
+	// The version rides just left of the wordmark, dimmed - it answers "which
+	// build is this" for a bug report, and should never compete with the tabs
+	// for attention. It is dropped rather than wrapped when the row is tight,
+	// the same bargain the footer makes with the compose file name.
+	versionStyle := lipgloss.NewStyle().
+		Foreground(appstyles.Active.TextDim).
+		Background(appstyles.Active.BackgroundContent)
+
+	version := versionStyle.Render(constants.Version())
+	if lipgloss.Width(tabs)+lipgloss.Width(badge)+lipgloss.Width(version)+versionGutter > m.terminalWidth {
+		version = ""
+	}
+
 	// Push the wordmark to the far right. The gap carries the bar background so
 	// the whole row stays tier 2; navStyle's own Width would only pad after the
 	// badge, leaving it stuck to the tabs.
-	gapWidth := max(0, m.terminalWidth-lipgloss.Width(tabs)-lipgloss.Width(badge))
+	gapWidth := max(0, m.terminalWidth-lipgloss.Width(tabs)-lipgloss.Width(badge)-lipgloss.Width(version))
 	gap := lipgloss.NewStyle().
 		Background(appstyles.Active.BackgroundContent).
 		Width(gapWidth).
 		Render("")
 
-	menuRow := lipgloss.JoinHorizontal(lipgloss.Left, tabs, gap, badge)
+	menuRow := lipgloss.JoinHorizontal(lipgloss.Left, tabs, gap, version, badge)
 
 	return tea.NewView(navStyle.Render(menuRow))
 }
