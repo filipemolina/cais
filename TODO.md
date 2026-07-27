@@ -230,10 +230,16 @@ historical records, not a live backlog.
 - [ ] **[S] Logs overlay improvements** — search/filter (`/`), line-wrap
   toggle, toggle timestamps, jump to top (`g`) / bottom (`G`).
 
-- [ ] **[S] Error banner lifecycle** — there is no manual dismissal or
-  timeout. A recovered background poll clears its own banner, while other
-  errors remain until a successful foreground operation. Add Esc-to-dismiss
-  and/or auto-expire after a few seconds.
+- [x] **[S] Error banner lifecycle** — Esc now dismisses the banner. It is the
+  next rung in esc's existing priority ladder (after a modal closes, a filter
+  being typed owns the keyboard, and an applied filter keeps esc): when no
+  stronger claim holds and a banner is showing, the first esc clears it and
+  the next esc backs out of the details panel — the same one-key-one-job
+  ladder a filtered list clears on. A recovered poll still clears its own
+  banner, and other errors still clear on the next successful foreground
+  operation; Esc is the manual dismissal that did not exist before. Auto-expire
+  was not added — the "and/or" left it optional, and a fixed timeout risks
+  expiring an error the user is still reading.
 
 - [x] **[S] Re-record `demo/demo.gif`** — re-recorded against real containers:
   start a group, tail its logs, stop it, switch pages with a digit, start one
