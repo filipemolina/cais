@@ -72,7 +72,7 @@ func (m ServiceChecklistModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case key.Matches(keyMsg, keys.Overlay.Submit):
 			if checked := m.checkedServiceNames(); len(checked) > 0 {
-				return m, cmds.CloseModal(cmds.CreateGroup(m.groupName, checked))
+				return m, cmds.CloseModal(cmds.RequestCreateGroup(m.groupName, checked))
 			}
 		}
 	}

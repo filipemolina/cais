@@ -10,15 +10,12 @@ type DeleteGroupMsg struct {
 	Err error
 }
 
-// DeleteGroup removes a group tag from every service that carries it
-// in the compose file on disk.
-func DeleteGroup(name string) tea.Cmd {
+// DeleteGroup removes a group tag from every service that carries it in
+// fileName, which is the compose file AppModel has loaded. Re-resolving it
+// here would write to whichever file the current directory happens to offer,
+// which stops being the loaded one the moment --file points elsewhere.
+func DeleteGroup(fileName string, name string) tea.Cmd {
 	return func() tea.Msg {
-		fileName, _, err := utils.GetComposeFileName()
-		if err != nil {
-			return DeleteGroupMsg{Err: err}
-		}
-
 		return DeleteGroupMsg{Err: utils.RemoveGroupTag(fileName, name)}
 	}
 }
