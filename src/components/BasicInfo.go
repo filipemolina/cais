@@ -19,7 +19,7 @@ func BasicInfo(service types.ServiceConfig, width int) string {
 
 	nameHeader := lipgloss.NewStyle().Bold(true).Render("Name: ")
 	puidHeader := lipgloss.NewStyle().Bold(true).Render("PUID: ")
-	pgidHeader := lipgloss.NewStyle().Bold(true).Render(" PGID: ")
+	pgidHeader := lipgloss.NewStyle().Bold(true).Render("PGID: ")
 	imageHeader := lipgloss.NewStyle().Bold(true).Render("Image: ")
 	portsHeader := lipgloss.NewStyle().Bold(true).Render("Ports: ")
 	groupsHeader := lipgloss.NewStyle().Bold(true).Render("Groups: ")
@@ -54,12 +54,30 @@ func BasicInfo(service types.ServiceConfig, width int) string {
 		pgid = *value
 	}
 
-	nameLine := lipgloss.JoinHorizontal(lipgloss.Top, nameHeader, service.ContainerName)
-	idLine := lipgloss.JoinHorizontal(lipgloss.Top, puidHeader, puid, pgidHeader, pgid)
+	nameLine := lipgloss.JoinHorizontal(lipgloss.Top, nameHeader, service.Name)
 	imageLine := lipgloss.JoinHorizontal(lipgloss.Top, imageHeader, service.Image)
 	groupsLine := lipgloss.JoinHorizontal(lipgloss.Top, groupsHeader, fmt.Sprintf("%+v", service.Profiles))
 
-	info := lipgloss.JoinVertical(lipgloss.Left, nameLine, idLine, imageLine, groupsLine, portsHeader, portContent)
+	// PUID/PGID are optional, env-var-derived fields (common in the *arr
+	// stack, absent for most services). Show the row only when at least one
+	// is set, so the card never carries empty "PUID:  PGID: " labels.
+	rows := []string{nameLine}
+	if puid != "" || pgid != "" {
+		var idParts []string
+		if puid != "" {
+			idParts = append(idParts, puidHeader, puid)
+		}
+		if pgid != "" {
+			if puid != "" {
+				idParts = append(idParts, "  ", pgidHeader, pgid)
+			} else {
+				idParts = append(idParts, pgidHeader, pgid)
+			}
+		}
+		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, idParts...))
+	}
+	rows = append(rows, imageLine, groupsLine, portsHeader, portContent)
 
+	info := lipgloss.JoinVertical(lipgloss.Left, rows...)
 	return wrapper.Render(info)
 }
