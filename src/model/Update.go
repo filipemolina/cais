@@ -45,7 +45,7 @@ func (m AppModel) calculateBodyLayout() cmds.SetBodyLayoutMsg {
 		height = 0
 	}
 
-	available := m.config.terminalWidht - constants.BODY_GUTTER_WIDTH
+	available := m.config.terminalWidth - constants.BODY_GUTTER_WIDTH
 	if available < 0 {
 		available = 0
 	}
@@ -390,7 +390,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// This is executed once when the app loads and after every
 	// window resize.
 	case tea.WindowSizeMsg:
-		m.config.terminalWidht = msg.Width
+		m.config.terminalWidth = msg.Width
 		m.config.terminalHeight = msg.Height
 		m.config.bodyLayout = m.calculateBodyLayout()
 		finalCmds = append(finalCmds, m.broadcastBodyLayout())
@@ -537,7 +537,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var startCmd tea.Cmd
 		m.activeModal, startCmd = components.LogsModal(
 			msg.Target, msg.IsGroup, m.config.configFileName,
-			m.config.terminalWidht, m.config.terminalHeight,
+			m.config.terminalWidth, m.config.terminalHeight,
 		)
 		finalCmds = append(finalCmds, startCmd)
 
@@ -623,7 +623,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.activeModal = components.HelpOverlay(
 			m.helpContext(),
 			m.config.configFiles,
-			m.config.terminalWidht,
+			m.config.terminalWidth,
 		)
 
 	case cmds.OpenConfirmModalMsg:

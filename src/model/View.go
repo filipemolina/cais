@@ -50,9 +50,9 @@ func (m AppModel) View() tea.View {
 	// overflow across the following lines.
 	rendered := lipgloss.NewStyle().
 		Background(appstyles.Active.BackgroundContent).
-		Width(m.config.terminalWidht).
+		Width(m.config.terminalWidth).
 		Height(m.config.terminalHeight).
-		MaxWidth(m.config.terminalWidht).
+		MaxWidth(m.config.terminalWidth).
 		MaxHeight(m.config.terminalHeight).
 		Render(layout)
 
@@ -99,7 +99,7 @@ func (m AppModel) renderBody() string {
 	if len(contents) == 0 {
 		return lipgloss.NewStyle().
 			Background(appstyles.Active.BackgroundContent).
-			Width(m.config.terminalWidht).
+			Width(m.config.terminalWidth).
 			Height(bodyHeight).
 			Render("")
 	}
@@ -126,7 +126,7 @@ func (m AppModel) renderBody() string {
 func (m AppModel) renderWithModal(base string) string {
 	modalContent := m.activeModal.View().Content
 
-	x := max(0, (m.config.terminalWidht-lipgloss.Width(modalContent))/2)
+	x := max(0, (m.config.terminalWidth-lipgloss.Width(modalContent))/2)
 	y := max(0, (m.config.terminalHeight-lipgloss.Height(modalContent))/2)
 
 	baseLayer := lipgloss.NewLayer(base)

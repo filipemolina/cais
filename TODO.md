@@ -254,16 +254,22 @@ historical records, not a live backlog.
   brought up to date; it had been switching pages by tabbing onto the nav and
   pressing Right, which stopped working in Phase 4.
 
-- [ ] **[H] Empty `Name:` in the service details panel** — the `BasicInfo`
-  card renders `Name:` and `PUID:`/`PGID:` as empty labels while the list
-  beside it shows the service name. Spotted while re-recording the demo, where
-  it is plainly visible. Either populate them or drop the rows.
+- [x] **[H] Empty `Name:` in the service details panel** — the `BasicInfo`
+  card used `service.ContainerName` (the optional `container_name:` field,
+  usually empty) for the `Name:` row, so it read blank while the list beside
+  it showed the name. It now uses `service.Name` (the `services:` key, always
+  set). PUID/PGID are optional env-var-derived fields (common in the *arr
+  stack, absent for most services), so their row is dropped entirely when
+  neither is set rather than rendering empty labels; when only one is set,
+  only that one appears.
 
-- [ ] **[H] Delete `reference/*.go.bak`** — Bubble Tea tutorial leftovers,
-  already gitignored; remove from disk.
+- [x] **[H] Delete `reference/*.go.bak`** — removed from disk. Bubble Tea
+  tutorial leftovers; the `/reference/` directory was already gitignored, so
+  this was a disk-only cleanup.
 
-- [ ] **[H] Fix `terminalWidht` typo** in `configModel`
-  (`src/model/AppModel.go`) and its uses in `Update.go` / `View.go`.
+- [x] **[H] Fix `terminalWidht` typo** — renamed the `configModel` field to
+  `terminalWidth` and its uses in `Update.go` / `View.go`.
 
-- [ ] **[H] Prune stray artifacts** — `vhs-test.gif`/`vhs-test.tape` at the
-  repo root look like one-off tests; fold into `demo/` or delete.
+- [x] **[H] Prune stray artifacts** — deleted `vhs-test.gif`/`vhs-test.tape`
+  from the repo root. They were a one-off "echo hello world" VHS scratch
+  test, not part of any demo.
