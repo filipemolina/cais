@@ -58,8 +58,9 @@ type GlobalKeys struct {
 }
 
 // ListKeys act on the body's left panel: the groups list and the services
-// list. New and Delete only mean something on the groups list, which is the
-// only list whose contents the app can create.
+// list. New, Edit and Delete only mean something on the groups list, which
+// is the only list whose contents the app can modify. The services list is
+// read-only; its services are created by editing the compose file.
 //
 // Filter, ClearFilter, GoToStart and GoToEnd belong to the bubbles list
 // rather than to a handler here, and are declared anyway so the footer and
@@ -69,6 +70,7 @@ type ListKeys struct {
 	Navigate     key.Binding
 	Select       key.Binding
 	New          key.Binding
+	Edit         key.Binding
 	Delete       key.Binding
 	Filter       key.Binding
 	ClearFilter  key.Binding
@@ -135,6 +137,7 @@ var List = ListKeys{
 	// muscle memory that expects enter to choose, not another key to learn.
 	Select:      key.NewBinding(key.WithKeys("space", "enter"), key.WithHelp("space", "select")),
 	New:         key.NewBinding(key.WithKeys("n"), key.WithHelp("n", "new")),
+	Edit:        key.NewBinding(key.WithKeys("e"), key.WithHelp("e", "edit")),
 	Delete:      key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "delete")),
 	Filter:      key.NewBinding(key.WithKeys("/"), key.WithHelp("/", "filter")),
 	ClearFilter: key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "clear filter")),
@@ -272,10 +275,10 @@ func Active(ctx Context) []key.Binding {
 		switch ctx.Focused {
 		case constants.COMPONENT_BODY_LIST:
 			// New is offered even with no groups - it is how the first one gets
-			// made - but Delete needs something to delete.
+			// made - but Edit and Delete need something to act on.
 			own := []key.Binding{List.New}
 			if !ctx.ListEmpty {
-				own = append(own, List.Delete)
+				own = append(own, List.Edit, List.Delete)
 			}
 
 			return listKeys(ctx, own...)
@@ -371,7 +374,7 @@ func Catalog(ctx Context) []Scope {
 		{
 			Title: "List",
 			Entries: append(
-				entries(List.Select, List.New, List.Delete, List.Filter, List.ClearFilter, List.Navigate),
+				entries(List.Select, List.New, List.Edit, List.Delete, List.Filter, List.ClearFilter, List.Navigate),
 				Entry{Binding: List.GoToStart, Available: listNavigable},
 				Entry{Binding: List.GoToEnd, Available: listNavigable},
 			),
