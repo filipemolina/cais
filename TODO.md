@@ -9,8 +9,8 @@ step, **[H]** = housekeeping.
 
 **This file is the flat list of what is left. `docs/ROADMAP.md` is the order to
 do it in, and why** — it carries the decisions already taken with the owner, so
-work resumed mid-sequence does not re-litigate them. Phases 0–4 of that roadmap
-are done; **Phase 5, the `?` help overlay, is next.**
+work resumed mid-sequence does not re-litigate them. Phases 0–5 of that roadmap
+are done; **Phase 6, centralizing color into a `Theme`, is next.**
 
 `README.md`, `docs/DESIGN.md`, `docs/ROADMAP.md`, and this file are the current
 documentation. The dated specs and plans under `docs/superpowers/` are completed
@@ -151,11 +151,16 @@ historical records, not a live backlog.
   `docs/DESIGN.md`. The `?` overlay picked up the `alt` aliases and the
   brackets, which the footer had no room for.
 
-- [ ] **[S] `?` help overlay** — rendered from `src/keys` so it cannot drift
-  from the handlers, grouped by scope, unavailable bindings dimmed. Also the
-  home for the other compose-file candidates, above, and for the `alt`+letter
-  aliases and `[`/`]` brackets, which the footer has no room for. This is
-  Phase 5 in `docs/ROADMAP.md`.
+- [x] **[S] `?` help overlay** — `?` opens `components.HelpOverlay` through
+  `cmds.OpenHelpModal`, rendered from `keys.Catalog(ctx)`: every binding
+  grouped by scope, with rows that do nothing on the screen it opened from
+  dimmed. Availability comes from a snapshot (`AppModel.helpContext`: page,
+  focus, selection, filter state via the lists' new `FilterState`); a modal
+  freezes the panels, so the snapshot cannot go stale. Closes with
+  `?`/`esc`/`q` — `q` closes only the overlay. It is the home for the
+  `alt`+letter aliases (one derived `alt+g/s/f` row), the `[`/`]` brackets,
+  `g`/`G`, `shift+tab`, `ctrl+c`, and the losing compose-file candidates the
+  footer can only count. The footer's global group gained `? help`.
 
 - [ ] **[S] The footer wraps on a narrow terminal** — predates the compose
   file segment (which drops itself rather than contributing to this). Below
@@ -170,8 +175,9 @@ historical records, not a live backlog.
   good semantic tokens, but they are package-level `var`s built at init, so
   they freeze one palette; five other files still carry stray hexes
   (`#B33A3A`, `#FAFAFA`, `#3F3F3F`). Make them a `Theme` value with a
-  registry, which is what a theme picker later needs, and run the existing
-  background-bleed suites over every registered theme.
+  registry (`stitcher-dark`, `stitcher-light`), which is what a theme picker
+  later needs, and run the existing background-bleed suites over every
+  registered theme. This is Phase 6 in `docs/ROADMAP.md`.
 
 - [ ] **[S] CI + releases** — GitHub Actions: `go build`, `go vet`,
   `go test` on push/PR. Add GoReleaser for tagged releases once the module
