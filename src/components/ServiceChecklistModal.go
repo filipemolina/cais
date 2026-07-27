@@ -46,7 +46,10 @@ func (m ServiceChecklistModalModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m ServiceChecklistModalModel) checkedServiceNames() []string {
+// CheckedNames returns the names of the currently checked services, in
+// list order. Exported so the model tests can assert the pre-checked state
+// an edit modal opened with.
+func (m ServiceChecklistModalModel) CheckedNames() []string {
 	var names []string
 
 	for _, listItem := range m.list.Items() {
@@ -74,7 +77,7 @@ func (m ServiceChecklistModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case key.Matches(keyMsg, keys.Overlay.Submit):
-			checked := m.checkedServiceNames()
+			checked := m.CheckedNames()
 			if m.isEdit {
 				// Editing an existing group allows empty membership:
 				// unchecking every service removes the group from the
