@@ -532,7 +532,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		groupName := string(msg)
 		m.activeModal = components.ConfirmModal(
 			fmt.Sprintf("Delete group %q? (y/n)", groupName),
-			cmds.DeleteGroup(groupName),
+			cmds.DeleteGroup(m.config.configFileName, groupName),
 		)
 
 	// Observed, not handled: these are on their way to the panels, and
@@ -607,6 +607,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Follow != nil {
 			finalCmds = append(finalCmds, msg.Follow)
 		}
+
+	case cmds.CreateGroupRequestMsg:
+		// Same split as RunDockerActionMsg: the modal knows the group, AppModel
+		// knows the file it has to be written into.
+		finalCmds = append(finalCmds, cmds.CreateGroup(
+			m.config.configFileName, msg.Name, msg.Services,
+		))
 
 	case cmds.CreateGroupMsg:
 		m.lastErrorFromPoll = false
