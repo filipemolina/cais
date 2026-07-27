@@ -344,7 +344,12 @@ directory.
 the app. It dispatches `GetRunningContainersBackground` only while a project is
 loaded and no modal is open. Background results update status without clearing
 an unrelated action/configuration error; a recovered background poll clears its
-own error banner. Keep this distinction if the refresh mechanism changes.
+own error banner. Esc is the manual dismissal that did not exist before: it is
+the next rung in esc's priority ladder (after a modal closes, a filter being
+typed owns the keyboard, and an applied filter keeps esc), so when no stronger
+claim holds and a banner is showing, the first esc clears it and the next esc
+backs out of the details panel. Keep this distinction if the refresh mechanism
+changes.
 
 `x` removes containers (`docker compose rm -fs`) and is therefore destructive.
 It must go through `cmds.OpenConfirmModal` / `ConfirmModal`; `y` runs the
