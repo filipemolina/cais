@@ -56,7 +56,7 @@ func (m GroupNameModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m GroupNameModalModel) View() tea.View {
 	lines := []string{"New group name:", m.input.View()}
 	if m.errMsg != "" {
-		errStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#B33A3A"))
+		errStyle := lipgloss.NewStyle().Foreground(appstyles.Active.Danger)
 		lines = append(lines, errStyle.Render(m.errMsg))
 	}
 

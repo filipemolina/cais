@@ -47,7 +47,7 @@ func (d containersListCustomDelegate) Render(w io.Writer, m list.Model, index in
 			BorderLeft(true).
 			BorderStyle(lipgloss.ThickBorder()).
 			BorderLeftForeground(appstyles.Active.Accent).
-			Background(lipgloss.Color("#3F3F3F"))
+			Background(appstyles.Active.ModalBg)
 
 	} else if isActive {
 		// Highlight text if active, but not currently selected
