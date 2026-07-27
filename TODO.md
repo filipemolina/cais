@@ -1,7 +1,7 @@
 # TODO
 
-Working list for Stack Stitcher. Sources: the roadmap in `README.md`, the
-guiding principles in `docs/DESIGN.md`, the "Out of scope / follow-ups"
+Working list for Stack Stitcher. Sources: the roadmap in `docs/ROADMAP.md`,
+the guiding principles in `docs/DESIGN.md`, the "Out of scope / follow-ups"
 sections of the specs in `docs/superpowers/specs/`, plus review findings.
 
 Legend: **[P]** = from the original plan/roadmap, **[S]** = suggested next
@@ -9,9 +9,9 @@ step, **[H]** = housekeeping.
 
 **This file is the flat list of what is left. `docs/ROADMAP.md` is the order to
 do it in, and why** — it carries the decisions already taken with the owner, so
-work resumed mid-sequence does not re-litigate them. Phases 0–8 of that roadmap
-are done; **Phase 9 — complete the Files page (syntax highlighting, then browse
-and switch compose files) — is the work on this branch.** (See `docs/ROADMAP.md`.)
+work resumed mid-sequence does not re-litigate them. Phases 0–9 of that roadmap
+are done — every tab is live and the alpha roadmap is complete. What remains is
+the post-alpha list. (See `docs/ROADMAP.md`.)
 
 `README.md`, `docs/DESIGN.md`, `docs/ROADMAP.md`, and this file are the current
 documentation. The dated specs and plans under `docs/superpowers/` are completed

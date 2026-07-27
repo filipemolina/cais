@@ -142,7 +142,7 @@ Every binding above is declared once, in [`src/keys/Keys.go`](src/keys/Keys.go).
 The panels match against it, and the footer bar and the `?` help overlay render
 from it, so changing a key there changes it everywhere and both follow. The
 overlay also lists the keys the footer has no room for (`Alt`+letter page
-aliases, `g`/`G`, `Shift+Tab`, `Ctrl+C`). If you are adding a key, that's the
+aliases, `g`/`G`, `Shift+Tab`, `Ctrl+C`, and `a` for About). If you are adding a key, that's the
 file — see [docs/DESIGN.md](docs/DESIGN.md) for the tiers and the rules they
 follow.
 
@@ -161,9 +161,9 @@ On **Home** the body is a two-pane layout: the Groups list on the left and the G
 - **Groups exist, none selected:** a *Select a group* card prompting the user to pick from the list.
 - **Group selected:** a header card with the group name, a status pill (ALL RUNNING / MIXED / STOPPED), and a running/stopped/services summary, followed by a member-services table (status dot, NAME, IMAGE, STATE, HEALTH, UPTIME, PORTS). When nothing is running a "Press `s` to start." footnote appears, and Start/Stop/Restart/Pull/Remove action buttons are pinned at the bottom.
 
-On **Files** the body is a single panel showing the loaded compose file's path and its raw contents, which you can scroll and open in your `$EDITOR` with `E`.
+On **Files** the body is a single panel showing the loaded compose file's path and its raw contents with syntax highlighting, which you can scroll and open in your `$EDITOR` with `E`. `b` opens a picker listing the other compose files in the same directory so you can switch the active one.
 
-The ASCII logo asset is still kept in `src/constants/Branding.go` for a future About modal.
+The ASCII logo lives in `src/constants/Branding.go` and is shown by the About modal (`a`).
 
 ## Tech stack
 
@@ -182,12 +182,13 @@ The ASCII logo asset is still kept in `src/constants/Branding.go` for a future A
 │   ├── components/    # Nested Bubble Tea models — one per panel (lists, details, buttons)
 │   ├── cmds/          # Message types + the tea.Cmds that produce them
 │   ├── apptypes/      # Shared data types (list items, docker container, pages)
-│   ├── keys/          # Every keybinding, declared once — components and the footer both read it
+│   ├── keys/          # Every keybinding, declared once — components, the footer, and the ? overlay all read it
 │   ├── utils/         # Non-Bubble Tea logic (compose file loading, docker exec, parsing)
 │   ├── appstyles/     # Lip Gloss colors/styles
+│   ├── highlight/     # Read-only YAML syntax highlighting for the Files page viewer
 │   └── constants/     # Layout widths, branding, focusable component list
 ├── demo/              # VHS script + recorded demo gif
-├── docs/              # DESIGN.md (why), ROADMAP.md (what's next), historical plans
+├── docs/              # DESIGN.md (why), ROADMAP.md (what's next), historical specs & plans
 ├── .github/workflows/ # CI on every push and PR, releases on a v* tag
 ├── .goreleaser.yaml   # what a tagged release builds
 ├── CONTRIBUTING.md    # the loop, how to test a TUI, how a release is cut

@@ -80,7 +80,7 @@ previews live, `enter` applies and persists) and additional themes — Phase 6 i
 what makes this small. A config file
 (`~/.config/stack-stitcher/config.yaml`: theme, default file, keybinding
 overrides — the keymap struct makes overrides a load-and-merge). Live CPU/MEM
-columns from `docker stats`. Group rename. An `x`-style action menu. About modal.
+columns from `docker stats`. Group rename. An `x`-style action menu.
 
 ## Loose ends worth knowing about
 
