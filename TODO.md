@@ -9,8 +9,8 @@ step, **[H]** = housekeeping.
 
 **This file is the flat list of what is left. `docs/ROADMAP.md` is the order to
 do it in, and why** — it carries the decisions already taken with the owner, so
-work resumed mid-sequence does not re-litigate them. Phases 0–5 of that roadmap
-are done; **Phase 7, release plumbing, is next.**
+work resumed mid-sequence does not re-litigate them. Phases 0–7 of that roadmap
+are done; **Phase 8 — edit group membership, then the Files page — is next.**
 
 `README.md`, `docs/DESIGN.md`, `docs/ROADMAP.md`, and this file are the current
 documentation. The dated specs and plans under `docs/superpowers/` are completed
@@ -39,15 +39,16 @@ historical records, not a live backlog.
   and silently rewriting the user's data is a worse failure than losing their
   spacing. Don't reintroduce it without a real YAML round-tripping library.
 
-- [ ] **[H] Flaky bootstrap tests** — `TestBootstrapModal_SkipServiceWritesEmptyFile`
-  and `TestBootstrapModal_EmptyFilenameShowsInlineError` both fail perhaps one
-  run in ten when the whole `src/model` suite runs, and pass alone (20/20).
-  Reproduces on `main`, so it predates the edit-services work.
-  The rig tests are timing-based; both end in a fixed `time.Sleep` followed by
-  an assertion on `r.Latest()`, which reads only the bytes rendered since the
-  previous call — so a frame arriving late lands in the wrong window. They want
-  `r.WaitFor` instead. Worth fixing together with making panel keypresses
-  testable through the rig, below.
+- [x] **[H] Flaky bootstrap tests** — fixed, and the diagnosis in this entry
+  was wrong: not a timing problem in the rig but a real one in the app. Init's
+  own `GetConfig` and each test's explicit message both reported
+  `ErrNoComposeFile`, and `Update` answered each by assigning a *fresh*
+  `CreateComposeFileModal` — so the second one landed mid-typing and reset the
+  filename field. Twelve backspaces against a field refilled after the sixth
+  leaves `compose.y`, which is why the failure read "must end in .yaml". The
+  modal now opens only when nothing else owns the screen, which is the right
+  behaviour anyway: a background reload has no business closing a modal the
+  user is working in. Six consecutive full-suite runs under `-race` pass.
 
 - [ ] **[H] Panel keys aren't testable through the rig** — every rig test
   that sends a key targets a modal, which `AppModel.Update` handles on an
@@ -80,9 +81,15 @@ historical records, not a live backlog.
   straightforward `yaml.Node` walk (retag every service that carries the
   name); worth doing once membership editing exists.
 
-- [ ] **[P] `--file` / `--directory` flag** — README notes "there's no flag
-  to point at a file elsewhere yet". Also unblocks multi-project usage
-  without `cd`. Show the active file path in the header or Files page.
+- [x] **[P] `--file` / `--directory` flag** — `-f`/`--file` opens exactly the
+  file named; `-d`/`--dir` resolves one inside that directory in Docker's
+  order. `utils.ComposeSource` carries whichever was given from `main.go` to
+  the resolver, and the resolved path reaches the footer, the YAML writers and
+  every docker call. That last part had to land **first**, as its own change:
+  until every `docker compose` invocation passed `--file`, the flag would have
+  had the panel describing one file while the commands acted on another. The
+  two flags are refused together, and a bad path fails before the alternate
+  screen. See *Which compose file* in `docs/DESIGN.md`. This was Phase 7.
 
 ## Suggested next steps
 
@@ -101,9 +108,10 @@ historical records, not a live backlog.
 
 - [x] **[S] Rename the module for distribution** — `go.mod` is now
   `module github.com/filipemolina/stack-stitcher`, so
-  `go install github.com/filipemolina/stack-stitcher@latest` can work.
-  **Remaining:** version stamping (`-ldflags -X`), `--version`, and showing it
-  in the header/About modal — tracked under CI + releases below.
+  `go install github.com/filipemolina/stack-stitcher@latest` works. Version
+  stamping and `--version` landed in Phase 7: `constants.Version()` prefers
+  the `-ldflags -X` stamp, falls back to the commit from the build info, and
+  the nav bar renders it dimmed beside the wordmark.
 
 - [x] **[S] One keymap** — every binding now lives once in `src/keys`.
   Components match with `key.Matches`; `KeybindingBar` asks `keys.Active` which
@@ -194,9 +202,13 @@ historical records, not a live backlog.
   catches something. See *Color lives on a Theme* and *Background tiers, and
   sealing them* in `docs/DESIGN.md`. This was Phase 6 in `docs/ROADMAP.md`.
 
-- [ ] **[S] CI + releases** — GitHub Actions: `go build`, `go vet`,
-  `go test` on push/PR. Add GoReleaser for tagged releases once the module
-  rename lands.
+- [x] **[S] CI + releases** — `.github/workflows/ci.yml` runs build, vet,
+  gofmt and `go test -race` on push to main and on every PR; `release.yml`
+  runs GoReleaser on a `v*` tag, building linux/darwin × amd64/arm64 with the
+  version stamped in and drafting the release for review. `CONTRIBUTING.md`
+  documents the loop. Verified with `goreleaser check` and a snapshot build.
+  No Windows target: the app shells out to `docker compose` and hands the
+  terminal to `$EDITOR`, and neither has been tried there.
 
 - [ ] **[S] Expand test coverage via the e2e rig** — `src/model/rig_test.go`
   already drives the app in-process (used for the bootstrap flow). Extend
@@ -211,8 +223,14 @@ historical records, not a live backlog.
   errors remain until a successful foreground operation. Add Esc-to-dismiss
   and/or auto-expire after a few seconds.
 
-- [ ] **[S] Re-record `demo/demo.gif`** — the recorded demo predates the
-  nav redesign, keybinding bar, and the group vocabulary.
+- [x] **[S] Re-record `demo/demo.gif`** — re-recorded against real containers:
+  start a group, tail its logs, stop it, switch pages with a digit, start one
+  service, open the `?` overlay. It is 3.9MB against the old 226KB, and mostly
+  not because it is longer: since the theme work every frame paints the full
+  screen instead of leaving most of it black, so frames no longer compress to
+  nothing. The tape documents the `mpdecimate` + shared-palette pass that
+  brings it down from 5.1MB — worth another look if it needs to be smaller
+  still, most likely by cutting the logs section, which is the densest part.
 
 ## Housekeeping
 
@@ -220,9 +238,14 @@ historical records, not a live backlog.
   says that `make build` runs `go install .` and installs to
   `$(go env GOPATH)/bin`.
 
-- [ ] **[H] Update `demo/demo.tape`** — its header still refers to
-  `dist/stack-stitcher` / `sudo mv`, and its comments still say "profile"
-  instead of "group".
+- [x] **[H] Update `demo/demo.tape`** — header, vocabulary and keys all
+  brought up to date; it had been switching pages by tabbing onto the nav and
+  pressing Right, which stopped working in Phase 4.
+
+- [ ] **[H] Empty `Name:` in the service details panel** — the `BasicInfo`
+  card renders `Name:` and `PUID:`/`PGID:` as empty labels while the list
+  beside it shows the service name. Spotted while re-recording the demo, where
+  it is plainly visible. Either populate them or drop the rows.
 
 - [ ] **[H] Delete `reference/*.go.bak`** — Bubble Tea tutorial leftovers,
   already gitignored; remove from disk.
