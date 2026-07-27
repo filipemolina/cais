@@ -173,6 +173,27 @@ func (m AppModel) keyboardOwned() bool {
 	return false
 }
 
+// escKeeper is implemented by a component that needs esc for itself without
+// owning the whole keyboard: a focused list holding an applied filter, where
+// esc alone clears it. Same shape as keyboardOwner - the answer has to be
+// right on the keystroke that asks.
+type escKeeper interface {
+	KeepsEsc() bool
+}
+
+// escKept reports whether esc belongs to a component on the active page.
+// AppModel's "back" yields to that: moving focus away from a filtered list
+// would strand the filter on a panel that no longer answers esc.
+func (m AppModel) escKept() bool {
+	for _, component := range m.pages[m.activePage] {
+		if keeper, ok := component.(escKeeper); ok && keeper.KeepsEsc() {
+			return true
+		}
+	}
+
+	return false
+}
+
 // pageForNavKey returns the page a global navigation key jumps to, or "" if
 // the key is not one. Three forms, one destination:
 //
@@ -314,6 +335,17 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			idx := int(-1)
 			tabCmd := m.ChangeFocus(&idx)
 			finalCmds = append(finalCmds, tabCmd)
+
+		// esc is "back": out of the details panel, to the list. Everything
+		// with a stronger claim on esc has already had it - a modal closes
+		// itself above, a filter being typed owns the keyboard above, and a
+		// focused list holding an applied filter keeps it (escKept) - so the
+		// only esc left to answer is the details panel's.
+		case key.Matches(msg, keys.Global.Back):
+			if !m.escKept() && m.focusedComponent != constants.COMPONENT_BODY_LIST {
+				leftPanel := constants.COMPONENT_BODY_LIST
+				finalCmds = append(finalCmds, m.ChangeFocus(&leftPanel))
+			}
 		}
 
 	// This is executed once when the app loads and after every

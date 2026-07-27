@@ -167,6 +167,14 @@ func (m GroupListModel) OwnsKeyboard() bool {
 	return m.list.FilterState() == list.Filtering
 }
 
+// KeepsEsc reports whether the list needs esc for itself: an applied filter
+// is cleared by esc alone, and the key only reaches the list while the list
+// is focused. AppModel's "back" checks this before it takes focus away - see
+// model.AppModel.escKept.
+func (m GroupListModel) KeepsEsc() bool {
+	return m.isFocused && m.list.FilterState() == list.FilterApplied
+}
+
 // footerHeight is the rows the stats line takes below the list.
 func (m GroupListModel) footerHeight() int {
 	if !m.hasStats {

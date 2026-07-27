@@ -35,6 +35,12 @@ type GlobalKeys struct {
 	// precisely so that ctrl+c yields to nothing.
 	Quit      key.Binding
 	ForceQuit key.Binding
+	// Back is esc away from everything that has a stronger claim on it: a
+	// modal, a filter being typed, a filter standing on a focused list. What
+	// is left is the details panel, so esc there means "back to the list" -
+	// which is why the footer offers it in the details contexts and nowhere
+	// else. See model.AppModel.escKept.
+	Back key.Binding
 	// Page is advertised but not matched: the digits are recognised by their
 	// key code and the alt+<letter> alias by its modifier, so that 1 as filter
 	// text and alt+shift+g are both left alone. See model.pageForNavKey. The
@@ -108,6 +114,7 @@ var Global = GlobalKeys{
 	),
 	NextPage: key.NewBinding(key.WithKeys("]"), key.WithHelp("]", "next page")),
 	PrevPage: key.NewBinding(key.WithKeys("["), key.WithHelp("[", "prev page")),
+	Back:     key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "back")),
 }
 
 var List = ListKeys{
@@ -264,13 +271,13 @@ func Active(ctx Context) []key.Binding {
 
 		case constants.COMPONENT_BODY_DETAILS:
 			if !ctx.Selected {
-				return []key.Binding{Global.NextPanel}
+				return []key.Binding{Global.Back, Global.NextPanel}
 			}
 
 			return []key.Binding{
 				Details.Start, Details.Stop, Details.Restart,
 				Details.Pull, Details.Remove, Details.Logs,
-				Global.NextPanel,
+				Global.Back, Global.NextPanel,
 			}
 		}
 
@@ -283,14 +290,14 @@ func Active(ctx Context) []key.Binding {
 
 		case constants.COMPONENT_BODY_DETAILS:
 			if !ctx.Selected {
-				return []key.Binding{Global.NextPanel}
+				return []key.Binding{Global.Back, Global.NextPanel}
 			}
 
 			return []key.Binding{
 				Details.Start, Details.Stop, Details.Restart,
 				Details.Pull, Details.Remove, Details.Logs,
 				Details.EditService, Details.EditFile,
-				Global.NextPanel,
+				Global.Back, Global.NextPanel,
 			}
 		}
 
