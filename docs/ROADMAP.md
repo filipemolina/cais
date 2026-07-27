@@ -59,7 +59,7 @@ Do not re-open these without asking:
 | 4 — The new global keys | done (`a64ec73`) |
 | 5 — `?` help overlay | done (`37bf74a`) |
 | 6 — Centralize color into a `Theme` | done (`88ce42d`) |
-| 7 — Release plumbing | done (`PENDING`) |
+| 7 — Release plumbing | done (`01f75e9`) |
 | 8 — Edit group membership, then the Files page | **next** |
 
 Phases 0–7 are described in `docs/DESIGN.md` (*Where keybindings live*, *Which
