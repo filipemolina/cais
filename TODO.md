@@ -11,6 +11,7 @@ step, **[H]** = housekeeping.
 do it in, and why** — it carries the decisions already taken with the owner, so
 work resumed mid-sequence does not re-litigate them. Phases 0–7 of that roadmap
 are done; **Phase 8 — edit group membership, then the Files page — is next.**
+(Its work is implemented on the phase branch; see `docs/ROADMAP.md`.)
 
 `README.md`, `docs/DESIGN.md`, `docs/ROADMAP.md`, and this file are the current
 documentation. The dated specs and plans under `docs/superpowers/` are completed
@@ -57,10 +58,11 @@ historical records, not a live backlog.
   at the model level instead. Worth closing before Phase 3, which is entirely
   panel keys.
 
-- [ ] **[P] Compose Files page** — currently a `PlaceholderPanel`. The tab
-  label is already "Files". Minimum useful version: show which compose file
-  is loaded and a read-only, syntax-highlighted view of it. Fuller version:
-  browse multiple compose files in the directory and switch the active one.
+- [~] **[P] Compose Files page** — the minimum useful version is done (Phase
+  8): the active file's path on the title row, a read-only scrollable view of
+  its raw contents, and `E` to edit it in `$EDITOR`. **Remaining:** syntax
+  highlighting, and the fuller version — browse multiple compose files in the
+  directory and switch the active one.
 
 - [x] **[P] Settings page** — dropped as a page. The tab was a placeholder with
   two rows of content in it, and each of those settings has a better home:
@@ -72,10 +74,14 @@ historical records, not a live backlog.
   is explicitly reserved for this. Include version, license, repo link.
   Open with `?` or `a`.
 
-- [ ] **[P] Edit group membership** — follow-up noted in the create/delete
-  spec: reopen the `ServiceChecklistModal` for an *existing* group to
-  add/remove members (today you can only set membership at creation time or
-  delete the whole group).
+- [x] **[P] Edit group membership** — `e` on the groups list reopens the
+  `ServiceChecklistModal` pre-checked with the group's current members, and
+  saving reconciles the diff through `utils.SetGroupMembers`: newly checked
+  services are tagged, newly unchecked ones untagged, in a single
+  read-modify-write pass (so there is no crash window with a half-applied
+  edit). Unchecking every service removes the group, matching delete. Enter
+  emits `cmds.EditGroupRequestMsg`; `AppModel` binds the loaded file and runs
+  `cmds.EditGroup`. This was Phase 8's first half.
 
 - [ ] **[P] Group rename** — `DESIGN.md` §3 lists it as unsupported. It's a
   straightforward `yaml.Node` walk (retag every service that carries the

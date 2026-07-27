@@ -38,7 +38,7 @@ func TestFooterHints(t *testing.T) {
 		{
 			name:  "groups list with groups",
 			model: KeybindingBarModel{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST},
-			want:  "space select · n new · d delete · / filter · ↑/↓ navigate · tab next",
+			want:  "space select · n new · e edit · d delete · / filter · ↑/↓ navigate · tab next",
 		},
 		{
 			// The list has the keyboard: every other key is a letter.
@@ -50,7 +50,7 @@ func TestFooterHints(t *testing.T) {
 			// The filter slot becomes the way out of the filter.
 			name:  "groups list with a filter applied",
 			model: KeybindingBarModel{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST, filterState: list.FilterApplied},
-			want:  "space select · n new · d delete · esc clear filter · ↑/↓ navigate · tab next",
+			want:  "space select · n new · e edit · d delete · esc clear filter · ↑/↓ navigate · tab next",
 		},
 		{
 			name:  "groups list while empty",
@@ -93,9 +93,9 @@ func TestFooterHints(t *testing.T) {
 			want:  "s start · t stop · r restart · p pull · x remove · l logs · e edit · E file · esc back · tab next",
 		},
 		{
-			name:  "a page with nothing focusable offers no keys",
+			name:  "the files page offers edit and scroll",
 			model: KeybindingBarModel{activePage: "Compose Files", focusedComponent: constants.COMPONENT_BODY_LIST},
-			want:  "",
+			want:  "E file · ↑/↓ scroll",
 		},
 		{
 			name:  "an unknown page still offers the focus ring",

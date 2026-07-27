@@ -260,3 +260,109 @@ func TestWriteNewComposeFile_RefusesExisting(t *testing.T) {
 		t.Errorf("expected wrapped os.ErrExist, got: %v", err)
 	}
 }
+
+func TestSetGroupMembers_AddsAndRemovesInOnePass(t *testing.T) {
+	path := writeFixture(t, baseFixture)
+
+	// "core" originally tags app and db. Move it to db and cache only.
+	if err := SetGroupMembers(path, "core", []string{"db", "cache"}); err != nil {
+		t.Fatalf("SetGroupMembers: %v", err)
+	}
+
+	appGot := readServiceGroups(t, path, "app")
+	if len(appGot) != 0 {
+		t.Errorf("app should have lost the core tag, got %v", appGot)
+	}
+	if hasGroupsKey(t, path, "app") {
+		t.Error("app's profiles key should be removed entirely once empty")
+	}
+
+	dbGot := readServiceGroups(t, path, "db")
+	if !slices.Equal(dbGot, []string{"core"}) {
+		t.Errorf("db groups = %v, want [core]", dbGot)
+	}
+
+	cacheGot := readServiceGroups(t, path, "cache")
+	if !slices.Equal(cacheGot, []string{"core"}) {
+		t.Errorf("cache groups = %v, want [core]", cacheGot)
+	}
+}
+
+func TestSetGroupMembers_EmptyRemovesAll(t *testing.T) {
+	path := writeFixture(t, baseFixture)
+
+	// Removing every member of a group is the delete-group path expressed
+	// through the same reconciliation, so it has to clean up the same way.
+	if err := SetGroupMembers(path, "core", nil); err != nil {
+		t.Fatalf("SetGroupMembers: %v", err)
+	}
+
+	if hasGroupsKey(t, path, "app") {
+		t.Error("app's profiles key should be removed when the group is emptied")
+	}
+	if hasGroupsKey(t, path, "db") {
+		t.Error("db's profiles key should be removed when the group is emptied")
+	}
+}
+
+func TestSetGroupMembers_PreservesOtherTags(t *testing.T) {
+	path := writeFixture(t, multiTagFixture)
+
+	// Reconcile "core" to only db: app loses core but keeps "extra".
+	if err := SetGroupMembers(path, "core", []string{"db"}); err != nil {
+		t.Fatalf("SetGroupMembers: %v", err)
+	}
+
+	appGot := readServiceGroups(t, path, "app")
+	if !slices.Equal(appGot, []string{"extra"}) {
+		t.Errorf("app groups = %v, want [extra]", appGot)
+	}
+	if !hasGroupsKey(t, path, "app") {
+		t.Error("app's profiles key should survive (still has extra)")
+	}
+
+	dbGot := readServiceGroups(t, path, "db")
+	if !slices.Equal(dbGot, []string{"core"}) {
+		t.Errorf("db groups = %v, want [core]", dbGot)
+	}
+}
+
+func TestSetGroupMembers_Idempotent(t *testing.T) {
+	path := writeFixture(t, baseFixture)
+
+	// Reconciling to the current membership must be a no-op.
+	if err := SetGroupMembers(path, "core", []string{"app", "db"}); err != nil {
+		t.Fatalf("SetGroupMembers: %v", err)
+	}
+
+	if !slices.Equal(readServiceGroups(t, path, "app"), []string{"core"}) {
+		t.Errorf("app groups changed by an idempotent reconcile")
+	}
+	if !slices.Equal(readServiceGroups(t, path, "db"), []string{"core"}) {
+		t.Errorf("db groups changed by an idempotent reconcile")
+	}
+	if hasGroupsKey(t, path, "cache") {
+		t.Error("cache gained a profiles key from an idempotent reconcile")
+	}
+}
+
+func TestSetGroupMembers_PreservesComments(t *testing.T) {
+	// The reconciliation is a node-tree edit, not a full re-encode from
+	// structs, so comments on untouched lines must ride through.
+	path := writeFixture(t, baseFixture)
+
+	if err := SetGroupMembers(path, "core", []string{"app", "cache"}); err != nil {
+		t.Fatalf("SetGroupMembers: %v", err)
+	}
+
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading result file: %v", err)
+	}
+
+	// app's # core services comment is attached to its profiles key, which
+	// is preserved (app keeps core). Verify it survives the round trip.
+	if !strings.Contains(string(raw), "core services") {
+		t.Errorf("expected the # core services comment to survive, got:\n%s", raw)
+	}
+}

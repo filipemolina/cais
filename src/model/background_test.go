@@ -107,6 +107,22 @@ func TestNoBackgroundBleedAcrossPages(t *testing.T) {
 				width: 120,
 			},
 			{
+				// The Files page's viewport holds raw, unstyled YAML. Lines
+				// shorter than the panel width are exactly where an unpainted
+				// cell would show through.
+				name: "files page with contents",
+				msgs: []tea.Msg{
+					cmds.GetConfigMsg{FileName: "compose.yaml", Project: project()},
+					cmds.SetActivePageMsg("Compose Files"),
+					cmds.SetComposeFileMsg{Name: "compose.yaml"},
+					cmds.ComposeFileContentsMsg{
+						Name:     "compose.yaml",
+						Contents: "services:\n  web:\n    image: nginx:alpine\n",
+					},
+				},
+				width: 120,
+			},
+			{
 				// Narrow enough that panels hit their minimum width and content
 				// has to wrap, which is where padding maths tends to slip.
 				name:  "narrow terminal",
