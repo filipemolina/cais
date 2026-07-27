@@ -12,22 +12,30 @@ import (
 // create one.
 var ErrNoComposeFile = errors.New("no compose file found in the current directory")
 
-func GetComposeFileName() (string, error) {
+// configFileNames are the names Docker tries, in the order it tries them:
+// the first one that exists in the directory wins. The order is fixed and
+// identical to Docker's on purpose - every docker invocation in this app
+// shells out without -f and lets Docker resolve the file itself, so the UI
+// has to agree with Docker about what won.
+var configFileNames = []string{
+	"compose.yaml",
+	"compose.yml",
+	"docker-compose.yaml",
+	"docker-compose.yml",
+}
+
+// GetComposeFileName resolves which compose file Docker would use in the
+// current directory. It returns the winner plus every candidate that exists,
+// in priority order (so the winner is candidates[0]), because the winner is
+// the whole story only when it is the only one: with several present, the UI
+// can say which others were in the running.
+func GetComposeFileName() (winner string, candidates []string, err error) {
 	files, err := os.ReadDir(".")
-
-	configFileNames := []string{
-		"compose.yaml",
-		"compose.yml",
-		"docker-compose.yaml",
-		"docker-compose.yml",
-	}
-
 	if err != nil {
-		return "", fmt.Errorf("failed reading the current directory: %w", err)
+		return "", nil, fmt.Errorf("failed reading the current directory: %w", err)
 	}
 
 	curDirFileNames := make(map[string]struct{})
-
 	for _, file := range files {
 		if !file.IsDir() {
 			curDirFileNames[file.Name()] = struct{}{}
@@ -36,9 +44,13 @@ func GetComposeFileName() (string, error) {
 
 	for _, fileName := range configFileNames {
 		if _, ok := curDirFileNames[fileName]; ok {
-			return fileName, nil
+			candidates = append(candidates, fileName)
 		}
 	}
 
-	return "", ErrNoComposeFile
+	if len(candidates) == 0 {
+		return "", nil, ErrNoComposeFile
+	}
+
+	return candidates[0], candidates, nil
 }

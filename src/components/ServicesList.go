@@ -155,6 +155,12 @@ func (m ServicesListModel) KeepsEsc() bool {
 	return m.isFocused && m.list.FilterState() == list.FilterApplied
 }
 
+// FilterState exposes how much of the keyboard the list has taken. Same rule
+// as the groups list - see GroupListModel.FilterState.
+func (m ServicesListModel) FilterState() list.FilterState {
+	return m.list.FilterState()
+}
+
 // resizeList sizes the inner list to the space left inside the panel box
 // after the wrapper padding.
 func (m *ServicesListModel) resizeList() {

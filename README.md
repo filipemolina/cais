@@ -70,7 +70,7 @@ Run Stack Stitcher from a directory that contains your Compose file:
 stack-stitcher
 ```
 
-It auto-detects the compose file in the current directory, checking in order: `compose.yaml`, `compose.yml`, `docker-compose.yaml`, `docker-compose.yml` — the same order Docker itself uses, since the `docker compose` commands Stack Stitcher runs resolve the file themselves. Whichever file won is named in the footer, so you can always see what you are acting on. There's no flag to point at a file elsewhere yet — `cd` into the project directory first.
+It auto-detects the compose file in the current directory, checking in order: `compose.yaml`, `compose.yml`, `docker-compose.yaml`, `docker-compose.yml` — the same order Docker itself uses, since the `docker compose` commands Stack Stitcher runs resolve the file themselves. Whichever file won is named in the footer, so you can always see what you are acting on; when several of those names exist, the footer marks the winner with `+N` and the `?` overlay lists the rest. There's no flag to point at a file elsewhere yet — `cd` into the project directory first.
 
 ### Key bindings
 
@@ -106,6 +106,7 @@ two body panels.
 | `f` | Toggle follow (auto-scroll) | Logs overlay open |
 | `↑`/`↓` `PgUp`/`PgDn` | Scroll logs | Logs overlay open |
 | `Esc` | Close the logs overlay | Logs overlay open |
+| `?` | Help overlay: every key, unavailable ones dimmed | Everywhere except while typing |
 | `q` | Quit | Everywhere except while typing |
 | `Ctrl+C` | Quit, whatever is on screen | Everywhere |
 | `Enter` | Confirm | Any modal |
@@ -116,10 +117,12 @@ two body panels.
 Start/Stop/Restart/Pull/Remove run `docker compose` under the hood — scoped to the selected group (every service tagged with it) on the Home page, or to just the selected service on the Services page.
 
 Every binding above is declared once, in [`src/keys/Keys.go`](src/keys/Keys.go).
-The panels match against it and the footer bar renders from it, so changing a key
-there changes it everywhere and the footer follows. If you are adding a key,
-that's the file — see [docs/DESIGN.md](docs/DESIGN.md) for the tiers and the rules
-they follow.
+The panels match against it, and the footer bar and the `?` help overlay render
+from it, so changing a key there changes it everywhere and both follow. The
+overlay also lists the keys the footer has no room for (`Alt`+letter page
+aliases, `g`/`G`, `Shift+Tab`, `Ctrl+C`). If you are adding a key, that's the
+file — see [docs/DESIGN.md](docs/DESIGN.md) for the tiers and the rules they
+follow.
 
 While you are typing a filter the list has the whole keyboard, so `n`, `d`,
 `q` and the page digits are letters rather than commands; `Enter` applies the

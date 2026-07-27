@@ -120,16 +120,26 @@ func TestFooterComposeFile(t *testing.T) {
 	const path = "/srv/homelab/compose.yaml"
 
 	tests := []struct {
-		name  string
-		file  string
-		spare int
-		want  string
+		name   string
+		file   string
+		others int
+		spare  int
+		want   string
 	}{
 		{
 			name:  "the full path when it fits",
 			file:  path,
 			spare: 40,
 			want:  path + " · ",
+		},
+		{
+			// The count is part of the answer to "which file?", so it rides
+			// along through the ladder rather than being shed as detail.
+			name:   "losing candidates are counted, and survive the basename",
+			file:   path,
+			others: 2,
+			spare:  20,
+			want:   "compose.yaml +2 · ",
 		},
 		{
 			name:  "the basename when only that fits",
@@ -165,7 +175,7 @@ func TestFooterComposeFile(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			model := KeybindingBarModel{composeFile: tc.file}
+			model := KeybindingBarModel{composeFile: tc.file, composeFileOthers: tc.others}
 
 			if got := ansi.Strip(model.composeFileSegment(tc.spare)); got != tc.want {
 				t.Errorf("compose file segment at spare=%d\n got: %q\nwant: %q", tc.spare, got, tc.want)
@@ -178,11 +188,17 @@ func TestFooterComposeFile(t *testing.T) {
 // the bar shows does.
 func TestFooterTakesTheComposeFileFromTheBroadcast(t *testing.T) {
 	var model tea.Model = KeybindingBar()
-	model, _ = model.Update(cmds.SetComposeFileMsg("compose.yaml"))
+	model, _ = model.Update(cmds.SetComposeFileMsg{
+		Name:   "compose.yaml",
+		Others: []string{"compose.yml", "docker-compose.yml"},
+	})
 
 	bar := ansi.Strip(model.View().Content)
 	if !strings.Contains(bar, "compose.yaml") {
 		t.Errorf("footer does not name the compose file: %q", bar)
+	}
+	if !strings.Contains(bar, "+2") {
+		t.Errorf("footer does not count the losing candidates: %q", bar)
 	}
 }
 
@@ -197,7 +213,7 @@ func TestFooterComposeFileNeverCrowdsOutTheKeys(t *testing.T) {
 
 		var model tea.Model = KeybindingBar()
 		if file != "" {
-			model, _ = model.Update(cmds.SetComposeFileMsg(file))
+			model, _ = model.Update(cmds.SetComposeFileMsg{Name: file})
 		}
 		model, _ = model.Update(tea.WindowSizeMsg{Width: width, Height: 24})
 
@@ -227,7 +243,7 @@ func TestFooterComposeFileNeverCrowdsOutTheKeys(t *testing.T) {
 // The right-hand side of the bar is fixed rather than context-dependent, so it
 // gets its own expectation.
 func TestFooterGlobalHints(t *testing.T) {
-	want := "1-3 page · q quit"
+	want := "1-3 page · ? help · q quit"
 
 	if got := joinHints(hintsFrom(keys.Globals())); got != want {
 		t.Errorf("global hints\n got: %s\nwant: %s", got, want)

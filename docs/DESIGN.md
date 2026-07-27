@@ -192,11 +192,24 @@ bindings it wants to hide. `key.Binding.Enabled` gates matching as well as help,
 and these are package-level values shared with the components: disabling one to
 tidy the footer would stop the key working everywhere.
 
+The help overlay is the package's third reader, after the components and the
+footer. `?` opens it through `cmds.OpenHelpModal` — the same message path every
+modal takes — and it renders `keys.Catalog(ctx)`: every binding grouped by
+scope, with availability resolved against a snapshot of the screen it opened
+from (`AppModel.helpContext`: page, focus, selection, and the list's filter
+state through a small `filterStater` interface). A row that does nothing on
+that screen is dimmed, and the snapshot cannot go stale because a modal freezes
+the panels beneath it. It closes with `?`, `esc` or `q` — `q` closes only the
+overlay — and, being an overlay with the footer hidden beneath it, it
+advertises those close keys itself, built from the same bindings. It is also
+where the keys with no footer room live: the `alt`+letter aliases (one derived
+row), the `[`/`]` brackets, `g`/`G`, `shift+tab` and `ctrl+c`.
+
 The tiers:
 
 | Tier | Keys | Rule |
 | --- | --- | --- |
-| Global | digits, `[` / `]`, `esc` (back), `tab` / `shift+tab`, `q` | Same meaning everywhere, never contextual — but they yield to whatever owns the keyboard (see the esc ladder under *Navigation and focus*) |
+| Global | digits, `[` / `]`, `?`, `esc` (back), `tab` / `shift+tab`, `q` | Same meaning everywhere, never contextual — but they yield to whatever owns the keyboard (see the esc ladder under *Navigation and focus*) |
 | Force quit | `ctrl+c` | Yields to nothing, checked before the modal handoff |
 | Panel | lowercase letters (`s t r p x l e n d`) | Act on the focused panel's selection; one verb, one key, on every panel |
 | Destructive | `x`, `d` | Always through `ConfirmModal`; never dispatched straight from a panel |
@@ -271,7 +284,11 @@ footer reports it. It degrades as the terminal narrows — full path, then
 basename, then dropped — because the keys beside it are worth more than the
 name; `components.TestFooterComposeFile` pins that ladder, and
 `TestFooterComposeFileNeverCrowdsOutTheKeys` pins the part that matters, that
-adding the name never costs the bar a line or a key.
+adding the name never costs the bar a line or a key. When several candidates
+exist the name alone is only half the answer: `utils.GetComposeFileName`
+returns every candidate in priority order, the footer marks the winner with
+`+N` (the count rides through the same ladder), and the help overlay lists
+the losers by name.
 
 **This constrains the planned `-f`/`--file` flag.** The flag is only safe once
 every docker invocation passes the resolved path; threading it through those

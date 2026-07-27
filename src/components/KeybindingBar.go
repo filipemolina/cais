@@ -36,6 +36,10 @@ type KeybindingBarModel struct {
 	groupsListEmpty   bool
 	servicesListEmpty bool
 	composeFile       string
+	// composeFileOthers is how many candidates lost to composeFile. The
+	// winner is the whole story only when it is the only one, so a +N marks
+	// the rest; the help overlay names them.
+	composeFileOthers int
 	filterState       list.FilterState
 }
 
@@ -71,7 +75,8 @@ func (m KeybindingBarModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case cmds.SetComposeFileMsg:
-		m.composeFile = string(msg)
+		m.composeFile = msg.Name
+		m.composeFileOthers = len(msg.Others)
 
 	case cmds.SetListFilterStateMsg:
 		m.filterState = list.FilterState(msg)
@@ -160,6 +165,13 @@ func (m KeybindingBarModel) composeFileSegment(spare int) string {
 		name = "no compose file"
 	}
 
+	// The count travels with the name through the degradation ladder: it is
+	// part of the answer to "which file?", not extra detail to shed.
+	suffix := ""
+	if m.composeFileOthers > 0 {
+		suffix = fmt.Sprintf(" +%d", m.composeFileOthers)
+	}
+
 	// The separator travels with the name so dropping one drops both.
 	const separator = " · "
 
@@ -171,7 +183,7 @@ func (m KeybindingBarModel) composeFileSegment(spare int) string {
 	style := lipgloss.NewStyle().Foreground(appstyles.TextDim)
 
 	for _, candidate := range candidates {
-		segment := candidate + separator
+		segment := candidate + suffix + separator
 		if lipgloss.Width(segment) <= spare {
 			return style.Render(segment)
 		}
