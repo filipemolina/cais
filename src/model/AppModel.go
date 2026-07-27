@@ -136,6 +136,38 @@ func (m AppModel) allGroupNames() []string {
 	return groups
 }
 
+// groupMembers returns the names of every service that currently carries
+// groupName as a profile tag, sorted for stable checklist ordering.
+func (m AppModel) groupMembers(groupName string) []string {
+	if m.config.configProject == nil {
+		return nil
+	}
+
+	var members []string
+	for _, service := range m.config.configProject.Services {
+		for _, profile := range service.Profiles {
+			if profile == groupName {
+				members = append(members, service.Name)
+				break
+			}
+		}
+	}
+
+	slices.Sort(members)
+	return members
+}
+
+// recomposeFilesCmdIfActive returns a command that reads the raw compose
+// file for the Files page's viewport, or nil when the Files page is not
+// active. Called on page switch and after any write through the app, so
+// the viewport stays in sync with disk.
+func (m AppModel) recomposeFilesCmdIfActive() tea.Cmd {
+	if m.activePage != "Compose Files" || m.config.configFileName == "" {
+		return nil
+	}
+	return cmds.GetComposeFileContents(m.config.configFileName)
+}
+
 // homeStats returns the counts shown in the home page status header:
 // groups (distinct Compose profiles), services (total in the project),
 // and running containers.
@@ -195,8 +227,7 @@ func GetInitialModel(source utils.ComposeSource) AppModel {
 	// from this map renders an empty body, which used to drop the app out of
 	// the alternate screen and look like a crash.
 	pages["Compose Files"] = []tea.Model{
-		components.PlaceholderPanel("Files",
-			"Browsing and editing compose files from here is not built yet. For now, Stack Stitcher reads the compose file in the directory it was started from."),
+		components.ComposeFilePanel(),
 	}
 
 	return AppModel{
