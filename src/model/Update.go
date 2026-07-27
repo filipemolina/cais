@@ -366,6 +366,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Global.Help):
 			finalCmds = append(finalCmds, cmds.OpenHelpModal())
 
+		case key.Matches(msg, keys.Global.About):
+			finalCmds = append(finalCmds, cmds.OpenAboutModal())
+
 		case key.Matches(msg, keys.Global.NextPanel):
 			tabCmd := m.ChangeFocus(nil)
 			finalCmds = append(finalCmds, tabCmd)
@@ -635,6 +638,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.config.configFiles,
 			m.config.terminalWidth,
 		)
+
+	case cmds.OpenAboutModalMsg:
+		m.activeModal = components.AboutModal()
 
 	case cmds.OpenConfirmModalMsg:
 		m.activeModal = components.ConfirmModal(msg.Message, msg.Follow)

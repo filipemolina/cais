@@ -76,9 +76,16 @@ historical records, not a live backlog.
   picker modal once colors are centralized. What persists goes to
   `~/.config/stack-stitcher/config.yaml` with no page to maintain.
 
-- [ ] **[P] About modal** — the ASCII `LOGO` in `src/constants/Branding.go`
-  is explicitly reserved for this. Include version, license, repo link.
-  Open with `?` or `a`.
+- [x] **[P] About modal** — `a` opens a read-only About overlay carrying the
+  reserved ASCII `LOGO` (`src/constants/Branding.go`), the wordmark and
+  slogan, the version (`constants.Version()`), the license (MIT), and the repo
+  link. It closes on the same three keys as the help overlay - `a` (the one
+  that opened it), `esc`, and `q` (which closes the overlay, not the app,
+  while it owns the keyboard). `a` is advertised in the `?` help overlay
+  rather than the footer: the footer is width-constrained (its narrow-terminal
+  wrapping is its own open item), and `?` is the comprehensive list, so the
+  footer stays lean while `a` is still discoverable. `?` stays the help key;
+  `a` does not collide with any panel or list binding.
 
 - [x] **[P] Edit group membership** — `e` on the groups list reopens the
   `ServiceChecklistModal` pre-checked with the group's current members, and
