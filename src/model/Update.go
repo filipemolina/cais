@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/compose-spec/compose-go/v2/types"
@@ -181,6 +182,40 @@ type escKeeper interface {
 	KeepsEsc() bool
 }
 
+// filterStater is implemented by the body lists, so the help overlay can
+// snapshot the filter state for its availability dimming.
+type filterStater interface {
+	FilterState() list.FilterState
+}
+
+// helpContext snapshots what the help overlay needs to dim the keys that do
+// nothing right now. A modal freezes the screen it opened from - panels see
+// no keys while one is up - so the snapshot cannot go stale.
+func (m AppModel) helpContext() keys.Context {
+	ctx := keys.Context{
+		Page:    m.activePage,
+		Focused: m.focusedComponent,
+	}
+
+	switch m.activePage {
+	case "Home":
+		ctx.ListEmpty = len(m.allGroupNames()) == 0
+		ctx.Selected = m.selection.groupName != ""
+	case "Services":
+		ctx.ListEmpty = m.config.configProject == nil || len(m.config.configProject.Services) == 0
+		ctx.Selected = m.selection.serviceName != ""
+	}
+
+	for _, component := range m.pages[m.activePage] {
+		if list, ok := component.(filterStater); ok {
+			ctx.Filter = list.FilterState()
+			break
+		}
+	}
+
+	return ctx
+}
+
 // escKept reports whether esc belongs to a component on the active page.
 // AppModel's "back" yields to that: moving focus away from a filtered list
 // would strand the filter on a panel that no longer answers esc.
@@ -327,6 +362,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Global.Quit):
 			return m, tea.Quit
 
+		case key.Matches(msg, keys.Global.Help):
+			finalCmds = append(finalCmds, cmds.OpenHelpModal())
+
 		case key.Matches(msg, keys.Global.NextPanel):
 			tabCmd := m.ChangeFocus(nil)
 			finalCmds = append(finalCmds, tabCmd)
@@ -447,11 +485,21 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		m.config.configFileName = msg.FileName
 		m.config.configProject = msg.Project
+		// Tests construct GetConfigMsg by hand without the candidates; the
+		// winner on its own is still a complete answer.
+		m.config.configFiles = msg.Files
+		if len(m.config.configFiles) == 0 && msg.FileName != "" {
+			m.config.configFiles = []string{msg.FileName}
+		}
 		finalCmds = append(finalCmds, cmds.GetRunningContainers)
 		// The footer starts out saying no file is loaded, so only a successful
 		// load has anything to report - a failed one leaves the previous answer
 		// standing, which is still the file the docker commands would act on.
-		finalCmds = append(finalCmds, cmds.SetComposeFile(msg.FileName))
+		var others []string
+		if len(m.config.configFiles) > 1 {
+			others = m.config.configFiles[1:]
+		}
+		finalCmds = append(finalCmds, cmds.SetComposeFile(msg.FileName, others))
 		finalCmds = append(finalCmds, m.configSyncCmds()...)
 		if homeStatsCmd := m.broadcastHomeStats(); homeStatsCmd != nil {
 			finalCmds = append(finalCmds, homeStatsCmd)
@@ -536,6 +584,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// nothing, and re-reading is cheaper than working out which.
 		m.lastError = ""
 		finalCmds = append(finalCmds, cmds.GetConfig)
+
+	case cmds.OpenHelpModalMsg:
+		m.activeModal = components.HelpOverlay(
+			m.helpContext(),
+			m.config.configFiles,
+			m.config.terminalWidht,
+		)
 
 	case cmds.OpenConfirmModalMsg:
 		m.activeModal = components.ConfirmModal(msg.Message, msg.Follow)

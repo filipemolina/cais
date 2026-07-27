@@ -175,6 +175,12 @@ func (m GroupListModel) KeepsEsc() bool {
 	return m.isFocused && m.list.FilterState() == list.FilterApplied
 }
 
+// FilterState exposes how much of the keyboard the list has taken, so
+// AppModel can snapshot it into the help overlay's context.
+func (m GroupListModel) FilterState() list.FilterState {
+	return m.list.FilterState()
+}
+
 // footerHeight is the rows the stats line takes below the list.
 func (m GroupListModel) footerHeight() int {
 	if !m.hasStats {

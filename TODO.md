@@ -130,10 +130,10 @@ historical records, not a live backlog.
   Docker's file priority stays fixed and identical to Docker's on purpose
   (making it configurable would desync the panel from the `docker compose`
   calls, which pass no `-f`), so *saying which file won* was the fix, not a
-  setting. See *Which compose file* in `docs/DESIGN.md`. **Remaining:** when
-  several candidate names exist in the directory, mark it (`compose.yaml +2`)
-  and list the rest — `GetComposeFileName` returns only the winner today, and
-  the natural home for the list is the `?` overlay.
+  setting. See *Which compose file* in `docs/DESIGN.md`. When several
+  candidates exist the footer marks the winner with `+N` and the `?` overlay
+  lists the losers — `GetComposeFileName` returns every candidate in priority
+  order.
 
 - [x] **[S] The new global keys** — digits `1`–`3` jump to pages and `[`/`]`
   step them with wraparound (`alt`+letter kept as an alias: macOS Terminal.app
@@ -148,8 +148,8 @@ historical records, not a live backlog.
   — making it apply-and-move would resurrect the one-key-two-jobs collision
   the list keymap work removed. Two labels may now share a first letter; the
   uniqueness guard went with the underline. See *Navigation and focus* in
-  `docs/DESIGN.md`. **Remaining:** the `?` overlay (Phase 5) picks up the
-  `alt` aliases and the brackets, which the footer has no room for.
+  `docs/DESIGN.md`. The `?` overlay picked up the `alt` aliases and the
+  brackets, which the footer had no room for.
 
 - [ ] **[S] `?` help overlay** — rendered from `src/keys` so it cannot drift
   from the handlers, grouped by scope, unavailable bindings dimmed. Also the
