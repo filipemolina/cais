@@ -22,8 +22,8 @@ type configModel struct {
 	// directory, in Docker's priority order (configFileName is the first).
 	// The help overlay lists them; configFileName alone is kept because most
 	// consumers only care about the winner.
-	configFiles   []string
-	configProject *types.Project
+	configFiles    []string
+	configProject  *types.Project
 	terminalWidht  int
 	terminalHeight int
 	// bodyLayout is the box the body panels render into. AppModel owns it

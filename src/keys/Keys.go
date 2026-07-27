@@ -144,8 +144,8 @@ var List = ListKeys{
 	// generic confirm/cancel a modal shows.
 	ApplyFilter:  key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "apply")),
 	CancelFilter: key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "cancel")),
-	GoToStart:   key.NewBinding(key.WithKeys("home", "g"), key.WithHelp("g", "first row")),
-	GoToEnd:     key.NewBinding(key.WithKeys("end", "G"), key.WithHelp("G", "last row")),
+	GoToStart:    key.NewBinding(key.WithKeys("home", "g"), key.WithHelp("g", "first row")),
+	GoToEnd:      key.NewBinding(key.WithKeys("end", "G"), key.WithHelp("G", "last row")),
 }
 
 var Details = DetailsKeys{
