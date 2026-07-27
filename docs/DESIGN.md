@@ -375,31 +375,70 @@ Home is the launchpad. Its body is a two-pane layout:
 The large ASCII logo is no longer rendered here; it remains reserved for a
 future About modal.
 
+### Color lives on a Theme
+
+Every color the app draws with is a field on `appstyles.Theme`
+(`src/appstyles/Theme.go`), not a hex value scattered through a component.
+`appstyles.Active` is the one `Theme` in effect; every call site reads it
+fresh - `appstyles.Active.TextPrimary`, say - rather than caching a color at
+package init, which is what lets a later switch actually repaint: assign a
+different registered `Theme` to `Active` and the next frame draws it. The
+handful of styles that are more than one field - `appstyles.NormalTitle`,
+`LogsModal.go`'s `logsModalWrapper`, `model/View.go`'s `errorBannerStyle` -
+are functions for the same reason, not package-level `var`s: a `var` built at
+init freezes whichever theme was active when the package loaded, and that
+used to be the whole palette's problem before this existed.
+
+`appstyles.Themes` is the registry (`stitcher-dark`, the default, and
+`stitcher-light`), built by `appstyles.newTheme` from a handful of base
+colors - `Accent`, the text/panel/modal bases, `Danger`, the four status
+colors - with everything else derived by `Lighten`/`Darken`. A dark theme
+raises a tier's attention by lightening it, a light theme by darkening it;
+see the constructor's doc comment for why both directions use the same
+deltas. Adding a theme is choosing those base colors, not hand-tuning thirty
+derived ones. There is no switcher UI yet (post-alpha, see
+`docs/ROADMAP.md`); `Active` is the seam it will use.
+
+Two fields are the one deliberate exception to "derived from base colors":
+`InkOnLight`/`InkOnDark` do not vary with a theme's `Dark` flag, because a
+status pill's own fill (`StatusRunning` green, `StatusStarting` amber,
+`StatusError` red) does not vary with the app's theme either - the text that
+reads legibly on a green pill has to stay dark whichever theme is active, not
+follow `TextPrimary`, which flips. `GroupDetailsPanel.go`'s `statusPill` used
+to reach for `PanelBg`/`TextPrimary` as stand-ins for "a dark color" and "a
+light color"; that only ever worked because the one theme that existed was
+dark, and `stitcher-light` is exactly what exposed it.
+
 ### Background tiers, and sealing them
 
 Sections are separated by background color rather than by borders. The tiers
-are defined in `src/appstyles/styles.go`:
+are `Theme` fields (`src/appstyles/Theme.go`), read through `appstyles.Active`:
 
-| Tier | Token                | Where                                  |
+| Tier | Field                | Where                                  |
 | ---- | -------------------- | -------------------------------------- |
 | 1    | terminal default     | outside the app — never drawn on        |
 | 2    | `BackgroundContent`  | the frame: header, footer, gutter       |
 | 3    | `BackgroundPanel`    | the body panels                        |
-| 4    | `BackgroundElevated` | the focused panel, and modals           |
+| 4    | `BackgroundElevated` | the focused panel                      |
+| —    | `ModalBg`            | modals, and an active list row — its own register, not derived from the panel tiers |
 
 Focus is shown by lifting a panel from tier 3 to tier 4, not by a heavier
 border, so a panel's box is the same size whether or not it is focused. Use
 `components.panelBg(isFocused)` rather than repeating that choice.
 
 One surface runs the other way. `BackgroundRecessed` sits *below* the panel
-tier — it is the unlightened `PanelBg` — and is used for insets like the
+tier — it is the theme's un-raised `PanelBg` — and is used for insets like the
 empty-state cards, which read as cut into the panel rather than raised off it.
-Because it is a fixed color rather than a lightening of its parent, it stays
-darker than every tier above it, including a focused panel's tier 4.
+Because it is the theme's own base rather than a raise of it, it stays at the
+ladder's base end regardless of which direction raising goes for the active
+theme.
 
-A recessed surface needs `BorderCard`, not `BorderDefault`: a rim has to be
-lighter than the surface it wraps, and `BorderDefault` is darker than
-`PanelBg`, so it disappears against a recessed fill.
+A recessed surface needs `BorderCard`, not `BorderDefault`: a rim has to
+stand out against the surface it wraps. `BorderDefault` moves toward the base
+end with `BackgroundRecessed` rather than away from it, so it all but
+disappears against a recessed fill; `BorderCard` moves the other way, toward
+more contrast, which is why it is the one that rims a recessed surface
+instead.
 
 **Every tier must be sealed with `appstyles.FillBackground`.** A terminal's
 SGR reset clears the background until the next SGR, and lipgloss closes each
@@ -425,8 +464,13 @@ Two rules follow:
 
 `appstyles.HasBackgroundBleed` is the matching assertion, and
 `src/model/background_test.go` applies it to fully rendered frames across
-both pages and their empty, populated, narrow and error-banner states. A new
-component that joins blocks without sealing them fails there.
+both pages and their empty, populated, narrow and error-banner states -
+now once per registered theme, via a `forEachTheme` helper that sets
+`appstyles.Active` and restores it after. A theme that leaves a field
+zero-valued (a nil `color.Color` sets no SGR at all) fails the same suite
+every other state already runs, rather than shipping unnoticed; see
+`src/appstyles/Theme_test.go` for the same property one level down, on the
+fields themselves rather than a rendered frame.
 
 ## 6. Decision checklist for new features
 
