@@ -93,9 +93,9 @@ func TestFooterHints(t *testing.T) {
 			want:  "s start · t stop · r restart · p pull · x remove · l logs · e edit · E file · esc back · tab next",
 		},
 		{
-			name:  "a page with nothing focusable offers no keys",
+			name:  "the files page offers edit and scroll",
 			model: KeybindingBarModel{activePage: "Compose Files", focusedComponent: constants.COMPONENT_BODY_LIST},
-			want:  "",
+			want:  "E file · ↑/↓ scroll",
 		},
 		{
 			name:  "an unknown page still offers the focus ring",

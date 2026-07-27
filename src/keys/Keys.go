@@ -96,6 +96,15 @@ type DetailsKeys struct {
 	EditFile    key.Binding
 }
 
+// FilesKeys act on the Files page's read-only file viewer. Scroll is the
+// viewport's own (the viewport answers the keystrokes); it is declared here
+// so the footer and the help overlay advertise it from the same place as
+// everything else - the same pattern as the list's navigation keys. The
+// viewer's edit key is Details.EditFile, reused rather than redeclared.
+type FilesKeys struct {
+	Scroll key.Binding
+}
+
 // OverlayKeys are the keys every modal answers to. Cancel is one binding for
 // every overlay in the app, including the logs viewer, so "esc backs out" needs
 // no exceptions.
@@ -160,6 +169,12 @@ var Details = DetailsKeys{
 	Logs:        key.NewBinding(key.WithKeys("l"), key.WithHelp("l", "logs")),
 	EditService: key.NewBinding(key.WithKeys("e"), key.WithHelp("e", "edit")),
 	EditFile:    key.NewBinding(key.WithKeys("E"), key.WithHelp("E", "file")),
+}
+
+var Files = FilesKeys{
+	// Help-only, like List.Navigate: the viewport owns the keystrokes, this
+	// declares what the footer and the help overlay say about them.
+	Scroll: key.NewBinding(key.WithHelp("↑/↓", "scroll")),
 }
 
 var Overlay = OverlayKeys{
@@ -315,10 +330,10 @@ func Active(ctx Context) []key.Binding {
 			}
 		}
 
-	// Pages with nothing focusable would otherwise advertise a Tab that
-	// visibly does nothing.
+	// The Files page has one always-focused panel, so the same keys apply
+	// regardless of which component id Tab last touched.
 	case "Compose Files":
-		return nil
+		return []key.Binding{Details.EditFile, Files.Scroll}
 	}
 
 	return []key.Binding{Global.NextPanel}
@@ -385,6 +400,12 @@ func Catalog(ctx Context) []Scope {
 				Details.Start, Details.Stop, Details.Restart,
 				Details.Pull, Details.Remove, Details.Logs,
 				Details.EditService, Details.EditFile,
+			),
+		},
+		{
+			Title: "Files",
+			Entries: entries(
+				Details.EditFile, Files.Scroll,
 			),
 		},
 		{

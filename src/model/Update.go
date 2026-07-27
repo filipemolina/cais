@@ -416,6 +416,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if homeStatsCmd := m.broadcastHomeStats(); homeStatsCmd != nil {
 			finalCmds = append(finalCmds, homeStatsCmd)
 		}
+		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
+			finalCmds = append(finalCmds, cfCmd)
+		}
 		finalCmds = append(finalCmds, m.broadcastBodyLayout())
 
 	case cmds.RefreshContainersTickMsg:
@@ -517,6 +520,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if homeStatsCmd := m.broadcastHomeStats(); homeStatsCmd != nil {
 			finalCmds = append(finalCmds, homeStatsCmd)
 		}
+		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
+			finalCmds = append(finalCmds, cfCmd)
+		}
 		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
 			finalCmds = append(finalCmds, bodyCmd)
 		}
@@ -540,6 +546,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			fmt.Sprintf("Delete group %q? (y/n)", groupName),
 			cmds.DeleteGroup(m.config.configFileName, groupName),
 		)
+
+	case cmds.OpenEditGroupModalMsg:
+		if m.config.configProject != nil {
+			members := m.groupMembers(msg.GroupName)
+			m.activeModal = components.ServiceChecklistModalForEdit(
+				msg.GroupName, m.config.configProject.ServiceNames(), members,
+			)
+		}
 
 	// Observed, not handled: these are on their way to the panels, and
 	// AppModel only notes what was picked so a reload can restore it.
@@ -583,6 +597,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		m.lastError = ""
 		finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
+		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
+			finalCmds = append(finalCmds, cfCmd)
+		}
 
 	case cmds.EditorClosedMsg:
 		m.externalEditorOpen = false
@@ -597,6 +614,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// nothing, and re-reading is cheaper than working out which.
 		m.lastError = ""
 		finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
+		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
+			finalCmds = append(finalCmds, cfCmd)
+		}
 
 	case cmds.OpenHelpModalMsg:
 		m.activeModal = components.HelpOverlay(
@@ -621,6 +641,25 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.config.configFileName, msg.Name, msg.Services,
 		))
 
+	case cmds.EditGroupRequestMsg:
+		// Same split as CreateGroupRequestMsg: the modal knows the group
+		// and members, AppModel knows the file they must be written into.
+		finalCmds = append(finalCmds, cmds.EditGroup(
+			m.config.configFileName, msg.GroupName, msg.Members,
+		))
+
+	case cmds.EditGroupMsg:
+		m.lastErrorFromPoll = false
+		if msg.Err != nil {
+			m.lastError = msg.Err.Error()
+		} else {
+			m.lastError = ""
+			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
+		}
+		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
+			finalCmds = append(finalCmds, bodyCmd)
+		}
+
 	case cmds.CreateGroupMsg:
 		m.lastErrorFromPoll = false
 		if msg.Err != nil {
@@ -628,6 +667,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			m.lastError = ""
 			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
+		}
+		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
+			finalCmds = append(finalCmds, cfCmd)
 		}
 		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
 			finalCmds = append(finalCmds, bodyCmd)
@@ -641,6 +683,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.lastError = ""
 			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
 		}
+		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
+			finalCmds = append(finalCmds, cfCmd)
+		}
 		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
 			finalCmds = append(finalCmds, bodyCmd)
 		}
@@ -653,9 +698,18 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.lastError = ""
 			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
 		}
+		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
+			finalCmds = append(finalCmds, cfCmd)
+		}
 		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
 			finalCmds = append(finalCmds, bodyCmd)
 		}
+
+	case cmds.ComposeFileContentsMsg:
+		// Only the active page's components see messages, and this one is
+		// for the Files page's viewport. Nothing to do here at the app
+		// level - the message reaches the component via UpdateInnerComponent
+		// above.
 	}
 
 	if m.activeModal != nil {
