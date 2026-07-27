@@ -103,6 +103,7 @@ type DetailsKeys struct {
 // viewer's edit key is Details.EditFile, reused rather than redeclared.
 type FilesKeys struct {
 	Scroll key.Binding
+	Browse key.Binding
 }
 
 // OverlayKeys are the keys every modal answers to. Cancel is one binding for
@@ -175,6 +176,7 @@ var Files = FilesKeys{
 	// Help-only, like List.Navigate: the viewport owns the keystrokes, this
 	// declares what the footer and the help overlay say about them.
 	Scroll: key.NewBinding(key.WithHelp("↑/↓", "scroll")),
+	Browse: key.NewBinding(key.WithKeys("b"), key.WithHelp("b", "browse")),
 }
 
 var Overlay = OverlayKeys{
@@ -333,7 +335,7 @@ func Active(ctx Context) []key.Binding {
 	// The Files page has one always-focused panel, so the same keys apply
 	// regardless of which component id Tab last touched.
 	case "Compose Files":
-		return []key.Binding{Details.EditFile, Files.Scroll}
+		return []key.Binding{Details.EditFile, Files.Browse, Files.Scroll}
 	}
 
 	return []key.Binding{Global.NextPanel}
@@ -405,7 +407,7 @@ func Catalog(ctx Context) []Scope {
 		{
 			Title: "Files",
 			Entries: entries(
-				Details.EditFile, Files.Scroll,
+				Details.EditFile, Files.Browse, Files.Scroll,
 			),
 		},
 		{

@@ -76,6 +76,10 @@ func (m ComposeFilePanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if key.Matches(msg, keys.Details.EditFile) {
 			return m, cmds.OpenEditor()
 		}
+
+		if key.Matches(msg, keys.Files.Browse) {
+			return m, cmds.OpenComposeFilePicker()
+		}
 	}
 
 	// Hand everything else (scroll navigation) to the viewport.
