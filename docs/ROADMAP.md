@@ -47,7 +47,7 @@ Do not re-open these without asking:
 | 1 — One keymap in `src/keys` | done (`9a68171`) |
 | 2 — Footer shows the parsed compose file | done (`62416ef`) |
 | 3 — The lists own their keymaps | done (`55173d0`) |
-| 4 — The new global keys | done |
+| 4 — The new global keys | done (`a64ec73`) |
 | 5 — `?` help overlay | **next** |
 | 6 — Centralize color into a `Theme` | |
 | 7 — Release plumbing | |
