@@ -12,15 +12,24 @@ without re-litigating decisions, plus enough polish to publish a first alpha.
 
 Each phase is a feature branch of small commits, merged with `--no-ff` so a
 phase can be reverted as a unit. `go build ./... && go vet ./... && go test ./...`
-green at **every** commit, not just at the merge. Behaviour that only shows up on
-screen gets checked in the real app with VHS (`vhs` is installed; write a tape
-with `Screenshot "name.png"` and run it from a scratch directory — note that VHS
-needs its paths quoted, and sometimes drops the last screenshot, so re-run if the
-file is missing).
+green at **every** commit, not just at the merge. The merge commit's hash then
+goes into the *Where we are* table as its `done` marker (a tiny "Pin the phase
+N merge hash" commit straight to main — the hash cannot exist before the
+merge does), and the phase branch is deleted.
+
+Behaviour that only shows up on screen gets checked in the real app with VHS
+(`vhs` is installed; write a tape with `Screenshot "name.png"` and run it from a
+scratch directory — note that VHS needs its paths quoted, and sometimes drops
+the last screenshot, so re-run if the file is missing). For a faster loop, a
+throwaway `go run` program that renders one component through
+`ansi.Strip(m.View().Content)` catches layout and styling mistakes before they
+are committed; phases 4 and 5 used it for the nav and the help overlay.
 
 Docs are part of the phase, not a follow-up: `README.md` for what a user needs to
 know, `docs/DESIGN.md` for why a decision went the way it did, `TODO.md` for
-what is left.
+what is left. When a phase lands, its section here is removed and the design
+moves to `docs/DESIGN.md` — see the *Where we are* table note above the phase
+sections.
 
 ## Decisions already taken with the owner
 
@@ -62,10 +71,10 @@ a plan.
 
 `src/appstyles/styles.go` holds good semantic tokens, but they are package-level
 `var`s computed at init (`Lighten`/`Darken` of base colors) plus a block of
-legacy aliases. Five other files carry stray hexes: `#B33A3A` in
-`GroupNameModal.go`, `CreateComposeFileModal.go` and `model/View.go` (a *fourth*
-red that is not `StatusError`), `#FAFAFA` in `LogsModal.go` and `View.go`,
-`#3F3F3F` in `ContainersList.go`.
+legacy aliases. Five other files carry stray hexes (verified after phase 5):
+`#B33A3A` in `GroupNameModal.go`, `CreateComposeFileModal.go` and
+`model/View.go` (a *fourth* red that is not `StatusError`), `#FAFAFA` in
+`LogsModal.go` and `View.go`, `#3F3F3F` in `ContainersList.go`.
 
 - Define `type Theme struct` with one field per semantic token and a constructor
   that derives the tiers (`BackgroundContent`/`Panel`/`Elevated`/`Recessed`,
@@ -73,8 +82,9 @@ red that is not `StatusError`), `#FAFAFA` in `LogsModal.go` and `View.go`,
   package init into the constructor.
 - A registry `map[string]Theme` with `stitcher-dark` (today's palette) as the
   default, plus `stitcher-light`, which closes the "unusable on a light terminal"
-  risk. Drop the hardcoded `var lightDark = lipgloss.LightDark(false)`
-  (`src/appstyles/styles.go:67`).
+  risk. Drop the hardcoded `var lightDark = lipgloss.LightDark(false)` and the
+  `lightDark(...)` calls in the `Selected*`/`Dimmed*` styles below it in
+  `src/appstyles/styles.go`.
 - **The real work:** the package-level style `var`s (`NormalTitle`, `DocStyle`,
   the `Selected*` family) are built at init and therefore freeze one palette.
   They become functions or methods on the active theme, so a later switch
@@ -85,6 +95,10 @@ red that is not `StatusError`), `#FAFAFA` in `LogsModal.go` and `View.go`,
   `src/model/background_test.go` already assert every tier is sealed.
   Parameterize them over every registered theme and a theme that leaves an
   unpainted cell fails CI.
+
+Everything built in phases 4–5 (the nav digits, the help overlay and its
+dimming) uses tokens only — they are the model of what every surface should
+look like once this phase lands.
 
 ## Phase 7 — Release plumbing
 
