@@ -46,6 +46,9 @@ type GlobalKeys struct {
 	// Help opens the help overlay. The overlay renders from this package, so
 	// what it says is what the handlers do.
 	Help key.Binding
+	// About opens the About modal: the brand mark, version, license and repo
+	// link. A read-only overlay like Help, closed by the same three keys.
+	About key.Binding
 	// Page is advertised but not matched: the digits are recognised by their
 	// key code and the alt+<letter> alias by its modifier, so that 1 as filter
 	// text and alt+shift+g are both left alone. See model.pageForNavKey. The
@@ -136,6 +139,7 @@ var Global = GlobalKeys{
 	PrevPage: key.NewBinding(key.WithKeys("["), key.WithHelp("[", "prev page")),
 	Back:     key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "back")),
 	Help:     key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "help")),
+	About:    key.NewBinding(key.WithKeys("a"), key.WithHelp("a", "about")),
 }
 
 var List = ListKeys{
@@ -423,7 +427,7 @@ func Catalog(ctx Context) []Scope {
 			Title: "Global",
 			Entries: entries(
 				Global.NextPanel, Global.PrevPanel, Global.Back,
-				Global.Quit, Global.ForceQuit, Global.Help,
+				Global.Quit, Global.ForceQuit, Global.Help, Global.About,
 			),
 		},
 	}
@@ -434,7 +438,7 @@ func Catalog(ctx Context) []Scope {
 // whether or not the footer has room to advertise them.
 func pressableNow(ctx Context) []key.Binding {
 	live := append(Active(ctx), Globals()...)
-	live = append(live, Global.ForceQuit, Global.PrevPage, Global.NextPage)
+	live = append(live, Global.ForceQuit, Global.PrevPage, Global.NextPage, Global.About)
 
 	// shift+tab is tab's twin: live wherever tab is, with no footer slot of
 	// its own.

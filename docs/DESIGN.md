@@ -207,11 +207,19 @@ advertises those close keys itself, built from the same bindings. It is also
 where the keys with no footer room live: the `alt`+letter aliases (one derived
 row), the `[`/`]` brackets, `g`/`G`, `shift+tab` and `ctrl+c`.
 
+`a` opens the About overlay: the ASCII brand mark reserved for it
+(`constants.LOGO`), the wordmark and slogan, the version, the license and the
+repo link. It is a read-only surface like the help overlay and closes on the
+same three keys (`a`, `esc`, `q`). `a` is advertised in the help overlay
+rather than the footer — the footer is width-constrained, and `?` is the
+comprehensive list — so it lives in `pressableNow` (always available) and the
+Catalog's Global scope, not in `Globals()` (the footer's pinned right side).
+
 The tiers:
 
 | Tier | Keys | Rule |
 | --- | --- | --- |
-| Global | digits, `[` / `]`, `?`, `esc` (back), `tab` / `shift+tab`, `q` | Same meaning everywhere, never contextual — but they yield to whatever owns the keyboard (see the esc ladder under *Navigation and focus*) |
+| Global | digits, `[` / `]`, `?`, `a` (about), `esc` (back), `tab` / `shift+tab`, `q` | Same meaning everywhere, never contextual — but they yield to whatever owns the keyboard (see the esc ladder under *Navigation and focus*) |
 | Force quit | `ctrl+c` | Yields to nothing, checked before the modal handoff |
 | Panel | lowercase letters (`s t r p x l e n d`) | Act on the focused panel's selection; one verb, one key, on every panel |
 | Destructive | `x`, `d` | Always through `ConfirmModal`; never dispatched straight from a panel |
