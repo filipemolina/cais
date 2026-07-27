@@ -48,7 +48,7 @@ Do not re-open these without asking:
 | 2 — Footer shows the parsed compose file | done (`62416ef`) |
 | 3 — The lists own their keymaps | done (`55173d0`) |
 | 4 — The new global keys | done (`a64ec73`) |
-| 5 — `?` help overlay | done |
+| 5 — `?` help overlay | done (`37bf74a`) |
 | 6 — Centralize color into a `Theme` | **next** |
 | 7 — Release plumbing | |
 | 8 — Edit group membership, then the Files page | |
