@@ -1,11 +1,13 @@
 package model
 
 import (
+	"fmt"
+	"strings"
+	"testing"
+
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/constants"
-	"strings"
-	"testing"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -338,23 +340,16 @@ func TestShiftTabWrapsBackwards(t *testing.T) {
 	}
 }
 
-// The underline is what tells the user which letter to press, so it has to be
-// on the letter the chord actually uses.
-func TestNavUnderlinesTheShortcutLetter(t *testing.T) {
+// The digit on each tab is what tells the user which key to press, so it has
+// to be the tab's own position in the page list.
+func TestNavRendersEachTabsDigit(t *testing.T) {
 	m := applyLayout(startup(120, 40))
-	nav := m.components.MainMenu.View().Content
+	nav := ansi.Strip(m.components.MainMenu.View().Content)
 
-	for _, page := range apptypes.PageTitles {
-		label := apptypes.PageLabel(page)
-		first := string([]rune(label)[0])
-
-		// SGR 4 is underline; it must open immediately before the letter.
-		if !strings.Contains(nav, "4m"+first) {
-			t.Errorf("page %q: first letter %q of label %q is not underlined", page, first, label)
-		}
-
-		if !strings.Contains(ansi.Strip(nav), label) {
-			t.Errorf("page %q: label %q missing from the nav", page, label)
+	for i, page := range apptypes.PageTitles {
+		tab := fmt.Sprintf("%d %s", i+1, apptypes.PageLabel(page))
+		if !strings.Contains(nav, tab) {
+			t.Errorf("page %q: tab %q missing from the nav", page, tab)
 		}
 	}
 }
