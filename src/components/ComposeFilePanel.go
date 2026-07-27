@@ -52,6 +52,13 @@ func (m ComposeFilePanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.filePath = msg.Name
 
 	case cmds.ComposeFileContentsMsg:
+		// The path rides with the contents because this is the message the
+		// panel is guaranteed to see: SetComposeFileMsg is broadcast while
+		// whichever page was active at load time is showing, and only the
+		// active page's components receive messages, so a Files page that
+		// was inactive at startup never learns the path from it. The
+		// contents read fires on page switch, so Name always arrives here.
+		m.filePath = msg.Name
 		m.readErr = msg.Err
 		if msg.Err == nil {
 			m.content = msg.Contents
