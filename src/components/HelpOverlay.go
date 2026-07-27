@@ -164,4 +164,3 @@ func HelpOverlay(ctx keys.Context, composeFiles []string, termWidth int) tea.Mod
 		termWidth:    termWidth,
 	}
 }
-
