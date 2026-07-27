@@ -3,6 +3,7 @@ package model
 import (
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/utils"
 	"strings"
 	"testing"
 
@@ -46,7 +47,7 @@ func TestEveryPageRendersAFullFrame(t *testing.T) {
 // off, so a page listed in the nav but missing from the map is a latent blank
 // screen.
 func TestEveryNavPageHasComponents(t *testing.T) {
-	m := GetInitialModel()
+	m := GetInitialModel(utils.ComposeSource{})
 
 	for _, page := range apptypes.PageTitles {
 		if len(m.pages[page]) == 0 {

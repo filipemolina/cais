@@ -18,20 +18,25 @@ type GetConfigMsg = struct {
 	Err     error
 }
 
-func GetConfig() tea.Msg {
-	fileName, candidates, err := utils.GetComposeFileName()
-	if err != nil {
-		return GetConfigMsg{Err: err}
-	}
+// GetConfig resolves the compose file for source and loads it. It re-resolves
+// on every reload rather than remembering the winner, so a file created (or
+// removed) while the app is running is picked up.
+func GetConfig(source utils.ComposeSource) tea.Cmd {
+	return func() tea.Msg {
+		fileName, candidates, err := utils.GetComposeFileName(source)
+		if err != nil {
+			return GetConfigMsg{Err: err}
+		}
 
-	project, err := utils.ReadConfigFile(fileName)
-	if err != nil {
-		return GetConfigMsg{Err: err}
-	}
+		project, err := utils.ReadConfigFile(fileName)
+		if err != nil {
+			return GetConfigMsg{Err: err}
+		}
 
-	return GetConfigMsg{
-		FileName: fileName,
-		Files:    candidates,
-		Project:  project,
+		return GetConfigMsg{
+			FileName: fileName,
+			Files:    candidates,
+			Project:  project,
+		}
 	}
 }

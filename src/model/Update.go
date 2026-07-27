@@ -482,7 +482,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// one in place. The error banner is still set above, so an
 			// Esc from the modal leaves a visible explanation.
 			if errors.Is(msg.Err, utils.ErrNoComposeFile) {
-				m.activeModal = components.CreateComposeFileModal()
+				m.activeModal = components.CreateComposeFileModal(m.config.source.Dir)
 			}
 			if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
 				finalCmds = append(finalCmds, bodyCmd)
@@ -576,7 +576,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		m.lastError = ""
-		finalCmds = append(finalCmds, cmds.GetConfig)
+		finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
 
 	case cmds.EditorClosedMsg:
 		m.externalEditorOpen = false
@@ -590,7 +590,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Reload unconditionally: the user may have saved anything, or
 		// nothing, and re-reading is cheaper than working out which.
 		m.lastError = ""
-		finalCmds = append(finalCmds, cmds.GetConfig)
+		finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
 
 	case cmds.OpenHelpModalMsg:
 		m.activeModal = components.HelpOverlay(
@@ -621,7 +621,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.lastError = msg.Err.Error()
 		} else {
 			m.lastError = ""
-			finalCmds = append(finalCmds, cmds.GetConfig)
+			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
 		}
 		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
 			finalCmds = append(finalCmds, bodyCmd)
@@ -633,7 +633,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.lastError = msg.Err.Error()
 		} else {
 			m.lastError = ""
-			finalCmds = append(finalCmds, cmds.GetConfig)
+			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
 		}
 		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
 			finalCmds = append(finalCmds, bodyCmd)
@@ -645,7 +645,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.lastError = msg.Err.Error()
 		} else {
 			m.lastError = ""
-			finalCmds = append(finalCmds, cmds.GetConfig)
+			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
 		}
 		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
 			finalCmds = append(finalCmds, bodyCmd)
