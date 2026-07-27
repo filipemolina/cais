@@ -128,6 +128,7 @@ two body panels.
 | `↑`/`↓` `PgUp`/`PgDn` | Scroll logs | Logs overlay open |
 | `Esc` | Close the logs overlay | Logs overlay open |
 | `?` | Help overlay: every key, unavailable ones dimmed | Everywhere except while typing |
+| `a` | About: version, license, repo link | Everywhere except while typing |
 | `q` | Quit | Everywhere except while typing |
 | `Ctrl+C` | Quit, whatever is on screen | Everywhere |
 | `Enter` | Confirm | Any modal |
