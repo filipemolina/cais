@@ -122,7 +122,7 @@ func (m GroupDetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		if action, ok := dockerActionFor(msg); ok {
-			actionCmd := cmds.RunDockerAction(action, m.selectedGroup, true)
+			actionCmd := cmds.RequestDockerAction(action, m.selectedGroup, true)
 			finalCmds = append(finalCmds, actionCmd)
 		}
 
@@ -132,7 +132,7 @@ func (m GroupDetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// confirmation first, unlike the other four actions.
 			finalCmds = append(finalCmds, cmds.OpenConfirmModal(
 				fmt.Sprintf("Remove group %q?\nThis stops and removes its containers. (y/n)", m.selectedGroup),
-				cmds.RunDockerAction("remove", m.selectedGroup, true),
+				cmds.RequestDockerAction("remove", m.selectedGroup, true),
 			))
 
 		case key.Matches(msg, keys.Details.Logs):

@@ -410,7 +410,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// there is no compose file to query; waiting avoids a failing ps
 		// command racing the bootstrap error on an empty directory.
 		if m.config.configProject != nil {
-			finalCmds = append(finalCmds, cmds.GetRunningContainers)
+			finalCmds = append(finalCmds, cmds.GetRunningContainers(m.config.configFileName))
 		}
 		finalCmds = append(finalCmds, m.configSyncCmds()...)
 		if homeStatsCmd := m.broadcastHomeStats(); homeStatsCmd != nil {
@@ -424,7 +424,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		finalCmds = append(finalCmds, cmds.RefreshContainersTick())
 
 		if m.shouldPollContainers() {
-			finalCmds = append(finalCmds, cmds.GetRunningContainersBackground)
+			finalCmds = append(finalCmds, cmds.GetRunningContainersBackground(m.config.configFileName))
 		}
 
 	case cmds.GetRunningContainersMsg:
@@ -454,6 +454,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			finalCmds = append(finalCmds, bodyCmd)
 		}
 
+	case cmds.RunDockerActionMsg:
+		// The panel asked for the action; AppModel is what knows which compose
+		// file it has to run against.
+		finalCmds = append(finalCmds, cmds.RunDockerAction(
+			msg.Action, msg.Target, msg.IsGroup, m.config.configFileName,
+		))
+
 	case cmds.DockerActionMsg:
 		// This result replaces any prior poll error in the banner.
 		m.lastErrorFromPoll = false
@@ -461,7 +468,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.lastError = msg.Err.Error()
 		} else {
 			m.lastError = ""
-			finalCmds = append(finalCmds, cmds.GetRunningContainers)
+			finalCmds = append(finalCmds, cmds.GetRunningContainers(m.config.configFileName))
 		}
 		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
 			finalCmds = append(finalCmds, bodyCmd)
@@ -491,7 +498,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if len(m.config.configFiles) == 0 && msg.FileName != "" {
 			m.config.configFiles = []string{msg.FileName}
 		}
-		finalCmds = append(finalCmds, cmds.GetRunningContainers)
+		finalCmds = append(finalCmds, cmds.GetRunningContainers(m.config.configFileName))
 		// The footer starts out saying no file is loaded, so only a successful
 		// load has anything to report - a failed one leaves the previous answer
 		// standing, which is still the file the docker commands would act on.
@@ -516,7 +523,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cmds.OpenLogsModalMsg:
 		var startCmd tea.Cmd
 		m.activeModal, startCmd = components.LogsModal(
-			msg.Target, msg.IsGroup,
+			msg.Target, msg.IsGroup, m.config.configFileName,
 			m.config.terminalWidht, m.config.terminalHeight,
 		)
 		finalCmds = append(finalCmds, startCmd)
