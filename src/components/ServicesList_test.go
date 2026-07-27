@@ -89,6 +89,34 @@ func TestNoActiveRowWhenTheSelectedServiceIsGone(t *testing.T) {
 	}
 }
 
+// Enter is an alias for space here too: same binding, same verb.
+func TestEnterSelectsTheHighlightedService(t *testing.T) {
+	list := drive(t, ServicesList(nil, 80, 24),
+		cmds.SetServicesListMsg(servicesOf("api", "db", "web")),
+		cmds.SetFocusMsg(1),
+	)
+
+	model, cmd := list.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+
+	var selected string
+	for _, msg := range messagesFrom(cmd) {
+		if sel, ok := msg.(cmds.SetSelectedServiceMsg); ok {
+			selected = types.ServiceConfig(sel).Name
+		}
+	}
+	if want := "api"; selected != want {
+		t.Errorf("enter selected %q, want %q", selected, want)
+	}
+
+	after, ok := model.(ServicesListModel)
+	if !ok {
+		t.Fatalf("expected a ServicesListModel, got %T", model)
+	}
+	if want := "api"; after.activeService != want {
+		t.Errorf("active service after enter: got %q, want %q", after.activeService, want)
+	}
+}
+
 // Nothing is active until something is selected. The zero value would point
 // at row 0 and render the first service as though the user had picked it.
 func TestNoActiveRowBeforeAnySelection(t *testing.T) {

@@ -102,6 +102,32 @@ func TestDeleteKeyDoesNotAlsoPageTheList(t *testing.T) {
 	}
 }
 
+// Enter is an alias for space: one binding, two keystrokes, so the panel
+// matches either. The highlight lands on the same frame, as it does for space.
+func TestEnterSelectsTheHighlightedGroup(t *testing.T) {
+	groups := focusedGroupsList(t, 12)
+
+	model, cmd := groups.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+
+	var selected string
+	for _, msg := range messagesFrom(cmd) {
+		if sel, ok := msg.(cmds.SetSelectedGroupMsg); ok {
+			selected = string(sel)
+		}
+	}
+	if want := "group-00"; selected != want {
+		t.Errorf("enter selected %q, want %q", selected, want)
+	}
+
+	after, ok := model.(GroupListModel)
+	if !ok {
+		t.Fatalf("expected a GroupListModel, got %T", model)
+	}
+	if want := "group-00"; after.activeGroup != want {
+		t.Errorf("active group after enter: got %q, want %q", after.activeGroup, want)
+	}
+}
+
 // The other letters the default map claimed. None of them is a list key in this
 // app: l opens logs, f follows a log stream, and h, b and u mean nothing yet,
 // which is still not "page the list".
