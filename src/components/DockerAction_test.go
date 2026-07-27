@@ -1,0 +1,64 @@
+package components
+
+import (
+	"testing"
+
+	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/constants"
+
+	tea "charm.land/bubbletea/v2"
+	"github.com/compose-spec/compose-go/v2/types"
+)
+
+// keyPress builds the KeyPressMsg for a single rune, the way a panel sees it.
+func keyPress(r rune) tea.KeyPressMsg {
+	return tea.KeyPressMsg{Code: r, Text: string(r)}
+}
+
+// requestedAction runs cmd and asserts it produced an intent for AppModel
+// rather than a finished docker call.
+func requestedAction(t *testing.T, cmd tea.Cmd) cmds.RunDockerActionMsg {
+	t.Helper()
+
+	if cmd == nil {
+		t.Fatal("expected a command, got nil")
+	}
+
+	msg := cmd()
+	request, ok := msg.(cmds.RunDockerActionMsg)
+	if !ok {
+		t.Fatalf("expected a RunDockerActionMsg, got %T", msg)
+	}
+
+	return request
+}
+
+// The panels do not know which compose file is loaded and must not run docker
+// themselves: they ask, and AppModel - which does know - runs it with --file.
+// If this ever goes back to returning a DockerActionMsg, the action has run
+// against whatever file docker resolved on its own, which is the desync the
+// --file threading exists to prevent.
+func TestServiceDetailsPanelRequestsTheActionRatherThanRunningIt(t *testing.T) {
+	panel := DetailsPanel(&types.ServiceConfig{Name: "web"})
+	panel, _ = panel.Update(cmds.SetFocusMsg(constants.COMPONENT_BODY_DETAILS))
+
+	_, cmd := panel.Update(keyPress('s'))
+
+	request := requestedAction(t, cmd)
+	if request.Action != "start" || request.Target != "web" || request.IsGroup {
+		t.Errorf("request: got %+v, want start/web/service", request)
+	}
+}
+
+func TestGroupDetailsPanelRequestsTheActionRatherThanRunningIt(t *testing.T) {
+	panel := GroupDetailsPanel()
+	panel, _ = panel.Update(cmds.SetFocusMsg(constants.COMPONENT_BODY_DETAILS))
+	panel, _ = panel.Update(cmds.SetSelectedGroupMsg("backend"))
+
+	_, cmd := panel.Update(keyPress('t'))
+
+	request := requestedAction(t, cmd)
+	if request.Action != "stop" || request.Target != "backend" || !request.IsGroup {
+		t.Errorf("request: got %+v, want stop/backend/group", request)
+	}
+}
