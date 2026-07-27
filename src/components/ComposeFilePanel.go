@@ -10,6 +10,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/constants"
+	"github.com/filipemolina/stack-stitcher/src/highlight"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
@@ -61,8 +62,12 @@ func (m ComposeFilePanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.filePath = msg.Name
 		m.readErr = msg.Err
 		if msg.Err == nil {
+			// content stays raw (the empty-file check reads it); the viewport
+			// gets the same bytes with syntax coloring applied. Highlighting
+			// is display-only - it changes no byte, so scrolling and the raw
+			// view agree. See highlight.YAML.
 			m.content = msg.Contents
-			m.viewport.SetContent(msg.Contents)
+			m.viewport.SetContent(highlight.YAML(msg.Contents))
 		}
 		m.loaded = true
 		m.viewport.GotoTop()
@@ -70,6 +75,10 @@ func (m ComposeFilePanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		if key.Matches(msg, keys.Details.EditFile) {
 			return m, cmds.OpenEditor()
+		}
+
+		if key.Matches(msg, keys.Files.Browse) {
+			return m, cmds.OpenComposeFilePicker()
 		}
 	}
 

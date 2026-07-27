@@ -61,8 +61,9 @@ Do not re-open these without asking:
 | 6 — Centralize color into a `Theme` | done (`88ce42d`) |
 | 7 — Release plumbing | done (`01f75e9`) |
 | 8 — Edit group membership, then the Files page | done (`ffe9fed`) |
+| 9 — Complete the Files page: syntax highlighting, browse and switch | done (this branch) |
 
-Phases 0–8 are described in `docs/DESIGN.md` (*Where keybindings live*, *Which
+Phases 0–9 are described in `docs/DESIGN.md` (*Where keybindings live*, *Which
 compose file* — now including *One resolution, passed down* and the two flags —
 *The lists do not get to keep `list.DefaultKeyMap`*, *Navigation and focus*,
 *Color lives on a Theme*, *Background tiers, and sealing them*, *Saying which
