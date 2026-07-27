@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/utils"
 )
 
 // The command returned for OpenEditorMsg is a tea.ExecProcess that would
@@ -12,7 +13,7 @@ import (
 // the messages that don't hand over the terminal - never by running it.
 
 func TestOpeningTheEditorSuspendsBackgroundWork(t *testing.T) {
-	m := GetInitialModel()
+	m := GetInitialModel(utils.ComposeSource{})
 	m.config.configFileName = "compose.yaml"
 
 	m = updateForTest(t, m, cmds.OpenEditorMsg{})
@@ -28,7 +29,7 @@ func TestOpeningTheEditorSuspendsBackgroundWork(t *testing.T) {
 // Nothing to hand the editor, and launching one on an empty path would open
 // an unnamed buffer that saves nowhere useful.
 func TestOpeningTheEditorWithoutAComposeFileReportsInstead(t *testing.T) {
-	m := GetInitialModel()
+	m := GetInitialModel(utils.ComposeSource{})
 
 	m = updateForTest(t, m, cmds.OpenEditorMsg{})
 
@@ -41,7 +42,7 @@ func TestOpeningTheEditorWithoutAComposeFileReportsInstead(t *testing.T) {
 }
 
 func TestClosingTheEditorReloadsTheConfig(t *testing.T) {
-	m := GetInitialModel()
+	m := GetInitialModel(utils.ComposeSource{})
 	m.externalEditorOpen = true
 
 	updated, cmd := m.Update(cmds.EditorClosedMsg{})
@@ -67,7 +68,7 @@ func TestClosingTheEditorReloadsTheConfig(t *testing.T) {
 }
 
 func TestAFailedEditorSurfacesItsError(t *testing.T) {
-	m := GetInitialModel()
+	m := GetInitialModel(utils.ComposeSource{})
 	m.externalEditorOpen = true
 
 	m = updateForTest(t, m, cmds.EditorClosedMsg{Err: errors.New("exec: \"nope\": executable file not found in $PATH")})
@@ -83,7 +84,7 @@ func TestAFailedEditorSurfacesItsError(t *testing.T) {
 // The banner belongs to the poll only when the poll put it there. An editor
 // error must not be cleared by the next successful background refresh.
 func TestAFailedEditorErrorIsNotOwnedByThePoll(t *testing.T) {
-	m := GetInitialModel()
+	m := GetInitialModel(utils.ComposeSource{})
 	m = updateForTest(t, m, cmds.EditorClosedMsg{Err: errors.New("editor exploded")})
 
 	m = updateForTest(t, m, cmds.GetRunningContainersMsg{Background: true})

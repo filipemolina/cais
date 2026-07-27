@@ -7,6 +7,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/components"
+	"github.com/filipemolina/stack-stitcher/src/utils"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/compose-spec/compose-go/v2/types"
@@ -25,7 +26,7 @@ func updateForTest(t *testing.T, m AppModel, msg tea.Msg) AppModel {
 }
 
 func TestShouldPollContainers(t *testing.T) {
-	m := GetInitialModel()
+	m := GetInitialModel(utils.ComposeSource{})
 
 	if m.shouldPollContainers() {
 		t.Error("should not poll before a compose project has loaded")
@@ -49,7 +50,7 @@ func TestShouldPollContainers(t *testing.T) {
 }
 
 func TestBackgroundPollPreservesActionErrorThatReplacedPollError(t *testing.T) {
-	m := GetInitialModel()
+	m := GetInitialModel(utils.ComposeSource{})
 
 	m = updateForTest(t, m, cmds.GetRunningContainersMsg{
 		Err:        errors.New("docker daemon unavailable"),
@@ -75,7 +76,7 @@ func TestBackgroundPollPreservesActionErrorThatReplacedPollError(t *testing.T) {
 }
 
 func TestBackgroundPollClearsItsOwnRecoveredError(t *testing.T) {
-	m := GetInitialModel()
+	m := GetInitialModel(utils.ComposeSource{})
 
 	m = updateForTest(t, m, cmds.GetRunningContainersMsg{
 		Err:        errors.New("docker daemon unavailable"),
@@ -103,7 +104,7 @@ func TestBackgroundPollClearsItsOwnRecoveredError(t *testing.T) {
 }
 
 func TestForegroundRefreshClearsAnyExistingError(t *testing.T) {
-	m := GetInitialModel()
+	m := GetInitialModel(utils.ComposeSource{})
 	m.lastError = "docker daemon unavailable"
 	m.lastErrorFromPoll = true
 

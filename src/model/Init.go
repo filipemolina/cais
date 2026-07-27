@@ -10,7 +10,7 @@ import (
 func (m AppModel) Init() tea.Cmd {
 	initialCommands := []tea.Cmd{
 		cmds.SetActivePage(apptypes.PageTitles[0]),
-		cmds.GetConfig,
+		cmds.GetConfig(m.config.source),
 		cmds.RefreshContainersTick(),
 	}
 
