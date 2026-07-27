@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"path/filepath"
 	"slices"
 
 	"charm.land/bubbles/v2/key"
@@ -710,6 +711,37 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// for the Files page's viewport. Nothing to do here at the app
 		// level - the message reaches the component via UpdateInnerComponent
 		// above.
+
+	case cmds.OpenComposeFilePickerMsg:
+		// Browsing only makes sense with a file loaded: the picker lists the
+		// YAML files alongside the active one, and with none loaded there is
+		// no directory to look in (the bootstrap modal owns that state).
+		if m.config.configFileName != "" {
+			finalCmds = append(finalCmds, cmds.ListComposeFiles(
+				filepath.Dir(m.config.configFileName),
+			))
+		}
+
+	case cmds.ComposeFileListMsg:
+		if msg.Err != nil {
+			m.lastError = msg.Err.Error()
+			m.lastErrorFromPoll = false
+			break
+		}
+		if len(msg.Files) == 0 {
+			break
+		}
+		m.activeModal = components.ComposeFilePickerModal(
+			msg.Dir, msg.Files, filepath.Base(m.config.configFileName),
+		)
+
+	case cmds.SwitchComposeFileMsg:
+		// Switching is exactly passing --file at runtime: point the source
+		// at the chosen path and reload. Every downstream consumer - the
+		// docker calls, the writers, the footer, the lists - already flows
+		// from the resolved file, so they follow without further work.
+		m.config.source = utils.ComposeSource{File: msg.Path}
+		finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
 	}
 
 	if m.activeModal != nil {
