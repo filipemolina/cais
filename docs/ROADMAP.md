@@ -48,34 +48,15 @@ Do not re-open these without asking:
 | 2 — Footer shows the parsed compose file | done (`62416ef`) |
 | 3 — The lists own their keymaps | done (`55173d0`) |
 | 4 — The new global keys | done (`a64ec73`) |
-| 5 — `?` help overlay | **next** |
-| 6 — Centralize color into a `Theme` | |
+| 5 — `?` help overlay | done |
+| 6 — Centralize color into a `Theme` | **next** |
 | 7 — Release plumbing | |
 | 8 — Edit group membership, then the Files page | |
 
-Phases 0–4 are described in `docs/DESIGN.md` (*Where keybindings live*, *Which
+Phases 0–5 are described in `docs/DESIGN.md` (*Where keybindings live*, *Which
 compose file*, *The lists do not get to keep `list.DefaultKeyMap`*, *Navigation
 and focus*) rather than here, because they are now how the app works rather than
 a plan.
-
-## Phase 5 — `?` help overlay
-
-`src/components/HelpOverlay.go`, opened by `?` through a `cmds.OpenHelpModal`
-message handled in `AppModel.Update`, closed with `?` / `esc` / `q`. Rendered
-**from `src/keys`** — grouped by scope, with bindings that are not currently
-available dimmed — so it cannot drift from the handlers. Reuse `modalSurface`
-(`src/components/PanelFrame.go`) and `renderKeyHints`. Add `? help` to the
-footer's global group.
-
-Two things are waiting on this overlay:
-
-- The `alt`+letter aliases and the `[`/`]` brackets, which the footer has no
-  room for.
-- **The other compose-file candidates.** When more than one candidate name
-  exists in the directory, the footer should mark it (`compose.yaml +2`) and the
-  overlay should list the rest. `utils.GetComposeFileName` returns only the
-  winner today and discards the others, so this needs a signature change —
-  that is the whole of what is left of Phase 2.
 
 ## Phase 6 — Centralize color into a `Theme`
 
