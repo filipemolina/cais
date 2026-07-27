@@ -172,7 +172,7 @@ func isValidServiceName(s string) bool {
 }
 
 func (m CreateComposeFileModalModel) View() tea.View {
-	errStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#B33A3A"))
+	errStyle := lipgloss.NewStyle().Foreground(appstyles.Active.Danger)
 	var lines []string
 
 	switch m.step {

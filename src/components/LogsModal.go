@@ -140,7 +140,7 @@ func (m LogsModalModel) View() tea.View {
 	body := m.viewport.View()
 	if m.err != nil {
 		body = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FAFAFA")).
+			Foreground(appstyles.Active.TextPrimary).
 			Render("Error: " + m.err.Error())
 	}
 

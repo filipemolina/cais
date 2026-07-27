@@ -8,10 +8,17 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-var errorBannerStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("#FAFAFA")).
-	Background(lipgloss.Color("#B33A3A")).
-	Padding(0, 1)
+// errorBannerStyle builds the error banner fresh each call, so it re-reads
+// appstyles.Active instead of freezing whichever theme was active when the
+// package loaded. Danger is app-level alert chrome, a different concept from
+// StatusError (one service's own state) even though this used to reach for
+// an uncoordinated fourth red instead of either.
+func errorBannerStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(appstyles.Active.TextPrimary).
+		Background(appstyles.Active.Danger).
+		Padding(0, 1)
+}
 
 func (m AppModel) View() tea.View {
 	mainMenu := m.components.MainMenu.View().Content
@@ -19,7 +26,7 @@ func (m AppModel) View() tea.View {
 
 	sections := []string{mainMenu, m.renderBody(), keybindingBar}
 	if m.lastError != "" {
-		sections = append([]string{errorBannerStyle.Render("Error: " + m.lastError)}, sections...)
+		sections = append([]string{errorBannerStyle().Render("Error: " + m.lastError)}, sections...)
 	}
 
 	layout := lipgloss.JoinVertical(lipgloss.Left, sections...)
