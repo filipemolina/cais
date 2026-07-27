@@ -9,8 +9,8 @@ step, **[H]** = housekeeping.
 
 **This file is the flat list of what is left. `docs/ROADMAP.md` is the order to
 do it in, and why** — it carries the decisions already taken with the owner, so
-work resumed mid-sequence does not re-litigate them. Phases 0–3 of that roadmap
-are done; **Phase 4, the new global keys, is next.**
+work resumed mid-sequence does not re-litigate them. Phases 0–4 of that roadmap
+are done; **Phase 5, the `?` help overlay, is next.**
 
 `README.md`, `docs/DESIGN.md`, `docs/ROADMAP.md`, and this file are the current
 documentation. The dated specs and plans under `docs/superpowers/` are completed
@@ -135,21 +135,27 @@ historical records, not a live backlog.
   and list the rest — `GetComposeFileName` returns only the winner today, and
   the natural home for the list is the `?` overlay.
 
-- [ ] **[S] The new global keys** — digits `1`–`3` and `[`/`]` for pages
-  (`alt`+letter kept as an alias), `enter` as an alias for `space` in both
-  lists, `esc` as a real "back", and `MainMenu` rendering the digit before each
-  label instead of underlining a letter. `alt` is the weak link: macOS
-  Terminal.app and iTerm2 do not send Option as Alt by default, so `alt+g`
-  silently does nothing for part of the audience. Three constraints from the
-  keymap work — `esc` must clear an applied filter before it moves focus, the
-  digits belong *inside* the `keyboardOwned()` guard so they stay letters while
-  a filter is typed, and `tab` currently does nothing while filtering. This is
-  Phase 4 in `docs/ROADMAP.md`.
+- [x] **[S] The new global keys** — digits `1`–`3` jump to pages and `[`/`]`
+  step them with wraparound (`alt`+letter kept as an alias: macOS Terminal.app
+  and iTerm2 do not send Option as Alt by default, so the chords were silently
+  dead for part of the audience). `enter` selects in both lists as an alias
+  for `space`, the nav renders each tab's digit instead of underlining a
+  letter, and `esc` is a real "back" (details → list). The three constraints
+  from the keymap work held: `esc` clears an applied filter before it moves
+  focus (`KeepsEsc`, with a focus-then-clear ladder when the filtered list is
+  not focused), the digits live inside the `keyboardOwned()` guard so they
+  stay letters while a filter is typed, and `tab` while filtering stays inert
+  — making it apply-and-move would resurrect the one-key-two-jobs collision
+  the list keymap work removed. Two labels may now share a first letter; the
+  uniqueness guard went with the underline. See *Navigation and focus* in
+  `docs/DESIGN.md`. **Remaining:** the `?` overlay (Phase 5) picks up the
+  `alt` aliases and the brackets, which the footer has no room for.
 
 - [ ] **[S] `?` help overlay** — rendered from `src/keys` so it cannot drift
   from the handlers, grouped by scope, unavailable bindings dimmed. Also the
   home for the other compose-file candidates, above, and for the `alt`+letter
-  aliases once the digits take over the nav.
+  aliases and `[`/`]` brackets, which the footer has no room for. This is
+  Phase 5 in `docs/ROADMAP.md`.
 
 - [ ] **[S] The footer wraps on a narrow terminal** — predates the compose
   file segment (which drops itself rather than contributing to this). Below

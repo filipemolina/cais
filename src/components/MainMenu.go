@@ -1,6 +1,7 @@
 package components
 
 import (
+	"fmt"
 	"image/color"
 	"slices"
 
@@ -13,9 +14,9 @@ import (
 )
 
 // MainMenuModel is the top nav bar. It is not focusable and handles no keys:
-// pages are switched with the global alt+<letter> chords that it advertises by
-// underlining each label's first letter (see apptypes.PageShortcut). All it
-// tracks is which page is active, so it can highlight that tab.
+// pages are switched with the global digit keys that it advertises by
+// rendering each tab's digit before its label. All it tracks is which page is
+// active, so it can highlight that tab.
 type MainMenuModel struct {
 	items             []string
 	selectedItemIndex int
@@ -40,22 +41,25 @@ func (m MainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// tabLabel renders a page label with its first letter underlined. That letter
-// is the page's alt+<letter> chord (see apptypes.PageShortcut), so underlining
-// it advertises the shortcut in place rather than spending a separate hint on
-// each page.
-func tabLabel(label string, fg color.Color, bold bool) string {
-	runes := []rune(label)
-	if len(runes) == 0 {
-		return label
-	}
+// tabLabel renders a tab as "<digit> <label>". The digit is the page's global
+// shortcut - 1 is the first page - shown in the accent color so the nav
+// advertises the key in place rather than spending a footer hint on each page.
+// It replaced the first-letter underline when digits became the primary
+// scheme; the alt+<letter> chord remains as an alias (apptypes.PageShortcut).
+func tabLabel(page string, index int, fg color.Color, bold bool) string {
+	digit := lipgloss.NewStyle().
+		Foreground(appstyles.Accent).
+		Background(appstyles.BackgroundContent).
+		Bold(true).
+		Render(fmt.Sprintf("%d", index+1))
 
-	base := lipgloss.NewStyle().
+	label := lipgloss.NewStyle().
 		Foreground(fg).
 		Background(appstyles.BackgroundContent).
-		Bold(bold)
+		Bold(bold).
+		Render(" " + apptypes.PageLabel(page))
 
-	return base.Underline(true).Render(string(runes[0])) + base.Render(string(runes[1:]))
+	return digit + label
 }
 
 func (m MainMenuModel) View() tea.View {
@@ -66,8 +70,8 @@ func (m MainMenuModel) View() tea.View {
 		Width(m.terminalWidth)
 
 	// Cell styles carry only the spacing. All text styling - color, bold, and
-	// the shortcut underline - happens in tabLabel, so the underline is not
-	// competing with a foreground set on the enclosing style.
+	// the accent digit - happens in tabLabel, so the digit is not competing
+	// with a foreground set on the enclosing style.
 	cellStyle := lipgloss.NewStyle().
 		Background(appstyles.BackgroundContent).
 		Padding(0, 2)
@@ -93,12 +97,12 @@ func (m MainMenuModel) View() tea.View {
 		isSelected := index == m.selectedItemIndex
 
 		if isSelected {
-			cell := activeCellStyle.Render(tabLabel(apptypes.PageLabel(item), appstyles.TextPrimary, true))
+			cell := activeCellStyle.Render(tabLabel(item, index, appstyles.TextPrimary, true))
 			cells = append(cells, lipgloss.JoinHorizontal(lipgloss.Left, accentBar, cell))
 			continue
 		}
 
-		cells = append(cells, cellStyle.Render(tabLabel(apptypes.PageLabel(item), appstyles.TextDim, false)))
+		cells = append(cells, cellStyle.Render(tabLabel(item, index, appstyles.TextDim, false)))
 	}
 
 	tabs := lipgloss.JoinHorizontal(lipgloss.Left, cells...)

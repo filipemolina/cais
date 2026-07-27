@@ -102,22 +102,53 @@ regions:
    keys are hidden when no group or service is selected, and list-empty keys
    are suppressed). It does not decide that itself: it tracks the state and
    asks `keys.Active` — see *Where keybindings live* below. The global keys
-   (page chords, quit) sit on the right, apart from the context-dependent ones,
+   (page digits, quit) sit on the right, apart from the context-dependent ones,
    with the resolved compose file dimmed just left of them — see *Which compose
    file* below.
 
 ### Navigation and focus
 
-**Pages are switched with `alt`+letter; the nav is not focusable.** The letter
-is the first letter of the tab's label, which the nav underlines, so the tab
-advertises its own shortcut. `apptypes.PageShortcut` derives the letter from the
-label rather than reading a table, so the underline and the binding cannot drift
-apart; `TestPageShortcutsAreUnique` guards against two labels sharing a letter.
+**Pages are switched with digits; the nav is not focusable.** `1` opens the
+first tab, `2` the second, and so on; `[` and `]` step through the tabs in
+order, wrapping around. The nav renders each tab's digit before its label (`1
+Groups`), so the tab advertises its own key. `alt`+letter remains as an alias,
+the letter derived from the label by `apptypes.PageShortcut`; it is advertised
+only in the `?` overlay.
 
-`alt` and not `ctrl`: terminals intercept `ctrl+s` as XOFF flow control and
-`ctrl+d` as end-of-input, so those chords are unreliable on two of the four
-pages. The chords are handled in `AppModel.Update`, after the modal check, so
-typing in a text field can never navigate away.
+Why digits at all: `alt` was the weakest link in the old scheme. macOS
+Terminal.app and iTerm2 do not send Option as Alt until the user changes a
+setting, so `alt+g` silently did nothing for part of the audience. Digits need
+no modifier and no terminal cooperation. They also drop the constraint that no
+two labels may share a first letter, which the underline scheme needed; a
+shared letter now just means the alias resolves to the first matching page.
+Even the alias avoids `ctrl`: terminals intercept `ctrl+s` as XOFF flow
+control and `ctrl+d` as end-of-input.
+
+All page keys are handled in `AppModel.Update`, after the modal check and
+inside the `keyboardOwned()` guard, so typing in a text field or a list filter
+can never navigate away - while a filter is being typed, `1` is a letter. The
+brackets are declared in `src/keys`; the digits are matched by key code in
+`pageForNavKey`, because which digits are live depends on how many pages there
+are - and the footer's `1-N` hint is derived from that same list, so a new tab
+extends both instead of drifting from them.
+
+**`esc` is "back", as a ladder of claims.** Strongest first: a modal closes
+itself; a filter being typed owns the keyboard and esc abandons it; a focused
+list holding an applied filter keeps esc, because esc is the only way back to
+the full rows - the list says so through `KeepsEsc()`, asked via
+`AppModel.escKept()` the same way `OwnsKeyboard()` is asked, because the
+answer has to be right on the keystroke that changes it. What remains is the
+details panel, where esc returns focus to the list. When a filter stands on an
+*unfocused* list, esc moves focus to the list first and clears the filter on
+the next press, so the user is never stranded in a filtered list with no
+advertised way out. The footer offers `esc back` in the details contexts only:
+everywhere else the key is either spoken for or does nothing, and the bar does
+not advertise inert keys.
+
+`tab` still does nothing while a filter is being typed: the filter input owns
+the keyboard, and `enter`/`esc` are the only ways out of it. Making `tab`
+apply-and-move would resurrect the one-key-two-jobs collision the list keymap
+work removed, so inert it stays.
 
 Because the nav takes no focus, `constants.FocusableComponents` holds only the
 two body panels, and `Tab`/`Shift+Tab` alternate between them. Component ids are
@@ -165,7 +196,7 @@ The tiers:
 
 | Tier | Keys | Rule |
 | --- | --- | --- |
-| Global | `alt`+letter, `tab` / `shift+tab`, `q` | Same meaning everywhere, never contextual — but they yield to whatever owns the keyboard |
+| Global | digits, `[` / `]`, `esc` (back), `tab` / `shift+tab`, `q` | Same meaning everywhere, never contextual — but they yield to whatever owns the keyboard (see the esc ladder under *Navigation and focus*) |
 | Force quit | `ctrl+c` | Yields to nothing, checked before the modal handoff |
 | Panel | lowercase letters (`s t r p x l e n d`) | Act on the focused panel's selection; one verb, one key, on every panel |
 | Destructive | `x`, `d` | Always through `ConfirmModal`; never dispatched straight from a panel |

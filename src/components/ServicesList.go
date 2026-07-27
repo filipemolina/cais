@@ -149,6 +149,12 @@ func (m ServicesListModel) OwnsKeyboard() bool {
 	return m.list.FilterState() == list.Filtering
 }
 
+// KeepsEsc reports whether the list needs esc for itself. Same rule as the
+// groups list - see GroupListModel.KeepsEsc.
+func (m ServicesListModel) KeepsEsc() bool {
+	return m.isFocused && m.list.FilterState() == list.FilterApplied
+}
+
 // resizeList sizes the inner list to the space left inside the panel box
 // after the wrapper padding.
 func (m *ServicesListModel) resizeList() {

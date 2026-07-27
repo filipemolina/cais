@@ -26,14 +26,15 @@ func PageLabel(page string) string {
 	return page
 }
 
-// PageShortcut returns the letter that jumps to a page: the first letter of its
-// display label, lowercased. The nav underlines this letter in the label and
-// AppModel binds it as alt+<letter>.
+// PageShortcut returns the letter of a page's alt+<letter> chord: the first
+// letter of its display label, lowercased.
 //
-// It is derived from the label rather than listed in a table on purpose - a
-// hand-maintained table drifts from the underline, and then the nav advertises
-// a key that does nothing. TestPageShortcutsAreUnique guards the assumption
-// that no two labels start with the same letter.
+// The chord is an alias. The digits are the primary page scheme, rendered on
+// the tabs themselves; the chord stays for the terminals that send Option as
+// Alt. It is still derived from the label rather than listed in a table,
+// because a hand-maintained table drifts. Two labels may now share a first
+// letter - the digits are unambiguous, and the alias simply resolves to the
+// first matching page.
 func PageShortcut(page string) string {
 	label := PageLabel(page)
 	if label == "" {
@@ -43,8 +44,10 @@ func PageShortcut(page string) string {
 	return strings.ToLower(string([]rune(label)[0]))
 }
 
-// PageForShortcut returns the page a shortcut letter jumps to, or "" if the
-// letter is not a page shortcut.
+// PageForShortcut returns the page a chord letter jumps to, or "" if the
+// letter is not a page chord. When two labels share a first letter the first
+// page wins - acceptable for an alias, since the digits are the primary
+// scheme and are unambiguous.
 func PageForShortcut(letter string) string {
 	for _, page := range PageTitles {
 		if PageShortcut(page) == strings.ToLower(letter) {
