@@ -17,9 +17,12 @@
 package keys
 
 import (
+	"fmt"
+
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
 
+	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 )
 
@@ -32,10 +35,15 @@ type GlobalKeys struct {
 	// precisely so that ctrl+c yields to nothing.
 	Quit      key.Binding
 	ForceQuit key.Binding
-	// Page is advertised but not matched: the page chords are recognised by
-	// their alt modifier rather than by keystroke, so that alt+shift+g and
-	// ctrl+alt+g are left alone. See model.pageForKey.
-	Page key.Binding
+	// Page is advertised but not matched: the digits are recognised by their
+	// key code and the alt+<letter> alias by its modifier, so that 1 as filter
+	// text and alt+shift+g are both left alone. See model.pageForNavKey. The
+	// bracket pair steps through the pages in order; it is not in the footer's
+	// global group for width, but lives here so the help overlay renders it
+	// from the same place as everything else.
+	Page     key.Binding
+	NextPage key.Binding
+	PrevPage key.Binding
 }
 
 // ListKeys act on the body's left panel: the groups list and the services
@@ -93,7 +101,13 @@ var Global = GlobalKeys{
 	// and the footer already says q. It carries no help text so Globals stays
 	// the same two hints it was.
 	ForceQuit: key.NewBinding(key.WithKeys("ctrl+c")),
-	Page:      key.NewBinding(key.WithHelp("alt+·", "page")),
+	// The digit range is derived from the page list rather than written out,
+	// so a fourth tab extends the hint instead of drifting from it.
+	Page: key.NewBinding(
+		key.WithHelp(fmt.Sprintf("1-%d", len(apptypes.PageTitles)), "page"),
+	),
+	NextPage: key.NewBinding(key.WithKeys("]"), key.WithHelp("]", "next page")),
+	PrevPage: key.NewBinding(key.WithKeys("["), key.WithHelp("[", "prev page")),
 }
 
 var List = ListKeys{
