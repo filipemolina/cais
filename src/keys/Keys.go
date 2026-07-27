@@ -18,6 +18,8 @@ package keys
 
 import (
 	"fmt"
+	"slices"
+	"strings"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
@@ -41,6 +43,9 @@ type GlobalKeys struct {
 	// which is why the footer offers it in the details contexts and nowhere
 	// else. See model.AppModel.escKept.
 	Back key.Binding
+	// Help opens the help overlay. The overlay renders from this package, so
+	// what it says is what the handlers do.
+	Help key.Binding
 	// Page is advertised but not matched: the digits are recognised by their
 	// key code and the alt+<letter> alias by its modifier, so that 1 as filter
 	// text and alt+shift+g are both left alone. See model.pageForNavKey. The
@@ -56,9 +61,10 @@ type GlobalKeys struct {
 // list. New and Delete only mean something on the groups list, which is the
 // only list whose contents the app can create.
 //
-// Filter and ClearFilter belong to the bubbles list rather than to a handler
-// here, and are declared anyway so the footer advertises them from the same
-// place as everything else. See ListKeyMap.
+// Filter, ClearFilter, GoToStart and GoToEnd belong to the bubbles list
+// rather than to a handler here, and are declared anyway so the footer and
+// the help overlay advertise them from the same place as everything else.
+// See ListKeyMap.
 type ListKeys struct {
 	Navigate     key.Binding
 	Select       key.Binding
@@ -68,6 +74,8 @@ type ListKeys struct {
 	ClearFilter  key.Binding
 	ApplyFilter  key.Binding
 	CancelFilter key.Binding
+	GoToStart    key.Binding
+	GoToEnd      key.Binding
 }
 
 // DetailsKeys act on whatever the body's right panel is showing. The first six
@@ -103,10 +111,10 @@ var Global = GlobalKeys{
 	NextPanel: key.NewBinding(key.WithKeys("tab"), key.WithHelp("tab", "next")),
 	PrevPanel: key.NewBinding(key.WithKeys("shift+tab"), key.WithHelp("shift+tab", "prev")),
 	Quit:      key.NewBinding(key.WithKeys("q"), key.WithHelp("q", "quit")),
-	// Not advertised: ctrl+c is the escape hatch every terminal program has,
-	// and the footer already says q. It carries no help text so Globals stays
-	// the same two hints it was.
-	ForceQuit: key.NewBinding(key.WithKeys("ctrl+c")),
+	// Not in the footer's global group: ctrl+c is the escape hatch every
+	// terminal program has, and the footer already says q. The help overlay
+	// is where it is advertised.
+	ForceQuit: key.NewBinding(key.WithKeys("ctrl+c"), key.WithHelp("ctrl+c", "force quit")),
 	// The digit range is derived from the page list rather than written out,
 	// so a fourth tab extends the hint instead of drifting from it.
 	Page: key.NewBinding(
@@ -115,6 +123,7 @@ var Global = GlobalKeys{
 	NextPage: key.NewBinding(key.WithKeys("]"), key.WithHelp("]", "next page")),
 	PrevPage: key.NewBinding(key.WithKeys("["), key.WithHelp("[", "prev page")),
 	Back:     key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "back")),
+	Help:     key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "help")),
 }
 
 var List = ListKeys{
@@ -135,6 +144,8 @@ var List = ListKeys{
 	// generic confirm/cancel a modal shows.
 	ApplyFilter:  key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "apply")),
 	CancelFilter: key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "cancel")),
+	GoToStart:   key.NewBinding(key.WithKeys("home", "g"), key.WithHelp("g", "first row")),
+	GoToEnd:     key.NewBinding(key.WithKeys("end", "G"), key.WithHelp("G", "last row")),
 }
 
 var Details = DetailsKeys{
@@ -184,8 +195,8 @@ func ListKeyMap() list.KeyMap {
 		// are the ones that collided with the panel verbs.
 		PrevPage:  key.NewBinding(key.WithKeys("left", "pgup"), key.WithHelp("←/pgup", "prev page")),
 		NextPage:  key.NewBinding(key.WithKeys("right", "pgdown"), key.WithHelp("→/pgdn", "next page")),
-		GoToStart: key.NewBinding(key.WithKeys("home", "g"), key.WithHelp("g/home", "go to start")),
-		GoToEnd:   key.NewBinding(key.WithKeys("end", "G"), key.WithHelp("G/end", "go to end")),
+		GoToStart: List.GoToStart,
+		GoToEnd:   List.GoToEnd,
 
 		Filter:      List.Filter,
 		ClearFilter: List.ClearFilter,
@@ -313,5 +324,120 @@ func Active(ctx Context) []key.Binding {
 // Globals are the always-available keys the footer pins to its right-hand side,
 // away from the context-dependent ones.
 func Globals() []key.Binding {
-	return []key.Binding{Global.Page, Global.Quit}
+	return []key.Binding{Global.Page, Global.Help, Global.Quit}
+}
+
+// Scope is one group of related keys in the help overlay.
+type Scope struct {
+	Title   string
+	Entries []Entry
+}
+
+// Entry is one row of the help overlay: the binding to render, and whether
+// the user can press it right now. Rows that cannot be pressed are dimmed.
+type Entry struct {
+	Binding   key.Binding
+	Available bool
+}
+
+// Catalog returns every key in the app, grouped by scope, with availability
+// resolved against ctx. It reads the same bindings the handlers match against
+// - that is the point of the overlay: it cannot drift from the handlers.
+func Catalog(ctx Context) []Scope {
+	live := pressableNow(ctx)
+
+	entries := func(bindings ...key.Binding) []Entry {
+		out := make([]Entry, 0, len(bindings))
+		for _, b := range bindings {
+			out = append(out, Entry{Binding: b, Available: containsBinding(live, b)})
+		}
+		return out
+	}
+
+	// g/G live wherever the arrows do - a focused list - but the footer never
+	// advertises them, so Active never returns them.
+	listNavigable := containsBinding(live, List.Navigate)
+
+	return []Scope{
+		{
+			Title: "Pages",
+			Entries: append(
+				entries(Global.Page, Global.PrevPage, Global.NextPage),
+				// The alt chords are always live as aliases; one entry lists
+				// them, derived from the labels so it cannot drift either.
+				Entry{Binding: pageChordBinding(), Available: true},
+			),
+		},
+		{
+			Title: "List",
+			Entries: append(
+				entries(List.Select, List.New, List.Delete, List.Filter, List.ClearFilter, List.Navigate),
+				Entry{Binding: List.GoToStart, Available: listNavigable},
+				Entry{Binding: List.GoToEnd, Available: listNavigable},
+			),
+		},
+		{
+			Title: "Details",
+			Entries: entries(
+				Details.Start, Details.Stop, Details.Restart,
+				Details.Pull, Details.Remove, Details.Logs,
+				Details.EditService, Details.EditFile,
+			),
+		},
+		{
+			// Overlay keys do nothing on the main screen the overlay was
+			// opened from, so they are dimmed there by construction.
+			Title: "Overlays",
+			Entries: entries(
+				Overlay.Submit, Overlay.Cancel, Overlay.Yes, Overlay.No,
+				Overlay.NextField, Overlay.Toggle, Overlay.Follow,
+			),
+		},
+		{
+			Title: "Global",
+			Entries: entries(
+				Global.NextPanel, Global.PrevPanel, Global.Back,
+				Global.Quit, Global.ForceQuit, Global.Help,
+			),
+		},
+	}
+}
+
+// pressableNow is the set of bindings the user can actually press in ctx: the
+// contextual ones Active returns, plus the globals that are always live
+// whether or not the footer has room to advertise them.
+func pressableNow(ctx Context) []key.Binding {
+	live := append(Active(ctx), Globals()...)
+	live = append(live, Global.ForceQuit, Global.PrevPage, Global.NextPage)
+
+	// shift+tab is tab's twin: live wherever tab is, with no footer slot of
+	// its own.
+	if containsBinding(live, Global.NextPanel) {
+		live = append(live, Global.PrevPanel)
+	}
+
+	return live
+}
+
+// pageChordBinding is the help face of the alt+letter aliases: one entry
+// listing each page's chord ("alt+g/s/f"), derived from the labels so a
+// renamed tab cannot leave it pointing at the old letter.
+func pageChordBinding() key.Binding {
+	letters := make([]string, 0, len(apptypes.PageTitles))
+	for _, page := range apptypes.PageTitles {
+		letters = append(letters, apptypes.PageShortcut(page))
+	}
+
+	return key.NewBinding(key.WithHelp("alt+"+strings.Join(letters, "/"), "page (alias)"))
+}
+
+// sameBinding reports whether two bindings are the same one: same keystrokes,
+// same help. The catalog compares values rather than pointers because
+// bindings travel by value.
+func sameBinding(a, b key.Binding) bool {
+	return slices.Equal(a.Keys(), b.Keys()) && a.Help() == b.Help()
+}
+
+func containsBinding(haystack []key.Binding, needle key.Binding) bool {
+	return slices.ContainsFunc(haystack, func(b key.Binding) bool { return sameBinding(b, needle) })
 }
