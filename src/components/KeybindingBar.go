@@ -138,8 +138,8 @@ func hintAs(binding key.Binding, desc string) KeyHint {
 // lighter descColor when they sit on a lighter surface than the bar does.
 func renderKeyHints(hints []KeyHint, descColor color.Color) string {
 	descStyle := lipgloss.NewStyle().Foreground(descColor)
-	sepStyle := lipgloss.NewStyle().Foreground(appstyles.TextDim)
-	keyStyle := lipgloss.NewStyle().Foreground(appstyles.TextPrimary).Bold(true)
+	sepStyle := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim)
+	keyStyle := lipgloss.NewStyle().Foreground(appstyles.Active.TextPrimary).Bold(true)
 
 	parts := make([]string, 0, len(hints)*2)
 	for i, h := range hints {
@@ -180,7 +180,7 @@ func (m KeybindingBarModel) composeFileSegment(spare int) string {
 		candidates = append(candidates, base)
 	}
 
-	style := lipgloss.NewStyle().Foreground(appstyles.TextDim)
+	style := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim)
 
 	for _, candidate := range candidates {
 		segment := candidate + suffix + separator
@@ -198,14 +198,14 @@ func (m KeybindingBarModel) View() tea.View {
 	// The page keys are global, so they sit on the right with quit rather
 	// than in the context-dependent hints. The nav renders each tab's own
 	// digit; this is the reminder that the digits switch pages.
-	rightHint := renderKeyHints(hintsFrom(keys.Globals()), appstyles.TextDim)
+	rightHint := renderKeyHints(hintsFrom(keys.Globals()), appstyles.Active.TextDim)
 
 	width := m.terminalWidth
 	if width <= 0 {
 		width = 80
 	}
 
-	left := renderKeyHints(hints, appstyles.TextDim)
+	left := renderKeyHints(hints, appstyles.Active.TextDim)
 
 	// The 4 is the bar's horizontal padding; the 1 is the narrowest gap the
 	// two hint groups will accept between them. What survives that is what the
@@ -222,7 +222,7 @@ func (m KeybindingBarModel) View() tea.View {
 	bar := lipgloss.JoinHorizontal(lipgloss.Left, left, gap, file, rightHint)
 
 	rendered := lipgloss.NewStyle().
-		Background(appstyles.BackgroundContent).
+		Background(appstyles.Active.BackgroundContent).
 		Width(width).
 		Padding(0, 2).
 		Render(bar)

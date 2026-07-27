@@ -20,15 +20,21 @@ import (
 // can't grow the buffer without bound.
 const maxLogLines = 5000
 
+// logsModalWrapper builds the near-full-screen overlay's chrome fresh each
+// call, so it re-reads appstyles.Active instead of freezing whichever theme
+// was active when the package loaded.
+//
 // BorderBackground matters as much as Background here: without it lipgloss
 // leaves the border cells on the terminal's default color, outlining a
 // near-full-screen overlay in the wrong shade.
-var logsModalWrapper = lipgloss.NewStyle().
-	Padding(0, 1).
-	BorderStyle(lipgloss.RoundedBorder()).
-	BorderForeground(appstyles.PrimaryColor).
-	BorderBackground(appstyles.PaneColor).
-	Background(appstyles.PaneColor)
+func logsModalWrapper() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Padding(0, 1).
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(appstyles.Active.Accent).
+		BorderBackground(appstyles.Active.PanelBg).
+		Background(appstyles.Active.PanelBg)
+}
 
 type LogsModalModel struct {
 	viewport viewport.Model
@@ -100,7 +106,7 @@ func (m *LogsModalModel) resize(termWidth, termHeight int) {
 	width := int(float32(termWidth) * 0.9)
 	height := int(float32(termHeight) * 0.9)
 
-	h, v := logsModalWrapper.GetFrameSize()
+	h, v := logsModalWrapper().GetFrameSize()
 	// Reserve two rows for the title and the footer hint.
 	m.viewport.SetWidth(max(1, width-h))
 	m.viewport.SetHeight(max(1, height-v-2))
@@ -109,7 +115,7 @@ func (m *LogsModalModel) resize(termWidth, termHeight int) {
 func (m LogsModalModel) View() tea.View {
 	title := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(appstyles.PrimaryFontColor).
+		Foreground(appstyles.Active.TextPrimary).
 		Render("logs: " + m.title)
 
 	followState := "off"
@@ -123,18 +129,18 @@ func (m LogsModalModel) View() tea.View {
 		hintAs(keys.List.Navigate, "scroll"),
 		hintAs(keys.Overlay.Follow, fmt.Sprintf("follow (%s)", followState)),
 		hintAs(keys.Overlay.Cancel, "quit"),
-	}, appstyles.SecondaryFontColor)
+	}, appstyles.Active.TextMuted)
 
 	if m.ended {
 		footer = lipgloss.NewStyle().
-			Foreground(appstyles.SecondaryFontColor).
+			Foreground(appstyles.Active.TextMuted).
 			Render("stream ended · ") + footer
 	}
 
 	body := m.viewport.View()
 	if m.err != nil {
 		body = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FAFAFA")).
+			Foreground(appstyles.Active.TextPrimary).
 			Render("Error: " + m.err.Error())
 	}
 
@@ -142,11 +148,11 @@ func (m LogsModalModel) View() tea.View {
 	// pads them out with unstyled spaces; seal them against the modal's
 	// background before the wrapper draws its border.
 	content := appstyles.FillBackground(
-		appstyles.PaneColor,
+		appstyles.Active.PanelBg,
 		lipgloss.JoinVertical(lipgloss.Left, title, body, footer),
 	)
 
-	return tea.NewView(logsModalWrapper.Render(content))
+	return tea.NewView(logsModalWrapper().Render(content))
 }
 
 // LogsModal opens a near-full-screen overlay streaming logs for target (a

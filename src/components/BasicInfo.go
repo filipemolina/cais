@@ -14,7 +14,7 @@ import (
 func BasicInfo(service types.ServiceConfig, width int) string {
 	wrapper := fitBox(lipgloss.NewStyle().
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(appstyles.PrimaryColor).
+		BorderForeground(appstyles.Active.Accent).
 		Padding(1), width, 0)
 
 	nameHeader := lipgloss.NewStyle().Bold(true).Render("Name: ")

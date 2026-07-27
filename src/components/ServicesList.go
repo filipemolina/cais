@@ -42,9 +42,9 @@ func (d servicesListCustomDelegate) Render(w io.Writer, m list.Model, index int,
 	var titleColor color.Color
 
 	if isActive {
-		titleColor = appstyles.PrimaryFontColor
+		titleColor = appstyles.Active.TextPrimary
 	} else {
-		titleColor = appstyles.SecondaryFontColor
+		titleColor = appstyles.Active.TextMuted
 	}
 
 	rowBg := listRowBg(isActive, d.isParentFocused)
@@ -64,21 +64,21 @@ func (d servicesListCustomDelegate) Render(w io.Writer, m list.Model, index int,
 		wrapperStyle = wrapperStyle.
 			BorderLeft(true).
 			BorderStyle(lipgloss.ThickBorder()).
-			BorderLeftForeground(appstyles.PrimaryColor)
+			BorderLeftForeground(appstyles.Active.Accent)
 
 	} else if isSelected && d.isParentFocused {
 		wrapperStyle = wrapperStyle.
 			Bold(true).
 			BorderLeft(true).
 			BorderStyle(lipgloss.DoubleBorder()).
-			BorderLeftForeground(appstyles.PrimaryFontColor)
+			BorderLeftForeground(appstyles.Active.TextPrimary)
 
 	} else {
 		// Default unselected, inactive state
 		wrapperStyle = wrapperStyle.
 			BorderLeft(true).
 			BorderStyle(lipgloss.NormalBorder()).
-			BorderLeftForeground(appstyles.SecondaryFontColor)
+			BorderLeftForeground(appstyles.Active.TextMuted)
 
 	}
 
@@ -296,7 +296,7 @@ func ServicesList(services []types.ServiceConfig, width int, height int) tea.Mod
 	servicesList.Styles.Title = servicesList.
 		Styles.
 		Title.
-		Background(appstyles.PrimaryColor)
+		Background(appstyles.Active.Accent)
 
 	model := ServicesListModel{
 		list:         servicesList,

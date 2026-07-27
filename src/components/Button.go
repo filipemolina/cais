@@ -31,7 +31,7 @@ func (m ButtonModel) View() tea.View {
 	buttonStyle := lipgloss.NewStyle().
 		BorderStyle(lipgloss.RoundedBorder()).
 		Padding(0, 1).
-		BorderForeground(appstyles.PrimaryColor).
+		BorderForeground(appstyles.Active.Accent).
 		Background(m.bg).
 		BorderBackground(m.bg)
 

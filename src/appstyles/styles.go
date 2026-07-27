@@ -2,97 +2,24 @@ package appstyles
 
 import "charm.land/lipgloss/v2"
 
-// Semantic tokens used across the UI. The single source of truth for color.
-// Add new tokens here rather than scattering hex values in components.
+// Computed styles built from the active theme. A raw color is a Theme field
+// (see Theme.go) and is read directly - appstyles.Active.TextPrimary, say.
+// Anything that needs actual style logic - more than reading one field -
+// lives here as a function instead of a package-level var, so it re-reads
+// Active on every call rather than freezing whichever theme was active at
+// package init. NormalTitle used to be exactly that kind of frozen var; the
+// comment stayed to explain why it no longer is.
 
-// Accent is the primary purple/magenta used for focus, branding, and CTAs.
-var Accent = lipgloss.Color("#BC3FBC")
-
-// Text tokens.
-var TextPrimary = lipgloss.Color("#FAFAFA")
-var TextMuted = lipgloss.Darken(TextPrimary, 0.2)
-var TextDim = lipgloss.Darken(TextPrimary, 0.5)
-
-// Panel/surface tokens.
-var PanelBg = lipgloss.Color("#151520")
-var PanelBgActive = lipgloss.Lighten(PanelBg, 0.05)
-var SurfaceBg = lipgloss.Color("#3F3F3F")
-
-// Three-tier background system, layered to separate sections visually
-// without relying on borders. See docs/DESIGN.md for the model.
-//
-//	Tier 1 (terminal default) - outside the app
-//	Tier 2 (BackgroundContent) - the "frame": top nav, bottom keybinding bar
-//	Tier 3 (BackgroundPanel)   - the "main content": left + right panels
-//	Tier 4 (BackgroundElevated) - the "selection": focused panel, modals
-//
-// The focus state is shown by lifting a panel from tier 3 to tier 4
-// (a subtle background lightening), not by a thicker border. Accent color
-// is reserved for the nav's active underline and the keybinding bar's key
-// labels.
-var BackgroundContent = lipgloss.Lighten(PanelBg, 0.04)
-var BackgroundPanel = lipgloss.Lighten(PanelBg, 0.08)
-var BackgroundElevated = lipgloss.Lighten(PanelBg, 0.12)
-
-// BackgroundRecessed runs the other way: a surface that sits *below* the panel
-// tier, for insets like the empty-state cards, which should read as cut into
-// the panel rather than raised off it. It is the unlightened base color, so it
-// stays darker than every tier above it including a focused panel's tier 4.
-var BackgroundRecessed = PanelBg
-
-// Border tokens.
-var BorderDefault = lipgloss.Darken(PanelBg, 0.3)
-var BorderFocus = Accent
-
-// BorderCard rims a recessed surface. It has to be lighter than the surface it
-// wraps, which is why BorderDefault does not work here: that token is darker
-// than PanelBg and disappears against a BackgroundRecessed fill.
-var BorderCard = lipgloss.Lighten(PanelBg, 0.18)
-
-// Status tokens.
-var StatusRunning = lipgloss.Color("#67C58A")
-var StatusStopped = lipgloss.Color("#858392")
-var StatusStarting = lipgloss.Color("#E8C547")
-var StatusError = lipgloss.Color("#EB4268")
-
-// Backward-compatible aliases for existing call sites.
-var PrimaryColor = Accent
-var PaneColor = PanelBg
-var PanelBackgroundColor = SurfaceBg
-var SelectedPaneColor = lipgloss.Darken(PrimaryColor, 0.5)
-var FocusedPaneColor = lipgloss.Darken(PrimaryColor, 0.7)
-var PrimaryFontColor = TextPrimary
-var SecondaryFontColor = TextMuted
-
-var lightDark = lipgloss.LightDark(false)
-
+// DocStyle is an empty style kept only for its frame size (Padding/Border),
+// which does not depend on color - see ContainersList.go's WindowSizeMsg
+// handling.
 var DocStyle = lipgloss.NewStyle()
 
-var BackgroundColor = lipgloss.Darken(PrimaryColor, 0.5)
-var FocusedBackgroundColor = PrimaryColor
-var ComplementaryColor = lipgloss.Complementary(PrimaryColor)
-
-var NormalTitle = lipgloss.NewStyle().
-	Foreground(TextPrimary).
-	Background(PrimaryColor).
-	Padding(0, 1).
-	MarginLeft(2)
-
-var NormalDesc = NormalTitle.
-	Foreground(lightDark(lipgloss.Color("#A49FA5"), lipgloss.Color("#777777")))
-
-var SelectedTitle = lipgloss.NewStyle().
-	Border(lipgloss.NormalBorder(), false, false, false, true).
-	BorderForeground(lightDark(lipgloss.Color("#F793FF"), lipgloss.Color("#AD58B4"))).
-	Foreground(lightDark(lipgloss.Color("#EE6FF8"), lipgloss.Color("#EE6FF8"))).
-	Padding(0, 0, 0, 1)
-
-var SelectedDesc = SelectedTitle.
-	Foreground(lightDark(lipgloss.Color("#F793FF"), lipgloss.Color("#AD58B4")))
-
-var DimmedTitle = lipgloss.NewStyle().
-	Foreground(lightDark(lipgloss.Color("#A49FA5"), lipgloss.Color("#777777"))).
-	Padding(0, 0, 0, 2) //nolint:mnd
-
-var DimmedDesc = DimmedTitle.
-	Foreground(lightDark(lipgloss.Color("#C2B8C2"), lipgloss.Color("#4D4D4D")))
+// NormalTitle is the title chip on a panel frame - see PanelFrame.go.
+func NormalTitle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(Active.TextPrimary).
+		Background(Active.Accent).
+		Padding(0, 1).
+		MarginLeft(2)
+}

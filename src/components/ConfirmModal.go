@@ -35,7 +35,7 @@ func (m ConfirmModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m ConfirmModalModel) View() tea.View {
-	return tea.NewView(modalSurface(appstyles.PanelBackgroundColor, m.message))
+	return tea.NewView(modalSurface(appstyles.Active.ModalBg, m.message))
 }
 
 // ConfirmModal shows message and, if the user presses 'y', runs confirm

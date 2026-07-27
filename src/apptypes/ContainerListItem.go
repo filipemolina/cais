@@ -14,14 +14,14 @@ func (i ContainerListItem) Description(isSelected bool) string {
 	wrapperStyle := lipgloss.NewStyle()
 
 	if isSelected {
-		wrapperStyle = wrapperStyle.Background(appstyles.PanelBackgroundColor)
+		wrapperStyle = wrapperStyle.Background(appstyles.Active.ModalBg)
 	}
 
 	boldStyle := wrapperStyle.
-		Foreground(appstyles.PrimaryFontColor).
+		Foreground(appstyles.Active.TextPrimary).
 		Bold(true)
 
-	normalStyle := wrapperStyle.Foreground(appstyles.SecondaryFontColor)
+	normalStyle := wrapperStyle.Foreground(appstyles.Active.TextMuted)
 	description := boldStyle.Render("Status: ") + normalStyle.Render(i.Status)
 
 	return description
