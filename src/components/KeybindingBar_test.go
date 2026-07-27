@@ -243,7 +243,7 @@ func TestFooterComposeFileNeverCrowdsOutTheKeys(t *testing.T) {
 // The right-hand side of the bar is fixed rather than context-dependent, so it
 // gets its own expectation.
 func TestFooterGlobalHints(t *testing.T) {
-	want := "1-3 page · q quit"
+	want := "1-3 page · ? help · q quit"
 
 	if got := joinHints(hintsFrom(keys.Globals())); got != want {
 		t.Errorf("global hints\n got: %s\nwant: %s", got, want)

@@ -134,6 +134,13 @@ func TestNoBackgroundBleedInModals(t *testing.T) {
 				cmds.GetConfigMsg{Err: utils.ErrNoComposeFile},
 			},
 		},
+		{
+			name: "help overlay",
+			msgs: []tea.Msg{
+				cmds.GetConfigMsg{FileName: "compose.yaml", Project: project()},
+				cmds.OpenHelpModalMsg{},
+			},
+		},
 	}
 
 	for _, tc := range cases {
