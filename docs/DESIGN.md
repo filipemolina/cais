@@ -629,17 +629,18 @@ Before adding a feature, answer these:
 2. **Can it be expressed as `profiles:` tag manipulation?** See §3. If yes,
    it fits the home page's mental model. If no, it may need a different
    mechanism.
-3. **Does it require editing existing services?** That capability is
-   currently a roadmap item. The first place to add it is the Services page,
-   not home — home is for groups.
+3. **Does it require editing existing services?** Inline (`textarea`) editing
+   is currently a roadmap item; the `$EDITOR` path (`e` for one service, `E`
+   for the whole file) already works. The first place to add inline editing is
+   the Services page, not home — home is for groups.
 4. **Does it conflict with the Services page's role?** If a feature would
    duplicate Services-page functionality, prefer to extend that page unless
    there's a clear group-level reason.
 
 ## 7. Related documents
 
-- [Roadmap](ROADMAP.md) — the ordered plan to a first alpha, the decisions
-  already taken with the owner, and which phase is next. Live.
+- [Roadmap](ROADMAP.md) — the ordered plan, the decisions already taken with
+  the owner, and the post-alpha list. Live.
 - [Current TODO](../TODO.md) — the live worklist and recent completed work.
 - [Contributing](../CONTRIBUTING.md) — the build/test loop, how to test a TUI,
   and how a release is cut.
@@ -651,3 +652,8 @@ Before adding a feature, answer these:
   completed historical design for bootstrapping a compose file from inside the TUI.
 - [Bootstrap compose file plan](superpowers/plans/2026-07-23-bootstrap-compose-file.md) —
   completed historical implementation plan for that flow.
+- [Edit services design](superpowers/specs/2026-07-25-edit-services-design.md) —
+  completed historical design for `$EDITOR`-based service editing; the inline
+  (`textarea`) follow-up it scopes is still open.
+- [Edit services plan](superpowers/plans/2026-07-25-edit-services.md) —
+  completed historical implementation plan for the `$EDITOR` path.
