@@ -32,7 +32,7 @@ func (m AppModel) View() tea.View {
 	// This is the outermost tier, so it must run last: every inner tier has
 	// already sealed its own region, which leaves no unpainted cell inside
 	// a panel for this pass to reach. See appstyles.FillBackground.
-	layout = appstyles.FillBackground(appstyles.BackgroundContent, layout)
+	layout = appstyles.FillBackground(appstyles.Active.BackgroundContent, layout)
 
 	// Wrap the full layout in a style that fills the terminal width
 	// with the tier-2 background.
@@ -42,7 +42,7 @@ func (m AppModel) View() tea.View {
 	// would otherwise be wrapped by the terminal itself, scattering the
 	// overflow across the following lines.
 	rendered := lipgloss.NewStyle().
-		Background(appstyles.BackgroundContent).
+		Background(appstyles.Active.BackgroundContent).
 		Width(m.config.terminalWidht).
 		Height(m.config.terminalHeight).
 		MaxWidth(m.config.terminalWidht).
@@ -91,14 +91,14 @@ func (m AppModel) renderBody() string {
 
 	if len(contents) == 0 {
 		return lipgloss.NewStyle().
-			Background(appstyles.BackgroundContent).
+			Background(appstyles.Active.BackgroundContent).
 			Width(m.config.terminalWidht).
 			Height(bodyHeight).
 			Render("")
 	}
 
 	gutter := lipgloss.NewStyle().
-		Background(appstyles.BackgroundContent).
+		Background(appstyles.Active.BackgroundContent).
 		Width(constants.BODY_GUTTER_WIDTH).
 		Height(bodyHeight).
 		Render("")

@@ -61,14 +61,14 @@ func (m HelpOverlayModel) contentWidth() int {
 func renderScope(scope keys.Scope, width int) string {
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(appstyles.Accent)
+		Foreground(appstyles.Active.Accent)
 	dimStyle := lipgloss.NewStyle().
-		Foreground(appstyles.TextDim)
+		Foreground(appstyles.Active.TextDim)
 	keyStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(appstyles.TextPrimary)
+		Foreground(appstyles.Active.TextPrimary)
 	descStyle := lipgloss.NewStyle().
-		Foreground(appstyles.TextMuted)
+		Foreground(appstyles.Active.TextMuted)
 
 	runs := make([]string, 0, len(scope.Entries)*2)
 	for i, entry := range scope.Entries {
@@ -101,12 +101,12 @@ func renderComposeFiles(files []string) string {
 
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(appstyles.Accent)
+		Foreground(appstyles.Active.Accent)
 	noteStyle := lipgloss.NewStyle().
-		Foreground(appstyles.TextDim)
+		Foreground(appstyles.Active.TextDim)
 	activeStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(appstyles.TextPrimary)
+		Foreground(appstyles.Active.TextPrimary)
 
 	lines := []string{
 		titleStyle.Render("Compose files"),
@@ -126,7 +126,7 @@ func (m HelpOverlayModel) View() tea.View {
 	sections := []string{
 		lipgloss.NewStyle().
 			Bold(true).
-			Foreground(appstyles.TextPrimary).
+			Foreground(appstyles.Active.TextPrimary).
 			Render("Keyboard shortcuts"),
 	}
 
@@ -145,11 +145,11 @@ func (m HelpOverlayModel) View() tea.View {
 		hintAs(keys.Global.Help, "close"),
 		hintAs(keys.Overlay.Cancel, "close"),
 		hintAs(keys.Global.Quit, "close"),
-	}, appstyles.TextMuted)
+	}, appstyles.Active.TextMuted)
 	sections = append(sections, hint)
 
 	return tea.NewView(modalSurface(
-		appstyles.PanelBackgroundColor,
+		appstyles.Active.ModalBg,
 		strings.Join(sections, "\n\n"),
 	))
 }

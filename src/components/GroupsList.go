@@ -41,9 +41,9 @@ func (d GroupsListCustomDelegate) Render(w io.Writer, m list.Model, index int, l
 	var titleColor color.Color
 
 	if isActive {
-		titleColor = appstyles.PrimaryFontColor
+		titleColor = appstyles.Active.TextPrimary
 	} else {
-		titleColor = appstyles.SecondaryFontColor
+		titleColor = appstyles.Active.TextMuted
 	}
 
 	rowBg := listRowBg(isActive, d.isParentFocused)
@@ -63,21 +63,21 @@ func (d GroupsListCustomDelegate) Render(w io.Writer, m list.Model, index int, l
 		wrapperStyle = wrapperStyle.
 			BorderLeft(true).
 			BorderStyle(lipgloss.ThickBorder()).
-			BorderLeftForeground(appstyles.PrimaryColor)
+			BorderLeftForeground(appstyles.Active.Accent)
 
 	} else if isSelected && d.isParentFocused {
 		wrapperStyle = wrapperStyle.
 			Bold(true).
 			BorderLeft(true).
 			BorderStyle(lipgloss.DoubleBorder()).
-			BorderLeftForeground(appstyles.PrimaryFontColor)
+			BorderLeftForeground(appstyles.Active.TextPrimary)
 
 	} else {
 		// Default unselected, inactive state
 		wrapperStyle = wrapperStyle.
 			BorderLeft(true).
 			BorderStyle(lipgloss.NormalBorder()).
-			BorderLeftForeground(appstyles.SecondaryFontColor)
+			BorderLeftForeground(appstyles.Active.TextMuted)
 
 	}
 
@@ -319,7 +319,7 @@ func (m GroupListModel) View() tea.View {
 
 	if len(m.list.Items()) == 0 {
 		emptyStyle := lipgloss.NewStyle().
-			Foreground(appstyles.TextMuted).
+			Foreground(appstyles.Active.TextMuted).
 			Background(bg).
 			Padding(2, 2)
 		// Width-constrained so the hint wraps inside the panel instead of
@@ -337,7 +337,7 @@ func (m GroupListModel) View() tea.View {
 	// appending the line here pins it to the bottom of the panel.
 	if m.hasStats {
 		footerStyle := lipgloss.NewStyle().
-			Foreground(appstyles.TextDim).
+			Foreground(appstyles.Active.TextDim).
 			Background(bg).
 			Padding(0, 1)
 
@@ -381,7 +381,7 @@ func GroupsList(groups []string, width int, height int) tea.Model {
 	servicesList.Styles.Title = servicesList.
 		Styles.
 		Title.
-		Background(appstyles.PrimaryColor)
+		Background(appstyles.Active.Accent)
 
 	model := GroupListModel{
 		list:         servicesList,
