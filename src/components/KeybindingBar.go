@@ -183,9 +183,9 @@ func (m KeybindingBarModel) composeFileSegment(spare int) string {
 func (m KeybindingBarModel) View() tea.View {
 	hints := m.hintsFor()
 
-	// The page chords are global, so they sit on the right with quit rather
-	// than in the context-dependent hints. The nav underlines which letter
-	// belongs to which page; this is the reminder that alt is the modifier.
+	// The page keys are global, so they sit on the right with quit rather
+	// than in the context-dependent hints. The nav renders each tab's own
+	// digit; this is the reminder that the digits switch pages.
 	rightHint := renderKeyHints(hintsFrom(keys.Globals()), appstyles.TextDim)
 
 	width := m.terminalWidth

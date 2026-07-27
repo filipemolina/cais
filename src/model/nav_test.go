@@ -1,11 +1,13 @@
 package model
 
 import (
+	"fmt"
+	"strings"
+	"testing"
+
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/constants"
-	"strings"
-	"testing"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -15,6 +17,12 @@ import (
 // would deliver it.
 func altKey(letter rune) tea.KeyPressMsg {
 	return tea.KeyPressMsg{Code: letter, Text: string(letter), Mod: tea.ModAlt}
+}
+
+// digitKey builds the key press for a number-row key the way a terminal
+// delivers it.
+func digitKey(digit rune) tea.KeyPressMsg {
+	return tea.KeyPressMsg{Code: digit, Text: string(digit)}
 }
 
 // collect drains a command, returning every message it produces. tea.Batch
@@ -124,6 +132,95 @@ func TestAltLetterSwitchesPage(t *testing.T) {
 	}
 }
 
+// The digits are the primary page scheme: 1 opens the first tab, and so on.
+func TestDigitSwitchesPage(t *testing.T) {
+	for i, page := range apptypes.PageTitles {
+		digit := rune('1' + i)
+
+		t.Run(page, func(t *testing.T) {
+			// Start somewhere else, so the key has an actual switch to make.
+			from := apptypes.PageTitles[0]
+			if from == page {
+				from = apptypes.PageTitles[1]
+			}
+
+			m := applyLayout(drive(startup(120, 40), cmds.SetActivePageMsg(from)))
+
+			_, cmd := m.Update(digitKey(digit))
+			if got := activePageFrom(collect(cmd)); got != page {
+				t.Errorf("%c from %q switched to %q, want %q", digit, from, got, page)
+			}
+		})
+	}
+}
+
+// Re-pressing the active page's digit is a no-op for the same reason the
+// chord is: switching pages re-runs the container query and the sync.
+func TestDigitForTheActivePageDoesNothing(t *testing.T) {
+	m := applyLayout(startup(120, 40))
+
+	if m.activePage != "Home" {
+		t.Fatalf("precondition: expected Home to be active, got %q", m.activePage)
+	}
+
+	_, cmd := m.Update(digitKey('1'))
+
+	if got := activePageFrom(collect(cmd)); got != "" {
+		t.Errorf("1 on Home re-broadcast the page as %q", got)
+	}
+}
+
+// A digit with no page behind it must fall through, and a shifted digit -
+// which arrives as the punctuation on that key - is not a page key at all.
+func TestDigitsWithoutAPageDoNothing(t *testing.T) {
+	m := applyLayout(startup(120, 40))
+
+	for _, stroke := range []tea.KeyPressMsg{
+		digitKey('9'),
+		digitKey('0'),
+		{Code: '!', Text: "!"},
+		{Code: '1', Text: "1", Mod: tea.ModCtrl},
+	} {
+		if _, cmd := m.Update(stroke); activePageFrom(collect(cmd)) != "" {
+			t.Errorf("%q switched pages, but it is not a page key", stroke.Text)
+		}
+	}
+}
+
+// [ and ] walk the tabs in order and wrap around at both ends.
+func TestBracketsStepThroughPages(t *testing.T) {
+	m := applyLayout(startup(120, 40))
+
+	step := func(stroke string) string {
+		t.Helper()
+
+		updated, cmd := m.Update(tea.KeyPressMsg{Code: rune(stroke[0]), Text: stroke})
+		m = updated.(AppModel)
+
+		page := activePageFrom(collect(cmd))
+		if page != "" {
+			m = drive(m, cmds.SetActivePageMsg(page))
+		}
+
+		return page
+	}
+
+	for _, want := range []string{"Services", "Compose Files"} {
+		if got := step("]"); got != want {
+			t.Errorf("] stepped to %q, want %q", got, want)
+		}
+	}
+	if got := step("]"); got != "Home" {
+		t.Errorf("] past the last tab stepped to %q, want it to wrap to Home", got)
+	}
+	if got := step("["); got != "Compose Files" {
+		t.Errorf("[ from Home stepped to %q, want it to wrap to Compose Files", got)
+	}
+	if got := step("["); got != "Services" {
+		t.Errorf("[ stepped to %q, want Services", got)
+	}
+}
+
 func TestPageChangeResetsFocusToLeftPanel(t *testing.T) {
 	m := applyLayout(startup(120, 40))
 	rightPanel := constants.COMPONENT_BODY_DETAILS
@@ -177,22 +274,30 @@ func TestPageShortcutsRequireAlt(t *testing.T) {
 	}
 }
 
-// While a modal is open it owns all key input, so a page chord must not fire
-// out from under a text field the user is typing into.
-func TestPageShortcutsAreInertWhileAModalIsOpen(t *testing.T) {
-	m := applyLayout(drive(startup(120, 40),
-		cmds.GetConfigMsg{FileName: "compose.yaml", Project: project()},
-		cmds.OpenCreateGroupModalMsg{},
-	))
+// While a modal is open it owns all key input, so a page key must not fire
+// out from under a text field the user is typing into. The digit case is not
+// hypothetical: group names can contain digits.
+func TestPageKeysAreInertWhileAModalIsOpen(t *testing.T) {
+	for name, stroke := range map[string]tea.KeyPressMsg{
+		"chord": altKey('d'),
+		"digit": digitKey('2'),
+	} {
+		t.Run(name, func(t *testing.T) {
+			m := applyLayout(drive(startup(120, 40),
+				cmds.GetConfigMsg{FileName: "compose.yaml", Project: project()},
+				cmds.OpenCreateGroupModalMsg{},
+			))
 
-	if m.activeModal == nil {
-		t.Fatal("precondition: expected a modal to be open")
-	}
+			if m.activeModal == nil {
+				t.Fatal("precondition: expected a modal to be open")
+			}
 
-	_, cmd := m.Update(altKey('d'))
+			_, cmd := m.Update(stroke)
 
-	if got := activePageFrom(collect(cmd)); got != "" {
-		t.Errorf("alt+d navigated to %q while a modal was open", got)
+			if got := activePageFrom(collect(cmd)); got != "" {
+				t.Errorf("%v navigated to %q while a modal was open", stroke, got)
+			}
+		})
 	}
 }
 
@@ -235,23 +340,16 @@ func TestShiftTabWrapsBackwards(t *testing.T) {
 	}
 }
 
-// The underline is what tells the user which letter to press, so it has to be
-// on the letter the chord actually uses.
-func TestNavUnderlinesTheShortcutLetter(t *testing.T) {
+// The digit on each tab is what tells the user which key to press, so it has
+// to be the tab's own position in the page list.
+func TestNavRendersEachTabsDigit(t *testing.T) {
 	m := applyLayout(startup(120, 40))
-	nav := m.components.MainMenu.View().Content
+	nav := ansi.Strip(m.components.MainMenu.View().Content)
 
-	for _, page := range apptypes.PageTitles {
-		label := apptypes.PageLabel(page)
-		first := string([]rune(label)[0])
-
-		// SGR 4 is underline; it must open immediately before the letter.
-		if !strings.Contains(nav, "4m"+first) {
-			t.Errorf("page %q: first letter %q of label %q is not underlined", page, first, label)
-		}
-
-		if !strings.Contains(ansi.Strip(nav), label) {
-			t.Errorf("page %q: label %q missing from the nav", page, label)
+	for i, page := range apptypes.PageTitles {
+		tab := fmt.Sprintf("%d %s", i+1, apptypes.PageLabel(page))
+		if !strings.Contains(nav, tab) {
+			t.Errorf("page %q: tab %q missing from the nav", page, tab)
 		}
 	}
 }

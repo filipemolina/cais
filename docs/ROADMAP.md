@@ -47,53 +47,16 @@ Do not re-open these without asking:
 | 1 — One keymap in `src/keys` | done (`9a68171`) |
 | 2 — Footer shows the parsed compose file | done (`62416ef`) |
 | 3 — The lists own their keymaps | done (`55173d0`) |
-| 4 — The new global keys | **next** |
-| 5 — `?` help overlay | |
+| 4 — The new global keys | done |
+| 5 — `?` help overlay | **next** |
 | 6 — Centralize color into a `Theme` | |
 | 7 — Release plumbing | |
 | 8 — Edit group membership, then the Files page | |
 
-Phases 0–3 are described in `docs/DESIGN.md` (*Where keybindings live*, *Which
-compose file*, *The lists do not get to keep `list.DefaultKeyMap`*) rather than
-here, because they are now how the app works rather than a plan.
-
-## Phase 4 — The new global keys
-
-In `src/model/Update.go`, alongside the existing `pageForKey`:
-
-- Digits `1`–`N` select `apptypes.PageTitles[n-1]`; `[` / `]` step to the
-  previous/next page with wraparound; `alt`+letter stays as an alias.
-- `enter` becomes an alias for `space` (select) in both lists.
-- `esc` becomes a real "back": close the overlay if one is open, else return
-  focus to the list panel.
-- `src/components/MainMenu.go` renders the digit before each label (`1 Groups`),
-  replacing the first-letter underline as the on-screen advertisement. `alt` then
-  lives only in the `?` overlay.
-
-Why digits at all: `alt` is the weakest link in the current scheme. macOS
-Terminal.app and iTerm2 do not send Option as Alt until the user changes a
-setting, so `alt+g` silently does nothing for part of the audience. Digits also
-remove the "no two tabs may share a first letter" constraint that
-`apptypes.PageShortcut` and `TestPageShortcutsAreUnique` exist to guard.
-
-**Three constraints fall out of Phase 3, and they are easy to miss:**
-
-1. **`esc` must check the filter first.** A list with an applied filter keeps
-   `esc` for clearing it — it is the only way out of a filtered list. Global
-   "back" has to yield to that, or filtering becomes a trap. The list already
-   reports what it is doing: `list.FilterState()` via `OwnsKeyboard()`.
-2. **The digits are letters while a filter is being typed.** `AppModel.Update`
-   already drops out of its own key handling when `keyboardOwned()` is true, and
-   the digit and bracket handling must sit inside that guard with everything
-   else — not before it.
-3. **`tab` currently does nothing while a filter is being typed**, because the
-   list gave up accepting the filter on `tab` (the default keymap made one key
-   both apply the filter and move panels). If Phase 4 wants `tab` to mean
-   something there, it has to pick one meaning.
-
-Tests: `src/model/nav_test.go` already covers `alt`+letter and focus resetting;
-add digit and bracket navigation beside it, and a case that `esc` clears a filter
-before it moves focus.
+Phases 0–4 are described in `docs/DESIGN.md` (*Where keybindings live*, *Which
+compose file*, *The lists do not get to keep `list.DefaultKeyMap`*, *Navigation
+and focus*) rather than here, because they are now how the app works rather than
+a plan.
 
 ## Phase 5 — `?` help overlay
 
@@ -106,7 +69,8 @@ footer's global group.
 
 Two things are waiting on this overlay:
 
-- The `alt`+letter aliases, once Phase 4 takes them off the nav.
+- The `alt`+letter aliases and the `[`/`]` brackets, which the footer has no
+  room for.
 - **The other compose-file candidates.** When more than one candidate name
   exists in the directory, the footer should mark it (`compose.yaml +2`) and the
   overlay should list the rest. `utils.GetComposeFileName` returns only the

@@ -173,14 +173,97 @@ func (m AppModel) keyboardOwned() bool {
 	return false
 }
 
-// pageForKey returns the page an alt+<letter> chord jumps to, or "" if the key
-// is not a page shortcut.
+// escKeeper is implemented by a component that needs esc for itself without
+// owning the whole keyboard: a focused list holding an applied filter, where
+// esc alone clears it. Same shape as keyboardOwner - the answer has to be
+// right on the keystroke that asks.
+type escKeeper interface {
+	KeepsEsc() bool
+}
+
+// escKept reports whether esc belongs to a component on the active page.
+// AppModel's "back" yields to that: moving focus away from a filtered list
+// would strand the filter on a panel that no longer answers esc.
+func (m AppModel) escKept() bool {
+	for _, component := range m.pages[m.activePage] {
+		if keeper, ok := component.(escKeeper); ok && keeper.KeepsEsc() {
+			return true
+		}
+	}
+
+	return false
+}
+
+// pageForNavKey returns the page a global navigation key jumps to, or "" if
+// the key is not one. Three forms, one destination:
+//
+//   - a digit: 1 is the first tab in apptypes.PageTitles, and so on. The
+//     primary scheme, and the one the nav renders on each tab.
+//   - [ and ]: step through the tabs in order, wrapping around.
+//   - alt+<letter>: the original scheme, kept as an alias for the terminals
+//     that send Option as Alt.
+//
+// Everything here runs inside Update's keyboardOwned guard, so while a filter
+// is being typed a digit is a letter; and after the modal check, so typing in
+// a text field can never navigate away.
+func (m AppModel) pageForNavKey(msg tea.KeyPressMsg) string {
+	if page := pageForDigit(msg); page != "" {
+		return page
+	}
+	if page := m.pageForStep(msg); page != "" {
+		return page
+	}
+	return pageForChord(msg)
+}
+
+// pageForDigit returns the page a digit key jumps to: 1 is the first page in
+// apptypes.PageTitles, and so on. "" if the key is not a digit, or is a digit
+// with no page behind it.
+//
+// Matched on the key's code with no modifiers held, so shifted digits (which
+// arrive as the punctuation on that key) and ctrl+1 are left alone.
+func pageForDigit(msg tea.KeyPressMsg) string {
+	key := msg.Key()
+	if key.Mod != 0 {
+		return ""
+	}
+
+	idx := int(key.Code - '1')
+	if idx < 0 || idx >= len(apptypes.PageTitles) {
+		return ""
+	}
+
+	return apptypes.PageTitles[idx]
+}
+
+// pageForStep returns the page [ or ] steps to from the active one: the next
+// or previous entry in apptypes.PageTitles, wrapping around. "" for any other
+// key, and the active page itself when it is the only one there is.
+func (m AppModel) pageForStep(msg tea.KeyPressMsg) string {
+	step := 0
+	switch {
+	case key.Matches(msg, keys.Global.NextPage):
+		step = 1
+	case key.Matches(msg, keys.Global.PrevPage):
+		step = -1
+	default:
+		return ""
+	}
+
+	pages := apptypes.PageTitles
+	current := max(0, slices.Index(pages, m.activePage))
+
+	return pages[(current+step+len(pages))%len(pages)]
+}
+
+// pageForChord returns the page an alt+<letter> chord jumps to, or "" if the
+// key is not a page chord.
 //
 // It matches on the modifier field rather than on msg.String(), because
 // String() returns the printable text for a key ("g") and only falls back to
 // the keystroke form ("alt+g") when there is none. Requiring Mod to be exactly
 // ModAlt also means ctrl+alt+g and alt+shift+g are left alone.
-func pageForKey(msg tea.KeyPressMsg) string {
+func pageForChord(msg tea.KeyPressMsg) string {
 	key := msg.Key()
 
 	if key.Mod != tea.ModAlt {
@@ -230,14 +313,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			break
 		}
 
-		// alt+<letter> jumps straight to a page. Handled here rather than in
-		// MainMenu because the nav is not focusable, so it never sees keys.
-		//
-		// alt, not ctrl: ctrl+s is eaten by terminal flow control (XOFF) and
-		// ctrl+d is EOF, so ctrl chords on those letters are unreliable at
-		// best. This runs after the modal check above, so typing in a text
-		// input cannot navigate away.
-		if page := pageForKey(msg); page != "" {
+		// Digits, brackets and alt+<letter> all jump straight to a page.
+		// Handled here rather than in MainMenu because the nav is not
+		// focusable, so it never sees keys.
+		if page := m.pageForNavKey(msg); page != "" {
 			if page != m.activePage {
 				finalCmds = append(finalCmds, cmds.SetActivePage(page))
 			}
@@ -256,6 +335,17 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			idx := int(-1)
 			tabCmd := m.ChangeFocus(&idx)
 			finalCmds = append(finalCmds, tabCmd)
+
+		// esc is "back": out of the details panel, to the list. Everything
+		// with a stronger claim on esc has already had it - a modal closes
+		// itself above, a filter being typed owns the keyboard above, and a
+		// focused list holding an applied filter keeps it (escKept) - so the
+		// only esc left to answer is the details panel's.
+		case key.Matches(msg, keys.Global.Back):
+			if !m.escKept() && m.focusedComponent != constants.COMPONENT_BODY_LIST {
+				leftPanel := constants.COMPONENT_BODY_LIST
+				finalCmds = append(finalCmds, m.ChangeFocus(&leftPanel))
+			}
 		}
 
 	// This is executed once when the app loads and after every

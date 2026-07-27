@@ -102,6 +102,69 @@ func TestDeleteKeyDoesNotAlsoPageTheList(t *testing.T) {
 	}
 }
 
+// The list keeps esc only while it can use it: focused, with a filter
+// standing. Unfocused or unfiltered it has no claim, and mid-typing it owns
+// the whole keyboard instead.
+func TestKeepsEscOnlyWhileFocusedWithAnAppliedFilter(t *testing.T) {
+	groups := focusedGroupsList(t, 12)
+
+	if groups.KeepsEsc() {
+		t.Error("an unfiltered list kept esc")
+	}
+
+	apply := func(m GroupListModel, msgs ...tea.Msg) GroupListModel {
+		for _, msg := range msgs {
+			updated, _ := m.Update(msg)
+			m = updated.(GroupListModel)
+		}
+		return m
+	}
+
+	filtered := apply(groups,
+		tea.KeyPressMsg{Code: '/', Text: "/"},
+		tea.KeyPressMsg{Code: 'g', Text: "g"},
+		tea.KeyPressMsg{Code: tea.KeyEnter},
+	)
+
+	if state := filtered.list.FilterState(); state != list.FilterApplied {
+		t.Fatalf("precondition: filter state is %v, want applied", state)
+	}
+	if !filtered.KeepsEsc() {
+		t.Error("a focused list with a filter standing did not keep esc")
+	}
+
+	unfocused := apply(filtered, cmds.SetFocusMsg(2))
+	if unfocused.KeepsEsc() {
+		t.Error("an unfocused list kept esc, but it never sees the key")
+	}
+}
+
+// Enter is an alias for space: one binding, two keystrokes, so the panel
+// matches either. The highlight lands on the same frame, as it does for space.
+func TestEnterSelectsTheHighlightedGroup(t *testing.T) {
+	groups := focusedGroupsList(t, 12)
+
+	model, cmd := groups.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+
+	var selected string
+	for _, msg := range messagesFrom(cmd) {
+		if sel, ok := msg.(cmds.SetSelectedGroupMsg); ok {
+			selected = string(sel)
+		}
+	}
+	if want := "group-00"; selected != want {
+		t.Errorf("enter selected %q, want %q", selected, want)
+	}
+
+	after, ok := model.(GroupListModel)
+	if !ok {
+		t.Fatalf("expected a GroupListModel, got %T", model)
+	}
+	if want := "group-00"; after.activeGroup != want {
+		t.Errorf("active group after enter: got %q, want %q", after.activeGroup, want)
+	}
+}
+
 // The other letters the default map claimed. None of them is a list key in this
 // app: l opens logs, f follows a log stream, and h, b and u mean nothing yet,
 // which is still not "page the list".

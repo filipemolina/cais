@@ -60,12 +60,12 @@ func TestFooterHints(t *testing.T) {
 		{
 			name:  "group details with nothing selected",
 			model: KeybindingBarModel{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_DETAILS},
-			want:  "tab next",
+			want:  "esc back · tab next",
 		},
 		{
 			name:  "group details with a group selected",
 			model: KeybindingBarModel{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_DETAILS, selectedGroup: "core"},
-			want:  "s start · t stop · r restart · p pull · x remove · l logs · tab next",
+			want:  "s start · t stop · r restart · p pull · x remove · l logs · esc back · tab next",
 		},
 		{
 			name:  "services list with services",
@@ -85,12 +85,12 @@ func TestFooterHints(t *testing.T) {
 		{
 			name:  "service details with nothing selected",
 			model: KeybindingBarModel{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_DETAILS},
-			want:  "tab next",
+			want:  "esc back · tab next",
 		},
 		{
 			name:  "service details with a service selected",
 			model: KeybindingBarModel{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_DETAILS, selectedService: true},
-			want:  "s start · t stop · r restart · p pull · x remove · l logs · e edit · E file · tab next",
+			want:  "s start · t stop · r restart · p pull · x remove · l logs · e edit · E file · esc back · tab next",
 		},
 		{
 			name:  "a page with nothing focusable offers no keys",
@@ -227,7 +227,7 @@ func TestFooterComposeFileNeverCrowdsOutTheKeys(t *testing.T) {
 // The right-hand side of the bar is fixed rather than context-dependent, so it
 // gets its own expectation.
 func TestFooterGlobalHints(t *testing.T) {
-	want := "alt+· page · q quit"
+	want := "1-3 page · q quit"
 
 	if got := joinHints(hintsFrom(keys.Globals())); got != want {
 		t.Errorf("global hints\n got: %s\nwant: %s", got, want)

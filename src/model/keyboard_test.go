@@ -70,6 +70,22 @@ func TestPageChordsYieldToAFilteringList(t *testing.T) {
 	}
 }
 
+// Digits are letters while a filter is being typed, same as q: 2 must not
+// swap the page out from under the search. The digit and bracket handling
+// sits inside the keyboardOwned guard for exactly this reason.
+func TestPageDigitsYieldToAFilteringList(t *testing.T) {
+	m := filtering(t, homeWithGroups(t))
+
+	for _, stroke := range []tea.KeyPressMsg{
+		digitKey('2'),
+		{Code: ']', Text: "]"},
+	} {
+		if _, cmd := m.Update(stroke); activePageFrom(collect(cmd)) != "" {
+			t.Errorf("%q switched pages while the list was being filtered", stroke.Text)
+		}
+	}
+}
+
 // ctrl+c is the exception that makes the rule safe: it quits whatever owns the
 // keyboard, so no state can trap the user.
 func TestForceQuitBeatsEveryClaimOnTheKeyboard(t *testing.T) {
