@@ -14,7 +14,7 @@ type DeleteGroupMsg struct {
 // in the compose file on disk.
 func DeleteGroup(name string) tea.Cmd {
 	return func() tea.Msg {
-		fileName, err := utils.GetComposeFileName()
+		fileName, _, err := utils.GetComposeFileName()
 		if err != nil {
 			return DeleteGroupMsg{Err: err}
 		}

@@ -9,12 +9,17 @@ import (
 
 type GetConfigMsg = struct {
 	FileName string
-	Project  *types.Project
-	Err      error
+	// Files is every compose-file candidate that exists in the directory, in
+	// Docker's priority order, so Files[0] is FileName. The rest are the
+	// candidates that lost - the footer counts them and the help overlay
+	// lists them. Empty in tests that construct the message by hand.
+	Files   []string
+	Project *types.Project
+	Err     error
 }
 
 func GetConfig() tea.Msg {
-	fileName, err := utils.GetComposeFileName()
+	fileName, candidates, err := utils.GetComposeFileName()
 	if err != nil {
 		return GetConfigMsg{Err: err}
 	}
@@ -26,6 +31,7 @@ func GetConfig() tea.Msg {
 
 	return GetConfigMsg{
 		FileName: fileName,
+		Files:    candidates,
 		Project:  project,
 	}
 }
