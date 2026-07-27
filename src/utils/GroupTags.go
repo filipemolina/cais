@@ -28,21 +28,7 @@ func AddGroupTag(fileName string, groupName string, serviceNames []string) error
 			return fmt.Errorf("service %q not found in compose file", serviceName)
 		}
 
-		profilesNode := findMappingValue(serviceNode, "profiles")
-		if profilesNode == nil {
-			profilesNode = &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq"}
-			serviceNode.Content = append(serviceNode.Content,
-				&yaml.Node{Kind: yaml.ScalarNode, Value: "profiles"},
-				profilesNode,
-			)
-		}
-
-		if !sequenceContains(profilesNode, groupName) {
-			profilesNode.Content = append(profilesNode.Content, &yaml.Node{
-				Kind:  yaml.ScalarNode,
-				Value: groupName,
-			})
-		}
+		ensureGroupTag(serviceNode, groupName)
 	}
 
 	return writeComposeNode(fileName, doc)
@@ -153,6 +139,65 @@ func sequenceContains(sequence *yaml.Node, value string) bool {
 	}
 
 	return false
+}
+
+// SetGroupMembers reconciles the compose file so that exactly the named
+// services carry groupName as a profile tag. Services in members that lack
+// the tag get it added; services not in members that carry it get it removed.
+// A service whose profiles key becomes empty is cleaned up the same way
+// RemoveGroupTag does.
+//
+// The reconciliation runs in a single read-modify-write pass rather than
+// composing AddGroupTag and RemoveGroupTag, which would each open and close
+// the file separately and leave a crash window with a half-applied edit.
+func SetGroupMembers(fileName string, groupName string, members []string) error {
+	doc, err := readComposeNode(fileName)
+	if err != nil {
+		return err
+	}
+
+	servicesNode, err := servicesMappingNode(doc)
+	if err != nil {
+		return err
+	}
+
+	memberSet := make(map[string]bool, len(members))
+	for _, name := range members {
+		memberSet[name] = true
+	}
+
+	for i := 0; i+1 < len(servicesNode.Content); i += 2 {
+		serviceName := servicesNode.Content[i].Value
+		serviceNode := servicesNode.Content[i+1]
+
+		if memberSet[serviceName] {
+			ensureGroupTag(serviceNode, groupName)
+		} else {
+			removeGroupFromService(serviceNode, groupName)
+		}
+	}
+
+	return writeComposeNode(fileName, doc)
+}
+
+// ensureGroupTag adds groupName to serviceNode's profiles sequence if it is
+// not already present. Creates the profiles key and sequence if absent.
+func ensureGroupTag(serviceNode *yaml.Node, groupName string) {
+	profilesNode := findMappingValue(serviceNode, "profiles")
+	if profilesNode == nil {
+		profilesNode = &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq"}
+		serviceNode.Content = append(serviceNode.Content,
+			&yaml.Node{Kind: yaml.ScalarNode, Value: "profiles"},
+			profilesNode,
+		)
+	}
+
+	if !sequenceContains(profilesNode, groupName) {
+		profilesNode.Content = append(profilesNode.Content, &yaml.Node{
+			Kind:  yaml.ScalarNode,
+			Value: groupName,
+		})
+	}
 }
 
 // WriteNewComposeFile creates a brand-new compose file at fileName with a
