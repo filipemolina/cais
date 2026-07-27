@@ -33,19 +33,15 @@ func fitBox(s lipgloss.Style, w, h int) lipgloss.Style {
 	return s
 }
 
-var logoStyle = lipgloss.NewStyle().
-	Align(lipgloss.Center).
-	Foreground(appstyles.TextPrimary)
-
 // panelBg is the background tier a body panel renders on: tier 4 when focused,
 // tier 3 otherwise. Focus lifts the whole panel rather than adding a border, so
 // the panel's box stays the same size either way.
 func panelBg(isFocused bool) color.Color {
 	if isFocused {
-		return appstyles.BackgroundElevated
+		return appstyles.Active.BackgroundElevated
 	}
 
-	return appstyles.BackgroundPanel
+	return appstyles.Active.BackgroundPanel
 }
 
 // listRowBg is the background a list row renders on. The active row is lifted
@@ -54,7 +50,7 @@ func panelBg(isFocused bool) color.Color {
 // row is rendered and sealed on its own - see appstyles.FillBackground.
 func listRowBg(isActive bool, isParentFocused bool) color.Color {
 	if isActive {
-		return appstyles.SurfaceBg
+		return appstyles.Active.ModalBg
 	}
 
 	return panelBg(isParentFocused)

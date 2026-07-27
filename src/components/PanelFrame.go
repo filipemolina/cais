@@ -66,7 +66,7 @@ func modalSurface(bg color.Color, content string) string {
 	style := lipgloss.NewStyle().
 		Padding(1, 2).
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(appstyles.PrimaryColor).
+		BorderForeground(appstyles.Active.Accent).
 		BorderBackground(bg).
 		Background(bg)
 
@@ -80,12 +80,12 @@ func modalSurface(bg color.Color, content string) string {
 // panel's background tier, which the space around the card sits on; the card
 // itself is recessed below that tier so it reads as inset into the panel.
 func renderEmptyCard(width, availHeight int, bg color.Color, title, body, key, hint string) string {
-	cardBg := appstyles.BackgroundRecessed
+	cardBg := appstyles.Active.BackgroundRecessed
 
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(appstyles.TextMuted).Background(cardBg)
-	bodyStyle := lipgloss.NewStyle().Foreground(appstyles.TextDim).Background(cardBg)
-	keyStyle := lipgloss.NewStyle().Bold(true).Foreground(appstyles.Accent).Background(cardBg)
-	hintStyle := lipgloss.NewStyle().Foreground(appstyles.TextDim).Background(cardBg)
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(appstyles.Active.TextMuted).Background(cardBg)
+	bodyStyle := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Background(cardBg)
+	keyStyle := lipgloss.NewStyle().Bold(true).Foreground(appstyles.Active.Accent).Background(cardBg)
+	hintStyle := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Background(cardBg)
 
 	content := lipgloss.JoinVertical(lipgloss.Left,
 		titleStyle.Render(title),
@@ -113,7 +113,7 @@ func renderEmptyCard(width, availHeight int, bg color.Color, title, body, key, h
 		Width(cardWidth).
 		Padding(1, 2).
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(appstyles.BorderCard).
+		BorderForeground(appstyles.Active.BorderCard).
 		BorderBackground(cardBg).
 		Background(cardBg).
 		AlignHorizontal(lipgloss.Center).
@@ -155,7 +155,7 @@ func renderPanelFrame(title string, titleRight string, isFocused bool, width int
 	bg := panelBg(isFocused)
 
 	style := fitBox(wrapperStyle.Background(bg), width, height)
-	titleRow := appstyles.NormalTitle.Render(title)
+	titleRow := appstyles.NormalTitle().Render(title)
 
 	if titleRight != "" {
 		gap := max(0, panelBodyWidth(width)-lipgloss.Width(titleRow)-lipgloss.Width(titleRight))

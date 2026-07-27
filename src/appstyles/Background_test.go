@@ -9,7 +9,7 @@ import (
 )
 
 func TestFillBackgroundPaintsSpacesAfterAReset(t *testing.T) {
-	pill := lipgloss.NewStyle().Background(Accent).Render("Details")
+	pill := lipgloss.NewStyle().Background(Active.Accent).Render("Details")
 
 	// This is the shape JoinVertical produces: a styled run, then bare
 	// padding out to the width of a wider sibling block.
@@ -19,7 +19,7 @@ func TestFillBackgroundPaintsSpacesAfterAReset(t *testing.T) {
 		t.Fatalf("precondition: expected raw block to bleed, got %q", block)
 	}
 
-	filled := FillBackground(BackgroundPanel, block)
+	filled := FillBackground(Active.BackgroundPanel, block)
 
 	if HasBackgroundBleed(filled) {
 		t.Errorf("FillBackground left unpainted spaces: %q", filled)
@@ -31,17 +31,17 @@ func TestFillBackgroundPaintsSpacesAfterAReset(t *testing.T) {
 }
 
 func TestFillBackgroundKeepsInnerBackgrounds(t *testing.T) {
-	pill := lipgloss.NewStyle().Background(Accent).Render("Details")
-	filled := FillBackground(BackgroundPanel, pill+"   ")
+	pill := lipgloss.NewStyle().Background(Active.Accent).Render("Details")
+	filled := FillBackground(Active.BackgroundPanel, pill+"   ")
 
-	accentSeq := backgroundSeq(Accent)
+	accentSeq := backgroundSeq(Active.Accent)
 	if !strings.Contains(filled, accentSeq) {
 		t.Errorf("FillBackground dropped the inner accent background %q from %q", accentSeq, filled)
 	}
 }
 
 func TestFillBackgroundPreservesPlainText(t *testing.T) {
-	filled := FillBackground(BackgroundPanel, "Name: web\nImage: nginx")
+	filled := FillBackground(Active.BackgroundPanel, "Name: web\nImage: nginx")
 
 	if got := ansi.Strip(filled); got != "Name: web\nImage: nginx" {
 		t.Errorf("FillBackground altered the text: got %q", got)
@@ -57,7 +57,7 @@ func TestFillBackgroundNilAndEmpty(t *testing.T) {
 		t.Errorf("nil background should be a no-op, got %q", got)
 	}
 
-	if got := FillBackground(BackgroundPanel, ""); got != "" {
+	if got := FillBackground(Active.BackgroundPanel, ""); got != "" {
 		t.Errorf("empty block should stay empty, got %q", got)
 	}
 }

@@ -26,9 +26,9 @@ func (d serviceChecklistDelegate) Render(w io.Writer, m list.Model, index int, l
 		return
 	}
 
-	style := lipgloss.NewStyle().Foreground(appstyles.SecondaryFontColor)
+	style := lipgloss.NewStyle().Foreground(appstyles.Active.TextMuted)
 	if index == m.Index() {
-		style = style.Foreground(appstyles.PrimaryFontColor).Bold(true)
+		style = style.Foreground(appstyles.Active.TextPrimary).Bold(true)
 	}
 
 	fmt.Fprint(w, style.Render(item.Title()))
@@ -96,20 +96,20 @@ func checklistHints() string {
 		renderKeyHints([]KeyHint{
 			hintFor(keys.List.Navigate),
 			hintFor(keys.Overlay.Toggle),
-		}, appstyles.TextMuted),
+		}, appstyles.Active.TextMuted),
 		renderKeyHints([]KeyHint{
 			// Enter is "confirm" everywhere; here what it confirms is worth
 			// naming, since it is the step that writes to the compose file.
 			hintAs(keys.Overlay.Submit, "create group"),
 			hintFor(keys.Overlay.Cancel),
-		}, appstyles.TextMuted),
+		}, appstyles.Active.TextMuted),
 	)
 }
 
 func (m ServiceChecklistModalModel) View() tea.View {
 	content := lipgloss.JoinVertical(lipgloss.Left, m.list.View(), "", checklistHints())
 
-	return tea.NewView(modalSurface(appstyles.PanelBackgroundColor, content))
+	return tea.NewView(modalSurface(appstyles.Active.ModalBg, content))
 }
 
 // ServiceChecklistModal is step 2 of the create-group flow: pick which
@@ -132,7 +132,7 @@ func ServiceChecklistModal(groupName string, serviceNames []string) tea.Model {
 	checklist.SetShowHelp(false)
 	checklist.SetShowStatusBar(false)
 	checklist.SetShowPagination(false)
-	checklist.Styles.Title = checklist.Styles.Title.Background(appstyles.PrimaryColor)
+	checklist.Styles.Title = checklist.Styles.Title.Background(appstyles.Active.Accent)
 
 	return ServiceChecklistModalModel{
 		groupName: groupName,

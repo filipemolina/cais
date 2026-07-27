@@ -61,7 +61,7 @@ func (m GroupNameModalModel) View() tea.View {
 	}
 
 	return tea.NewView(modalSurface(
-		appstyles.PanelBackgroundColor,
+		appstyles.Active.ModalBg,
 		lipgloss.JoinVertical(lipgloss.Left, lines...),
 	))
 }

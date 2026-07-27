@@ -48,14 +48,14 @@ func (m MainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // scheme; the alt+<letter> chord remains as an alias (apptypes.PageShortcut).
 func tabLabel(page string, index int, fg color.Color, bold bool) string {
 	digit := lipgloss.NewStyle().
-		Foreground(appstyles.Accent).
-		Background(appstyles.BackgroundContent).
+		Foreground(appstyles.Active.Accent).
+		Background(appstyles.Active.BackgroundContent).
 		Bold(true).
 		Render(fmt.Sprintf("%d", index+1))
 
 	label := lipgloss.NewStyle().
 		Foreground(fg).
-		Background(appstyles.BackgroundContent).
+		Background(appstyles.Active.BackgroundContent).
 		Bold(bold).
 		Render(" " + apptypes.PageLabel(page))
 
@@ -66,29 +66,29 @@ func (m MainMenuModel) View() tea.View {
 	// The whole nav sits on tier 2 background. No bottom border — the
 	// tier 2 vs tier 3/4 background contrast handles the section break.
 	navStyle := lipgloss.NewStyle().
-		Background(appstyles.BackgroundContent).
+		Background(appstyles.Active.BackgroundContent).
 		Width(m.terminalWidth)
 
 	// Cell styles carry only the spacing. All text styling - color, bold, and
 	// the accent digit - happens in tabLabel, so the digit is not competing
 	// with a foreground set on the enclosing style.
 	cellStyle := lipgloss.NewStyle().
-		Background(appstyles.BackgroundContent).
+		Background(appstyles.Active.BackgroundContent).
 		Padding(0, 2)
 
 	// The active cell has less left padding to compensate for the external ▌.
 	activeCellStyle := cellStyle.Padding(0, 2, 0, 1)
 
 	accentBar := lipgloss.NewStyle().
-		Foreground(appstyles.Accent).
-		Background(appstyles.BackgroundContent).
+		Foreground(appstyles.Active.Accent).
+		Background(appstyles.Active.BackgroundContent).
 		Render("▌")
 
 	// Wordmark badge, now at the far right, in the accent color on the same
 	// tier-2 bar background.
 	wordmarkStyle := lipgloss.NewStyle().
-		Foreground(appstyles.Accent).
-		Background(appstyles.BackgroundContent).
+		Foreground(appstyles.Active.Accent).
+		Background(appstyles.Active.BackgroundContent).
 		Bold(true).
 		Padding(0, 2)
 
@@ -97,12 +97,12 @@ func (m MainMenuModel) View() tea.View {
 		isSelected := index == m.selectedItemIndex
 
 		if isSelected {
-			cell := activeCellStyle.Render(tabLabel(item, index, appstyles.TextPrimary, true))
+			cell := activeCellStyle.Render(tabLabel(item, index, appstyles.Active.TextPrimary, true))
 			cells = append(cells, lipgloss.JoinHorizontal(lipgloss.Left, accentBar, cell))
 			continue
 		}
 
-		cells = append(cells, cellStyle.Render(tabLabel(item, index, appstyles.TextDim, false)))
+		cells = append(cells, cellStyle.Render(tabLabel(item, index, appstyles.Active.TextDim, false)))
 	}
 
 	tabs := lipgloss.JoinHorizontal(lipgloss.Left, cells...)
@@ -113,7 +113,7 @@ func (m MainMenuModel) View() tea.View {
 	// badge, leaving it stuck to the tabs.
 	gapWidth := max(0, m.terminalWidth-lipgloss.Width(tabs)-lipgloss.Width(badge))
 	gap := lipgloss.NewStyle().
-		Background(appstyles.BackgroundContent).
+		Background(appstyles.Active.BackgroundContent).
 		Width(gapWidth).
 		Render("")
 
