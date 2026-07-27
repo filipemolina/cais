@@ -375,12 +375,22 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			tabCmd := m.ChangeFocus(&idx)
 			finalCmds = append(finalCmds, tabCmd)
 
-		// esc is "back": out of the details panel, to the list. Everything
-		// with a stronger claim on esc has already had it - a modal closes
-		// itself above, a filter being typed owns the keyboard above, and a
-		// focused list holding an applied filter keeps it (escKept) - so the
-		// only esc left to answer is the details panel's.
+		// esc is "back": out of the details panel, to the list, and off an
+		// error banner. Everything with a stronger claim on esc has already
+		// had it - a modal closes itself above, a filter being typed owns the
+		// keyboard above, and a focused list holding an applied filter keeps
+		// it (escKept) - so by here esc belongs to the app. An error banner
+		// showing is the next claim: dismiss it first, and the next esc backs
+		// out of the details panel. It is the same one-key-one-job ladder a
+		// filtered list clears on. A recovered poll already clears its own
+		// banner; this is the manual dismissal for the errors that stay until
+		// the next successful foreground operation.
 		case key.Matches(msg, keys.Global.Back):
+			if m.lastError != "" && !m.escKept() {
+				m.lastError = ""
+				m.lastErrorFromPoll = false
+				break
+			}
 			if !m.escKept() && m.focusedComponent != constants.COMPONENT_BODY_LIST {
 				leftPanel := constants.COMPONENT_BODY_LIST
 				finalCmds = append(finalCmds, m.ChangeFocus(&leftPanel))
