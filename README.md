@@ -15,7 +15,7 @@ Stack Stitcher reads a Docker **Compose** file and turns it into an interactive 
 
 ## Project status
 
-Stack Stitcher is under **active development**. Compose parsing, navigation, starting/stopping services (individually or as a whole group), creating/deleting groups, editing a group's membership, streaming live logs, and bootstrapping a new compose file from inside the TUI all work. Editing existing services works by handing the YAML to your `$EDITOR` — `e` for one service, `E` for the whole file — rather than by filling in a form, so every compose field is reachable and your comments, quoting and key order are kept. (Blank lines between services are not: the YAML library preserves comments but not blank lines, so any write closes the spacing up.) The Files page shows the loaded compose file and opens it in your editor. Editing services inline in the panel is still on the roadmap. See [TODO.md](TODO.md) for the current worklist and completed recent work, and [docs/ROADMAP.md](docs/ROADMAP.md) for the ordered plan to a first alpha. Feedback, issues, and ideas are genuinely welcome and help shape where it goes next.
+Stack Stitcher is under **active development**. Compose parsing, navigation, starting/stopping services (individually or as a whole group), creating/deleting groups, editing a group's membership, streaming live logs, and bootstrapping a new compose file from inside the TUI all work. Editing existing services works by handing the YAML to your `$EDITOR` — `e` for one service, `E` for the whole file — rather than by filling in a form, so every compose field is reachable and your comments, quoting and key order are kept. (Blank lines between services are not: the YAML library preserves comments but not blank lines, so any write closes the spacing up.) The Files page shows the loaded compose file with syntax highlighting and opens it in your editor; `b` browses the other compose files in its directory and switches the active one. Editing services inline in the panel is still on the roadmap. See [TODO.md](TODO.md) for the current worklist and completed recent work, and [docs/ROADMAP.md](docs/ROADMAP.md) for the ordered plan to a first alpha. Feedback, issues, and ideas are genuinely welcome and help shape where it goes next.
 
 ![Stack Stitcher demo](./demo/demo.gif)
 
@@ -25,7 +25,7 @@ Stack Stitcher is under **active development**. Compose parsing, navigation, sta
 - **Keyboard-first TUI.** Built on [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Bubbles](https://github.com/charmbracelet/bubbles), and [Lip Gloss](https://github.com/charmbracelet/lipgloss) for a responsive, styled terminal experience.
 - **Start/stop a whole group together.** Compose "profiles" group related services (e.g. everything a self-hosted app needs); Stack Stitcher lets you Start/Stop/Restart/Pull/Remove all of them in one keypress instead of remembering which services belong together.
 - **Create, delete, and re-member groups from the TUI.** Make a group by naming it and picking its services, change which services belong later, or delete it — all written back to your compose file with comments and key order preserved.
-- **See the file you're acting on.** The Files page shows the loaded compose file's path and its raw contents, and opens it in your `$EDITOR`.
+- **See the file you're acting on.** The Files page shows the loaded compose file's path and its raw contents with syntax highlighting, opens it in your `$EDITOR`, and `b` browses the other compose files in its directory to switch the active one.
 - **Start/stop a single service.** The same five actions are available for one service at a time from the Services page.
 - **Stream live logs.** Press `l` on a focused service or group panel to open a full-screen overlay that tails `docker compose logs -f` in real time, with follow-mode and scrollback.
 - **Automatically refreshed status.** Container state is rechecked every five seconds while a compose project is loaded and no modal is open, so status panels reflect changes made outside Stack Stitcher.
@@ -116,6 +116,7 @@ two body panels.
 | `d` | Delete the highlighted group | Groups panel focused |
 | `e` | Edit the service's YAML in `$EDITOR` | Service details panel focused |
 | `E` | Edit the whole compose file in `$EDITOR` | Service details panel or Files page focused |
+| `b` | Browse and switch compose files | Files page focused |
 | `↑`/`↓` `k`/`j` `PgUp`/`PgDn` | Scroll the compose file | Files page focused |
 | `l` | View live logs (streaming overlay) | A group or service panel focused |
 | `↑`/`↓` `k`/`j` | Move the cursor | Groups/Services list focused |
