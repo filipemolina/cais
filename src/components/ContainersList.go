@@ -46,8 +46,8 @@ func (d containersListCustomDelegate) Render(w io.Writer, m list.Model, index in
 		wrapperStyle = wrapperStyle.
 			BorderLeft(true).
 			BorderStyle(lipgloss.ThickBorder()).
-			BorderLeftForeground(appstyles.PrimaryColor).
-			Background(lipgloss.Color("#3F3F3F"))
+			BorderLeftForeground(appstyles.Active.Accent).
+			Background(appstyles.Active.ModalBg)
 
 	} else if isActive {
 		// Highlight text if active, but not currently selected
@@ -55,14 +55,14 @@ func (d containersListCustomDelegate) Render(w io.Writer, m list.Model, index in
 			Bold(true).
 			BorderLeft(true).
 			BorderStyle(lipgloss.NormalBorder()).
-			BorderLeftForeground(appstyles.PrimaryFontColor)
+			BorderLeftForeground(appstyles.Active.TextPrimary)
 
 	} else {
 		// Default unselected, inactive state
 		wrapperStyle = wrapperStyle.
 			BorderLeft(true).
 			BorderStyle(lipgloss.NormalBorder()).
-			BorderLeftForeground(appstyles.SecondaryFontColor)
+			BorderLeftForeground(appstyles.Active.TextMuted)
 
 	}
 
@@ -138,7 +138,7 @@ func (m ContainersListModel) View() tea.View {
 	if m.isFocused {
 		wrapper = wrapper.
 			BorderStyle(lipgloss.RoundedBorder()).
-			BorderForeground(appstyles.PrimaryColor).
+			BorderForeground(appstyles.Active.Accent).
 			Padding(0, 1, 1, 1)
 	}
 
@@ -169,7 +169,7 @@ func ContainersList(containers []apptypes.ContainerListItem, width int, height i
 	servicesList.Styles.Title = servicesList.
 		Styles.
 		Title.
-		Background(appstyles.PrimaryColor)
+		Background(appstyles.Active.Accent)
 
 	return ContainersListModel{
 		list:        servicesList,

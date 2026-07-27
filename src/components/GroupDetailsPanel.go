@@ -211,7 +211,7 @@ func (m GroupDetailsPanelModel) renderBody() string {
 	footnoteBlock := ""
 	if running == 0 && len(members) > 0 {
 		footnoteBlock = lipgloss.JoinVertical(lipgloss.Left, "",
-			lipgloss.NewStyle().Foreground(appstyles.TextDim).Render("Press s to start."))
+			lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Render("Press s to start."))
 	}
 	footnoteH := 0
 	if footnoteBlock != "" {
@@ -249,18 +249,18 @@ func (m GroupDetailsPanelModel) renderBody() string {
 func (m GroupDetailsPanelModel) groupHeaderCard(name string, running, stopped, total int, width int) string {
 	nameRow := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(appstyles.TextPrimary).
+		Foreground(appstyles.Active.TextPrimary).
 		Width(width).
 		Render(truncate(name, width))
 
 	summary := fmt.Sprintf("%d running · %d stopped · %d services", running, stopped, total)
 	summaryRow := lipgloss.NewStyle().
-		Foreground(appstyles.TextMuted).
+		Foreground(appstyles.Active.TextMuted).
 		Width(width).
 		Render(summary)
 
 	rule := lipgloss.NewStyle().
-		Foreground(appstyles.BorderDefault).
+		Foreground(appstyles.Active.BorderDefault).
 		Width(width).
 		Render(strings.Repeat("─", max(width, 0)))
 
@@ -269,17 +269,24 @@ func (m GroupDetailsPanelModel) groupHeaderCard(name string, running, stopped, t
 
 // statusPill renders a filled pill whose color reflects the group's state:
 // green when every service is running, amber when mixed, red when none run.
+//
+// The pill's ink (fg) does not follow the app's theme: InkOnLight/InkOnDark
+// are fixed regardless of Dark, because the pill's own fill (green, amber,
+// red) is fixed too. Using PanelBg/TextPrimary here used to work only by
+// coincidence, because the only theme that existed was dark - PanelBg is a
+// light color in stitcher-light, which would have put light text on the
+// light-ish ALL RUNNING/MIXED pills.
 func statusPill(running, total int) string {
 	var label string
 	var bg, fg color.Color
 
 	switch {
 	case total > 0 && running == total:
-		label, bg, fg = "ALL RUNNING", appstyles.StatusRunning, appstyles.PanelBg
+		label, bg, fg = "ALL RUNNING", appstyles.Active.StatusRunning, appstyles.Active.InkOnLight
 	case running == 0:
-		label, bg, fg = "STOPPED", appstyles.StatusError, appstyles.TextPrimary
+		label, bg, fg = "STOPPED", appstyles.Active.StatusError, appstyles.Active.InkOnDark
 	default:
-		label, bg, fg = "MIXED", appstyles.StatusStarting, appstyles.PanelBg
+		label, bg, fg = "MIXED", appstyles.Active.StatusStarting, appstyles.Active.InkOnLight
 	}
 
 	return lipgloss.NewStyle().
@@ -298,7 +305,7 @@ func (m GroupDetailsPanelModel) renderMemberTable(members []types.ServiceConfig,
 
 	header := renderTableHeader(cols, width)
 	rule := lipgloss.NewStyle().
-		Foreground(appstyles.BorderDefault).
+		Foreground(appstyles.Active.BorderDefault).
 		Width(width).
 		Render(strings.Repeat("─", max(width, 0)))
 
@@ -306,7 +313,7 @@ func (m GroupDetailsPanelModel) renderMemberTable(members []types.ServiceConfig,
 
 	if len(members) == 0 {
 		parts = append(parts, lipgloss.NewStyle().
-			Foreground(appstyles.TextDim).
+			Foreground(appstyles.Active.TextDim).
 			Width(width).
 			AlignHorizontal(lipgloss.Center).
 			Render("No services in this group"))
@@ -337,7 +344,7 @@ func (m GroupDetailsPanelModel) renderMemberRow(cols tableCols, width int, svc t
 	health := "-"
 	uptime := "-"
 	ports := "-"
-	dotColor := appstyles.StatusStopped
+	dotColor := appstyles.Active.StatusStopped
 
 	if has {
 		state = container.State
@@ -356,16 +363,16 @@ func (m GroupDetailsPanelModel) renderMemberRow(cols tableCols, width int, svc t
 	}
 
 	if state == "running" {
-		dotColor = appstyles.StatusRunning
+		dotColor = appstyles.Active.StatusRunning
 	}
 
 	dot := lipgloss.NewStyle().Foreground(dotColor).Width(cols.dot).Render("●")
-	name := lipgloss.NewStyle().Foreground(appstyles.TextPrimary).Width(cols.name).Render(truncate(svc.Name, cols.name))
-	img := lipgloss.NewStyle().Foreground(appstyles.TextMuted).Width(cols.image).Render(truncate(image, cols.image))
+	name := lipgloss.NewStyle().Foreground(appstyles.Active.TextPrimary).Width(cols.name).Render(truncate(svc.Name, cols.name))
+	img := lipgloss.NewStyle().Foreground(appstyles.Active.TextMuted).Width(cols.image).Render(truncate(image, cols.image))
 	st := lipgloss.NewStyle().Foreground(stateColor(state)).Width(cols.state).Render(truncate(state, cols.state))
 	hl := lipgloss.NewStyle().Foreground(healthColor(health)).Width(cols.health).Render(truncate(health, cols.health))
-	up := lipgloss.NewStyle().Foreground(appstyles.TextDim).Width(cols.uptime).Render(truncate(uptime, cols.uptime))
-	pt := lipgloss.NewStyle().Foreground(appstyles.TextMuted).Width(cols.ports).Render(truncate(ports, cols.ports))
+	up := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Width(cols.uptime).Render(truncate(uptime, cols.uptime))
+	pt := lipgloss.NewStyle().Foreground(appstyles.Active.TextMuted).Width(cols.ports).Render(truncate(ports, cols.ports))
 
 	row := lipgloss.JoinHorizontal(lipgloss.Left, dot, name, img, st, hl, up, pt)
 
@@ -373,7 +380,7 @@ func (m GroupDetailsPanelModel) renderMemberRow(cols tableCols, width int, svc t
 }
 
 func renderTableHeader(cols tableCols, width int) string {
-	dim := lipgloss.NewStyle().Foreground(appstyles.TextDim).Bold(true)
+	dim := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Bold(true)
 
 	cells := []string{
 		dim.Width(cols.dot).Render(""),
@@ -392,22 +399,22 @@ func renderTableHeader(cols tableCols, width int) string {
 
 func stateColor(state string) color.Color {
 	if state == "running" {
-		return appstyles.StatusRunning
+		return appstyles.Active.StatusRunning
 	}
 
-	return appstyles.StatusStopped
+	return appstyles.Active.StatusStopped
 }
 
 func healthColor(health string) color.Color {
 	switch health {
 	case "healthy":
-		return appstyles.StatusRunning
+		return appstyles.Active.StatusRunning
 	case "unhealthy":
-		return appstyles.StatusError
+		return appstyles.Active.StatusError
 	case "starting":
-		return appstyles.StatusStarting
+		return appstyles.Active.StatusStarting
 	default:
-		return appstyles.TextDim
+		return appstyles.Active.TextDim
 	}
 }
 

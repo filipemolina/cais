@@ -10,7 +10,7 @@ step, **[H]** = housekeeping.
 **This file is the flat list of what is left. `docs/ROADMAP.md` is the order to
 do it in, and why** — it carries the decisions already taken with the owner, so
 work resumed mid-sequence does not re-litigate them. Phases 0–5 of that roadmap
-are done; **Phase 6, centralizing color into a `Theme`, is next.**
+are done; **Phase 7, release plumbing, is next.**
 
 `README.md`, `docs/DESIGN.md`, `docs/ROADMAP.md`, and this file are the current
 documentation. The dated specs and plans under `docs/superpowers/` are completed
@@ -171,13 +171,28 @@ historical records, not a live backlog.
   table collides its column headers (`NAMEIMAGSTATHEALT…`) and the action
   buttons wrap into each other.
 
-- [ ] **[S] Centralize color into a `Theme`** — `src/appstyles/styles.go` has
-  good semantic tokens, but they are package-level `var`s built at init, so
-  they freeze one palette; five other files still carry stray hexes
-  (`#B33A3A`, `#FAFAFA`, `#3F3F3F`). Make them a `Theme` value with a
-  registry (`stitcher-dark`, `stitcher-light`), which is what a theme picker
-  later needs, and run the existing background-bleed suites over every
-  registered theme. This is Phase 6 in `docs/ROADMAP.md`.
+- [x] **[S] Centralize color into a `Theme`** — `appstyles.Theme`
+  (`src/appstyles/Theme.go`) is one field per semantic token, built by a
+  `newTheme` constructor that derives everything but a handful of base
+  colors via `Lighten`/`Darken`, flipping which operator "raise" means by a
+  `Dark` flag so the same deltas work in a light theme too.
+  `appstyles.Themes` registers `stitcher-dark` (today's palette, byte-for-byte
+  verified) and a new `stitcher-light`, closing the "unusable on a light
+  terminal" risk; `appstyles.Active` is the one in effect, read fresh by every
+  call site (`appstyles.Active.TextPrimary`, not a cached `var`) so a later
+  switch actually repaints. Every legacy alias is gone, including three
+  (`PrimaryColor`, `PrimaryFontColor`, `SecondaryFontColor`) the roadmap didn't
+  name but turned out to be the three heaviest-used names in the codebase, and
+  the five stray hexes are theme tokens now. Found and fixed a real bug along
+  the way: a status pill's text color used `PanelBg`/`TextPrimary` as stand-ins
+  for "dark"/"light", which only worked because the one theme that existed was
+  dark; fixed with two theme-invariant fields, `InkOnLight`/`InkOnDark`, since
+  a pill's own fill doesn't vary with the app's theme either. The
+  background-bleed suites now run once per registered theme
+  (`src/model/background_test.go`'s `forEachTheme`), verified against a
+  deliberately broken throwaway theme to confirm the safety net actually
+  catches something. See *Color lives on a Theme* and *Background tiers, and
+  sealing them* in `docs/DESIGN.md`. This was Phase 6 in `docs/ROADMAP.md`.
 
 - [ ] **[S] CI + releases** — GitHub Actions: `go build`, `go vet`,
   `go test` on push/PR. Add GoReleaser for tagged releases once the module

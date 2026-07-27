@@ -58,47 +58,14 @@ Do not re-open these without asking:
 | 3 — The lists own their keymaps | done (`55173d0`) |
 | 4 — The new global keys | done (`a64ec73`) |
 | 5 — `?` help overlay | done (`37bf74a`) |
-| 6 — Centralize color into a `Theme` | **next** |
-| 7 — Release plumbing | |
+| 6 — Centralize color into a `Theme` | done |
+| 7 — Release plumbing | **next** |
 | 8 — Edit group membership, then the Files page | |
 
-Phases 0–5 are described in `docs/DESIGN.md` (*Where keybindings live*, *Which
+Phases 0–6 are described in `docs/DESIGN.md` (*Where keybindings live*, *Which
 compose file*, *The lists do not get to keep `list.DefaultKeyMap`*, *Navigation
-and focus*) rather than here, because they are now how the app works rather than
-a plan.
-
-## Phase 6 — Centralize color into a `Theme`
-
-`src/appstyles/styles.go` holds good semantic tokens, but they are package-level
-`var`s computed at init (`Lighten`/`Darken` of base colors) plus a block of
-legacy aliases. Five other files carry stray hexes (verified after phase 5):
-`#B33A3A` in `GroupNameModal.go`, `CreateComposeFileModal.go` and
-`model/View.go` (a *fourth* red that is not `StatusError`), `#FAFAFA` in
-`LogsModal.go` and `View.go`, `#3F3F3F` in `ContainersList.go`.
-
-- Define `type Theme struct` with one field per semantic token and a constructor
-  that derives the tiers (`BackgroundContent`/`Panel`/`Elevated`/`Recessed`,
-  `BorderCard`, …) from a handful of base colors — the derivation rules move from
-  package init into the constructor.
-- A registry `map[string]Theme` with `stitcher-dark` (today's palette) as the
-  default, plus `stitcher-light`, which closes the "unusable on a light terminal"
-  risk. Drop the hardcoded `var lightDark = lipgloss.LightDark(false)` and the
-  `lightDark(...)` calls in the `Selected*`/`Dimmed*` styles below it in
-  `src/appstyles/styles.go`.
-- **The real work:** the package-level style `var`s (`NormalTitle`, `DocStyle`,
-  the `Selected*` family) are built at init and therefore freeze one palette.
-  They become functions or methods on the active theme, so a later switch
-  actually repaints. Then replace each stray hex above with a token.
-- Retire the legacy aliases (`PaneColor`, `PanelBackgroundColor`,
-  `SelectedPaneColor`, `FocusedPaneColor`, `BackgroundColor`) as call sites move.
-- Free property: `src/appstyles/Background_test.go` and
-  `src/model/background_test.go` already assert every tier is sealed.
-  Parameterize them over every registered theme and a theme that leaves an
-  unpainted cell fails CI.
-
-Everything built in phases 4–5 (the nav digits, the help overlay and its
-dimming) uses tokens only — they are the model of what every surface should
-look like once this phase lands.
+and focus*, *Color lives on a Theme*, *Background tiers, and sealing them*)
+rather than here, because they are now how the app works rather than a plan.
 
 ## Phase 7 — Release plumbing
 
