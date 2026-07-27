@@ -271,12 +271,9 @@ Two consequences worth keeping:
 **The file priority order is fixed, matches Docker's, and is not a setting.**
 `utils.GetComposeFileName` tries `compose.yaml`, `compose.yml`,
 `docker-compose.yaml`, `docker-compose.yml` in that order — the same order
-Docker uses, because `utils.DockerCompose`, `utils.DockerComposePs` and
-`utils.DockerLogs` all shell out to `docker compose …` **without `-f`** and let
-Docker resolve the file itself. The TUI and the commands it runs agree today by
-duplicating that order. Making it configurable would break that agreement: the
-panel would describe `compose.yaml` while `docker compose start` acted on
-`docker-compose.yml`.
+Docker uses. Making the *order* configurable would only mean answering "which
+file?" differently from the tool the app is a front end for, in a way the user
+would then have to keep in their head.
 
 What was missing is not a setting but an answer to "which file?", so
 `AppModel` broadcasts the name it resolved as `cmds.SetComposeFileMsg` and the
@@ -290,9 +287,48 @@ returns every candidate in priority order, the footer marks the winner with
 `+N` (the count rides through the same ladder), and the help overlay lists
 the losers by name.
 
-**This constrains the planned `-f`/`--file` flag.** The flag is only safe once
-every docker invocation passes the resolved path; threading it through those
-three `utils` call sites is a prerequisite of the flag, not a follow-up.
+#### One resolution, passed down — never two
+
+**The app resolves the file once and tells docker which one it picked.** Every
+invocation starts from `utils.ComposeFileArgs`, which opens the argument list
+with `compose --file <path>`, so `utils.DockerCompose`, `utils.DockerComposePs`
+and `utils.DockerLogs` act on exactly the file the panels are describing.
+
+It was not always so. Each side used to resolve independently — the app through
+`GetComposeFileName`, docker through its own identical order — and they agreed
+only because both were looking in the same directory for the same names. That
+is a coincidence, not a guarantee, and `-f`/`--file` was the flag that would
+have ended it: the footer would have named the file the user asked for while
+`docker compose start` acted on whatever was in the working directory. So the
+threading landed **first**, as its own change, and the flag after it. Anything
+that later runs a docker command belongs on the same path; a second resolution
+anywhere is the bug coming back.
+
+The same argument applies to writes, which is why `cmds.CreateGroup` and
+`cmds.DeleteGroup` take the file name as an argument instead of calling
+`GetComposeFileName` again inside the command.
+
+A component cannot supply the path, because a component does not know it and
+should not: `AppModel` holds the resolved file, so panels emit an intent —
+`cmds.RunDockerActionMsg`, `cmds.CreateGroupRequestMsg`, `cmds.OpenEditorMsg` —
+and `AppModel` turns it into the command that carries the file.
+
+#### `-f`/`--file` and `-d`/`--dir`
+
+`utils.ComposeSource` carries whichever flag was given from `main.go` to the
+resolver. `--dir` resolves in that directory in the usual order and returns
+paths joined with it, so nothing downstream needs to know where they came from;
+`--file` skips resolution altogether, because the user named the file and there
+is nothing left to choose between — which also means no losing candidates for
+the footer's `+N` to count.
+
+They are refused together rather than layered. `--dir` says where to look and
+`--file` says what to open, so honouring both would mean deciding which of two
+answers the user meant, and either flag alone already covers the other's use.
+
+Bad paths fail in `main.go`, before the alternate screen is entered. A typo in
+the command the user just typed belongs in the shell they typed it into, not in
+an error banner behind a full-screen app they have to quit to read.
 
 ### State refresh and destructive actions
 
@@ -472,6 +508,28 @@ every other state already runs, rather than shipping unnoticed; see
 `src/appstyles/Theme_test.go` for the same property one level down, on the
 fields themselves rather than a rendered frame.
 
+### Saying which build this is
+
+`constants.Version()` is the single reader of a version that may or may not
+have been stamped, so no caller has to care whether it was. `make build` and
+the GoReleaser build both pass `-ldflags -X …constants.version=`, and that
+value wins when it is there.
+
+When it is not, the build info answers, and which half of it answers separates
+the two remaining cases without a heuristic. A binary built from a checkout has
+a `vcs.revision` — the short commit is its version, and it is the thing a bug
+report actually needs. A binary from `go install …@v0.1.0` has no VCS
+information at all, because it was built from a module download, so
+`Main.Version` is both the only answer and the right one.
+
+The toolchain's synthesized `v0.0.0-<date>-<hash>` pseudo-version is
+deliberately ignored: it says exactly what the commit says, three times longer,
+and looks like a release nobody ever made.
+
+The nav bar renders it dimmed, left of the wordmark, and drops it when the row
+gets tight — the same bargain the footer makes with the compose file name, and
+for the same reason: the tabs are what the nav is for.
+
 ## 6. Decision checklist for new features
 
 Before adding a feature, answer these:
@@ -493,6 +551,8 @@ Before adding a feature, answer these:
 - [Roadmap](ROADMAP.md) — the ordered plan to a first alpha, the decisions
   already taken with the owner, and which phase is next. Live.
 - [Current TODO](../TODO.md) — the live worklist and recent completed work.
+- [Contributing](../CONTRIBUTING.md) — the build/test loop, how to test a TUI,
+  and how a release is cut.
 - [Create/delete profiles design](superpowers/specs/2026-07-22-create-delete-profiles-design.md) —
   completed historical design for the create/delete-groups flow.
 - [Create/delete profiles plan](superpowers/plans/2026-07-22-create-delete-profiles.md) —

@@ -2,6 +2,7 @@
 
 > A fast, keyboard-driven terminal UI for managing your self-hosted Docker Compose services.
 
+[![CI](https://github.com/filipemolina/stack-stitcher/actions/workflows/ci.yml/badge.svg)](https://github.com/filipemolina/stack-stitcher/actions/workflows/ci.yml)
 ![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Status](https://img.shields.io/badge/status-work%20in%20progress-orange)
@@ -48,9 +49,10 @@ cd stack-stitcher
 make build
 ```
 
-`make build` runs `go install .`, which installs the binary to
-`$(go env GOPATH)/bin` (usually `~/go/bin`). Ensure that directory is on your
-`PATH`; no `sudo` or manual move is needed.
+`make build` runs `go install .` with the current `git describe` stamped in, so
+`stack-stitcher --version` reports the build it came from. It installs the
+binary to `$(go env GOPATH)/bin` (usually `~/go/bin`). Ensure that directory is
+on your `PATH`; no `sudo` or manual move is needed.
 
 ```bash
 command -v stack-stitcher
@@ -70,7 +72,21 @@ Run Stack Stitcher from a directory that contains your Compose file:
 stack-stitcher
 ```
 
-It auto-detects the compose file in the current directory, checking in order: `compose.yaml`, `compose.yml`, `docker-compose.yaml`, `docker-compose.yml` — the same order Docker itself uses, since the `docker compose` commands Stack Stitcher runs resolve the file themselves. Whichever file won is named in the footer, so you can always see what you are acting on; when several of those names exist, the footer marks the winner with `+N` and the `?` overlay lists the rest. There's no flag to point at a file elsewhere yet — `cd` into the project directory first.
+It auto-detects the compose file in the current directory, checking in order: `compose.yaml`, `compose.yml`, `docker-compose.yaml`, `docker-compose.yml` — the same order Docker itself uses. Whichever file won is named in the footer, so you can always see what you are acting on; when several of those names exist, the footer marks the winner with `+N` and the `?` overlay lists the rest. Whatever it resolves is then passed to every `docker compose` call as `--file`, so the commands act on the file the panels describe.
+
+To work on a project somewhere else, point at it instead of `cd`-ing there:
+
+```bash
+stack-stitcher --dir ~/homelab/media      # resolve a compose file in that directory
+stack-stitcher --file ~/homelab/media/compose.prod.yaml   # open exactly this file
+```
+
+`-d` and `-f` are the short forms. `--dir` resolves in the usual order; `--file` opens the file you name, whatever it is called. They can't be combined — either one on its own already does the job. A path that doesn't exist is reported before the UI starts, not inside it.
+
+```bash
+stack-stitcher --version   # the release it was built from, or the commit
+stack-stitcher --help
+```
 
 ### Key bindings
 
@@ -164,6 +180,9 @@ The ASCII logo asset is still kept in `src/constants/Branding.go` for a future A
 │   └── constants/     # Layout widths, branding, focusable component list
 ├── demo/              # VHS script + recorded demo gif
 ├── docs/              # DESIGN.md (why), ROADMAP.md (what's next), historical plans
+├── .github/workflows/ # CI on every push and PR, releases on a v* tag
+├── .goreleaser.yaml   # what a tagged release builds
+├── CONTRIBUTING.md    # the loop, how to test a TUI, how a release is cut
 ├── TODO.md            # current worklist and completed recent work
 ├── Makefile           # dev / build targets
 ├── go.mod
@@ -179,9 +198,13 @@ make build         # install to $(go env GOPATH)/bin
 go build ./...     # compile every package
 go vet ./...       # static checks
 go test ./...      # test suite
+gofmt -l .         # must print nothing
 ```
 
-Contributions, issues, and feature ideas are welcome.
+CI runs all four on every push and pull request, with `go test -race`.
+
+Contributions, issues, and feature ideas are welcome — see
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
