@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/utils"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/compose-spec/compose-go/v2/types"
@@ -138,7 +139,7 @@ func TestReloadOfAnEmptyProjectSelectsNothing(t *testing.T) {
 // panels emit on their way past, which is what gives the reload something
 // to restore.
 func TestAppModelRecordsWhatThePanelsSelect(t *testing.T) {
-	m := drive(GetInitialModel(),
+	m := drive(GetInitialModel(utils.ComposeSource{}),
 		cmds.SetSelectedServiceMsg(types.ServiceConfig{Name: "web"}),
 		cmds.SetSelectedGroupMsg("media"),
 	)

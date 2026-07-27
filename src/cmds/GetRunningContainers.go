@@ -17,20 +17,21 @@ type GetRunningContainersMsg struct {
 }
 
 // GetRunningContainers is the foreground refresh: on success it clears the
-// error banner, on failure it sets it.
-func GetRunningContainers() tea.Msg {
-	return getRunningContainers(false)
+// error banner, on failure it sets it. composeFile scopes the query to the
+// file the app has loaded.
+func GetRunningContainers(composeFile string) tea.Cmd {
+	return func() tea.Msg { return getRunningContainers(false, composeFile) }
 }
 
 // GetRunningContainersBackground is the ticker-driven poll: it refreshes
 // container state and surfaces new docker errors, but a success leaves an
 // error banner from another source (e.g. a failed action) alone.
-func GetRunningContainersBackground() tea.Msg {
-	return getRunningContainers(true)
+func GetRunningContainersBackground(composeFile string) tea.Cmd {
+	return func() tea.Msg { return getRunningContainers(true, composeFile) }
 }
 
-func getRunningContainers(background bool) tea.Msg {
-	commandOutput, err := utils.DockerComposePs()
+func getRunningContainers(background bool, composeFile string) tea.Msg {
+	commandOutput, err := utils.DockerComposePs(composeFile)
 	if err != nil {
 		return GetRunningContainersMsg{Err: err, Background: background}
 	}

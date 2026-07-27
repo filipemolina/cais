@@ -8,6 +8,8 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+
+	"github.com/filipemolina/stack-stitcher/src/utils"
 )
 
 // rig drives a real tea.Program end-to-end without a TTY. It captures all
@@ -48,7 +50,7 @@ func newRig(t *testing.T) *rig {
 
 	out := &safeBuffer{}
 	p := tea.NewProgram(
-		GetInitialModel(),
+		GetInitialModel(utils.ComposeSource{}),
 		tea.WithInput(nil),
 		tea.WithOutput(out),
 		tea.WithoutSignals(),

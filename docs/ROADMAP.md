@@ -59,27 +59,15 @@ Do not re-open these without asking:
 | 4 — The new global keys | done (`a64ec73`) |
 | 5 — `?` help overlay | done (`37bf74a`) |
 | 6 — Centralize color into a `Theme` | done (`88ce42d`) |
-| 7 — Release plumbing | **next** |
-| 8 — Edit group membership, then the Files page | |
+| 7 — Release plumbing | done (`PENDING`) |
+| 8 — Edit group membership, then the Files page | **next** |
 
-Phases 0–6 are described in `docs/DESIGN.md` (*Where keybindings live*, *Which
-compose file*, *The lists do not get to keep `list.DefaultKeyMap`*, *Navigation
-and focus*, *Color lives on a Theme*, *Background tiers, and sealing them*)
-rather than here, because they are now how the app works rather than a plan.
-
-## Phase 7 — Release plumbing
-
-- A version variable stamped with `-ldflags -X`, plus `--version`.
-- **First**, thread the resolved compose path into `utils.DockerCompose`,
-  `utils.DockerComposePs` and `utils.DockerLogs` as `--file`; **then** add
-  `-f`/`--file` and `-d`/`--dir` to `main.go` → `utils.GetComposeFileName` →
-  `cmds.GetConfig` → `AppModel`. Without the first step the flag desyncs the UI
-  from the commands it runs: the panel would describe one file while
-  `docker compose start` acted on another. This ordering is not optional, and
-  `docs/DESIGN.md` records why.
-- GitHub Actions: `go build ./... && go vet ./... && go test ./...` on push/PR.
-  GoReleaser for tagged binaries. `CONTRIBUTING.md`. Re-record `demo/demo.gif`
-  (`demo/demo.tape` still says "profile" and `dist/stack-stitcher`).
+Phases 0–7 are described in `docs/DESIGN.md` (*Where keybindings live*, *Which
+compose file* — now including *One resolution, passed down* and the two flags —
+*The lists do not get to keep `list.DefaultKeyMap`*, *Navigation and focus*,
+*Color lives on a Theme*, *Background tiers, and sealing them*, *Saying which
+build this is*) rather than here, because they are now how the app works rather
+than a plan.
 
 ## Phase 8 — Close the functional hole, then Files
 
@@ -88,10 +76,14 @@ rather than here, because they are now how the app works rather than a plan.
   applies the diff by reusing the YAML walks in `cmds/CreateGroup.go` (tag) and
   `cmds/DeleteGroup.go` (untag). Today membership can only be set at creation,
   which is the first wall a real user hits. `e` = "edit the selected thing"
-  matches `e` on the service details panel.
+  matches `e` on the service details panel. Note that both commands now take
+  the file name from `AppModel` rather than resolving it themselves (Phase 7),
+  so whatever saves the diff must be given it the same way — the modal emits
+  `cmds.CreateGroupRequestMsg` and `AppModel` supplies the file.
 - **Files page, minimally.** Active file path, a read-only viewport of its
   contents, `E` to edit. Replaces the `PlaceholderPanel` so the alpha has no dead
-  tabs.
+  tabs. `-d`/`--dir` (Phase 7) makes the path worth showing in full: it is no
+  longer always a bare name in the working directory.
 
 ## Explicitly post-alpha
 
@@ -116,3 +108,10 @@ columns from `docker stats`. Group rename. An `x`-style action menu. About modal
   return. Phase 3 tested panel keys at the component and model level instead,
   which worked well enough that the rig gap is no longer blocking — but the rig
   is still the only place to test a full flow end to end.
+- **The two flaky bootstrap tests were an app bug, not a rig bug** (fixed in
+  Phase 7). Worth remembering before blaming the rig again: a failed reload was
+  replacing the open modal with a fresh one. If a rig test starts failing
+  intermittently, ask what else the app is doing to itself first.
+- **`--version` is unstamped in a `go run` / plain `go build`.** It reports the
+  commit instead, which is intended. Only `make build` and the release build
+  stamp a version, so a screenshot of a dev build shows a hash in the nav bar.

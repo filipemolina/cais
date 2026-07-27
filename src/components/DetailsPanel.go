@@ -52,7 +52,7 @@ func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		if action, ok := dockerActionFor(msg); ok {
-			actionCmd := cmds.RunDockerAction(action, m.service.Name, false)
+			actionCmd := cmds.RequestDockerAction(action, m.service.Name, false)
 			finalCmds = append(finalCmds, actionCmd)
 		}
 
@@ -62,7 +62,7 @@ func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// confirmation first, unlike the other four actions.
 			finalCmds = append(finalCmds, cmds.OpenConfirmModal(
 				fmt.Sprintf("Remove service %q?\nThis stops and removes its containers. (y/n)", m.service.Name),
-				cmds.RunDockerAction("remove", m.service.Name, false),
+				cmds.RequestDockerAction("remove", m.service.Name, false),
 			))
 
 		case key.Matches(msg, keys.Details.Logs):

@@ -12,6 +12,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/utils"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 )
 
 func getConfigErrNoFileMsg() cmds.GetConfigMsg {
@@ -155,6 +156,37 @@ func TestBootstrapModal_SkipServiceWritesEmptyFile(t *testing.T) {
 	}
 
 	t.Fatalf("compose.yaml was not written to %s after dismissing the modal with 'n'. Output:\n%s", dir, r.Output())
+}
+
+// A second failed load must leave the modal alone. Init's own GetConfig and
+// any reload after it can both report ErrNoComposeFile while the modal is
+// already up, and reopening it there would silently swap a fresh modal in
+// under whatever the user had typed - which is what made the two rig tests
+// below flaky: a reset field turned "" back into "compose.yaml", and the
+// remaining backspaces left "compose.y".
+func TestBootstrapModal_SurvivesASecondFailedLoad(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	m := drive(GetInitialModel(utils.ComposeSource{}),
+		tea.WindowSizeMsg{Width: 120, Height: 40},
+		getConfigErrNoFileMsg(),
+	)
+
+	// Clear the default "compose.yaml" (12 characters), with the second
+	// failure landing in the middle of the typing.
+	for range 6 {
+		m = drive(m, keyPress(teaKeyBackspace()))
+	}
+	m = drive(m, getConfigErrNoFileMsg())
+	for range 6 {
+		m = drive(m, keyPress(teaKeyBackspace()))
+	}
+
+	m = drive(m, keyPress(teaKeyEnter()))
+
+	if screen := ansi.Strip(m.View().Content); !strings.Contains(screen, "Filename can't be empty") {
+		t.Fatalf("the field was reset by the second failed load. Screen:\n%s", screen)
+	}
 }
 
 // TestBootstrapModal_EmptyFilenameShowsInlineError clears the default
