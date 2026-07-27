@@ -433,7 +433,18 @@ the same handover as the service-details panel (see *Editing services*).
 Two things are deliberate. First, the contents are the *raw bytes*, comments
 and blank lines included — not the parse tree the groups and services pages
 derive from — because the page exists to show the user their own file as they
-would see it in an editor, which is also the file `E` is about to open.
+would see it in an editor, which is also the file `E` is about to open. A
+hand-rolled, line-oriented YAML highlighter (`src/highlight`) colors keys,
+quoted strings and comments from the active theme as a *display layer over
+those bytes* — it changes no byte, so the view still matches the file `E`
+opens and the raw text a scroll reveals. It is hand-rolled rather than a
+lexer library: the app has one file to color, and Chroma is a heavy
+dependency against the minimal-deps stance. It tracks block scalars so a
+`command: |` body is treated as literal text rather than structure — a line
+like `echo image: x` inside one is not colored as a key, and a `#` inside it
+is not a comment — and it is best-effort by design, degrading to plain text
+on anything it does not recognize.
+
 Second, the panel is **always focused**: it is the only component on its
 page, so there is nothing for Tab to move to, and tracking focus would let
 Tab strand it on a component id that does not exist here.
@@ -444,9 +455,21 @@ every write through the app, so the view re-syncs from disk instead of going
 stale. The file's path rides on that message (`ComposeFileContentsMsg.Name`)
 rather than only on `SetComposeFileMsg`: a broadcast reaches only the active
 page's components, so a Files page that was inactive at load time never sees
-the footer-oriented message, but it always sees the read it triggered. Syntax
-highlighting and browsing several compose files are deliberately out of the
-first cut (see `TODO.md`).
+the footer-oriented message, but it always sees the read it triggered.
+
+`b` browses the other compose files in the active file's directory. It opens
+a picker modal (`ComposeFilePickerModal`) listing every `*.yaml`/`*.yml`
+there — not just the four auto-detected names, so it is a way to *choose*,
+like `--file`, not a resolution order — with the loaded file marked and the
+cursor starting on it. The directory scan runs as a command (the picker
+opens off `ComposeFileListMsg`) so `AppModel` does no IO inline. Enter
+switches: the modal closes with `SwitchComposeFileMsg` as its follow-up, and
+`AppModel` handles that by pointing the source at the chosen path and
+reloading with `GetConfig` — exactly what passing `--file` at startup does.
+Every downstream consumer (the docker calls, the YAML writers, the footer,
+the groups and services lists) already flows from the resolved file, so they
+follow without further work; the contents read above repopulates the
+viewport on the same chain.
 
 ### Home layout
 
