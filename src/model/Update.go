@@ -447,11 +447,21 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		m.config.configFileName = msg.FileName
 		m.config.configProject = msg.Project
+		// Tests construct GetConfigMsg by hand without the candidates; the
+		// winner on its own is still a complete answer.
+		m.config.configFiles = msg.Files
+		if len(m.config.configFiles) == 0 && msg.FileName != "" {
+			m.config.configFiles = []string{msg.FileName}
+		}
 		finalCmds = append(finalCmds, cmds.GetRunningContainers)
 		// The footer starts out saying no file is loaded, so only a successful
 		// load has anything to report - a failed one leaves the previous answer
 		// standing, which is still the file the docker commands would act on.
-		finalCmds = append(finalCmds, cmds.SetComposeFile(msg.FileName))
+		var others []string
+		if len(m.config.configFiles) > 1 {
+			others = m.config.configFiles[1:]
+		}
+		finalCmds = append(finalCmds, cmds.SetComposeFile(msg.FileName, others))
 		finalCmds = append(finalCmds, m.configSyncCmds()...)
 		if homeStatsCmd := m.broadcastHomeStats(); homeStatsCmd != nil {
 			finalCmds = append(finalCmds, homeStatsCmd)

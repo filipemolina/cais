@@ -14,7 +14,7 @@ type CreateGroupMsg struct {
 // the compose file on disk.
 func CreateGroup(name string, serviceNames []string) tea.Cmd {
 	return func() tea.Msg {
-		fileName, err := utils.GetComposeFileName()
+		fileName, _, err := utils.GetComposeFileName()
 		if err != nil {
 			return CreateGroupMsg{Err: err}
 		}
