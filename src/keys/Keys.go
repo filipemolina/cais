@@ -113,8 +113,11 @@ var Global = GlobalKeys{
 var List = ListKeys{
 	// Matched by the bubbles list itself; declared here so the footer can
 	// advertise it from the same place as everything else.
-	Navigate:    key.NewBinding(key.WithHelp("↑/↓", "navigate")),
-	Select:      key.NewBinding(key.WithKeys("space"), key.WithHelp("space", "select")),
+	Navigate: key.NewBinding(key.WithHelp("↑/↓", "navigate")),
+	// Enter is an alias for space: same verb, same binding, so every panel
+	// matches either. The help advertises space alone - the alias is for the
+	// muscle memory that expects enter to choose, not another key to learn.
+	Select:      key.NewBinding(key.WithKeys("space", "enter"), key.WithHelp("space", "select")),
 	New:         key.NewBinding(key.WithKeys("n"), key.WithHelp("n", "new")),
 	Delete:      key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "delete")),
 	Filter:      key.NewBinding(key.WithKeys("/"), key.WithHelp("/", "filter")),
