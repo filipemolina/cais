@@ -74,16 +74,20 @@ It auto-detects the compose file in the current directory, checking in order: `c
 
 ### Key bindings
 
-Pages are switched with `Alt` plus the underlined letter in each nav tab — the
-nav itself never takes keyboard focus, so `Tab` is free to move between the two
-body panels. `Alt` rather than `Ctrl` because terminals intercept `Ctrl+S` as
-flow control and `Ctrl+D` as end-of-input.
+Pages are switched with the digit shown on each nav tab — `1` Groups, `2`
+Services, `3` Files — or with `[` and `]` to step through them. `Alt` plus the
+tab's first letter still works as an alias for terminals that send Option as
+Alt (macOS Terminal.app and iTerm2 do not, unless you change a setting). The
+nav itself never takes keyboard focus, so `Tab` is free to move between the
+two body panels.
 
 | Key | Action | Where |
 | --- | --- | --- |
-| `Alt`+`G` `S` `F` | Jump to Groups / Services / Files | Everywhere |
+| `1`–`3` | Jump to Groups / Services / Files | Everywhere |
+| `[` / `]` | Step to the previous / next page | Everywhere |
 | `Tab` / `Shift+Tab` | Move focus between the two body panels | Everywhere |
-| `Space` | Select the highlighted group or service | Groups/Services list focused |
+| `Esc` | Back to the list panel | Details panel focused |
+| `Space` / `Enter` | Select the highlighted group or service | Groups/Services list focused |
 | `s` | Start | A group or service panel focused |
 | `t` | Stop | A group or service panel focused |
 | `r` | Restart | A group or service panel focused |
@@ -117,9 +121,10 @@ there changes it everywhere and the footer follows. If you are adding a key,
 that's the file — see [docs/DESIGN.md](docs/DESIGN.md) for the tiers and the rules
 they follow.
 
-While you are typing a filter the list has the whole keyboard, so `n`, `d` and
-`q` are letters rather than commands; `Enter` applies the filter and `Esc`
-abandons it. `Ctrl+C` is the exception that always quits, whatever is on screen.
+While you are typing a filter the list has the whole keyboard, so `n`, `d`,
+`q` and the page digits are letters rather than commands; `Enter` applies the
+filter and `Esc` abandons it. `Ctrl+C` is the exception that always quits,
+whatever is on screen.
 
 ### UI overview
 
