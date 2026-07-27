@@ -51,6 +51,8 @@ This means:
 
 - **Creating a group** = tagging one or more services with a new profile name.
 - **Deleting a group** = stripping that tag from all services that have it.
+- **Editing a group's membership** = reconciling tags so exactly the chosen
+  services carry it (see *Editing group membership* below).
 - **A group can become empty** if its last service is removed or untagged.
 - **Renaming a group** is currently not supported (would require multi-file
   YAML rewriting).
@@ -393,6 +395,58 @@ with `os.WriteFile` or an `os.Create` truncation: those destroy the original
 before the new contents are safely on disk, so a failure mid-write leaves the
 user with nothing. Encode into memory first, as `writeComposeNode` does, so
 that a serialisation error never reaches the file at all.
+
+### Editing group membership
+
+A group's membership can be changed after creation, because creation is not
+the moment the user knows the final set. `e` on the groups list reopens the
+service checklist — the same component the create flow ends on — pre-checked
+with the group's current members. Reusing the checklist is the point:
+"which services are in this set" is one question with one answer widget,
+whether the set is being made or edited. `e` = "edit the selected thing"
+matches `e` on the service details panel.
+
+Saving applies the *diff*, not a rewrite. `utils.SetGroupMembers` reconciles
+the file so exactly the checked services carry the tag: newly checked services
+are tagged, newly unchecked ones untagged. It runs as a single
+read-modify-write pass over the node tree rather than composing the create
+and delete walks, which would each open and close the file separately and
+leave a crash window with a half-applied edit. Unchecking every service is
+allowed and removes the group, because an empty group is the same end state
+as a deleted one (§3); create still requires at least one, because a group
+that begins empty has no members to derive from.
+
+The request/response split is the one every write uses: the modal emits
+`cmds.EditGroupRequestMsg` (the group and the members it chose), `AppModel`
+supplies the loaded file and runs `cmds.EditGroup`, and a success reloads the
+config so the lists re-derive from disk. A component never learns which file
+is loaded — see *One resolution, passed down* under *Which compose file*.
+
+### The Files page
+
+The Files page answers "which file am I acting on, and what is in it?" in
+full. It is a single panel — not the two-pane list-and-details split —
+showing the active compose file's path on the title row and its raw contents
+in a read-only, scrollable viewport. `E` opens the file in `$EDITOR`, reusing
+the same handover as the service-details panel (see *Editing services*).
+
+Two things are deliberate. First, the contents are the *raw bytes*, comments
+and blank lines included — not the parse tree the groups and services pages
+derive from — because the page exists to show the user their own file as they
+would see it in an editor, which is also the file `E` is about to open.
+Second, the panel is **always focused**: it is the only component on its
+page, so there is nothing for Tab to move to, and tracking focus would let
+Tab strand it on a component id that does not exist here.
+
+The viewport is fed by a read, not held in app state. `AppModel` issues
+`cmds.GetComposeFileContents` when the Files page becomes active and after
+every write through the app, so the view re-syncs from disk instead of going
+stale. The file's path rides on that message (`ComposeFileContentsMsg.Name`)
+rather than only on `SetComposeFileMsg`: a broadcast reaches only the active
+page's components, so a Files page that was inactive at load time never sees
+the footer-oriented message, but it always sees the read it triggered. Syntax
+highlighting and browsing several compose files are deliberately out of the
+first cut (see `TODO.md`).
 
 ### Home layout
 
