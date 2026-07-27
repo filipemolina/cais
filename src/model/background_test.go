@@ -2,11 +2,14 @@ package model
 
 import (
 	"fmt"
+	"maps"
+	"slices"
+	"strings"
+	"testing"
+
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/utils"
-	"strings"
-	"testing"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/compose-spec/compose-go/v2/types"
@@ -42,138 +45,163 @@ func project() *types.Project {
 	}
 }
 
-func TestNoBackgroundBleedAcrossPages(t *testing.T) {
-	cases := []struct {
-		name  string
-		msgs  []tea.Msg
-		width int
-	}{
-		{name: "home empty", width: 120},
-		{
-			name: "home with groups",
-			msgs: []tea.Msg{
-				cmds.GetConfigMsg{FileName: "compose.yaml", Project: project()},
-			},
-			width: 120,
-		},
-		{
-			name: "home with a group selected",
-			msgs: []tea.Msg{
-				cmds.GetConfigMsg{FileName: "compose.yaml", Project: project()},
-				cmds.SetSelectedGroupMsg("frontend"),
-			},
-			width: 120,
-		},
-		{
-			name: "dashboard empty",
-			msgs: []tea.Msg{
-				cmds.SetActivePageMsg("Services"),
-			},
-			width: 120,
-		},
-		{
-			name: "dashboard with a service selected",
-			msgs: []tea.Msg{
-				cmds.GetConfigMsg{FileName: "compose.yaml", Project: project()},
-				cmds.SetActivePageMsg("Services"),
-				cmds.SetSelectedServiceMsg(types.ServiceConfig{
-					Name:  "web",
-					Image: "nginx:latest",
-				}),
-			},
-			width: 120,
-		},
-		{
-			// Narrow enough that panels hit their minimum width and content
-			// has to wrap, which is where padding maths tends to slip.
-			name:  "narrow terminal",
-			width: 64,
-		},
-	}
+// forEachTheme runs fn once per registered theme, with appstyles.Active set
+// to that theme for the duration, in sorted order for stable test output.
+// This is the "free property" the roadmap asks for: a theme that leaves a
+// tier unsealed fails the exact same assertions every existing state already
+// runs, just under a different palette - see docs/ROADMAP.md's Theme phase.
+func forEachTheme(t *testing.T, fn func(t *testing.T)) {
+	t.Helper()
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			m := applyLayout(drive(startup(tc.width, 40), tc.msgs...))
+	original := appstyles.Active
+	t.Cleanup(func() { appstyles.Active = original })
 
-			frame := m.View().Content
-
-			if appstyles.HasBackgroundBleed(frame) {
-				t.Errorf("rendered frame has unpainted spaces:\n%s", describeBleed(frame))
-			}
+	for _, name := range slices.Sorted(maps.Keys(appstyles.Themes)) {
+		t.Run(name, func(t *testing.T) {
+			appstyles.Active = appstyles.Themes[name]
+			fn(t)
 		})
 	}
+}
+
+func TestNoBackgroundBleedAcrossPages(t *testing.T) {
+	forEachTheme(t, func(t *testing.T) {
+		cases := []struct {
+			name  string
+			msgs  []tea.Msg
+			width int
+		}{
+			{name: "home empty", width: 120},
+			{
+				name: "home with groups",
+				msgs: []tea.Msg{
+					cmds.GetConfigMsg{FileName: "compose.yaml", Project: project()},
+				},
+				width: 120,
+			},
+			{
+				name: "home with a group selected",
+				msgs: []tea.Msg{
+					cmds.GetConfigMsg{FileName: "compose.yaml", Project: project()},
+					cmds.SetSelectedGroupMsg("frontend"),
+				},
+				width: 120,
+			},
+			{
+				name: "dashboard empty",
+				msgs: []tea.Msg{
+					cmds.SetActivePageMsg("Services"),
+				},
+				width: 120,
+			},
+			{
+				name: "dashboard with a service selected",
+				msgs: []tea.Msg{
+					cmds.GetConfigMsg{FileName: "compose.yaml", Project: project()},
+					cmds.SetActivePageMsg("Services"),
+					cmds.SetSelectedServiceMsg(types.ServiceConfig{
+						Name:  "web",
+						Image: "nginx:latest",
+					}),
+				},
+				width: 120,
+			},
+			{
+				// Narrow enough that panels hit their minimum width and content
+				// has to wrap, which is where padding maths tends to slip.
+				name:  "narrow terminal",
+				width: 64,
+			},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				m := applyLayout(drive(startup(tc.width, 40), tc.msgs...))
+
+				frame := m.View().Content
+
+				if appstyles.HasBackgroundBleed(frame) {
+					t.Errorf("rendered frame has unpainted spaces:\n%s", describeBleed(frame))
+				}
+			})
+		}
+	})
 }
 
 // A modal is composited over the page beneath it, so an unpainted cell shows
 // the page through the modal rather than just the terminal color.
 func TestNoBackgroundBleedInModals(t *testing.T) {
-	cases := []struct {
-		name string
-		msgs []tea.Msg
-	}{
-		{
-			name: "create group name prompt",
-			msgs: []tea.Msg{
-				cmds.GetConfigMsg{FileName: "compose.yaml", Project: project()},
-				cmds.OpenCreateGroupModalMsg{},
+	forEachTheme(t, func(t *testing.T) {
+		cases := []struct {
+			name string
+			msgs []tea.Msg
+		}{
+			{
+				name: "create group name prompt",
+				msgs: []tea.Msg{
+					cmds.GetConfigMsg{FileName: "compose.yaml", Project: project()},
+					cmds.OpenCreateGroupModalMsg{},
+				},
 			},
-		},
-		{
-			name: "delete group confirmation",
-			msgs: []tea.Msg{
-				cmds.GetConfigMsg{FileName: "compose.yaml", Project: project()},
-				cmds.SetSelectedGroupMsg("frontend"),
-				cmds.OpenDeleteGroupModalMsg("frontend"),
+			{
+				name: "delete group confirmation",
+				msgs: []tea.Msg{
+					cmds.GetConfigMsg{FileName: "compose.yaml", Project: project()},
+					cmds.SetSelectedGroupMsg("frontend"),
+					cmds.OpenDeleteGroupModalMsg("frontend"),
+				},
 			},
-		},
-		{
-			// No compose file in the working directory opens the bootstrap
-			// modal off the back of the error.
-			name: "bootstrap compose file",
-			msgs: []tea.Msg{
-				cmds.GetConfigMsg{Err: utils.ErrNoComposeFile},
+			{
+				// No compose file in the working directory opens the bootstrap
+				// modal off the back of the error.
+				name: "bootstrap compose file",
+				msgs: []tea.Msg{
+					cmds.GetConfigMsg{Err: utils.ErrNoComposeFile},
+				},
 			},
-		},
-		{
-			name: "help overlay",
-			msgs: []tea.Msg{
-				cmds.GetConfigMsg{FileName: "compose.yaml", Project: project()},
-				cmds.OpenHelpModalMsg{},
+			{
+				name: "help overlay",
+				msgs: []tea.Msg{
+					cmds.GetConfigMsg{FileName: "compose.yaml", Project: project()},
+					cmds.OpenHelpModalMsg{},
+				},
 			},
-		},
-	}
+		}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			m := applyLayout(drive(startup(120, 40), tc.msgs...))
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				m := applyLayout(drive(startup(120, 40), tc.msgs...))
 
-			if m.activeModal == nil {
-				t.Fatalf("precondition: expected a modal to be open")
-			}
+				if m.activeModal == nil {
+					t.Fatalf("precondition: expected a modal to be open")
+				}
 
-			frame := m.View().Content
+				frame := m.View().Content
 
-			if appstyles.HasBackgroundBleed(frame) {
-				t.Errorf("frame with %s has unpainted spaces:\n%s", tc.name, describeBleed(frame))
-			}
-		})
-	}
+				if appstyles.HasBackgroundBleed(frame) {
+					t.Errorf("frame with %s has unpainted spaces:\n%s", tc.name, describeBleed(frame))
+				}
+			})
+		}
+	})
 }
 
 func TestNoBackgroundBleedWhenErrorBannerIsShown(t *testing.T) {
-	m := applyLayout(drive(startup(120, 40),
-		cmds.DockerActionMsg{Action: "start", Target: "frontend", IsGroup: true, Err: errBoom{}},
-	))
+	forEachTheme(t, func(t *testing.T) {
+		m := applyLayout(drive(startup(120, 40),
+			cmds.DockerActionMsg{Action: "start", Target: "frontend", IsGroup: true, Err: errBoom{}},
+		))
 
-	frame := m.View().Content
+		frame := m.View().Content
 
-	if !strings.Contains(frame, "boom") {
-		t.Fatalf("precondition: expected the error banner to be rendered")
-	}
+		if !strings.Contains(frame, "boom") {
+			t.Fatalf("precondition: expected the error banner to be rendered")
+		}
 
-	if appstyles.HasBackgroundBleed(frame) {
-		t.Errorf("frame with an error banner has unpainted spaces:\n%s", describeBleed(frame))
-	}
+		if appstyles.HasBackgroundBleed(frame) {
+			t.Errorf("frame with an error banner has unpainted spaces:\n%s", describeBleed(frame))
+		}
+	})
 }
 
 type errBoom struct{}
