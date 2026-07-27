@@ -9,9 +9,9 @@ step, **[H]** = housekeeping.
 
 **This file is the flat list of what is left. `docs/ROADMAP.md` is the order to
 do it in, and why** — it carries the decisions already taken with the owner, so
-work resumed mid-sequence does not re-litigate them. Phases 0–7 of that roadmap
-are done; **Phase 8 — edit group membership, then the Files page — is next.**
-(Its work is implemented on the phase branch; see `docs/ROADMAP.md`.)
+work resumed mid-sequence does not re-litigate them. Phases 0–8 of that roadmap
+are done; **Phase 9 — complete the Files page (syntax highlighting, then browse
+and switch compose files) — is the work on this branch.** (See `docs/ROADMAP.md`.)
 
 `README.md`, `docs/DESIGN.md`, `docs/ROADMAP.md`, and this file are the current
 documentation. The dated specs and plans under `docs/superpowers/` are completed
@@ -58,11 +58,17 @@ historical records, not a live backlog.
   at the model level instead. Worth closing before Phase 3, which is entirely
   panel keys.
 
-- [~] **[P] Compose Files page** — the minimum useful version is done (Phase
-  8): the active file's path on the title row, a read-only scrollable view of
-  its raw contents, and `E` to edit it in `$EDITOR`. **Remaining:** syntax
-  highlighting, and the fuller version — browse multiple compose files in the
-  directory and switch the active one.
+- [x] **[P] Compose Files page** — done across Phases 8–9. Phase 8 landed the
+  minimum: the active file's path on the title row, a read-only scrollable
+  view of its raw contents, and `E` to edit it in `$EDITOR`. Phase 9 completed
+  it: a hand-rolled, line-oriented YAML highlighter colors keys, quoted
+  strings and comments from the active theme (display-only — it changes no
+  byte, so the view still matches the file `E` opens; it tracks block scalars
+  so a `command: |` body is not colored as structure); and `b` opens a picker
+  listing the YAML files in the active file's directory, with the loaded one
+  marked, and Enter switches — which is exactly passing `--file` at runtime
+  (AppModel points the source at the chosen path and reloads with `GetConfig`,
+  so every downstream consumer follows without further work).
 
 - [x] **[P] Settings page** — dropped as a page. The tab was a placeholder with
   two rows of content in it, and each of those settings has a better home:
