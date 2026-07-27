@@ -61,7 +61,7 @@ Do not re-open these without asking:
 | 6 — Centralize color into a `Theme` | done (`88ce42d`) |
 | 7 — Release plumbing | done (`01f75e9`) |
 | 8 — Edit group membership, then the Files page | done (`ffe9fed`) |
-| 9 — Complete the Files page: syntax highlighting, browse and switch | done (this branch) |
+| 9 — Complete the Files page: syntax highlighting, browse and switch | done (`f450a55`) |
 
 Phases 0–9 are described in `docs/DESIGN.md` (*Where keybindings live*, *Which
 compose file* — now including *One resolution, passed down* and the two flags —
