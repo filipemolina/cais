@@ -478,10 +478,16 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Err != nil {
 			m.lastError = msg.Err.Error()
 			m.lastErrorFromPoll = false
-			// No compose file in the current directory: offer to create
-			// one in place. The error banner is still set above, so an
-			// Esc from the modal leaves a visible explanation.
-			if errors.Is(msg.Err, utils.ErrNoComposeFile) {
+			// No compose file where we looked: offer to create one there.
+			// The error banner is still set above, so an Esc from the modal
+			// leaves a visible explanation.
+			//
+			// Only when nothing else owns the screen. A second failed load
+			// arriving while this modal is up would otherwise replace it with
+			// a fresh one, wiping out a filename half-typed into it - and a
+			// modal the user opened deliberately is not something a
+			// background reload gets to close.
+			if errors.Is(msg.Err, utils.ErrNoComposeFile) && m.activeModal == nil {
 				m.activeModal = components.CreateComposeFileModal(m.config.source.Dir)
 			}
 			if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
