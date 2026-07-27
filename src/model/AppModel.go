@@ -28,7 +28,7 @@ type configModel struct {
 	// consumers only care about the winner.
 	configFiles    []string
 	configProject  *types.Project
-	terminalWidht  int
+	terminalWidth  int
 	terminalHeight int
 	// bodyLayout is the box the body panels render into. AppModel owns it
 	// (see calculateBodyLayout) and broadcasts it; components never derive
