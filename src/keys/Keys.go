@@ -264,6 +264,9 @@ type Context struct {
 	// The editor owns the keyboard, so the panel's action keys and the page
 	// digits are dead; the footer shows the editor-specific keys instead.
 	Editing bool
+	// PendingAction is true when a docker action is running. Action keys are
+	// disabled and a spinner is shown in the panel.
+	PendingAction bool
 	// Filter is the focused list's filter state. Its zero value is
 	// list.Unfiltered, so a caller that has no list to report about gets the
 	// ordinary keys.
@@ -320,6 +323,11 @@ func Active(ctx Context) []key.Binding {
 		case constants.COMPONENT_BODY_DETAILS:
 			if !ctx.Selected {
 				return []key.Binding{List.New, Global.Back, Global.NextPanel}
+			}
+
+			// While an action is pending, disable action keys.
+			if ctx.PendingAction {
+				return []key.Binding{Global.Back, Global.NextPanel}
 			}
 
 			return []key.Binding{

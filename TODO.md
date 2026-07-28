@@ -282,13 +282,13 @@ documentation.
   the onboarding issue where the empty state says "press n" but the key only
   works on one panel. See `docs/PLAN-UX-IMPROVEMENTS.md`.
 
-- [ ] **[S] Action feedback with spinner** — show a spinning animation while
+- [x] **[S] Action feedback with spinner** — show a spinning animation while
   docker actions (start, stop, restart, pull, remove) are in progress. The
   spinner appears in the title pill area (replacing the status pill) and in
   the action buttons area (replacing the buttons). Action keys are disabled
   while an action is pending. See `docs/PLAN-UX-IMPROVEMENTS.md`.
 
-- [ ] **[S] Error modals for foreground errors** — show foreground errors
+- [x] **[S] Error modals for foreground errors** — show foreground errors
   (from docker actions, config loads, etc.) in a modal dialog instead of the
   banner. Background poll errors keep the banner to avoid modal fatigue. See
   `docs/PLAN-UX-IMPROVEMENTS.md`.

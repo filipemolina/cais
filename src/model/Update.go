@@ -194,9 +194,10 @@ type filterStater interface {
 // no keys while one is up - so the snapshot cannot go stale.
 func (m AppModel) helpContext() keys.Context {
 	ctx := keys.Context{
-		Page:    m.activePage,
-		Focused: m.focusedComponent,
-		Editing: m.inlineEditing,
+		Page:         m.activePage,
+		Focused:      m.focusedComponent,
+		Editing:      m.inlineEditing,
+		PendingAction: m.pendingAction != nil,
 	}
 
 	switch m.activePage {
@@ -485,17 +486,30 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cmds.RunDockerActionMsg:
 		// The panel asked for the action; AppModel is what knows which compose
 		// file it has to run against.
+		m.pendingAction = &components.PendingAction{
+			Action:  msg.Action,
+			Target:  msg.Target,
+			IsGroup: msg.IsGroup,
+		}
+		finalCmds = append(finalCmds, cmds.SetPendingAction(msg.Action, msg.Target, msg.IsGroup))
 		finalCmds = append(finalCmds, cmds.RunDockerAction(
 			msg.Action, msg.Target, msg.IsGroup, m.config.configFileName,
 		))
 
 	case cmds.DockerActionMsg:
-		// This result replaces any prior poll error in the banner.
-		m.lastErrorFromPoll = false
+		// Clear the pending action state.
+		m.pendingAction = nil
+		finalCmds = append(finalCmds, cmds.ClearPendingAction())
+
+		// Docker action errors are foreground: show a modal instead of the banner.
 		if msg.Err != nil {
-			m.lastError = msg.Err.Error()
+			if m.activeModal == nil {
+				m.activeModal = components.ErrorModal(msg.Err.Error(), m.config.terminalWidth)
+			}
 		} else {
+			// Success: clear the banner and check for running containers.
 			m.lastError = ""
+			m.lastErrorFromPoll = false
 			finalCmds = append(finalCmds, cmds.GetRunningContainers(m.config.configFileName))
 		}
 		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
@@ -668,7 +682,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// The compose file is untouched. Carry the underlying message
 			// through - "invalid compose file" on its own tells the user
 			// nothing they can act on.
-			m.lastError = fmt.Sprintf("Editing %s: %s", msg.ServiceName, msg.Err)
+			errMsg := fmt.Sprintf("Editing %s: %s", msg.ServiceName, msg.Err)
+			if m.activeModal == nil {
+				m.activeModal = components.ErrorModal(errMsg, m.config.terminalWidth)
+			}
 			break
 		}
 
@@ -683,7 +700,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.lastErrorFromPoll = false
 
 		if msg.Err != nil {
-			m.lastError = msg.Err.Error()
+			if m.activeModal == nil {
+				m.activeModal = components.ErrorModal(msg.Err.Error(), m.config.terminalWidth)
+			}
 			break
 		}
 
@@ -704,6 +723,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case cmds.OpenAboutModalMsg:
 		m.activeModal = components.AboutModal()
+
+	case cmds.OpenErrorModalMsg:
+		if m.activeModal == nil {
+			m.activeModal = components.ErrorModal(msg.Message, m.config.terminalWidth)
+		}
 
 	case cmds.OpenThemePickerMsg:
 		m.activeModal = components.ThemePickerModal()
@@ -748,7 +772,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cmds.EditGroupMsg:
 		m.lastErrorFromPoll = false
 		if msg.Err != nil {
-			m.lastError = msg.Err.Error()
+			if m.activeModal == nil {
+				m.activeModal = components.ErrorModal(msg.Err.Error(), m.config.terminalWidth)
+			}
 		} else {
 			m.lastError = ""
 			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
@@ -760,7 +786,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cmds.CreateGroupMsg:
 		m.lastErrorFromPoll = false
 		if msg.Err != nil {
-			m.lastError = msg.Err.Error()
+			if m.activeModal == nil {
+				m.activeModal = components.ErrorModal(msg.Err.Error(), m.config.terminalWidth)
+			}
 		} else {
 			m.lastError = ""
 			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
@@ -775,7 +803,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cmds.DeleteGroupMsg:
 		m.lastErrorFromPoll = false
 		if msg.Err != nil {
-			m.lastError = msg.Err.Error()
+			if m.activeModal == nil {
+				m.activeModal = components.ErrorModal(msg.Err.Error(), m.config.terminalWidth)
+			}
 		} else {
 			m.lastError = ""
 			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
@@ -790,7 +820,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cmds.CreateComposeFileMsg:
 		m.lastErrorFromPoll = false
 		if msg.Err != nil {
-			m.lastError = msg.Err.Error()
+			if m.activeModal == nil {
+				m.activeModal = components.ErrorModal(msg.Err.Error(), m.config.terminalWidth)
+			}
 		} else {
 			m.lastError = ""
 			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))

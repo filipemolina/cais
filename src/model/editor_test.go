@@ -76,8 +76,8 @@ func TestAFailedEditorSurfacesItsError(t *testing.T) {
 	if m.externalEditorOpen {
 		t.Error("external editor should be marked closed even when it failed")
 	}
-	if m.lastError == "" {
-		t.Error("a failed editor should reach the banner")
+	if m.activeModal == nil {
+		t.Error("a failed editor should open an error modal")
 	}
 }
 
@@ -87,9 +87,15 @@ func TestAFailedEditorErrorIsNotOwnedByThePoll(t *testing.T) {
 	m := GetInitialModel(utils.ComposeSource{})
 	m = updateForTest(t, m, cmds.EditorClosedMsg{Err: errors.New("editor exploded")})
 
+	// Foreground errors open a modal, so check that the modal is still open
+	// after a background poll (the poll should not dismiss it).
+	if m.activeModal == nil {
+		t.Error("editor error should open a modal")
+	}
+
 	m = updateForTest(t, m, cmds.GetRunningContainersMsg{Background: true})
 
-	if m.lastError == "" {
-		t.Error("a background poll cleared an editor error it did not cause")
+	if m.activeModal == nil {
+		t.Error("a background poll dismissed an editor error modal it did not cause")
 	}
 }

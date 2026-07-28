@@ -79,6 +79,9 @@ type AppModel struct {
 	// the panel uses to announce it, so the help overlay and the footer can
 	// show the editor keys.
 	inlineEditing bool
+	// pendingAction tracks a docker action that is currently running.
+	// While set, action keys are disabled and a spinner is shown.
+	pendingAction *components.PendingAction
 }
 
 // ChangeFocus moves focus through constants.FocusableComponents and returns the

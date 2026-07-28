@@ -7,6 +7,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 
 	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/textarea"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -34,6 +35,9 @@ type DetailsPanelModel struct {
 	validationError string
 	// saveError is the last compose-level error from a failed save.
 	saveError string
+
+	pendingAction *PendingAction
+	spinner       spinner.Model
 }
 
 func (m DetailsPanelModel) Init() tea.Cmd {
@@ -51,6 +55,22 @@ func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.panelWidth = msg.RightWidth
 		m.panelHeight = msg.Height
 		m.resizeEditor()
+
+	case cmds.SetPendingActionMsg:
+		m.pendingAction = &PendingAction{Action: msg.Action, Target: msg.Target, IsGroup: msg.IsGroup}
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(m.spinner.Tick())
+		finalCmds = append(finalCmds, cmd)
+
+	case cmds.ClearPendingActionMsg:
+		m.pendingAction = nil
+
+	case spinner.TickMsg:
+		if m.pendingAction != nil {
+			var cmd tea.Cmd
+			m.spinner, cmd = m.spinner.Update(msg)
+			finalCmds = append(finalCmds, cmd)
+		}
 
 	case cmds.SetFocusMsg:
 		if int(msg) == m.componentId {
@@ -275,7 +295,14 @@ func (m DetailsPanelModel) View() tea.View {
 	}
 
 	basicInfo := BasicInfo(*m.service, bodyWidth)
-	buttons := renderActionButtons(bodyWidth, panelBg(m.isFocused))
+	bg := panelBg(m.isFocused)
+
+	var buttons string
+	if m.pendingAction != nil {
+		buttons = m.renderPendingAction(bodyWidth, bg)
+	} else {
+		buttons = renderActionButtons(bodyWidth, bg)
+	}
 
 	body := lipgloss.JoinVertical(lipgloss.Left, basicInfo, buttons)
 	body = lipgloss.NewStyle().MaxHeight(bodyAvail).Render(body)
@@ -342,9 +369,24 @@ func (m DetailsPanelModel) renderStatusLine(width int) string {
 	)
 }
 
+// renderPendingAction renders a spinner with the action description in place
+// of the action buttons while a docker action is in progress.
+func (m DetailsPanelModel) renderPendingAction(width int, bg color.Color) string {
+	desc := actionDescription(m.pendingAction.Action, m.pendingAction.Target, m.pendingAction.IsGroup)
+
+	style := lipgloss.NewStyle().
+		Foreground(appstyles.Active.TextPrimary).
+		Background(bg).
+		Width(width).
+		AlignHorizontal(lipgloss.Center)
+
+	return style.Render(m.spinner.View() + " " + desc)
+}
+
 func DetailsPanel(service *types.ServiceConfig) tea.Model {
 	return DetailsPanelModel{
 		service:     service,
 		componentId: 2,
+		spinner:     newSpinner(),
 	}
 }
