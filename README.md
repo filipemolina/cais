@@ -17,7 +17,7 @@ Stack Stitcher reads a Docker **Compose** file and turns it into an interactive 
 
 Stack Stitcher is under **active development**. Compose parsing, navigation, starting/stopping services (individually or as a whole group), creating/deleting groups, editing a group's membership, streaming live logs, bootstrapping a new compose file, and editing existing services all work from inside the TUI. `e` on a service opens an inline YAML editor in the details panel; `ctrl+s` saves, `ctrl+o` opens the fragment in your `$EDITOR`, and `esc` cancels. `E` still opens the whole compose file in `$EDITOR`. Inline editing works with real YAML, not a form, so every compose field is reachable and your comments, quoting and key order are kept. (Blank lines between services are not: the YAML library preserves comments but not blank lines, so any write closes the spacing up.) The Files page shows the loaded compose file with syntax highlighting and opens it in your editor; `b` browses the other compose files in its directory and switches the active one. See [TODO.md](TODO.md) for the current worklist and completed recent work, and [docs/ROADMAP.md](docs/ROADMAP.md) for the ordered plan to a first alpha. Feedback, issues, and ideas are genuinely welcome and help shape where it goes next.
 
-![Stack Stitcher demo](./demo/demo.gif)
+![Stack Stitcher — Groups page](./mocks/screenshots/01-groups-list.png)
 
 ## Features
 
