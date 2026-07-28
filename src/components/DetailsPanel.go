@@ -263,7 +263,7 @@ func (m DetailsPanelModel) View() tea.View {
 	if m.service == nil {
 		body := renderEmptyCard(bodyWidth, bodyAvail, panelBg(m.isFocused), "Select a service",
 			"Pick a service from the list to see its details.",
-			"↑/↓", "then space")
+			"↑/↓", "to browse")
 		screen := renderPanelFrame("Details", "", m.isFocused, m.panelWidth, m.panelHeight, body)
 		return tea.NewView(screen)
 	}

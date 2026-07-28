@@ -197,7 +197,7 @@ func (m GroupDetailsPanelModel) renderBody() string {
 	if m.selectedGroup == "" {
 		return renderEmptyCard(bodyWidth, bodyAvail, bg, "Select a group",
 			"Pick a group from the list to see its services.",
-			"↑/↓", "then space")
+			"↑/↓", "to browse")
 	}
 
 	// A group is selected: header card + member table + actions.
