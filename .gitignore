@@ -5,6 +5,9 @@
 # to $(go env GOPATH)/bin instead, so nothing here needs to be tracked.
 /stack-stitcher
 
+# Screenshots and mock data
+mocks/
+
 # BEGIN oh-my-opencode-slim worktrees
 .slim/worktrees/
 .slim/worktrees.json
