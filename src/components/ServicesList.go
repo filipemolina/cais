@@ -103,11 +103,9 @@ func (d servicesListCustomDelegate) Render(w io.Writer, m list.Model, index int,
 type ServicesListModel struct {
 	list         list.Model
 	listDelegate servicesListCustomDelegate
-	// activeService is the name of the service the user picked with space.
-	// The delegate can only compare row numbers while rendering, but a row
-	// number goes stale as soon as the list changes: a reload that adds or
-	// removes a service would leave the highlight sitting on whatever moved
-	// into that row. The name survives, so the index is re-derived from it.
+	// activeService is the name of the service the cursor is on. The cursor
+	// position IS the selection now (auto-select on navigation), so a stored
+	// row number would highlight whichever service moved into that row.
 	activeService string
 	isFocused     bool
 	componentId   int
@@ -189,21 +187,11 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.resizeList()
 
 	case tea.KeyPressMsg:
-		// While a filter is being typed the keystrokes are text, so select
-		// waits; the inner list below still receives them.
+		// Space/Enter starts the selected service (quick action).
+		// Selection happens automatically on cursor movement.
 		if m.isFocused && !m.OwnsKeyboard() && key.Matches(msg, keys.List.Select) {
-			selectedItem := m.list.SelectedItem()
-			selectedService, ok := selectedItem.(apptypes.ServiceListItem)
-
-			if ok {
-				// Highlight straight away rather than waiting for the
-				// message to come back around, so the row responds on
-				// the same frame as the keypress.
-				m.activeService = selectedService.Service.Name
-				m.syncActiveIndex()
-
-				selectedServiceCmd := cmds.SetSelectedService(selectedService.Service)
-				finalCmds = append(finalCmds, selectedServiceCmd)
+			if m.activeService != "" {
+				finalCmds = append(finalCmds, cmds.RequestDockerAction("start", m.activeService, false))
 			}
 		}
 
@@ -241,9 +229,24 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	if m.isFocused {
+		// Track cursor before the list processes the key, so we can detect
+		// movement and auto-select the item under it.
+		previousIndex := m.list.Index()
+
 		var cmd tea.Cmd
 		m.list, cmd = m.list.Update(msg)
 		finalCmds = append(finalCmds, cmd)
+
+		// Auto-select: if the cursor moved, select the item under it.
+		if m.list.Index() != previousIndex {
+			if item := m.list.SelectedItem(); item != nil {
+				if service, ok := item.(apptypes.ServiceListItem); ok {
+					m.activeService = service.Service.Name
+					m.syncActiveIndex()
+					finalCmds = append(finalCmds, cmds.SetSelectedService(service.Service))
+				}
+			}
+		}
 	}
 
 	if state := m.list.FilterState(); state != filterStateBefore {

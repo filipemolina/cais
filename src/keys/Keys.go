@@ -156,7 +156,7 @@ var List = ListKeys{
 	// Enter is an alias for space: same verb, same binding, so every panel
 	// matches either. The help advertises space alone - the alias is for the
 	// muscle memory that expects enter to choose, not another key to learn.
-	Select:      key.NewBinding(key.WithKeys("space", "enter"), key.WithHelp("space", "select")),
+	Select:      key.NewBinding(key.WithKeys("space", "enter"), key.WithHelp("space", "start")),
 	New:         key.NewBinding(key.WithKeys("n"), key.WithHelp("n", "new")),
 	Edit:        key.NewBinding(key.WithKeys("e"), key.WithHelp("e", "edit")),
 	Delete:      key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "delete")),

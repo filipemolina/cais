@@ -89,31 +89,39 @@ func TestNoActiveRowWhenTheSelectedServiceIsGone(t *testing.T) {
 	}
 }
 
-// Enter is an alias for space here too: same binding, same verb.
-func TestEnterSelectsTheHighlightedService(t *testing.T) {
+// Enter starts the selected service. Selection happens automatically on cursor
+// movement, so we move the cursor first, then press enter.
+func TestEnterStartsTheHighlightedService(t *testing.T) {
 	list := drive(t, ServicesList(nil, 80, 24),
 		cmds.SetServicesListMsg(servicesOf("api", "db", "web")),
 		cmds.SetFocusMsg(1),
 	)
 
-	model, cmd := list.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-
-	var selected string
-	for _, msg := range messagesFrom(cmd) {
-		if sel, ok := msg.(cmds.SetSelectedServiceMsg); ok {
-			selected = types.ServiceConfig(sel).Name
-		}
-	}
-	if want := "api"; selected != want {
-		t.Errorf("enter selected %q, want %q", selected, want)
-	}
-
-	after, ok := model.(ServicesListModel)
+	// Move the cursor down to trigger auto-select (cursor goes from 0 to 1).
+	model, _ := list.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
+	moved, ok := model.(ServicesListModel)
 	if !ok {
 		t.Fatalf("expected a ServicesListModel, got %T", model)
 	}
-	if want := "api"; after.activeService != want {
-		t.Errorf("active service after enter: got %q, want %q", after.activeService, want)
+
+	// Verify auto-select happened (index 1 = db).
+	if moved.activeService != "db" {
+		t.Fatalf("auto-select did not fire: activeService = %q", moved.activeService)
+	}
+
+	// Now press enter to start the service.
+	model, cmd := moved.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+
+	var started bool
+	for _, msg := range messagesFrom(cmd) {
+		if dockerMsg, ok := msg.(cmds.RunDockerActionMsg); ok {
+			if dockerMsg.Action == "start" && dockerMsg.Target == "db" && !dockerMsg.IsGroup {
+				started = true
+			}
+		}
+	}
+	if !started {
+		t.Errorf("enter did not start db, got %#v", messagesFrom(cmd))
 	}
 }
 

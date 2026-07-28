@@ -99,10 +99,9 @@ func (d GroupsListCustomDelegate) Render(w io.Writer, m list.Model, index int, l
 type GroupListModel struct {
 	list         list.Model
 	listDelegate GroupsListCustomDelegate
-	// activeGroup is the name of the group the user picked with space. See
-	// ServicesListModel.activeService - creating or deleting a group
-	// reshuffles this list, so a stored row number would highlight whichever
-	// group moved into that row.
+	// activeGroup is the name of the group the cursor is on. The cursor
+	// position IS the selection now (auto-select on navigation), so a stored
+	// row number would highlight whichever group moved into that row.
 	activeGroup string
 	isFocused   bool
 	componentId int
@@ -227,17 +226,10 @@ func (m GroupListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		switch {
 		case key.Matches(msg, keys.List.Select):
-			selectedItem := m.list.SelectedItem()
-			selectedGroup, ok := selectedItem.(apptypes.GroupListItem)
-
-			if ok {
-				// Highlight on the same frame as the keypress rather
-				// than waiting for the message to come back around.
-				m.activeGroup = string(selectedGroup)
-				m.syncActiveIndex()
-
-				selectedServiceCmd := cmds.SetSelectedGroup(string(selectedGroup))
-				finalCmds = append(finalCmds, selectedServiceCmd)
+			// Space/Enter starts the selected item (quick action).
+			// Selection happens automatically on cursor movement.
+			if m.activeGroup != "" {
+				finalCmds = append(finalCmds, cmds.RequestDockerAction("start", m.activeGroup, true))
 			}
 
 		case key.Matches(msg, keys.List.New):
@@ -292,9 +284,24 @@ func (m GroupListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	if m.isFocused {
+		// Track cursor before the list processes the key, so we can detect
+		// movement and auto-select the item under it.
+		previousIndex := m.list.Index()
+
 		var cmd tea.Cmd
 		m.list, cmd = m.list.Update(msg)
 		finalCmds = append(finalCmds, cmd)
+
+		// Auto-select: if the cursor moved, select the item under it.
+		if m.list.Index() != previousIndex {
+			if item := m.list.SelectedItem(); item != nil {
+				if group, ok := item.(apptypes.GroupListItem); ok {
+					m.activeGroup = string(group)
+					m.syncActiveIndex()
+					finalCmds = append(finalCmds, cmds.SetSelectedGroup(string(group)))
+				}
+			}
+		}
 	}
 
 	if state := m.list.FilterState(); state != filterStateBefore {

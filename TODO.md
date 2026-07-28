@@ -271,6 +271,28 @@ documentation.
   brings it down from 5.1MB — worth another look if it needs to be smaller
   still, most likely by cutting the logs section, which is the densest part.
 
+- [x] **[S] Auto-select on navigation** — arrow keys in the list
+  automatically select the item under the cursor, updating the details panel
+  immediately. No separate "space to select" step. `space`/`enter` become
+  aliases for "start the selected item". See `docs/PLAN-UX-IMPROVEMENTS.md`
+  for implementation details.
+
+- [ ] **[S] `n` works on both panels** — the `n` key opens the create group
+  modal from either the list or details panel on the Home page. This fixes
+  the onboarding issue where the empty state says "press n" but the key only
+  works on one panel. See `docs/PLAN-UX-IMPROVEMENTS.md`.
+
+- [ ] **[S] Action feedback with spinner** — show a spinning animation while
+  docker actions (start, stop, restart, pull, remove) are in progress. The
+  spinner appears in the title pill area (replacing the status pill) and in
+  the action buttons area (replacing the buttons). Action keys are disabled
+  while an action is pending. See `docs/PLAN-UX-IMPROVEMENTS.md`.
+
+- [ ] **[S] Error modals for foreground errors** — show foreground errors
+  (from docker actions, config loads, etc.) in a modal dialog instead of the
+  banner. Background poll errors keep the banner to avoid modal fatigue. See
+  `docs/PLAN-UX-IMPROVEMENTS.md`.
+
 ## Housekeeping
 
 - [x] **[H] Document the current build/install path** — README now correctly

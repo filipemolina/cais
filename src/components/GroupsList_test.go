@@ -139,29 +139,36 @@ func TestKeepsEscOnlyWhileFocusedWithAnAppliedFilter(t *testing.T) {
 	}
 }
 
-// Enter is an alias for space: one binding, two keystrokes, so the panel
-// matches either. The highlight lands on the same frame, as it does for space.
-func TestEnterSelectsTheHighlightedGroup(t *testing.T) {
+// Enter starts the selected group. Selection happens automatically on cursor
+// movement, so we move the cursor first, then press enter.
+func TestEnterStartsTheHighlightedGroup(t *testing.T) {
 	groups := focusedGroupsList(t, 12)
 
-	model, cmd := groups.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-
-	var selected string
-	for _, msg := range messagesFrom(cmd) {
-		if sel, ok := msg.(cmds.SetSelectedGroupMsg); ok {
-			selected = string(sel)
-		}
-	}
-	if want := "group-00"; selected != want {
-		t.Errorf("enter selected %q, want %q", selected, want)
-	}
-
-	after, ok := model.(GroupListModel)
+	// Move the cursor down to trigger auto-select (cursor goes from 0 to 1).
+	model, _ := groups.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
+	moved, ok := model.(GroupListModel)
 	if !ok {
 		t.Fatalf("expected a GroupListModel, got %T", model)
 	}
-	if want := "group-00"; after.activeGroup != want {
-		t.Errorf("active group after enter: got %q, want %q", after.activeGroup, want)
+
+	// Verify auto-select happened (index 1 = group-01).
+	if moved.activeGroup != "group-01" {
+		t.Fatalf("auto-select did not fire: activeGroup = %q", moved.activeGroup)
+	}
+
+	// Now press enter to start the group.
+	model, cmd := moved.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+
+	var started bool
+	for _, msg := range messagesFrom(cmd) {
+		if dockerMsg, ok := msg.(cmds.RunDockerActionMsg); ok {
+			if dockerMsg.Action == "start" && dockerMsg.Target == "group-01" && dockerMsg.IsGroup {
+				started = true
+			}
+		}
+	}
+	if !started {
+		t.Errorf("enter did not start group-01, got %#v", messagesFrom(cmd))
 	}
 }
 
@@ -275,5 +282,65 @@ func TestTheListKeepsItsOwnNavigation(t *testing.T) {
 	}
 	if atStart.list.Index() != 0 {
 		t.Errorf("g left the cursor at index %d rather than the first row", atStart.list.Index())
+	}
+}
+
+// Auto-select: moving the cursor automatically selects the item under it.
+func TestCursorMovementAutoSelects(t *testing.T) {
+	groups := focusedGroupsList(t, 12)
+
+	// Initial state: no selection.
+	if groups.activeGroup != "" {
+		t.Fatalf("initial activeGroup should be empty, got %q", groups.activeGroup)
+	}
+
+	// Move down one row (cursor goes from 0 to 1).
+	model, cmd := groups.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
+	moved := model.(GroupListModel)
+
+	// Auto-select should have fired (index 1 = group-01).
+	if moved.activeGroup != "group-01" {
+		t.Errorf("after j: activeGroup = %q, want group-01", moved.activeGroup)
+	}
+
+	// A SetSelectedGroupMsg should have been emitted.
+	var selectedMsg bool
+	for _, msg := range messagesFrom(cmd) {
+		if _, ok := msg.(cmds.SetSelectedGroupMsg); ok {
+			selectedMsg = true
+		}
+	}
+	if !selectedMsg {
+		t.Error("cursor movement did not emit SetSelectedGroupMsg")
+	}
+
+	// Move down again (cursor goes from 1 to 2).
+	model, _ = moved.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
+	moved2 := model.(GroupListModel)
+
+	if moved2.activeGroup != "group-02" {
+		t.Errorf("after second j: activeGroup = %q, want group-02", moved2.activeGroup)
+	}
+}
+
+// Moving up also auto-selects.
+func TestCursorMovementUpAutoSelects(t *testing.T) {
+	groups := focusedGroupsList(t, 12)
+
+	// Move down twice (cursor goes to index 2).
+	model, _ := groups.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
+	model, _ = model.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
+	moved := model.(GroupListModel)
+
+	if moved.activeGroup != "group-02" {
+		t.Fatalf("after two j: activeGroup = %q, want group-02", moved.activeGroup)
+	}
+
+	// Move up (cursor goes from 2 to 1).
+	model, _ = moved.Update(tea.KeyPressMsg{Code: 'k', Text: "k"})
+	movedUp := model.(GroupListModel)
+
+	if movedUp.activeGroup != "group-01" {
+		t.Errorf("after k: activeGroup = %q, want group-01", movedUp.activeGroup)
 	}
 }

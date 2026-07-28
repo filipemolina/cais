@@ -101,7 +101,7 @@ func TestHelpOverlayRendersTheCatalog(t *testing.T) {
 	for _, want := range []string{
 		"Keyboard shortcuts",
 		"Pages", "List", "Details", "Overlays", "Global",
-		"space select",
+		"space start",
 		"alt+g/s/f",
 		"Compose files",
 		"compose.yml",
