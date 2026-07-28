@@ -74,6 +74,11 @@ type AppModel struct {
 	// terminal. The app is suspended for that whole time, so background work
 	// would only pile up messages to process on resume.
 	externalEditorOpen bool
+	// inlineEditing is true while the service details panel is editing a
+	// service inline. It is broadcast back to the panel via the same message
+	// the panel uses to announce it, so the help overlay and the footer can
+	// show the editor keys.
+	inlineEditing bool
 }
 
 // ChangeFocus moves focus through constants.FocusableComponents and returns the

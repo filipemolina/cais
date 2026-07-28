@@ -64,7 +64,7 @@ func TestCatalogAvailability(t *testing.T) {
 		if entryIn(t, global, Global.Back).Available {
 			t.Error("esc back should be dimmed while the list has focus")
 		}
-		for _, binding := range []key.Binding{Global.NextPanel, Global.PrevPanel, Global.Quit, Global.ForceQuit, Global.Help, Global.About} {
+		for _, binding := range []key.Binding{Global.NextPanel, Global.PrevPanel, Global.Quit, Global.ForceQuit, Global.Help, Global.About, Global.Theme} {
 			if !entryIn(t, global, binding).Available {
 				t.Errorf("%q should be available everywhere", binding.Help().Key)
 			}

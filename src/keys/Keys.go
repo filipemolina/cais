@@ -49,6 +49,10 @@ type GlobalKeys struct {
 	// About opens the About modal: the brand mark, version, license and repo
 	// link. A read-only overlay like Help, closed by the same three keys.
 	About key.Binding
+	// Theme opens the theme picker: a list of registered themes with live
+	// preview on cursor movement and persist-on-confirm. T (shift+t) so it
+	// does not collide with the details panel's lowercase t (stop).
+	Theme key.Binding
 	// Page is advertised but not matched: the digits are recognised by their
 	// key code and the alt+<letter> alias by its modifier, so that 1 as filter
 	// text and alt+shift+g are both left alone. See model.pageForNavKey. The
@@ -87,7 +91,7 @@ type ListKeys struct {
 // are shared verbatim between the group panel and the service panel: same key,
 // same meaning, one scope wider or narrower. EditService and EditFile exist
 // only on the service panel, which is the only place a single service is the
-// subject.
+// subject. Save and OpenEditor are only live while the inline editor is open.
 type DetailsKeys struct {
 	Start       key.Binding
 	Stop        key.Binding
@@ -97,6 +101,8 @@ type DetailsKeys struct {
 	Logs        key.Binding
 	EditService key.Binding
 	EditFile    key.Binding
+	Save        key.Binding
+	OpenEditor  key.Binding
 }
 
 // FilesKeys act on the Files page's read-only file viewer. Scroll is the
@@ -140,6 +146,7 @@ var Global = GlobalKeys{
 	Back:     key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "back")),
 	Help:     key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "help")),
 	About:    key.NewBinding(key.WithKeys("a"), key.WithHelp("a", "about")),
+	Theme:    key.NewBinding(key.WithKeys("T"), key.WithHelp("T", "theme")),
 }
 
 var List = ListKeys{
@@ -174,6 +181,8 @@ var Details = DetailsKeys{
 	Logs:        key.NewBinding(key.WithKeys("l"), key.WithHelp("l", "logs")),
 	EditService: key.NewBinding(key.WithKeys("e"), key.WithHelp("e", "edit")),
 	EditFile:    key.NewBinding(key.WithKeys("E"), key.WithHelp("E", "file")),
+	Save:        key.NewBinding(key.WithKeys("ctrl+s"), key.WithHelp("ctrl+s", "save")),
+	OpenEditor:  key.NewBinding(key.WithKeys("ctrl+o"), key.WithHelp("ctrl+o", "editor")),
 }
 
 var Files = FilesKeys{
@@ -251,6 +260,10 @@ type Context struct {
 	// group on Home, a chosen service on Services. Without one, the action
 	// keys do nothing and are not offered.
 	Selected bool
+	// Editing is true when the service details panel is in inline edit mode.
+	// The editor owns the keyboard, so the panel's action keys and the page
+	// digits are dead; the footer shows the editor-specific keys instead.
+	Editing bool
 	// Filter is the focused list's filter state. Its zero value is
 	// list.Unfiltered, so a caller that has no list to report about gets the
 	// ordinary keys.
@@ -324,6 +337,13 @@ func Active(ctx Context) []key.Binding {
 			return listKeys(ctx)
 
 		case constants.COMPONENT_BODY_DETAILS:
+			if ctx.Editing {
+				return []key.Binding{
+					Details.Save, Details.OpenEditor,
+					Global.Back,
+				}
+			}
+
 			if !ctx.Selected {
 				return []key.Binding{Global.Back, Global.NextPanel}
 			}
@@ -406,6 +426,7 @@ func Catalog(ctx Context) []Scope {
 				Details.Start, Details.Stop, Details.Restart,
 				Details.Pull, Details.Remove, Details.Logs,
 				Details.EditService, Details.EditFile,
+				Details.Save, Details.OpenEditor,
 			),
 		},
 		{
@@ -428,6 +449,7 @@ func Catalog(ctx Context) []Scope {
 			Entries: entries(
 				Global.NextPanel, Global.PrevPanel, Global.Back,
 				Global.Quit, Global.ForceQuit, Global.Help, Global.About,
+				Global.Theme,
 			),
 		},
 	}
@@ -438,7 +460,7 @@ func Catalog(ctx Context) []Scope {
 // whether or not the footer has room to advertise them.
 func pressableNow(ctx Context) []key.Binding {
 	live := append(Active(ctx), Globals()...)
-	live = append(live, Global.ForceQuit, Global.PrevPage, Global.NextPage, Global.About)
+	live = append(live, Global.ForceQuit, Global.PrevPage, Global.NextPage, Global.About, Global.Theme)
 
 	// shift+tab is tab's twin: live wherever tab is, with no footer slot of
 	// its own.

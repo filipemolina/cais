@@ -1,7 +1,6 @@
 # Roadmap to the first alpha
 
-This is the ordered plan the current work follows, and it is **live** — unlike
-the dated specs and plans under `docs/superpowers/`, which are finished records.
+This is the ordered plan the current work follows, and it is **live**.
 `TODO.md` is the flat worklist; this file is the order and the reasoning, so
 picking up mid-sequence does not mean re-deciding what was already settled.
 
@@ -75,12 +74,13 @@ group-membership wall is gone. What follows is the post-alpha list.
 
 ## Explicitly post-alpha
 
-Theme picker modal (a key opens the list of registered themes, cursor movement
-previews live, `enter` applies and persists) and additional themes — Phase 6 is
-what makes this small. A config file
-(`~/.config/stack-stitcher/config.yaml`: theme, default file, keybinding
-overrides — the keymap struct makes overrides a load-and-merge). Live CPU/MEM
-columns from `docker stats`. Group rename. An `x`-style action menu.
+The theme picker is done (`T` opens it, cursor previews live, Enter persists
+to `~/.config/stack-stitcher/config.yaml`). The config file exists and
+already stores the theme; default file and keybinding overrides are the
+remaining fields the keymap struct makes a load-and-merge. Additional
+themes beyond the four shipped (`stitcher-dark`, `stitcher-light`,
+`stitcher-ocean`, `stitcher-ember`). Live CPU/MEM columns from `docker
+stats`. Group rename. An `x`-style action menu.
 
 ## Loose ends worth knowing about
 
@@ -91,11 +91,13 @@ columns from `docker stats`. Group rename. An `x`-style action menu.
 - **The footer wraps below roughly 60 columns**, and so do the details table
   headers and the action buttons. Tracked in `TODO.md`; the bar needs to shed
   hints in priority order the way the compose file name already does.
-- **Panel keypresses through the e2e rig.** `TODO.md` has the details: rig tests
-  that send a key target modals, which `AppModel.Update` handles on an early
-  return. Phase 3 tested panel keys at the component and model level instead,
-  which worked well enough that the rig gap is no longer blocking — but the rig
-  is still the only place to test a full flow end to end.
+- **Panel keypresses through the e2e rig — fixed.** `TODO.md` has the details:
+  panel keys need `Text` set on the `tea.KeyPressMsg` because `key.Matches`
+  compares `msg.String()` against the binding strings. `TestRigGroupListEditKey`
+  now verifies a panel key ('e') reaches the focused groups list through the
+  full program. The rig gained a `letterKey` helper for printable keys; special
+  modal keys (esc/enter/tab/backspace) still go through the existing `keyPress`
+  helper.
 - **The two flaky bootstrap tests were an app bug, not a rig bug** (fixed in
   Phase 7). Worth remembering before blaming the rig again: a failed reload was
   replacing the open modal with a fresh one. If a rig test starts failing

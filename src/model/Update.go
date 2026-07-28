@@ -196,6 +196,7 @@ func (m AppModel) helpContext() keys.Context {
 	ctx := keys.Context{
 		Page:    m.activePage,
 		Focused: m.focusedComponent,
+		Editing: m.inlineEditing,
 	}
 
 	switch m.activePage {
@@ -368,6 +369,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case key.Matches(msg, keys.Global.About):
 			finalCmds = append(finalCmds, cmds.OpenAboutModal())
+
+		case key.Matches(msg, keys.Global.Theme):
+			finalCmds = append(finalCmds, cmds.OpenThemePicker())
 
 		case key.Matches(msg, keys.Global.NextPanel):
 			tabCmd := m.ChangeFocus(nil)
@@ -587,6 +591,58 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.externalEditorOpen = true
 		finalCmds = append(finalCmds, cmds.RunEditor(m.config.configFileName))
 
+	case cmds.SetEditingStateMsg:
+		m.inlineEditing = bool(msg)
+
+	case cmds.RequestInlineEditMsg:
+		if m.config.configFileName == "" {
+			finalCmds = append(finalCmds, func() tea.Msg {
+				return cmds.InlineEditReadyMsg{
+					ServiceName: msg.ServiceName,
+					Err:         fmt.Errorf("no compose file to edit"),
+				}
+			})
+			break
+		}
+
+		fragment, err := utils.ExtractServiceFragment(m.config.configFileName, msg.ServiceName)
+		finalCmds = append(finalCmds, func() tea.Msg {
+			return cmds.InlineEditReadyMsg{
+				ServiceName: msg.ServiceName,
+				Fragment:    fragment,
+				Err:         err,
+			}
+		})
+
+	case cmds.RequestSaveServiceMsg:
+		if m.config.configFileName == "" {
+			finalCmds = append(finalCmds, func() tea.Msg {
+				return cmds.ServiceSavedMsg{
+					ServiceName: msg.ServiceName,
+					Err:         fmt.Errorf("no compose file to save to"),
+				}
+			})
+			break
+		}
+
+		finalCmds = append(finalCmds, func() tea.Msg {
+			return cmds.ServiceSavedMsg{
+				ServiceName: msg.ServiceName,
+				Err:         utils.ApplyServiceFragment(m.config.configFileName, msg.ServiceName, msg.Fragment),
+			}
+		})
+
+	case cmds.ServiceSavedMsg:
+		// The panel keeps the editor open and shows the error inline, so the
+		// app banner is not touched. A successful save is followed by the
+		// usual config reload.
+		if msg.Err == nil {
+			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
+			if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
+				finalCmds = append(finalCmds, cfCmd)
+			}
+		}
+
 	case cmds.OpenServiceEditorMsg:
 		if m.config.configFileName == "" {
 			m.lastError = "No compose file to edit"
@@ -641,6 +697,23 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case cmds.OpenAboutModalMsg:
 		m.activeModal = components.AboutModal()
+
+	case cmds.OpenThemePickerMsg:
+		m.activeModal = components.ThemePickerModal()
+
+	case cmds.ThemeAppliedMsg:
+		// CloseModal already cleared activeModal. Report a persist
+		// error in the banner; a success needs no feedback — the whole
+		// UI is already repainted in the new theme.
+		m.lastErrorFromPoll = false
+		if msg.Err != nil {
+			m.lastError = msg.Err.Error()
+		} else {
+			m.lastError = ""
+		}
+		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
+			finalCmds = append(finalCmds, bodyCmd)
+		}
 
 	case cmds.OpenConfirmModalMsg:
 		m.activeModal = components.ConfirmModal(msg.Message, msg.Follow)

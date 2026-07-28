@@ -7,6 +7,8 @@ import (
 	"os"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/stack-stitcher/src/config"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/model"
 	"github.com/filipemolina/stack-stitcher/src/utils"
@@ -30,6 +32,14 @@ func main() {
 		}
 		fmt.Fprintln(os.Stderr, "stack-stitcher:", err)
 		os.Exit(1)
+	}
+
+	// Apply the saved theme before the program starts. A missing or
+	// malformed config is silently ignored — the default theme is
+	// already active. An unknown theme name is also ignored: the
+	// registry may have shrunk since the config was written.
+	if cfg, err := config.LoadConfig(); err == nil && cfg.Theme != "" {
+		appstyles.SetTheme(cfg.Theme)
 	}
 
 	p := tea.NewProgram(model.GetInitialModel(source))

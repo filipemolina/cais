@@ -11,25 +11,84 @@ import (
 	tea "charm.land/bubbletea/v2"
 )
 
-// OpenServiceEditorMsg asks AppModel to open one service for editing. The
-// panel emits this rather than the command itself, because which compose
-// file is loaded is AppModel's business.
+// OpenServiceEditorMsg asks AppModel to open one service for editing in the
+// user's $EDITOR. The panel emits this rather than the command itself,
+// because which compose file is loaded is AppModel's business.
 type OpenServiceEditorMsg struct {
 	ServiceName string
 }
 
-// ServiceEditedMsg reports the outcome of an edit. Err covers everything
-// that can go wrong between opening the editor and writing the file; the
-// compose file is untouched whenever it is set.
+// RequestInlineEditMsg asks AppModel to prepare the YAML fragment for one
+// service so the panel can edit it inline. AppModel answers with
+// InlineEditReadyMsg.
+type RequestInlineEditMsg struct {
+	ServiceName string
+}
+
+// InlineEditReadyMsg carries the YAML fragment the panel should put into the
+// inline editor. Err means the fragment could not be extracted; the panel
+// is not yet in edit mode and should not enter it.
+type InlineEditReadyMsg struct {
+	ServiceName string
+	Fragment    []byte
+	Err         error
+}
+
+// RequestSaveServiceMsg asks AppModel to save an edited service fragment
+// back to the compose file. AppModel applies it and answers with
+// ServiceSavedMsg.
+type RequestSaveServiceMsg struct {
+	ServiceName string
+	Fragment    []byte
+}
+
+// ServiceSavedMsg reports the outcome of an inline save. The panel is the
+// one that keeps the editor open, so the error belongs inline there; the
+// banner is not set for this message.
+type ServiceSavedMsg struct {
+	ServiceName string
+	Err         error
+}
+
+// CancelInlineEditMsg tells the panel to abandon inline editing without
+// saving. Emitted by the follow-up of the discard-changes confirmation.
+type CancelInlineEditMsg struct{}
+
+// ServiceEditedMsg reports the outcome of the $EDITOR path. Err covers
+// everything that can go wrong between opening the editor and writing the
+// file; the compose file is untouched whenever it is set.
 type ServiceEditedMsg struct {
 	ServiceName string
 	Err         error
 }
 
-// OpenServiceEditor asks AppModel to open serviceName for editing.
+// OpenServiceEditor asks AppModel to open serviceName for editing in $EDITOR.
 func OpenServiceEditor(serviceName string) tea.Cmd {
 	return func() tea.Msg {
 		return OpenServiceEditorMsg{ServiceName: serviceName}
+	}
+}
+
+// RequestInlineEdit asks AppModel to prepare a service fragment for inline
+// editing.
+func RequestInlineEdit(serviceName string) tea.Cmd {
+	return func() tea.Msg {
+		return RequestInlineEditMsg{ServiceName: serviceName}
+	}
+}
+
+// RequestSaveService asks AppModel to save an inline-edited service fragment.
+func RequestSaveService(serviceName string, fragment []byte) tea.Cmd {
+	return func() tea.Msg {
+		return RequestSaveServiceMsg{ServiceName: serviceName, Fragment: fragment}
+	}
+}
+
+// CancelInlineEdit is the follow-up command for the discard-changes confirm
+// modal; the panel exits edit mode when it receives the message.
+func CancelInlineEdit() tea.Cmd {
+	return func() tea.Msg {
+		return CancelInlineEditMsg{}
 	}
 }
 

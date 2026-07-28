@@ -93,6 +93,11 @@ func TestFooterHints(t *testing.T) {
 			want:  "s start · t stop · r restart · p pull · x remove · l logs · e edit · E file · esc back · tab next",
 		},
 		{
+			name:  "service details while inline editing",
+			model: KeybindingBarModel{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_DETAILS, selectedService: true, editing: true},
+			want:  "ctrl+s save · ctrl+o editor · esc back",
+		},
+		{
 			name:  "the files page offers edit, browse and scroll",
 			model: KeybindingBarModel{activePage: "Compose Files", focusedComponent: constants.COMPONENT_BODY_LIST},
 			want:  "E file · b browse · ↑/↓ scroll",
