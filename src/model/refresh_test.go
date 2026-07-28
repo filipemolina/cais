@@ -56,22 +56,32 @@ func TestBackgroundPollPreservesActionErrorThatReplacedPollError(t *testing.T) {
 		Err:        errors.New("docker daemon unavailable"),
 		Background: true,
 	})
+
+	// The poll error goes to the banner.
+	if m.lastError != "docker daemon unavailable" {
+		t.Fatalf("poll error = %q, want docker daemon unavailable", m.lastError)
+	}
+
+	// A foreground docker action error opens a modal, not the banner.
 	m = updateForTest(t, m, cmds.DockerActionMsg{Err: errors.New("docker start failed")})
 
-	if m.lastError != "docker start failed" {
-		t.Fatalf("action error = %q, want docker start failed", m.lastError)
-	}
-	if m.lastErrorFromPoll {
-		t.Fatal("action error was still marked as a poll error")
+	if m.activeModal == nil {
+		t.Fatal("action error should open an error modal")
 	}
 
+	// The banner should still have the poll error (the modal did not touch it).
+	if m.lastError != "docker daemon unavailable" {
+		t.Errorf("banner after action error = %q, want poll error preserved", m.lastError)
+	}
+
+	// A successful background poll clears its own error from the banner.
 	m = updateForTest(t, m, cmds.GetRunningContainersMsg{
 		Containers: []apptypes.DockerContainer{},
 		Background: true,
 	})
 
-	if m.lastError != "docker start failed" {
-		t.Errorf("background success cleared an unrelated error: %q", m.lastError)
+	if m.lastError != "" {
+		t.Errorf("background success did not clear poll error: %q", m.lastError)
 	}
 }
 

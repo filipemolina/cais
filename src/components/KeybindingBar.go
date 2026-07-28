@@ -44,6 +44,9 @@ type KeybindingBarModel struct {
 	// editing is true while the service details panel is in inline edit
 	// mode, so the footer can swap the action keys for the editor keys.
 	editing bool
+	// pendingAction is true while a docker action is running, so the footer
+	// can disable action key hints.
+	pendingAction bool
 }
 
 func (m KeybindingBarModel) Init() tea.Cmd { return nil }
@@ -86,6 +89,12 @@ func (m KeybindingBarModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case cmds.SetEditingStateMsg:
 		m.editing = bool(msg)
+
+	case cmds.SetPendingActionMsg:
+		m.pendingAction = true
+
+	case cmds.ClearPendingActionMsg:
+		m.pendingAction = false
 	}
 	return m, nil
 }
@@ -104,12 +113,13 @@ func (m KeybindingBarModel) hintsFor() []KeyHint {
 	}
 
 	return hintsFrom(keys.Active(keys.Context{
-		Page:      m.activePage,
-		Focused:   m.focusedComponent,
-		ListEmpty: listEmpty,
-		Selected:  selected,
-		Editing:   m.editing,
-		Filter:    m.filterState,
+		Page:          m.activePage,
+		Focused:       m.focusedComponent,
+		ListEmpty:     listEmpty,
+		Selected:      selected,
+		Editing:       m.editing,
+		PendingAction: m.pendingAction,
+		Filter:        m.filterState,
 	}))
 }
 

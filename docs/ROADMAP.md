@@ -82,9 +82,9 @@ themes beyond the four shipped (`stitcher-dark`, `stitcher-light`,
 `stitcher-ocean`, `stitcher-ember`). Live CPU/MEM columns from `docker
 stats`. Group rename. An `x`-style action menu.
 
-**UX improvements** are planned in `docs/PLAN-UX-IMPROVEMENTS.md`:
-auto-select on navigation, `n` on both panels, action feedback with
-spinner, and error modals for foreground errors.
+**UX improvements** are done: auto-select on navigation, `n` on both
+panels, action feedback with spinner, and error modals for foreground
+errors (see `docs/PLAN-UX-IMPROVEMENTS.md`).
 
 ## Loose ends worth knowing about
 

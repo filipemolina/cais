@@ -11,6 +11,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 
 	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/compose-spec/compose-go/v2/types"
@@ -26,6 +27,8 @@ type GroupDetailsPanelModel struct {
 	panelHeight   int
 	isFocused     bool
 	componentId   int
+	pendingAction *PendingAction
+	spinner       spinner.Model
 }
 
 func (m GroupDetailsPanelModel) Init() tea.Cmd {
@@ -97,6 +100,22 @@ func (m GroupDetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cmds.SetBodyLayoutMsg:
 		m.panelWidth = msg.RightWidth
 		m.panelHeight = msg.Height
+
+	case cmds.SetPendingActionMsg:
+		m.pendingAction = &PendingAction{Action: msg.Action, Target: msg.Target, IsGroup: msg.IsGroup}
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(m.spinner.Tick())
+		finalCmds = append(finalCmds, cmd)
+
+	case cmds.ClearPendingActionMsg:
+		m.pendingAction = nil
+
+	case spinner.TickMsg:
+		if m.pendingAction != nil {
+			var cmd tea.Cmd
+			m.spinner, cmd = m.spinner.Update(msg)
+			finalCmds = append(finalCmds, cmd)
+		}
 
 	case cmds.SetFocusMsg:
 		if int(msg) == m.componentId {
@@ -231,7 +250,13 @@ func (m GroupDetailsPanelModel) renderBody() string {
 	if footnoteBlock != "" {
 		parts = append(parts, footnoteBlock)
 	}
-	parts = append(parts, buttons)
+
+	// Show a spinner in the buttons area while an action is pending.
+	if m.pendingAction != nil {
+		parts = append(parts, m.renderPendingAction(bodyWidth, bg))
+	} else {
+		parts = append(parts, buttons)
+	}
 
 	bodyContent := lipgloss.JoinVertical(lipgloss.Left, parts...)
 
@@ -513,8 +538,23 @@ func truncate(s string, w int) string {
 	return runewidth.Truncate(s, w, "…")
 }
 
+// renderPendingAction renders a spinner with the action description in place
+// of the action buttons while a docker action is in progress.
+func (m GroupDetailsPanelModel) renderPendingAction(width int, bg color.Color) string {
+	desc := actionDescription(m.pendingAction.Action, m.pendingAction.Target, m.pendingAction.IsGroup)
+
+	style := lipgloss.NewStyle().
+		Foreground(appstyles.Active.TextPrimary).
+		Background(bg).
+		Width(width).
+		AlignHorizontal(lipgloss.Center)
+
+	return style.Render(m.spinner.View() + " " + desc)
+}
+
 func GroupDetailsPanel() tea.Model {
 	return GroupDetailsPanelModel{
 		componentId: 2,
+		spinner:     newSpinner(),
 	}
 }
