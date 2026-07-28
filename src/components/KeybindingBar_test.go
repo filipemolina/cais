@@ -60,12 +60,12 @@ func TestFooterHints(t *testing.T) {
 		{
 			name:  "group details with nothing selected",
 			model: KeybindingBarModel{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_DETAILS},
-			want:  "esc back · tab next",
+			want:  "n new · esc back · tab next",
 		},
 		{
 			name:  "group details with a group selected",
 			model: KeybindingBarModel{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_DETAILS, selectedGroup: "core"},
-			want:  "s start · t stop · r restart · p pull · x remove · l logs · esc back · tab next",
+			want:  "n new · s start · t stop · r restart · p pull · x remove · l logs · esc back · tab next",
 		},
 		{
 			name:  "services list with services",

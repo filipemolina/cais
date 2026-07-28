@@ -277,7 +277,7 @@ documentation.
   aliases for "start the selected item". See `docs/PLAN-UX-IMPROVEMENTS.md`
   for implementation details.
 
-- [ ] **[S] `n` works on both panels** — the `n` key opens the create group
+- [x] **[S] `n` works on both panels** — the `n` key opens the create group
   modal from either the list or details panel on the Home page. This fixes
   the onboarding issue where the empty state says "press n" but the key only
   works on one panel. See `docs/PLAN-UX-IMPROVEMENTS.md`.

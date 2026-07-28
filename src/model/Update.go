@@ -402,6 +402,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				leftPanel := constants.COMPONENT_BODY_LIST
 				finalCmds = append(finalCmds, m.ChangeFocus(&leftPanel))
 			}
+
+		// n creates a group from either panel on Home. Handled here rather
+		// than in GroupsList so it works regardless of which panel is focused.
+		case key.Matches(msg, keys.List.New):
+			if m.activePage == "Home" {
+				finalCmds = append(finalCmds, cmds.OpenCreateGroupModal())
+			}
 		}
 
 	// This is executed once when the app loads and after every
