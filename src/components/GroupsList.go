@@ -232,9 +232,6 @@ func (m GroupListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				finalCmds = append(finalCmds, cmds.RequestDockerAction("start", m.activeGroup, true))
 			}
 
-		case key.Matches(msg, keys.List.New):
-			finalCmds = append(finalCmds, cmds.OpenCreateGroupModal())
-
 		case key.Matches(msg, keys.List.Delete):
 			if selectedGroup, ok := m.list.SelectedItem().(apptypes.GroupListItem); ok {
 				finalCmds = append(finalCmds, cmds.OpenDeleteGroupModal(string(selectedGroup)))

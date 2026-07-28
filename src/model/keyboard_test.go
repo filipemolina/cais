@@ -9,6 +9,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/components"
+	"github.com/filipemolina/stack-stitcher/src/constants"
 )
 
 // letter is a plain keystroke as a terminal delivers it.
@@ -155,5 +156,47 @@ func TestApplyingTheFilterHandsTheKeyboardBack(t *testing.T) {
 
 	if m.keyboardOwned() {
 		t.Error("the list still owns the keyboard after the filter was applied")
+	}
+}
+
+// n creates a group from either panel on Home. This fixes the onboarding issue
+// where the empty state says "press n" but the key only works on one panel.
+func TestNWorksFromEitherPanel(t *testing.T) {
+	m := applyLayout(startup(120, 40))
+	m = drive(m, cmds.SetGroupsListMsg{"core", "media"})
+
+	// Switch focus to the details panel.
+	rightPanel := constants.COMPONENT_BODY_DETAILS
+	m = drive(m, collect(m.ChangeFocus(&rightPanel))...)
+
+	if m.focusedComponent != constants.COMPONENT_BODY_DETAILS {
+		t.Fatalf("precondition: focus = %d, want details (%d)",
+			m.focusedComponent, constants.COMPONENT_BODY_DETAILS)
+	}
+
+	// Press n from the details panel.
+	_, cmd := m.Update(letter('n'))
+
+	var opened bool
+	for _, msg := range collect(cmd) {
+		if _, ok := msg.(cmds.OpenCreateGroupModalMsg); ok {
+			opened = true
+		}
+	}
+	if !opened {
+		t.Error("n did not open the create group modal from the details panel")
+	}
+}
+
+// n does nothing on pages other than Home.
+func TestNDoesNothingOnOtherPages(t *testing.T) {
+	m := applyLayout(drive(startup(120, 40), cmds.SetActivePageMsg("Services")))
+
+	_, cmd := m.Update(letter('n'))
+
+	for _, msg := range collect(cmd) {
+		if _, ok := msg.(cmds.OpenCreateGroupModalMsg); ok {
+			t.Error("n opened the create group modal on Services page")
+		}
 	}
 }

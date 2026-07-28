@@ -319,10 +319,11 @@ func Active(ctx Context) []key.Binding {
 
 		case constants.COMPONENT_BODY_DETAILS:
 			if !ctx.Selected {
-				return []key.Binding{Global.Back, Global.NextPanel}
+				return []key.Binding{List.New, Global.Back, Global.NextPanel}
 			}
 
 			return []key.Binding{
+				List.New,
 				Details.Start, Details.Stop, Details.Restart,
 				Details.Pull, Details.Remove, Details.Logs,
 				Global.Back, Global.NextPanel,
