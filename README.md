@@ -1,5 +1,7 @@
 # Stack Stitcher
 
+![Stack Stitcher — Groups page](./demo/screenshot-groups.png)
+
 > A fast, keyboard-driven terminal UI for managing your self-hosted Docker Compose services.
 
 [![CI](https://github.com/filipemolina/stack-stitcher/actions/workflows/ci.yml/badge.svg)](https://github.com/filipemolina/stack-stitcher/actions/workflows/ci.yml)
@@ -17,8 +19,6 @@ Stack Stitcher reads a Docker **Compose** file and turns it into an interactive 
 
 Stack Stitcher is under **active development**. Compose parsing, navigation, starting/stopping services (individually or as a whole group), creating/deleting groups, editing a group's membership, streaming live logs, bootstrapping a new compose file, and editing existing services all work from inside the TUI. `e` on a service opens an inline YAML editor in the details panel; `ctrl+s` saves, `ctrl+o` opens the fragment in your `$EDITOR`, and `esc` cancels. `E` still opens the whole compose file in `$EDITOR`. Inline editing works with real YAML, not a form, so every compose field is reachable and your comments, quoting and key order are kept. (Blank lines between services are not: the YAML library preserves comments but not blank lines, so any write closes the spacing up.) The Files page shows the loaded compose file with syntax highlighting and opens it in your editor; `b` browses the other compose files in its directory and switches the active one. See [TODO.md](TODO.md) for the current worklist and completed recent work, and [docs/ROADMAP.md](docs/ROADMAP.md) for the ordered plan to a first alpha. Feedback, issues, and ideas are genuinely welcome and help shape where it goes next.
 
-![Stack Stitcher — Groups page](./demo/screenshot-groups.png)
-
 ## Features
 
 - **Reads standard Compose files.** Uses the official [`compose-go`](https://github.com/compose-spec/compose-go) parser, so it understands the same `compose.yml` your Docker setup already relies on — no custom config format to learn.
@@ -30,6 +30,7 @@ Stack Stitcher is under **active development**. Compose parsing, navigation, sta
 - **Stream live logs.** Press `l` on a focused service or group panel to open a full-screen overlay that tails `docker compose logs -f` in real time, with follow-mode and scrollback.
 - **Automatically refreshed status.** Container state is rechecked every five seconds while a compose project is loaded and no modal is open, so status panels reflect changes made outside Stack Stitcher.
 - **Full-height, context-aware layout.** The app fills the terminal with a pinned header (wordmark + tabs) and footer (keybinding bar); the body region stretches to use every available row. Tabs show user-facing labels such as **Groups** for Home and **Files** for Compose Files, while the underlying page IDs stay the same.
+- **Theme picker.** Press `T` to open a modal with 14 built-in themes — dark, light, and everything in between. Cursor movement previews each theme live; Enter applies and persists your choice.
 
 ## Requirements
 
@@ -130,6 +131,7 @@ two body panels.
 | `f` | Toggle follow (auto-scroll) | Logs overlay open |
 | `↑`/`↓` `PgUp`/`PgDn` | Scroll logs | Logs overlay open |
 | `Esc` | Close the logs overlay | Logs overlay open |
+| `T` | Open theme picker | Everywhere except while typing |
 | `?` | Help overlay: every key, unavailable ones dimmed | Everywhere except while typing |
 | `a` | About: version, license, repo link | Everywhere except while typing |
 | `q` | Quit | Everywhere except while typing |
@@ -187,7 +189,8 @@ The ASCII logo lives in `src/constants/Branding.go` and is shown by the About mo
 │   ├── apptypes/      # Shared data types (list items, docker container, pages)
 │   ├── keys/          # Every keybinding, declared once — components, the footer, and the ? overlay all read it
 │   ├── utils/         # Non-Bubble Tea logic (compose file loading, docker exec, parsing)
-│   ├── appstyles/     # Lip Gloss colors/styles
+│   ├── appstyles/     # Lip Gloss colors/styles + 14 registered themes
+│   ├── config/        # Persistent user preferences (theme, stored in ~/.config/stack-stitcher)
 │   ├── highlight/     # Read-only YAML syntax highlighting for the Files page viewer
 │   └── constants/     # Layout widths, branding, focusable component list
 ├── demo/              # VHS script + recorded demo gif
