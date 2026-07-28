@@ -41,6 +41,9 @@ type KeybindingBarModel struct {
 	// the rest; the help overlay names them.
 	composeFileOthers int
 	filterState       list.FilterState
+	// editing is true while the service details panel is in inline edit
+	// mode, so the footer can swap the action keys for the editor keys.
+	editing bool
 }
 
 func (m KeybindingBarModel) Init() tea.Cmd { return nil }
@@ -80,6 +83,9 @@ func (m KeybindingBarModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case cmds.SetListFilterStateMsg:
 		m.filterState = list.FilterState(msg)
+
+	case cmds.SetEditingStateMsg:
+		m.editing = bool(msg)
 	}
 	return m, nil
 }
@@ -102,6 +108,7 @@ func (m KeybindingBarModel) hintsFor() []KeyHint {
 		Focused:   m.focusedComponent,
 		ListEmpty: listEmpty,
 		Selected:  selected,
+		Editing:   m.editing,
 		Filter:    m.filterState,
 	}))
 }

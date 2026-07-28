@@ -121,7 +121,7 @@ func newTheme(p themeParams) Theme {
 
 		TextPrimary: p.Text,
 		TextMuted:   lower(p.Text, 0.2),
-		TextDim:     lower(p.Text, 0.5),
+		TextDim:     lower(p.Text, 0.3),
 
 		PanelBg:            p.Panel,
 		BackgroundContent:  raise(p.Panel, 0.04),
@@ -162,7 +162,7 @@ var Themes = map[string]Theme{
 		Accent: lipgloss.Color("#BC3FBC"),
 		Text:   lipgloss.Color("#FAFAFA"),
 		Panel:  lipgloss.Color("#151520"),
-		Modal:  lipgloss.Color("#3F3F3F"),
+		Modal:  lipgloss.Color("#282828"),
 		Danger: lipgloss.Color("#B33A3A"),
 
 		Running:  lipgloss.Color("#67C58A"),
@@ -182,8 +182,217 @@ var Themes = map[string]Theme{
 		Accent: lipgloss.Color("#BC3FBC"),
 		Text:   lipgloss.Color("#1B1A22"),
 		Panel:  lipgloss.Color("#EDEBF5"),
-		Modal:  lipgloss.Color("#C9C7D1"),
+		Modal:  lipgloss.Color("#B2B0BE"),
 		Danger: lipgloss.Color("#B33A3A"),
+
+		Running:  lipgloss.Color("#67C58A"),
+		Stopped:  lipgloss.Color("#858392"),
+		Starting: lipgloss.Color("#E8C547"),
+		Err:      lipgloss.Color("#EB4268"),
+	}),
+
+	// stitcher-ocean is a dark theme with a cool blue base and a teal
+	// accent. Status colors and Danger are shared with the other themes
+	// for the same reason as stitcher-light: they are recognizable hues
+	// that read on any base.
+	"stitcher-ocean": newTheme(themeParams{
+		Name:   "stitcher-ocean",
+		Dark:   true,
+		Accent: lipgloss.Color("#5BA8C8"),
+		Text:   lipgloss.Color("#E8F0F8"),
+		Panel:  lipgloss.Color("#111B26"),
+		Modal:  lipgloss.Color("#2A3A4A"),
+		Danger: lipgloss.Color("#B33A3A"),
+
+		Running:  lipgloss.Color("#67C58A"),
+		Stopped:  lipgloss.Color("#7A8A96"),
+		Starting: lipgloss.Color("#E8C547"),
+		Err:      lipgloss.Color("#EB4268"),
+	}),
+
+	// stitcher-ember is a dark theme with a warm brown-black base and an
+	// amber accent. The same shared status/danger colors keep the
+	// container state vocabulary consistent across themes.
+	"stitcher-ember": newTheme(themeParams{
+		Name:   "stitcher-ember",
+		Dark:   true,
+		Accent: lipgloss.Color("#E8A44A"),
+		Text:   lipgloss.Color("#F5EDE4"),
+		Panel:  lipgloss.Color("#1E1612"),
+		Modal:  lipgloss.Color("#3E322A"),
+		Danger: lipgloss.Color("#B33A3A"),
+
+		Running:  lipgloss.Color("#67C58A"),
+		Stopped:  lipgloss.Color("#8A8078"),
+		Starting: lipgloss.Color("#E8C547"),
+		Err:      lipgloss.Color("#EB4268"),
+	}),
+
+	// stitcher-abyss is a dark theme inspired by the deep ocean at night:
+	// a near-black violet base, muted teal text, and a luminous mint
+	// accent that glows like bioluminescence.
+	"stitcher-abyss": newTheme(themeParams{
+		Name:   "stitcher-abyss",
+		Dark:   true,
+		Accent: lipgloss.Color("#d0f4ea"),
+		Text:   lipgloss.Color("#a0b8c0"),
+		Panel:  lipgloss.Color("#02010a"),
+		Modal:  lipgloss.Color("#22007c"),
+		Danger: lipgloss.Color("#0d00a4"),
+
+		Running:  lipgloss.Color("#67C58A"),
+		Stopped:  lipgloss.Color("#829399"),
+		Starting: lipgloss.Color("#E8C547"),
+		Err:      lipgloss.Color("#EB4268"),
+	}),
+
+	// stitcher-trench channels the deep sea: a dark navy base with vivid
+	// cyan accents, like light piercing through black water.
+	"stitcher-trench": newTheme(themeParams{
+		Name:   "stitcher-trench",
+		Dark:   true,
+		Accent: lipgloss.Color("#0094c6"),
+		Text:   lipgloss.Color("#78d8e8"),
+		Panel:  lipgloss.Color("#000022"),
+		Modal:  lipgloss.Color("#001242"),
+		Danger: lipgloss.Color("#EB4268"),
+
+		Running:  lipgloss.Color("#67C58A"),
+		Stopped:  lipgloss.Color("#7A8A96"),
+		Starting: lipgloss.Color("#E8C547"),
+		Err:      lipgloss.Color("#EB4268"),
+	}),
+
+	// stitcher-forge evokes a blacksmith's workshop: charcoal stone
+	// surfaces warmed by amber highlights and a coral spark.
+	"stitcher-forge": newTheme(themeParams{
+		Name:   "stitcher-forge",
+		Dark:   true,
+		Accent: lipgloss.Color("#f4b860"),
+		Text:   lipgloss.Color("#fff0e8"),
+		Panel:  lipgloss.Color("#32373b"),
+		Modal:  lipgloss.Color("#384848"),
+		Danger: lipgloss.Color("#c83e4d"),
+
+		Running:  lipgloss.Color("#67C58A"),
+		Stopped:  lipgloss.Color("#858392"),
+		Starting: lipgloss.Color("#E8C547"),
+		Err:      lipgloss.Color("#EB4268"),
+	}),
+
+	// stitcher-phantom is a dusk-themed palette: deep plum surfaces, soft
+	// blue text, and a cool mint accent like moonlight on stone.
+	"stitcher-phantom": newTheme(themeParams{
+		Name:   "stitcher-phantom",
+		Dark:   true,
+		Accent: lipgloss.Color("#ebf5ee"),
+		Text:   lipgloss.Color("#e0ecf5"),
+		Panel:  lipgloss.Color("#542344"),
+		Modal:  lipgloss.Color("#301a28"),
+		Danger: lipgloss.Color("#d8bfaa"),
+
+		Running:  lipgloss.Color("#67C58A"),
+		Stopped:  lipgloss.Color("#858392"),
+		Starting: lipgloss.Color("#E8C547"),
+		Err:      lipgloss.Color("#EB4268"),
+	}),
+
+	// stitcher-velvet is a light theme with a silver base, rich rose
+	// accents, and deep aubergine for contrast - opulent yet refined.
+	"stitcher-velvet": newTheme(themeParams{
+		Name:   "stitcher-velvet",
+		Dark:   false,
+		Accent: lipgloss.Color("#893168"),
+		Text:   lipgloss.Color("#1a0c18"),
+		Panel:  lipgloss.Color("#eaeaea"),
+		Modal:  lipgloss.Color("#c9c0d5"),
+		Danger: lipgloss.Color("#893168"),
+
+		Running:  lipgloss.Color("#67C58A"),
+		Stopped:  lipgloss.Color("#858392"),
+		Starting: lipgloss.Color("#E8C547"),
+		Err:      lipgloss.Color("#EB4268"),
+	}),
+
+	// stitcher-canyon draws from desert mesas: warm terracotta earth tones
+	// with a coral accent and soft peach highlights. Panel and modal were
+	// darkened from the source palette to give text enough contrast.
+	"stitcher-canyon": newTheme(themeParams{
+		Name:   "stitcher-canyon",
+		Dark:   true,
+		Accent: lipgloss.Color("#ea9580"),
+		Text:   lipgloss.Color("#f5ddd5"),
+		Panel:  lipgloss.Color("#1e201d"),
+		Modal:  lipgloss.Color("#101210"),
+		Danger: lipgloss.Color("#a37774"),
+
+		Running:  lipgloss.Color("#67C58A"),
+		Stopped:  lipgloss.Color("#858392"),
+		Starting: lipgloss.Color("#E8C547"),
+		Err:      lipgloss.Color("#EB4268"),
+	}),
+
+	// stitcher-neon is an electric jungle: a pitch-black base lit by vivid
+	// tropical greens and warm amber - high energy, high contrast.
+	"stitcher-neon": newTheme(themeParams{
+		Name:   "stitcher-neon",
+		Dark:   true,
+		Accent: lipgloss.Color("#00a878"),
+		Text:   lipgloss.Color("#d8f1a0"),
+		Panel:  lipgloss.Color("#0b0500"),
+		Modal:  lipgloss.Color("#2a1810"),
+		Danger: lipgloss.Color("#fe5e41"),
+
+		Running:  lipgloss.Color("#67C58A"),
+		Stopped:  lipgloss.Color("#858392"),
+		Starting: lipgloss.Color("#f3c178"),
+		Err:      lipgloss.Color("#EB4268"),
+	}),
+
+	// stitcher-orchid pairs dusty mauves with an electric cyan pop - like
+	// wildflowers blooming under a stormy sky.
+	"stitcher-orchid": newTheme(themeParams{
+		Name:   "stitcher-orchid",
+		Dark:   true,
+		Accent: lipgloss.Color("#14bdeb"),
+		Text:   lipgloss.Color("#ecd0da"),
+		Panel:  lipgloss.Color("#241715"),
+		Modal:  lipgloss.Color("#402a2c"),
+		Danger: lipgloss.Color("#703d57"),
+
+		Running:  lipgloss.Color("#67C58A"),
+		Stopped:  lipgloss.Color("#957186"),
+		Starting: lipgloss.Color("#E8C547"),
+		Err:      lipgloss.Color("#EB4268"),
+	}),
+
+	// stitcher-bloom is a dark volcanic palette: smoldering reds and ambers
+	// rising from a deep charcoal base, like embers in twilight.
+	"stitcher-bloom": newTheme(themeParams{
+		Name:   "stitcher-bloom",
+		Dark:   true,
+		Accent: lipgloss.Color("#d58936"),
+		Text:   lipgloss.Color("#fffb46"),
+		Panel:  lipgloss.Color("#3c1518"),
+		Modal:  lipgloss.Color("#69140e"),
+		Danger: lipgloss.Color("#a44200"),
+
+		Running:  lipgloss.Color("#67C58A"),
+		Stopped:  lipgloss.Color("#858392"),
+		Starting: lipgloss.Color("#E8C547"),
+		Err:      lipgloss.Color("#EB4268"),
+	}),
+
+	// stitcher-slate is a refined dark theme with golden accents on a blue-
+	// black base - understated elegance with a warm metallic shimmer.
+	"stitcher-slate": newTheme(themeParams{
+		Name:   "stitcher-slate",
+		Dark:   true,
+		Accent: lipgloss.Color("#cca43b"),
+		Text:   lipgloss.Color("#e5e5e5"),
+		Panel:  lipgloss.Color("#242f40"),
+		Modal:  lipgloss.Color("#363636"),
+		Danger: lipgloss.Color("#EB4268"),
 
 		Running:  lipgloss.Color("#67C58A"),
 		Stopped:  lipgloss.Color("#858392"),
@@ -195,6 +404,22 @@ var Themes = map[string]Theme{
 // Active is the one Theme in effect. Everything that draws reads it fresh
 // each render - see the Theme doc comment - so assigning a different
 // registered Theme here and re-rendering is the whole of what a theme switch
-// needs to do. There is no switcher UI yet (post-alpha, see
-// docs/ROADMAP.md); this is the seam it will use.
+// needs to do.
 var Active = Themes[DefaultTheme]
+
+// SetTheme assigns a new active theme by name. Everything that draws reads
+// Active fresh on each render, so the next frame repaints in the new
+// palette. Exported so the theme picker modal can apply themes live as the
+// cursor moves.
+//
+// Returns false if name is not in the registry, so the caller can report
+// the error. When config file persistence lands, this function gains a
+// tea.Cmd return that writes the chosen name to disk - one line added,
+// no caller changes needed.
+func SetTheme(name string) bool {
+	if t, ok := Themes[name]; ok {
+		Active = t
+		return true
+	}
+	return false
+}

@@ -2,6 +2,8 @@ package model
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -77,6 +79,17 @@ func (r *rig) Send(msg tea.Msg) {
 	r.p.Send(msg)
 }
 
+// letterKey builds a KeyPressMsg for a printable character key, with both
+// Code and Text set. key.Matches (used by the panel handlers) compares
+// msg.String() against the binding strings, so a letter sent with only
+// Code does not match - textinput is happy with Code alone, but the panels
+// are not. Use this helper for any rig key that targets a panel binding
+// (s/t/r/p/x/l/e/n/d); keep keyPress for special keys (esc, enter, tab,
+// backspace) where Code is enough for textinput.
+func letterKey(r rune) tea.KeyPressMsg {
+	return tea.KeyPressMsg{Code: r, Text: string(r)}
+}
+
 // Latest returns the bytes rendered since the last call to Latest (or since
 // the rig was created). It is safe to call from the test goroutine while
 // the program goroutine is concurrently writing to the buffer.
@@ -120,3 +133,39 @@ func (r *rig) WaitForNot(substr string, timeout time.Duration) bool {
 func (r *rig) Output() string {
 	return r.out.String()
 }
+
+// TestRigGroupListEditKey reaches the focused groups list through the rig:
+// 'e' opens the membership editor. This used to fail because panel key
+// bindings match on msg.String(), which comes from Text, not Code.
+func TestRigGroupListEditKey(t *testing.T) {
+	setupProjectDir(t)
+
+	r := newRig(t)
+	if !r.WaitFor("core", 3*time.Second) {
+		t.Fatal("groups never rendered")
+	}
+
+	r.Send(letterKey('e'))
+
+	if !r.WaitFor("Edit members of", 3*time.Second) {
+		t.Fatalf("expected membership editor modal. Output:\n%s", r.Output())
+	}
+}
+
+// setupProjectDir drops a minimal compose project in a temp dir and moves
+// the test there. Extracted here so other rig panel-key tests can reuse it.
+func setupProjectDir(t *testing.T) {
+	t.Helper()
+
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "compose.yaml"), []byte(panelKeyFixture), 0o644); err != nil {
+		t.Fatalf("writing fixture: %v", err)
+	}
+	t.Chdir(dir)
+}
+
+const panelKeyFixture = `services:
+  web:
+    image: nginx:alpine
+    profiles: ["core"]
+`

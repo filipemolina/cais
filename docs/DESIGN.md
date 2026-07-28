@@ -377,16 +377,22 @@ vs. mapping), so round-tripping through inputs would silently rewrite
 whichever the user chose along with their comments and key order. A form is
 also a standing tax: any field nobody modelled is a field nobody can edit.
 
-`e` extracts one service as a single-key mapping, opens it in `$VISUAL`/
-`$EDITOR`, and splices the result back over the same key. `E` opens the
-whole file, which is the only way to add a service or touch top-level keys.
+`e` on the Services details panel opens the service in an inline `textarea`
+that holds the same YAML fragment the external editor uses. `ctrl+s` saves
+through `utils.ApplyServiceFragment`, `ctrl+o` opens the same fragment in
+`$VISUAL`/`$EDITOR` for when the panel is too cramped, and `esc` cancels —
+confirming first if the buffer has changed. The editor owns the keyboard
+while it is open, so the docker action keys (`s`, `t`, `r`, `p`, `x`, `l`)
+are plain text then. `E` still opens the whole compose file in `$EDITOR`,
+which is the only way to add a service or touch top-level keys.
 
 Nothing is written unless the fragment parses, keeps its name, and the whole
 resulting document still loads as compose — validated by writing a candidate
-next to the compose file and running the loader over it. A rejected edit
-reports the loader's message and returns to a normal TUI with the file
-untouched; pressing the key again is the retry. Do not add a
-fix-it-before-you-can-leave loop: being unable to leave is worse than losing
+next to the compose file and running the loader over it. A rejected inline
+save keeps the editor open with the error on the status line; the file is
+untouched. A rejected `$EDITOR` edit reports the error and returns to a normal
+TUI with the file untouched; pressing the key again is the retry. Do not add
+a fix-it-before-you-can-leave loop: being unable to leave is worse than losing
 the text.
 
 Renaming a service through the fragment is refused, because `depends_on:`
@@ -598,6 +604,33 @@ every other state already runs, rather than shipping unnoticed; see
 `src/appstyles/Theme_test.go` for the same property one level down, on the
 fields themselves rather than a rendered frame.
 
+### Theme picker modal
+
+`T` (shift+t) opens a modal listing every registered theme, sorted by name,
+with the active one marked and the cursor starting on it. Cursor movement
+previews live: `ThemePickerModalModel.Update` detects an index change after
+the list update and calls `appstyles.SetTheme`, so the entire UI behind the
+modal repaints on each keystroke. The original theme is captured at
+construction time, so `Esc` always restores what the user started with,
+even after several preview steps. `Enter` applies and persists: the choice
+is written to `~/.config/stack-stitcher/config.yaml` via
+`config.SaveConfig`, and the saved theme is loaded in `main.go` before
+the program starts — a missing or malformed config silently yields the
+default. Persistence errors surface in the banner rather than blocking the
+modal close, because the theme the user saw is already active.
+
+The config struct (`src/config/config.go`) has one field (`Theme`) today
+but is designed to absorb the other post-alpha preferences (default file,
+keybinding overrides) without changing existing callers: add a field, tag
+it, and `LoadConfig`/`SaveConfig` round-trip it automatically.
+
+Adding a theme is choosing the handful of base colors in `themeParams`
+(accent, text, panel, modal, danger, the four status colors); `newTheme`
+derives every other field. The four shipped themes (`stitcher-dark`,
+`stitcher-light`, `stitcher-ocean`, `stitcher-ember`) share the status
+and danger colors on purpose — container state is a vocabulary the user
+shouldn't have to re-learn per theme.
+
 ### Saying which build this is
 
 `constants.Version()` is the single reader of a version that may or may not
@@ -644,16 +677,3 @@ Before adding a feature, answer these:
 - [Current TODO](../TODO.md) — the live worklist and recent completed work.
 - [Contributing](../CONTRIBUTING.md) — the build/test loop, how to test a TUI,
   and how a release is cut.
-- [Create/delete profiles design](superpowers/specs/2026-07-22-create-delete-profiles-design.md) —
-  completed historical design for the create/delete-groups flow.
-- [Create/delete profiles plan](superpowers/plans/2026-07-22-create-delete-profiles.md) —
-  completed historical implementation plan for that flow.
-- [Bootstrap compose file design](superpowers/specs/2026-07-23-bootstrap-compose-file-design.md) —
-  completed historical design for bootstrapping a compose file from inside the TUI.
-- [Bootstrap compose file plan](superpowers/plans/2026-07-23-bootstrap-compose-file.md) —
-  completed historical implementation plan for that flow.
-- [Edit services design](superpowers/specs/2026-07-25-edit-services-design.md) —
-  completed historical design for `$EDITOR`-based service editing; the inline
-  (`textarea`) follow-up it scopes is still open.
-- [Edit services plan](superpowers/plans/2026-07-25-edit-services.md) —
-  completed historical implementation plan for the `$EDITOR` path.

@@ -15,7 +15,7 @@ Stack Stitcher reads a Docker **Compose** file and turns it into an interactive 
 
 ## Project status
 
-Stack Stitcher is under **active development**. Compose parsing, navigation, starting/stopping services (individually or as a whole group), creating/deleting groups, editing a group's membership, streaming live logs, and bootstrapping a new compose file from inside the TUI all work. Editing existing services works by handing the YAML to your `$EDITOR` — `e` for one service, `E` for the whole file — rather than by filling in a form, so every compose field is reachable and your comments, quoting and key order are kept. (Blank lines between services are not: the YAML library preserves comments but not blank lines, so any write closes the spacing up.) The Files page shows the loaded compose file with syntax highlighting and opens it in your editor; `b` browses the other compose files in its directory and switches the active one. Editing services inline in the panel is still on the roadmap. See [TODO.md](TODO.md) for the current worklist and completed recent work, and [docs/ROADMAP.md](docs/ROADMAP.md) for the ordered plan to a first alpha. Feedback, issues, and ideas are genuinely welcome and help shape where it goes next.
+Stack Stitcher is under **active development**. Compose parsing, navigation, starting/stopping services (individually or as a whole group), creating/deleting groups, editing a group's membership, streaming live logs, bootstrapping a new compose file, and editing existing services all work from inside the TUI. `e` on a service opens an inline YAML editor in the details panel; `ctrl+s` saves, `ctrl+o` opens the fragment in your `$EDITOR`, and `esc` cancels. `E` still opens the whole compose file in `$EDITOR`. Inline editing works with real YAML, not a form, so every compose field is reachable and your comments, quoting and key order are kept. (Blank lines between services are not: the YAML library preserves comments but not blank lines, so any write closes the spacing up.) The Files page shows the loaded compose file with syntax highlighting and opens it in your editor; `b` browses the other compose files in its directory and switches the active one. See [TODO.md](TODO.md) for the current worklist and completed recent work, and [docs/ROADMAP.md](docs/ROADMAP.md) for the ordered plan to a first alpha. Feedback, issues, and ideas are genuinely welcome and help shape where it goes next.
 
 ![Stack Stitcher demo](./demo/demo.gif)
 
@@ -114,7 +114,10 @@ two body panels.
 | `n` | Create a new group | Groups panel focused |
 | `e` | Edit the highlighted group's membership | Groups panel focused |
 | `d` | Delete the highlighted group | Groups panel focused |
-| `e` | Edit the service's YAML in `$EDITOR` | Service details panel focused |
+| `e` | Edit the service's YAML inline in the details panel | Service details panel focused |
+| `ctrl+s` | Save the inline edit | Inline editor open |
+| `ctrl+o` | Open the current inline fragment in `$EDITOR` | Inline editor open |
+| `esc` | Cancel the inline edit (confirms if changed) | Inline editor open |
 | `E` | Edit the whole compose file in `$EDITOR` | Service details panel or Files page focused |
 | `b` | Browse and switch compose files | Files page focused |
 | `↑`/`↓` `k`/`j` `PgUp`/`PgDn` | Scroll the compose file | Files page focused |
@@ -146,10 +149,10 @@ aliases, `g`/`G`, `Shift+Tab`, `Ctrl+C`, and `a` for About). If you are adding a
 file — see [docs/DESIGN.md](docs/DESIGN.md) for the tiers and the rules they
 follow.
 
-While you are typing a filter the list has the whole keyboard, so `n`, `d`,
-`q` and the page digits are letters rather than commands; `Enter` applies the
-filter and `Esc` abandons it. `Ctrl+C` is the exception that always quits,
-whatever is on screen.
+While you are typing a filter or editing a service inline, the component has the
+whole keyboard, so `n`, `d`, `q` and the page digits are letters rather than
+commands; `Enter` applies the filter and `Esc` abandons it. `Ctrl+C` is the
+exception that always quits, whatever is on screen.
 
 ### UI overview
 

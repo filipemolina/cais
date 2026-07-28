@@ -1,8 +1,7 @@
 # TODO
 
 Working list for Stack Stitcher. Sources: the roadmap in `docs/ROADMAP.md`,
-the guiding principles in `docs/DESIGN.md`, the "Out of scope / follow-ups"
-sections of the specs in `docs/superpowers/specs/`, plus review findings.
+the guiding principles in `docs/DESIGN.md`, plus review findings.
 
 Legend: **[P]** = from the original plan/roadmap, **[S]** = suggested next
 step, **[H]** = housekeeping.
@@ -14,22 +13,21 @@ are done — every tab is live and the alpha roadmap is complete. What remains i
 the post-alpha list. (See `docs/ROADMAP.md`.)
 
 `README.md`, `docs/DESIGN.md`, `docs/ROADMAP.md`, and this file are the current
-documentation. The dated specs and plans under `docs/superpowers/` are completed
-historical records, not a live backlog.
+documentation.
 
 ---
 
 ## Remaining from the original plan
 
-- [~] **[P] Edit existing services** — `$EDITOR`-based editing works: `e`
-  opens one service's YAML, `E` opens the whole compose file. Writes are
-  validated against the compose loader and refused (leaving the file
-  untouched) rather than half-applied. The user edits real YAML, not a
-  form, so every compose field is reachable. **Remaining:** Phase 3, editing
-  inline in the details panel with a `textarea`, plus the deferred draft
-  mechanism. See the live
-  [design](docs/superpowers/specs/2026-07-25-edit-services-design.md) and
-  [plan](docs/superpowers/plans/2026-07-25-edit-services.md).
+- [x] **[P] Edit existing services** — inline editing works: `e` on the
+  Services details panel opens a `textarea` with the service's YAML
+  fragment; `ctrl+s` saves through `utils.ApplyServiceFragment`, `ctrl+o`
+  opens the same fragment in `$EDITOR`, and `esc` cancels (confirming first
+  if the buffer changed). The editor owns the keyboard while open, so action
+  keys are plain text. Live YAML syntax validation is shown on the status
+  line; a save that fails compose validation keeps the editor open with the
+  error and leaves the file untouched. **Remaining:** the deferred draft
+  mechanism (resume a rejected edit from `$XDG_CACHE_HOME/stack-stitcher/drafts/`).
 
 - [x] **[S] Blank lines are not preserved across writes** — accepted, not
   fixed. `yaml.v3` round-trips comments but not blank lines, so every write
@@ -51,12 +49,15 @@ historical records, not a live backlog.
   behaviour anyway: a background reload has no business closing a modal the
   user is working in. Six consecutive full-suite runs under `-race` pass.
 
-- [ ] **[H] Panel keys aren't testable through the rig** — every rig test
-  that sends a key targets a modal, which `AppModel.Update` handles on an
-  early-return path that never reaches a panel. Keys sent to a *panel*
-  through the rig did nothing when tried, so Phase 1/2 keypress coverage sits
-  at the model level instead. Worth closing before Phase 3, which is entirely
-  panel keys.
+- [x] **[H] Panel keys aren't testable through the rig** — fixed: panel
+  keybindings match with `key.Matches`, which compares `msg.String()` against
+  the binding strings. `tea.KeyPressMsg.String()` returns `Text` when it is
+  set, so a key sent to the rig with only `Code` matched nothing. The rig
+  now has a `letterKey` helper that sets both `Code` and `Text`, and
+  `TestRigGroupListEditKey` verifies 'e' reaches the focused groups list
+  through a real `tea.Program`. Modal special keys (esc/enter/tab/backspace)
+  still work with `keyPress` because Code alone resolves to the right
+  string for those. Panel-key coverage is no longer blocked for Phase 3.
 
 - [x] **[P] Compose Files page** — done across Phases 8–9. Phase 8 landed the
   minimum: the active file's path on the title row, a read-only scrollable
@@ -111,6 +112,19 @@ historical records, not a live backlog.
   screen. See *Which compose file* in `docs/DESIGN.md`. This was Phase 7.
 
 ## Suggested next steps
+
+- [x] **[S] Theme picker modal** — `T` (shift+t) opens a picker listing
+  every registered theme (`stitcher-dark`, `stitcher-light`,
+  `stitcher-ocean`, `stitcher-ember`), sorted by name. Cursor movement
+  previews the theme live — the entire UI behind the modal repaints on
+  each cursor step. `Enter` applies and persists to
+  `~/.config/stack-stitcher/config.yaml` (or `$XDG_CONFIG_HOME`); `Esc`
+  restores the theme that was active when the picker opened. The saved
+  theme is loaded on startup in `main.go`, before the program starts. Two
+  new themes (`stitcher-ocean`, `stitcher-ember`) join the existing pair
+  to make the picker worth having. The config struct
+  (`src/config/config.go`) is designed to absorb future fields (default
+  file, keybinding overrides) without changing callers.
 
 - [x] **[S] Periodic container refresh** — re-poll `docker compose ps`
   every five seconds while a compose project is loaded and no modal is open.
