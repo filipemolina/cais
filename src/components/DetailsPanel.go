@@ -3,6 +3,7 @@ package components
 import (
 	"fmt"
 	"image/color"
+	"strings"
 
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
@@ -13,6 +14,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/compose-spec/compose-go/v2/types"
+	"github.com/docker/go-units"
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 	"gopkg.in/yaml.v3"
@@ -320,9 +322,11 @@ func (m DetailsPanelModel) View() tea.View {
 		return tea.NewView(screen)
 	}
 
-	basicInfo := BasicInfo(*m.service, bodyWidth)
-	runtimeStats := m.renderRuntimeStats(bodyWidth)
 	bg := panelBg(m.isFocused)
+
+	serviceHeader := m.renderServiceHeader(bodyWidth)
+	configTable := m.renderConfigTable(bodyWidth)
+	runtimeStats := m.renderRuntimeStats(bodyWidth)
 
 	var buttons string
 	if m.pendingAction != nil {
@@ -331,7 +335,13 @@ func (m DetailsPanelModel) View() tea.View {
 		buttons = renderActionButtons(bodyWidth, bg)
 	}
 
-	body := lipgloss.JoinVertical(lipgloss.Left, basicInfo, runtimeStats, buttons)
+	parts := []string{serviceHeader, configTable}
+	if runtimeStats != "" {
+		parts = append(parts, runtimeStats)
+	}
+	parts = append(parts, buttons)
+
+	body := lipgloss.JoinVertical(lipgloss.Left, parts...)
 	body = lipgloss.NewStyle().MaxHeight(bodyAvail).Render(body)
 
 	screen := renderPanelFrame("Details", m.titlePill(), m.isFocused, m.panelWidth, m.panelHeight, body)
@@ -375,9 +385,262 @@ func (m DetailsPanelModel) isServiceRunning(serviceName string) bool {
 	return false
 }
 
+// renderServiceHeader renders the service name, image, and a status line
+// (status dot · state · health · uptime). It mirrors the visual weight of
+// GroupDetailsPanelModel.groupHeaderCard.
+func (m DetailsPanelModel) renderServiceHeader(width int) string {
+	name := m.service.Name
+	image := m.service.Image
+
+	nameRow := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(appstyles.Active.TextPrimary).
+		Width(width).
+		Render(name)
+
+	var imagePart string
+	if image != "" {
+		imagePart = " (" + image + ")"
+	}
+	subtitleRow := lipgloss.NewStyle().
+		Foreground(appstyles.Active.TextMuted).
+		Width(width).
+		Render(imagePart)
+
+	// Status line with dot, state, health, uptime.
+	var statusParts []string
+
+	container, hasContainer := m.containerForService(name)
+	dotColor := appstyles.Active.StatusStopped
+	stateLabel := "stopped"
+	if hasContainer {
+		stateLabel = container.State
+	}
+	if m.isServiceRunning(name) {
+		dotColor = appstyles.Active.StatusRunning
+	}
+
+	dot := lipgloss.NewStyle().Foreground(dotColor).Render("●")
+	statusParts = append(statusParts, dot, " ", stateLabel)
+
+	if hasContainer && container.HealthStatus != "" && container.HealthStatus != "-" {
+		hlColor := healthColor(container.HealthStatus)
+		hl := lipgloss.NewStyle().Foreground(hlColor).Render("· " + container.HealthStatus)
+		statusParts = append(statusParts, "  ", hl)
+	}
+
+	if hasContainer && container.RunningFor != "" {
+		up := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Render("· " + container.RunningFor)
+		statusParts = append(statusParts, "  ", up)
+	}
+
+	statusRow := lipgloss.NewStyle().
+		Width(width).
+		Render(lipgloss.JoinHorizontal(lipgloss.Left, statusParts...))
+
+	rule := lipgloss.NewStyle().
+		Foreground(appstyles.Active.BorderDefault).
+		Width(width).
+		Render(strings.Repeat("─", max(width, 0)))
+
+	return lipgloss.JoinVertical(lipgloss.Left, nameRow, subtitleRow, statusRow, "", rule)
+}
+
+// renderConfigTable renders the service's compose configuration as a compact
+// two-column table (Property | Value), matching the visual language of
+// GroupDetailsPanelModel.renderMemberTable.
+func (m DetailsPanelModel) renderConfigTable(width int) string {
+	propWidth := 14
+	valWidth := width - propWidth
+	if valWidth < 8 {
+		valWidth = 8
+		propWidth = width - valWidth
+		if propWidth < 4 {
+			propWidth = 4
+		}
+	}
+
+	dim := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Bold(true)
+
+	headerRow := lipgloss.JoinHorizontal(lipgloss.Left,
+		dim.Width(propWidth).Render("PROPERTY"),
+		dim.Width(valWidth).Render("VALUE"),
+	)
+
+	rule := lipgloss.NewStyle().
+		Foreground(appstyles.Active.BorderDefault).
+		Width(width).
+		Render(strings.Repeat("─", max(width, 0)))
+
+	var rows []string
+
+	svc := *m.service
+
+	// Ports
+	if len(svc.Ports) > 0 {
+		var portLines []string
+		for _, port := range svc.Ports {
+			protocol := port.Protocol
+			if protocol == "" {
+				protocol = "tcp"
+			}
+			portStr := fmt.Sprintf("%d/%s", port.Target, protocol)
+			if port.Published != "" {
+				portStr = port.Published + "->" + portStr
+			}
+			portLines = append(portLines, portStr)
+		}
+		rows = append(rows, m.configRow(propWidth, valWidth, "Ports", portLines...))
+	}
+
+	// Container name
+	if svc.ContainerName != "" {
+		rows = append(rows, m.configRow(propWidth, valWidth, "Container", svc.ContainerName))
+	}
+
+	// Restart policy
+	if svc.Restart != "" {
+		rows = append(rows, m.configRow(propWidth, valWidth, "Restart", svc.Restart))
+	}
+
+	// Networks
+	if len(svc.Networks) > 0 {
+		netNames := make([]string, 0, len(svc.Networks))
+		for name := range svc.Networks {
+			netNames = append(netNames, name)
+		}
+		rows = append(rows, m.configRow(propWidth, valWidth, "Networks", strings.Join(netNames, ", ")))
+	}
+
+	// Volumes summary
+	if len(svc.Volumes) > 0 {
+		bindCount := 0
+		volCount := 0
+		for _, vol := range svc.Volumes {
+			switch vol.Type {
+			case "bind", "":
+				bindCount++
+			case "volume":
+				volCount++
+			}
+		}
+		var volParts []string
+		if bindCount > 0 {
+			volParts = append(volParts, fmt.Sprintf("%d bind", bindCount))
+		}
+		if volCount > 0 {
+			volParts = append(volParts, fmt.Sprintf("%d volume", volCount))
+		}
+		rows = append(rows, m.configRow(propWidth, valWidth, "Volumes", strings.Join(volParts, ", ")))
+	}
+
+	// Healthcheck
+	if svc.HealthCheck != nil && svc.HealthCheck.Test != nil && len(svc.HealthCheck.Test) > 0 {
+		test := strings.Join(svc.HealthCheck.Test, " ")
+		// Trim common prefixes for brevity.
+		test = strings.TrimPrefix(test, "CMD-SHELL ")
+		test = strings.TrimPrefix(test, "CMD ")
+		test = strings.TrimPrefix(test, "NONE")
+		if len(test) > 24 {
+			test = test[:24] + "…"
+		}
+		if test != "" {
+			rows = append(rows, m.configRow(propWidth, valWidth, "Healthcheck", test))
+		}
+	}
+
+	// Depends on
+	if len(svc.DependsOn) > 0 {
+		deps := make([]string, 0, len(svc.DependsOn))
+		for name := range svc.DependsOn {
+			deps = append(deps, name)
+		}
+		rows = append(rows, m.configRow(propWidth, valWidth, "Depends on", strings.Join(deps, ", ")))
+	}
+
+	// Pull policy
+	if svc.PullPolicy != "" {
+		rows = append(rows, m.configRow(propWidth, valWidth, "Pull", svc.PullPolicy))
+	}
+
+	// PUID / PGID (common in self-hosted stacks)
+	puid, puidOk := svc.Environment["PUID"]
+	pgid, pgidOk := svc.Environment["PGID"]
+	if puidOk || pgidOk {
+		var idParts []string
+		if puidOk && puid != nil {
+			idParts = append(idParts, "PUID="+*puid)
+		}
+		if pgidOk && pgid != nil {
+			idParts = append(idParts, "PGID="+*pgid)
+		}
+		rows = append(rows, m.configRow(propWidth, valWidth, "IDs", strings.Join(idParts, "  ")))
+	}
+
+	// Memory limits
+	var memLimits []string
+	if svc.MemLimit > 0 {
+		memLimits = append(memLimits, "limit="+units.BytesSize(float64(svc.MemLimit)))
+	}
+	if svc.MemReservation > 0 {
+		memLimits = append(memLimits, "reservation="+units.BytesSize(float64(svc.MemReservation)))
+	}
+	if len(memLimits) > 0 {
+		rows = append(rows, m.configRow(propWidth, valWidth, "Memory", strings.Join(memLimits, ", ")))
+	}
+
+	// Labels (useful for reverse-proxy configs, etc.)
+	if len(svc.Labels) > 0 {
+		rows = append(rows, m.configRow(propWidth, valWidth, "Labels", fmt.Sprintf("%d keys", len(svc.Labels))))
+	}
+
+	if len(rows) == 0 {
+		return ""
+	}
+
+	all := make([]string, 0, 2+len(rows))
+	all = append(all, headerRow, rule)
+	all = append(all, rows...)
+
+	return lipgloss.JoinVertical(lipgloss.Left, all...)
+}
+
+// configRow builds one row of the config table: a left-aligned property
+// name in muted text and a right-filling value in primary text. When value
+// lines span multiple entries, the property label row-spans them visually
+// by appearing only on the first line.
+func (m DetailsPanelModel) configRow(propWidth, valWidth int, prop string, values ...string) string {
+	propStyle := lipgloss.NewStyle().
+		Foreground(appstyles.Active.TextDim).
+		Width(propWidth).
+		Render(prop)
+
+	if len(values) == 0 {
+		return lipgloss.JoinHorizontal(lipgloss.Left, propStyle, lipgloss.NewStyle().Width(valWidth).Render("—"))
+	}
+
+	valStyle := lipgloss.NewStyle().Foreground(appstyles.Active.TextPrimary).Width(valWidth)
+
+	// First value on the same row as the property.
+	firstVal := valStyle.Render(values[0])
+	row := lipgloss.JoinHorizontal(lipgloss.Left, propStyle, firstVal)
+
+	// Subsequent values on continuation rows (blank property cell).
+	for _, v := range values[1:] {
+		cont := lipgloss.JoinHorizontal(lipgloss.Left,
+			lipgloss.NewStyle().Width(propWidth).Render(""),
+			valStyle.Render(v),
+		)
+		row = lipgloss.JoinVertical(lipgloss.Left, row, cont)
+	}
+
+	return row
+}
+
 // renderRuntimeStats renders a card with live container stats (memory,
-// network I/O, disk I/O, uptime) when available. Returns an empty string
-// when the service has no running container or no stats data.
+// CPU, network I/O, disk I/O, PIDs, uptime) as a compact two-column table.
+// Returns an empty string when the service has no running container or no
+// stats data.
 func (m DetailsPanelModel) renderRuntimeStats(width int) string {
 	if m.service == nil {
 		return ""
@@ -389,43 +652,95 @@ func (m DetailsPanelModel) renderRuntimeStats(width int) string {
 	}
 
 	// Check if we have any stats data at all.
-	hasStats := container.MemUsage != "" || container.NetIO != "" || container.BlockIO != ""
+	hasStats := container.MemUsage != "" || container.NetIO != "" || container.BlockIO != "" || container.CPUPerc != ""
 	if !hasStats {
 		return ""
 	}
 
-	wrapper := fitBox(lipgloss.NewStyle().
-		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(appstyles.Active.Accent).
-		Padding(1), width, 0)
+	propWidth := 14
+	valWidth := width - propWidth
+	if valWidth < 8 {
+		valWidth = 8
+		propWidth = width - valWidth
+		if propWidth < 4 {
+			propWidth = 4
+		}
+	}
 
-	memHeader := lipgloss.NewStyle().Bold(true).Render("Memory: ")
-	netHeader := lipgloss.NewStyle().Bold(true).Render("Network: ")
-	diskHeader := lipgloss.NewStyle().Bold(true).Render("Disk I/O: ")
-	uptimeHeader := lipgloss.NewStyle().Bold(true).Render("Uptime: ")
+	dim := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Bold(true)
+
+	headerRow := lipgloss.JoinHorizontal(lipgloss.Left,
+		dim.Width(propWidth).Render("METRIC"),
+		dim.Width(valWidth).Render("VALUE"),
+	)
+
+	rule := lipgloss.NewStyle().
+		Foreground(appstyles.Active.BorderDefault).
+		Width(width).
+		Render(strings.Repeat("─", max(width, 0)))
 
 	var rows []string
+	valStyle := lipgloss.NewStyle().Foreground(appstyles.Active.TextPrimary).Width(valWidth)
+	propStyle := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Width(propWidth)
 
 	if container.MemUsage != "" {
 		memDisplay := formatMemUsage(container.MemUsage, container.MemPerc)
-		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, memHeader, memDisplay))
+		row := lipgloss.JoinHorizontal(lipgloss.Left,
+			propStyle.Render("Memory"),
+			valStyle.Render(memDisplay),
+		)
+		rows = append(rows, row)
 	}
+
+	if container.CPUPerc != "" {
+		row := lipgloss.JoinHorizontal(lipgloss.Left,
+			propStyle.Render("CPU"),
+			valStyle.Render(container.CPUPerc),
+		)
+		rows = append(rows, row)
+	}
+
 	if container.NetIO != "" {
-		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, netHeader, container.NetIO))
+		row := lipgloss.JoinHorizontal(lipgloss.Left,
+			propStyle.Render("Network I/O"),
+			valStyle.Render(container.NetIO),
+		)
+		rows = append(rows, row)
 	}
+
 	if container.BlockIO != "" {
-		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, diskHeader, container.BlockIO))
+		row := lipgloss.JoinHorizontal(lipgloss.Left,
+			propStyle.Render("Disk I/O"),
+			valStyle.Render(container.BlockIO),
+		)
+		rows = append(rows, row)
 	}
+
+	if container.PIDs != "" {
+		row := lipgloss.JoinHorizontal(lipgloss.Left,
+			propStyle.Render("PIDs"),
+			valStyle.Render(container.PIDs),
+		)
+		rows = append(rows, row)
+	}
+
 	if container.RunningFor != "" {
-		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, uptimeHeader, container.RunningFor))
+		row := lipgloss.JoinHorizontal(lipgloss.Left,
+			propStyle.Render("Uptime"),
+			valStyle.Render(container.RunningFor),
+		)
+		rows = append(rows, row)
 	}
 
 	if len(rows) == 0 {
 		return ""
 	}
 
-	info := lipgloss.JoinVertical(lipgloss.Left, rows...)
-	return wrapper.Render(info)
+	all := make([]string, 0, 2+len(rows))
+	all = append(all, headerRow, rule)
+	all = append(all, rows...)
+
+	return lipgloss.JoinVertical(lipgloss.Left, all...)
 }
 
 // renderEditor renders the textarea plus a status line under it. The status
