@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 	"io"
+	"strings"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
@@ -317,14 +318,29 @@ func (m *ServicesListModel) containerStatus(serviceName string) string {
 }
 
 // containerMemUsage returns the memory usage string for the given service,
-// or "" if no container exists or stats are unavailable.
+// formatted as "Usage (Percent)" (e.g., "21.71MiB (0.07%)"), or "" if no
+// container exists or stats are unavailable.
 func (m *ServicesListModel) containerMemUsage(serviceName string) string {
 	for _, c := range m.containers {
 		if c.Service == serviceName && c.State == "running" {
-			return c.MemUsage
+			return formatMemUsage(c.MemUsage, c.MemPerc)
 		}
 	}
 	return ""
+}
+
+// formatMemUsage formats memory usage as "Usage (Percent)", e.g.,
+// "21.71MiB / 31.02GiB" + "0.07%" -> "21.71MiB (0.07%)".
+// If percent is empty, returns just the usage part (before "/").
+func formatMemUsage(memUsage, memPerc string) string {
+	usage := memUsage
+	if idx := strings.Index(memUsage, "/"); idx != -1 {
+		usage = strings.TrimSpace(memUsage[:idx])
+	}
+	if memPerc != "" {
+		return usage + " (" + memPerc + ")"
+	}
+	return usage
 }
 
 // updateServiceStatuses refreshes the status and memory fields on every list

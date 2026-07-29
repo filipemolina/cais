@@ -2,6 +2,7 @@ package apptypes
 
 import (
 	"image/color"
+	"strings"
 
 	"charm.land/lipgloss/v2"
 	"github.com/compose-spec/compose-go/v2/types"
@@ -17,6 +18,8 @@ type ServiceListItem struct {
 	// MemUsage is the real-time memory usage from docker stats, e.g.
 	// "21.71MiB / 31.02GiB". Empty when stats are unavailable.
 	MemUsage string
+	// MemPerc is the memory usage percentage from docker stats, e.g. "0.07%"
+	MemPerc string
 }
 
 func (s ServiceListItem) Title() string       { return s.Service.Name }
@@ -60,10 +63,24 @@ func (s ServiceListItem) Description(isActive bool) string {
 	memLabel := boldStyle.Render("Mem: ")
 	var memValue string
 	if s.MemUsage != "" {
-		memValue = normalStyle.Render(s.MemUsage)
+		memValue = normalStyle.Render(formatMemUsage(s.MemUsage, s.MemPerc))
 	} else {
 		memValue = normalStyle.Render("—")
 	}
 
 	return memLabel + memValue
+}
+
+// formatMemUsage formats memory usage as "Usage (Percent)", e.g.,
+// "21.71MiB / 31.02GiB" + "0.07%" -> "21.71MiB (0.07%)".
+// If percent is empty, returns just the usage part (before "/").
+func formatMemUsage(memUsage, memPerc string) string {
+	usage := memUsage
+	if idx := strings.Index(memUsage, "/"); idx != -1 {
+		usage = strings.TrimSpace(memUsage[:idx])
+	}
+	if memPerc != "" {
+		return usage + " (" + memPerc + ")"
+	}
+	return usage
 }
