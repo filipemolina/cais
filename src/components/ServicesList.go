@@ -219,7 +219,10 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case cmds.GetContainerStatsMsg:
-		if msg.Err == nil {
+		// Present-but-unenriched still beats stale: a failed stats call sends
+		// the containers through without their runtime numbers, so the status
+		// column stays correct even when the memory column empties.
+		if msg.Containers != nil {
 			m.containers = msg.Containers
 			finalCmds = append(finalCmds, m.updateServiceStatuses())
 		}

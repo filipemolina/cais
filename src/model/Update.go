@@ -194,9 +194,9 @@ type filterStater interface {
 // no keys while one is up - so the snapshot cannot go stale.
 func (m AppModel) helpContext() keys.Context {
 	ctx := keys.Context{
-		Page:         m.activePage,
-		Focused:      m.focusedComponent,
-		Editing:      m.inlineEditing,
+		Page:          m.activePage,
+		Focused:       m.focusedComponent,
+		Editing:       m.inlineEditing,
 		PendingAction: m.pendingAction != nil,
 	}
 
@@ -485,11 +485,12 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case cmds.GetContainerStatsMsg:
 		m.waitingForStats = false
-		if msg.Err != nil {
-			// Stats errors are non-fatal; the banner already shows the
-			// container status, so we just ignore stats failures.
-		} else {
-			// Update running count with enriched data.
+		// A stats failure is non-fatal and deliberately not surfaced: the
+		// containers still arrive, only without their runtime numbers, so the
+		// count is recomputed either way. Skipping this on Err would strand
+		// the count at whatever the last successful stats call left, because
+		// a background poll's own message never reaches the panels.
+		if msg.Containers != nil {
 			count := 0
 			for _, container := range msg.Containers {
 				if container.State == "running" {
