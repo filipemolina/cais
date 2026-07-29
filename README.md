@@ -168,6 +168,12 @@ On **Home** the body is a two-pane layout: the Groups list on the left and the G
 
 On **Files** the body is a single panel showing the loaded compose file's path and its raw contents with syntax highlighting, which you can scroll and open in your `$EDITOR` with `E`. `b` opens a picker listing the other compose files in the same directory so you can switch the active one.
 
+On **Services** the body is also a two-pane layout: the Services list on the left and the Service Details panel on the right. The Service Details panel shows:
+
+- **No service selected:** a *Select a service* card prompting the user to pick from the list.
+- **Editing:** the inline YAML editor with live validation, save (ctrl+s), open in `$EDITOR` (ctrl+o), and cancel.
+- **Service selected:** a header with the service name, image, and a status line (colored dot ● with running/stopped state, health, and uptime), followed by a compact two-column PROPERTY | VALUE configuration table showing ports, container name, restart policy, networks, volumes, depends on, healthcheck, pull policy, PUID/PGID, memory limits and labels. When the container is running, a live runtime stats table (METRIC | VALUE) shows memory, CPU, network I/O, disk I/O, PIDs and uptime. Start/Stop/Restart/Pull/Remove action buttons are pinned at the bottom, with a spinner replacing them while an action is in progress.
+
 The ASCII logo lives in `src/constants/Branding.go` and is shown by the About modal (`a`).
 
 ## Tech stack

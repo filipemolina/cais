@@ -507,6 +507,53 @@ Home is the launchpad. Its body is a two-pane layout:
 The large ASCII logo is no longer rendered here; it remains reserved for a
 future About modal.
 
+### Services layout
+
+Services page is the counterpart to Home for single-service operations. Its
+body is a two-pane layout:
+
+- **Services list** — the selectable list of compose services with status and
+  memory summary per row.
+- **Service Details** — the right panel. Its layout mirrors the polish of the
+  Group Details panel:
+  - **Empty state:** a *Select a service* card prompting the user to pick from
+    the list, using the same recessed-card visual as the group panel.
+  - **Editing:** the inline YAML editor replaces the view entirely, showing
+    the service's YAML fragment in a `textarea` with live validation on the
+    status line below.
+  - **Service selected:** a header section with the service name (bold), the
+    image in parentheses, and a status line with a coloured dot (●), state
+    label, health status (coloured by state), and uptime — all on a single
+    row, separated by · markers. A thin rule separates the header from the
+    content below.
+    
+    Beneath the header is a compact two-column table (PROPERTY | VALUE)
+    showing the service's compose configuration. Properties are shown in dim
+    text, values in primary text. Multi-value properties (e.g. ports) indent
+    continuation rows below the first value. The table rows shown depend on
+    what the service defines, and include: ports, container name, restart
+    policy, connected networks, volumes summary (count by bind/volume type),
+    healthcheck command (trimmed for brevity), depends_on, pull policy,
+    PUID/PGID (common in self-hosted *arr stacks), memory limits (in
+    human-readable form via `docker/go-units`), and label count.
+    
+    When the service has a running container with stats data, a live runtime
+    stats table (METRIC | VALUE) appears below the config table, showing
+    memory usage + percentage, CPU usage, network I/O, disk I/O, PIDs count,
+    and uptime.
+    
+    Start/Stop/Restart/Pull/Remove action buttons are pinned at the bottom,
+    matching the group panel exactly. While a docker action is pending, the
+    buttons are replaced by a spinner with the action description.
+
+  The service details panel deliberately omits the PUID/PGID row when neither
+  is set (since they are optional env-var-derived fields specific to certain
+  stacks). The information density was curated for the self-host enthusiast
+  audience: ports tell the user how to reach the service, restart policy
+  tells them whether it comes back after a crash, volumes tell them what data
+  is persisted, depends_on reveals startup ordering, and the resource limits
+  help diagnose OOM kills — all common concerns when running a home server.
+
 ### Color lives on a Theme
 
 Every color the app draws with is a field on `appstyles.Theme`

@@ -293,6 +293,17 @@ documentation.
   banner. Background poll errors keep the banner to avoid modal fatigue. See
   `docs/PLAN-UX-IMPROVEMENTS.md`.
 
+- [x] **[S] Service details panel redesign** — redesigned the right-pane details
+  for individual services to match the visual polish of the group details panel.
+  Replaced the old `BasicInfo` card with: a service header (name, image, status
+  dot with state/health/uptime), a compact two-column PROPERTY|VALUE config
+  table (ports, restart policy, networks, volumes, depends_on, healthcheck,
+  pull policy, PUID/PGID, memory limits, labels), and an improved runtime stats
+  table (memory, CPU, network I/O, disk I/O, PIDs, uptime). Information was
+  curated for the self-host enthusiast audience. All existing functionality
+  (inline editor, docker actions, action buttons, logs modal) preserved.
+  Branch: `service-details-redesign`.
+
 ## Housekeeping
 
 - [x] **[H] Document the current build/install path** — README now correctly
