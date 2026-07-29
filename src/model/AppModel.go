@@ -82,6 +82,10 @@ type AppModel struct {
 	// pendingAction tracks a docker action that is currently running.
 	// While set, action keys are disabled and a spinner is shown.
 	pendingAction *components.PendingAction
+	// waitingForStats is true while a GetContainerStats command is in flight.
+	// When set, GetRunningContainersMsg is not forwarded to components to
+	// avoid a flicker where stats disappear for one render cycle.
+	waitingForStats bool
 }
 
 // ChangeFocus moves focus through constants.FocusableComponents and returns the
@@ -213,6 +217,19 @@ func (m *AppModel) UpdateInnerComponent(activePage string, msg tea.Msg) tea.Cmd 
 	}
 
 	return tea.Batch(finalCmds...)
+}
+
+// shouldForwardToComponents reports whether a message should be passed to
+// the active page's components. GetRunningContainersMsg is skipped while
+// waiting for stats to avoid a flicker where stats disappear for one
+// render cycle.
+func (m AppModel) shouldForwardToComponents(msg tea.Msg) bool {
+	if m.waitingForStats {
+		if _, ok := msg.(cmds.GetRunningContainersMsg); ok {
+			return false
+		}
+	}
+	return true
 }
 
 // GetInitialModel builds the app's starting state. source is what the -f/-d

@@ -468,6 +468,28 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.lastError = ""
 				m.lastErrorFromPoll = false
 			}
+			// Fetch runtime stats for enriched container data.
+			// For background polls, set waitingForStats so UpdateInnerComponent
+			// skips forwarding this message to components - they will receive the
+			// enriched version via GetContainerStatsMsg instead, avoiding a flicker.
+			// Foreground actions (page switch, docker action) need immediate
+			// updates so the UI reflects the new state right away.
+			if msg.Background {
+				m.waitingForStats = true
+			}
+			finalCmds = append(finalCmds, cmds.GetContainerStats(msg.Containers, msg.Background))
+		}
+		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
+			finalCmds = append(finalCmds, bodyCmd)
+		}
+
+	case cmds.GetContainerStatsMsg:
+		m.waitingForStats = false
+		if msg.Err != nil {
+			// Stats errors are non-fatal; the banner already shows the
+			// container status, so we just ignore stats failures.
+		} else {
+			// Update running count with enriched data.
 			count := 0
 			for _, container := range msg.Containers {
 				if container.State == "running" {
@@ -885,7 +907,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var keybindingBarCmd tea.Cmd
 	m.components.KeybindingBar, keybindingBarCmd = m.components.KeybindingBar.Update(msg)
 
-	innerComponentsCmd := m.UpdateInnerComponent(m.activePage, msg)
+	var innerComponentsCmd tea.Cmd
+	if m.shouldForwardToComponents(msg) {
+		innerComponentsCmd = m.UpdateInnerComponent(m.activePage, msg)
+	}
 	finalCmds = append(finalCmds, mainMenuCmd, keybindingBarCmd, innerComponentsCmd)
 
 	return m, tea.Batch(finalCmds...)

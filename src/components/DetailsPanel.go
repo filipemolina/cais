@@ -18,6 +18,17 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// containerForService returns the first container matching the given compose
+// service name, or a zero-value DockerContainer and false if none exists.
+func (m DetailsPanelModel) containerForService(serviceName string) (apptypes.DockerContainer, bool) {
+	for _, c := range m.containers {
+		if c.Service == serviceName {
+			return c, true
+		}
+	}
+	return apptypes.DockerContainer{}, false
+}
+
 type DetailsPanelModel struct {
 	service     *types.ServiceConfig
 	panelWidth  int
@@ -135,6 +146,11 @@ func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		finalCmds = append(finalCmds, cmd)
 
 	case cmds.GetRunningContainersMsg:
+		if msg.Err == nil {
+			m.containers = msg.Containers
+		}
+
+	case cmds.GetContainerStatsMsg:
 		if msg.Err == nil {
 			m.containers = msg.Containers
 		}
@@ -305,6 +321,7 @@ func (m DetailsPanelModel) View() tea.View {
 	}
 
 	basicInfo := BasicInfo(*m.service, bodyWidth)
+	runtimeStats := m.renderRuntimeStats(bodyWidth)
 	bg := panelBg(m.isFocused)
 
 	var buttons string
@@ -314,7 +331,7 @@ func (m DetailsPanelModel) View() tea.View {
 		buttons = renderActionButtons(bodyWidth, bg)
 	}
 
-	body := lipgloss.JoinVertical(lipgloss.Left, basicInfo, buttons)
+	body := lipgloss.JoinVertical(lipgloss.Left, basicInfo, runtimeStats, buttons)
 	body = lipgloss.NewStyle().MaxHeight(bodyAvail).Render(body)
 
 	screen := renderPanelFrame("Details", m.titlePill(), m.isFocused, m.panelWidth, m.panelHeight, body)
@@ -356,6 +373,58 @@ func (m DetailsPanelModel) isServiceRunning(serviceName string) bool {
 	}
 
 	return false
+}
+
+// renderRuntimeStats renders a card with live container stats (memory,
+// network I/O, disk I/O, uptime) when available. Returns an empty string
+// when the service has no running container or no stats data.
+func (m DetailsPanelModel) renderRuntimeStats(width int) string {
+	if m.service == nil {
+		return ""
+	}
+
+	container, ok := m.containerForService(m.service.Name)
+	if !ok || container.State != "running" {
+		return ""
+	}
+
+	// Check if we have any stats data at all.
+	hasStats := container.MemUsage != "" || container.NetIO != "" || container.BlockIO != ""
+	if !hasStats {
+		return ""
+	}
+
+	wrapper := fitBox(lipgloss.NewStyle().
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(appstyles.Active.Accent).
+		Padding(1), width, 0)
+
+	memHeader := lipgloss.NewStyle().Bold(true).Render("Memory: ")
+	netHeader := lipgloss.NewStyle().Bold(true).Render("Network: ")
+	diskHeader := lipgloss.NewStyle().Bold(true).Render("Disk I/O: ")
+	uptimeHeader := lipgloss.NewStyle().Bold(true).Render("Uptime: ")
+
+	var rows []string
+
+	if container.MemUsage != "" {
+		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, memHeader, container.MemUsage))
+	}
+	if container.NetIO != "" {
+		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, netHeader, container.NetIO))
+	}
+	if container.BlockIO != "" {
+		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, diskHeader, container.BlockIO))
+	}
+	if container.RunningFor != "" {
+		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, uptimeHeader, container.RunningFor))
+	}
+
+	if len(rows) == 0 {
+		return ""
+	}
+
+	info := lipgloss.JoinVertical(lipgloss.Left, rows...)
+	return wrapper.Render(info)
 }
 
 // renderEditor renders the textarea plus a status line under it. The status
