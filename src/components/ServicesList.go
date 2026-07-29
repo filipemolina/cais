@@ -113,6 +113,9 @@ type ServicesListModel struct {
 	project       *types.Project
 	panelWidth    int
 	panelHeight   int
+	// containers is the latest known container list, used to derive the
+	// RUNNING/STOPPED status shown on each service row.
+	containers []apptypes.DockerContainer
 }
 
 // syncActiveIndex points the delegate at the row holding activeService, or
@@ -202,19 +205,17 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.syncActiveIndex()
 
 	case cmds.SetServicesListMsg:
-		servicesList := []list.Item{}
-
-		for _, service := range msg {
-			newService := apptypes.ServiceListItem{
-				Service: service,
-			}
-
-			servicesList = append(servicesList, newService)
-		}
+		servicesList := m.buildItems(msg)
 
 		cmd := m.list.SetItems(servicesList)
 		finalCmds = append(finalCmds, cmd)
 		m.syncActiveIndex()
+
+	case cmds.GetRunningContainersMsg:
+		if msg.Err == nil {
+			m.containers = msg.Containers
+			m.updateServiceStatuses()
+		}
 
 	case cmds.SetFocusMsg:
 		if int(msg) == m.componentId {
@@ -276,12 +277,65 @@ func (m ServicesListModel) View() tea.View {
  * Initializer function
  */
 
-func ServicesList(services []types.ServiceConfig, width int, height int) tea.Model {
-	var items []list.Item
+// buildItems converts a slice of service configs into list items, picking up
+// the latest container state from the model so each row shows the correct
+// RUNNING/STOPPED pill.
+func (m *ServicesListModel) buildItems(services []types.ServiceConfig) []list.Item {
+	items := make([]list.Item, 0, len(services))
 
 	for _, service := range services {
-		items = append(items, apptypes.ServiceListItem{Service: service})
+		item := apptypes.ServiceListItem{
+			Service: service,
+			Status:  m.containerStatus(service.Name),
+		}
+
+		items = append(items, item)
 	}
+
+	return items
+}
+
+// containerStatus returns "running", "stopped", or "" depending on whether a
+// live container exists for the given compose service name.
+func (m *ServicesListModel) containerStatus(serviceName string) string {
+	for _, c := range m.containers {
+		if c.Service == serviceName {
+			if c.State == "running" {
+				return "running"
+			}
+			return "stopped"
+		}
+	}
+	return ""
+}
+
+// updateServiceStatuses refreshes the status field on every list item to match
+// the current container state. Called whenever a GetRunningContainersMsg
+// arrives with fresh data.
+func (m *ServicesListModel) updateServiceStatuses() {
+	items := m.list.Items()
+	updated := make([]list.Item, 0, len(items))
+
+	for _, item := range items {
+		svcItem, ok := item.(apptypes.ServiceListItem)
+		if !ok {
+			updated = append(updated, item)
+			continue
+		}
+
+		svcItem.Status = m.containerStatus(svcItem.Service.Name)
+		updated = append(updated, svcItem)
+	}
+
+	m.list.SetItems(updated)
+}
+
+func ServicesList(services []types.ServiceConfig, width int, height int) tea.Model {
+	model := ServicesListModel{
+		componentId: 1,
+	}
+
+	items := model.buildItems(services)
 
 	// -1 rather than the zero value: no service is active until one is
 	// selected, and 0 would render the first row as though one were.
@@ -301,11 +355,8 @@ func ServicesList(services []types.ServiceConfig, width int, height int) tea.Mod
 		Title.
 		Background(appstyles.Active.Accent)
 
-	model := ServicesListModel{
-		list:         servicesList,
-		listDelegate: listDelegate,
-		componentId:  1,
-	}
+	model.list = servicesList
+	model.listDelegate = listDelegate
 
 	return model
 }
