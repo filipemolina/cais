@@ -693,7 +693,7 @@ func (m DetailsPanelModel) renderRuntimeStats(width int) string {
 	propStyle := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Width(propWidth)
 
 	if container.MemUsage != "" {
-		memDisplay := formatMemUsage(container.MemUsage, container.MemPerc)
+		memDisplay := apptypes.FormatMemUsage(container.MemUsage, container.MemPerc)
 		row := lipgloss.JoinHorizontal(lipgloss.Left,
 			propStyle.Render("Memory"),
 			valStyle.Render(memDisplay),

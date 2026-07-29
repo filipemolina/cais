@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"image/color"
 	"io"
-	"strings"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
@@ -294,10 +293,12 @@ func (m *ServicesListModel) buildItems(services []types.ServiceConfig) []list.It
 	items := make([]list.Item, 0, len(services))
 
 	for _, service := range services {
+		usage, perc := m.containerMem(service.Name)
 		item := apptypes.ServiceListItem{
 			Service:  service,
 			Status:   m.containerStatus(service.Name),
-			MemUsage: m.containerMemUsage(service.Name),
+			MemUsage: usage,
+			MemPerc:  perc,
 		}
 
 		items = append(items, item)
@@ -320,30 +321,18 @@ func (m *ServicesListModel) containerStatus(serviceName string) string {
 	return ""
 }
 
-// containerMemUsage returns the memory usage string for the given service,
-// formatted as "Usage (Percent)" (e.g., "21.71MiB (0.07%)"), or "" if no
-// container exists or stats are unavailable.
-func (m *ServicesListModel) containerMemUsage(serviceName string) string {
+// containerMem returns docker's raw memory usage and percentage for the
+// given service, or two empty strings if no container exists or stats are
+// unavailable. The row formats them at render time via
+// apptypes.FormatMemUsage - see the note there on why they are not formatted
+// here.
+func (m *ServicesListModel) containerMem(serviceName string) (usage, perc string) {
 	for _, c := range m.containers {
 		if c.Service == serviceName && c.State == "running" {
-			return formatMemUsage(c.MemUsage, c.MemPerc)
+			return c.MemUsage, c.MemPerc
 		}
 	}
-	return ""
-}
-
-// formatMemUsage formats memory usage as "Usage (Percent)", e.g.,
-// "21.71MiB / 31.02GiB" + "0.07%" -> "21.71MiB (0.07%)".
-// If percent is empty, returns just the usage part (before "/").
-func formatMemUsage(memUsage, memPerc string) string {
-	usage := memUsage
-	if idx := strings.Index(memUsage, "/"); idx != -1 {
-		usage = strings.TrimSpace(memUsage[:idx])
-	}
-	if memPerc != "" {
-		return usage + " (" + memPerc + ")"
-	}
-	return usage
+	return "", ""
 }
 
 // updateServiceStatuses refreshes the status and memory fields on every
@@ -364,7 +353,7 @@ func (m *ServicesListModel) updateServiceStatuses() tea.Cmd {
 		}
 
 		svcItem.Status = m.containerStatus(svcItem.Service.Name)
-		svcItem.MemUsage = m.containerMemUsage(svcItem.Service.Name)
+		svcItem.MemUsage, svcItem.MemPerc = m.containerMem(svcItem.Service.Name)
 		updated = append(updated, svcItem)
 	}
 
