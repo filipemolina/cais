@@ -2,7 +2,6 @@ package apptypes
 
 import (
 	"image/color"
-	"strconv"
 
 	"charm.land/lipgloss/v2"
 	"github.com/compose-spec/compose-go/v2/types"
@@ -15,6 +14,9 @@ type ServiceListItem struct {
 	// "running", "stopped", or "" (unknown / no container yet). Set by
 	// ServicesListModel when a GetRunningContainersMsg arrives.
 	Status string
+	// MemUsage is the real-time memory usage from docker stats, e.g.
+	// "21.71MiB / 31.02GiB". Empty when stats are unavailable.
+	MemUsage string
 }
 
 func (s ServiceListItem) Title() string       { return s.Service.Name }
@@ -55,10 +57,13 @@ func (s ServiceListItem) Description(isActive bool) string {
 
 	normalStyle := wrapperStyle.Foreground(appstyles.Active.TextMuted)
 
-	cpuUsage := strconv.FormatFloat(float64(s.Service.CPUPercent), 'f', 1, 32)
+	memLabel := boldStyle.Render("Mem: ")
+	var memValue string
+	if s.MemUsage != "" {
+		memValue = normalStyle.Render(s.MemUsage)
+	} else {
+		memValue = normalStyle.Render("—")
+	}
 
-	description := boldStyle.Render("CPU: ") +
-		normalStyle.Render(cpuUsage)
-
-	return description
+	return memLabel + memValue
 }

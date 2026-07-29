@@ -217,6 +217,12 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.updateServiceStatuses()
 		}
 
+	case cmds.GetContainerStatsMsg:
+		if msg.Err == nil {
+			m.containers = msg.Containers
+			m.updateServiceStatuses()
+		}
+
 	case cmds.SetFocusMsg:
 		if int(msg) == m.componentId {
 			m.isFocused = true
@@ -279,14 +285,15 @@ func (m ServicesListModel) View() tea.View {
 
 // buildItems converts a slice of service configs into list items, picking up
 // the latest container state from the model so each row shows the correct
-// RUNNING/STOPPED pill.
+// RUNNING/STOPPED pill and memory usage.
 func (m *ServicesListModel) buildItems(services []types.ServiceConfig) []list.Item {
 	items := make([]list.Item, 0, len(services))
 
 	for _, service := range services {
 		item := apptypes.ServiceListItem{
-			Service: service,
-			Status:  m.containerStatus(service.Name),
+			Service:  service,
+			Status:   m.containerStatus(service.Name),
+			MemUsage: m.containerMemUsage(service.Name),
 		}
 
 		items = append(items, item)
@@ -309,9 +316,20 @@ func (m *ServicesListModel) containerStatus(serviceName string) string {
 	return ""
 }
 
-// updateServiceStatuses refreshes the status field on every list item to match
-// the current container state. Called whenever a GetRunningContainersMsg
-// arrives with fresh data.
+// containerMemUsage returns the memory usage string for the given service,
+// or "" if no container exists or stats are unavailable.
+func (m *ServicesListModel) containerMemUsage(serviceName string) string {
+	for _, c := range m.containers {
+		if c.Service == serviceName && c.State == "running" {
+			return c.MemUsage
+		}
+	}
+	return ""
+}
+
+// updateServiceStatuses refreshes the status and memory fields on every list
+// item to match the current container state. Called whenever a
+// GetRunningContainersMsg or GetContainerStatsMsg arrives with fresh data.
 func (m *ServicesListModel) updateServiceStatuses() {
 	items := m.list.Items()
 	updated := make([]list.Item, 0, len(items))
@@ -324,6 +342,7 @@ func (m *ServicesListModel) updateServiceStatuses() {
 		}
 
 		svcItem.Status = m.containerStatus(svcItem.Service.Name)
+		svcItem.MemUsage = m.containerMemUsage(svcItem.Service.Name)
 		updated = append(updated, svcItem)
 	}
 
