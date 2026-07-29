@@ -215,13 +215,13 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cmds.GetRunningContainersMsg:
 		if msg.Err == nil {
 			m.containers = msg.Containers
-			m.updateServiceStatuses()
+			finalCmds = append(finalCmds, m.updateServiceStatuses())
 		}
 
 	case cmds.GetContainerStatsMsg:
 		if msg.Err == nil {
 			m.containers = msg.Containers
-			m.updateServiceStatuses()
+			finalCmds = append(finalCmds, m.updateServiceStatuses())
 		}
 
 	case cmds.SetFocusMsg:
@@ -343,10 +343,13 @@ func formatMemUsage(memUsage, memPerc string) string {
 	return usage
 }
 
-// updateServiceStatuses refreshes the status and memory fields on every list
-// item to match the current container state. Called whenever a
+// updateServiceStatuses refreshes the status and memory fields on every
+// list item to match the current container state. Called whenever a
 // GetRunningContainersMsg or GetContainerStatsMsg arrives with fresh data.
-func (m *ServicesListModel) updateServiceStatuses() {
+// It returns a tea.Cmd so that any filter re-application triggered by
+// SetItems (required when a filter is active) gets executed by the
+// runtime, keeping the filtered view consistent.
+func (m *ServicesListModel) updateServiceStatuses() tea.Cmd {
 	items := m.list.Items()
 	updated := make([]list.Item, 0, len(items))
 
@@ -362,7 +365,7 @@ func (m *ServicesListModel) updateServiceStatuses() {
 		updated = append(updated, svcItem)
 	}
 
-	m.list.SetItems(updated)
+	return m.list.SetItems(updated)
 }
 
 func ServicesList(services []types.ServiceConfig, width int, height int) tea.Model {
