@@ -24,10 +24,10 @@ type DockerContainer struct {
 
 	// Runtime stats from `docker stats --no-stream`. These are populated
 	// by GetContainerStats, not by docker compose ps.
-	MemPerc   string // e.g. "0.07%"
-	MemUsage  string // e.g. "21.71MiB / 31.02GiB"
-	NetIO     string // e.g. "3.22MB / 4.7kB"
-	BlockIO   string // e.g. "70.3MB / 43.7MB"
-	CPUPerc   string // e.g. "0.00%"
-	PIDs      string // e.g. "19"
+	MemPerc  string // e.g. "0.07%"
+	MemUsage string // e.g. "21.71MiB / 31.02GiB"
+	NetIO    string // e.g. "3.22MB / 4.7kB"
+	BlockIO  string // e.g. "70.3MB / 43.7MB"
+	CPUPerc  string // e.g. "0.00%"
+	PIDs     string // e.g. "19"
 }

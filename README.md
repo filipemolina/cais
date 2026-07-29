@@ -106,13 +106,14 @@ two body panels.
 | `[` / `]` | Step to the previous / next page | Everywhere |
 | `Tab` / `Shift+Tab` | Move focus between the two body panels | Everywhere |
 | `Esc` | Back to the list panel | Details panel focused |
-| `Space` / `Enter` | Select the highlighted group or service | Groups/Services list focused |
+| `↑`/`↓` `k`/`j` | Move the cursor — the details panel follows it, no separate select step | Groups/Services list focused |
+| `Space` / `Enter` | **Start** the highlighted group or service | Groups/Services list focused |
 | `s` | Start | A group or service panel focused |
 | `t` | Stop | A group or service panel focused |
 | `r` | Restart | A group or service panel focused |
 | `p` | Pull | A group or service panel focused |
 | `x` | Remove (asks for confirmation) | A group or service panel focused |
-| `n` | Create a new group | Groups panel focused |
+| `n` | Create a new group | Either panel on the Groups page |
 | `e` | Edit the highlighted group's membership | Groups panel focused |
 | `d` | Delete the highlighted group | Groups panel focused |
 | `e` | Edit the service's YAML inline in the details panel | Service details panel focused |
@@ -123,7 +124,6 @@ two body panels.
 | `b` | Browse and switch compose files | Files page focused |
 | `↑`/`↓` `k`/`j` `PgUp`/`PgDn` | Scroll the compose file | Files page focused |
 | `l` | View live logs (streaming overlay) | A group or service panel focused |
-| `↑`/`↓` `k`/`j` | Move the cursor | Groups/Services list focused |
 | `g` / `G` | Jump to the first / last row | Groups/Services list focused |
 | `/` | Filter the list by name | Groups/Services list focused |
 | `Enter` / `Esc` | Apply / abandon the filter you are typing | Filtering a list |
