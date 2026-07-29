@@ -8,7 +8,12 @@ import (
 )
 
 // GetContainerStatsMsg carries containers enriched with runtime stats from
-// `docker stats`. On error, Containers may be nil.
+// `docker stats`. Containers is always the full set the poll found, enriched
+// when the stats call succeeded and plain when it did not: a background poll
+// withholds its own GetRunningContainersMsg from the panels and lets this
+// message deliver the data, so dropping it here would freeze every panel
+// until the next foreground refresh. Err reports the stats failure for
+// callers that care; it never means "no containers".
 type GetContainerStatsMsg struct {
 	Containers []apptypes.DockerContainer
 	Err        error
@@ -21,10 +26,14 @@ func GetContainerStats(containers []apptypes.DockerContainer, background bool) t
 	return func() tea.Msg {
 		stats, err := utils.DockerStats()
 		if err != nil {
-			return GetContainerStatsMsg{Err: err, Background: background}
+			// Stats are an enrichment, not the payload. Hand the containers
+			// back unenriched so the panels still get this poll's state.
+			return GetContainerStatsMsg{Containers: containers, Err: err, Background: background}
 		}
 
-		// Build a lookup map by container ID (first 12 chars match).
+		// Build a lookup map by container ID. Both `docker compose ps` and
+		// `docker stats` report the short (12-char) form, so the IDs compare
+		// directly.
 		statsMap := make(map[string]utils.DockerStatsContainer)
 		for _, s := range stats {
 			statsMap[s.ID] = s
