@@ -135,6 +135,14 @@ func (m GroupDetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.containers = msg.Containers
 		}
 
+	// A background poll withholds GetRunningContainersMsg while stats are in
+	// flight and delivers the containers here instead, so this panel has to
+	// answer both or its member rows only refresh on a foreground reload.
+	case cmds.GetContainerStatsMsg:
+		if msg.Containers != nil {
+			m.containers = msg.Containers
+		}
+
 	case tea.KeyPressMsg:
 		if !m.isFocused || m.selectedGroup == "" {
 			break

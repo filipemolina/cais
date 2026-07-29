@@ -153,7 +153,9 @@ func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case cmds.GetContainerStatsMsg:
-		if msg.Err == nil {
+		// Present-but-unenriched still beats stale: a failed stats call sends
+		// the containers through without their runtime numbers.
+		if msg.Containers != nil {
 			m.containers = msg.Containers
 		}
 
