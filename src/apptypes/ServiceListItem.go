@@ -15,8 +15,11 @@ type ServiceListItem struct {
 	// "running", "stopped", or "" (unknown / no container yet). Set by
 	// ServicesListModel when a GetRunningContainersMsg arrives.
 	Status string
-	// MemUsage is the real-time memory usage from docker stats, e.g.
-	// "21.71MiB / 31.02GiB". Empty when stats are unavailable.
+	// MemUsage is the real-time memory usage from docker stats, exactly as
+	// docker reports it: "21.71MiB / 31.02GiB". Empty when stats are
+	// unavailable. Store it raw - FormatMemUsage is applied once, at render
+	// time, and formatting it on the way in instead would double-apply the
+	// percent suffix.
 	MemUsage string
 	// MemPerc is the memory usage percentage from docker stats, e.g. "0.07%"
 	MemPerc string
@@ -63,7 +66,7 @@ func (s ServiceListItem) Description(isActive bool) string {
 	memLabel := boldStyle.Render("Mem: ")
 	var memValue string
 	if s.MemUsage != "" {
-		memValue = normalStyle.Render(formatMemUsage(s.MemUsage, s.MemPerc))
+		memValue = normalStyle.Render(FormatMemUsage(s.MemUsage, s.MemPerc))
 	} else {
 		memValue = normalStyle.Render("—")
 	}
@@ -71,10 +74,16 @@ func (s ServiceListItem) Description(isActive bool) string {
 	return memLabel + memValue
 }
 
-// formatMemUsage formats memory usage as "Usage (Percent)", e.g.,
+// FormatMemUsage formats memory usage as "Usage (Percent)", e.g.,
 // "21.71MiB / 31.02GiB" + "0.07%" -> "21.71MiB (0.07%)".
 // If percent is empty, returns just the usage part (before "/").
-func formatMemUsage(memUsage, memPerc string) string {
+//
+// It takes docker's raw strings, and is the one copy: the service list row
+// and the details panel's runtime table both render through it, so the two
+// never drift apart. Applying it twice is not idempotent - the second pass
+// finds no "/" to split on and appends the percent again - so call it at
+// render time and keep the raw values in the fields.
+func FormatMemUsage(memUsage, memPerc string) string {
 	usage := memUsage
 	if idx := strings.Index(memUsage, "/"); idx != -1 {
 		usage = strings.TrimSpace(memUsage[:idx])
