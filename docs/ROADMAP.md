@@ -86,6 +86,13 @@ stats`. Group rename. An `x`-style action menu.
 panels, action feedback with spinner, and error modals for foreground
 errors (see `docs/PLAN-UX-IMPROVEMENTS.md`).
 
+The **service details panel** was redesigned to match the visual polish
+of the group details panel: a service header with status dot, a compact
+two-column configuration table curated for self-host enthusiasts, and an
+improved runtime stats table. All existing functionality (inline editor,
+docker actions, logs modal) preserved. See `docs/DESIGN.md` §Services
+layout.
+
 ## Loose ends worth knowing about
 
 - **`CPU: 0.0` in the services list is not telemetry.**
