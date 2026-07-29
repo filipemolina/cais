@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 
+	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 
 	"charm.land/bubbles/v2/key"
@@ -38,6 +39,10 @@ type DetailsPanelModel struct {
 
 	pendingAction *PendingAction
 	spinner       spinner.Model
+
+	// containers is the latest known container list, used to derive the
+	// RUNNING/STOPPED status pill in the panel title row.
+	containers []apptypes.DockerContainer
 }
 
 func (m DetailsPanelModel) Init() tea.Cmd {
@@ -128,6 +133,11 @@ func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		updated, cmd := m.exitEditMode()
 		m = updated
 		finalCmds = append(finalCmds, cmd)
+
+	case cmds.GetRunningContainersMsg:
+		if msg.Err == nil {
+			m.containers = msg.Containers
+		}
 
 	case tea.KeyPressMsg:
 		if !m.isFocused || m.service == nil {
@@ -307,8 +317,45 @@ func (m DetailsPanelModel) View() tea.View {
 	body := lipgloss.JoinVertical(lipgloss.Left, basicInfo, buttons)
 	body = lipgloss.NewStyle().MaxHeight(bodyAvail).Render(body)
 
-	screen := renderPanelFrame("Details", "", m.isFocused, m.panelWidth, m.panelHeight, body)
+	screen := renderPanelFrame("Details", m.titlePill(), m.isFocused, m.panelWidth, m.panelHeight, body)
 	return tea.NewView(screen)
+}
+
+// titlePill returns a status pill for the selected service, or "" when no
+// service is selected. The pill is rendered in the panel's title row,
+// right-aligned — same visual language as GroupDetailsPanelModel.titlePill.
+func (m DetailsPanelModel) titlePill() string {
+	if m.service == nil {
+		return ""
+	}
+
+	var label string
+	var bg, fg color.Color
+
+	if m.isServiceRunning(m.service.Name) {
+		label, bg, fg = "RUNNING", appstyles.Active.StatusRunning, appstyles.Active.InkOnLight
+	} else {
+		label, bg, fg = "STOPPED", appstyles.Active.StatusError, appstyles.Active.InkOnDark
+	}
+
+	return lipgloss.NewStyle().
+		Background(bg).
+		Foreground(fg).
+		Bold(true).
+		Padding(0, 1).
+		Render(label)
+}
+
+// isServiceRunning checks whether a live container exists for the given
+// compose service name and is in the "running" state.
+func (m DetailsPanelModel) isServiceRunning(serviceName string) bool {
+	for _, container := range m.containers {
+		if container.Service == serviceName && container.State == "running" {
+			return true
+		}
+	}
+
+	return false
 }
 
 // renderEditor renders the textarea plus a status line under it. The status
