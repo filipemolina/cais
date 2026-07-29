@@ -3,6 +3,9 @@ package components
 import (
 	"testing"
 
+	"charm.land/bubbles/v2/list"
+
+	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 
 	tea "charm.land/bubbletea/v2"
@@ -134,5 +137,75 @@ func TestNoActiveRowBeforeAnySelection(t *testing.T) {
 
 	if got := list.listDelegate.activeIndex; got != -1 {
 		t.Errorf("active row before any selection: got %d, want -1", got)
+	}
+}
+
+// Regression test: when memory usage stats are polled while a filter is
+// active, the filtered items must remain visible. Previously,
+// updateServiceStatuses called list.SetItems and discarded the returned
+// tea.Cmd. SetItems clears filteredItems and returns a cmd that re-
+// applies the filter; if that cmd is discarded, filteredItems stays nil
+// and every filtered row disappears on the next render cycle.
+// This test verifies that updateServiceStatuses returns the cmd from
+// SetItems so the runtime can re-populate filteredItems correctly.
+func TestFilterSurvivesStatsPolling(t *testing.T) {
+	services := servicesOf("api", "cache", "db", "web")
+
+	model := drive(t, ServicesList(services, 80, 24),
+		cmds.SetFocusMsg(1),
+	)
+
+	// Type a filter that matches only "api" and "cache": the keystrokes
+	// are handled by the inner list because it owns the keyboard while
+	// filtering.
+	filtered := drive(t, model,
+		tea.KeyPressMsg{Code: '/', Text: "/"},
+		tea.KeyPressMsg{Code: 'a', Text: "a"},
+		tea.KeyPressMsg{Code: tea.KeyEnter},
+	)
+
+	if filtered.list.FilterState() != list.FilterApplied {
+		t.Fatalf("precondition: filter state is %v, want FilterApplied", filtered.list.FilterState())
+	}
+
+	// Sanity-check that the filter works correctly before polling.
+	initialVisible := len(filtered.list.VisibleItems())
+	if initialVisible == 0 {
+		t.Fatal("precondition: filter should show visible items")
+	}
+
+	// Stats polling produces GetContainerStatsMsg.
+	statsMsg := cmds.GetContainerStatsMsg{
+		Containers: []apptypes.DockerContainer{
+			{Service: "api", State: "running"},
+			{Service: "cache", State: "running"},
+			{Service: "db", State: "running"},
+			{Service: "web", State: "running"},
+		},
+	}
+
+	// Update returns a cmd that (when executed by the Bubble Tea
+	// runtime) re-applies the filter via FilterMatchesMsg, which
+	// repopulates filteredItems so VisibleItems keeps working.
+	_, cmd := filtered.Update(statsMsg)
+
+	// The cmd must not be nil — that was the root cause of the bug.
+	if cmd == nil {
+		t.Fatal("updateServiceStatuses returned nil cmd; SetItems filter-re-application was discarded, leaving filteredItems nil")
+	}
+
+	// Run the cmd and walk the resulting msgs to confirm at least one
+	// FilterMatchesMsg is produced. This is the msg the list's Update
+	// handler uses to repopulate filteredItems.
+	msgs := messagesFrom(cmd)
+	var hasFilterMatches bool
+	for _, m := range msgs {
+		if _, ok := m.(list.FilterMatchesMsg); ok {
+			hasFilterMatches = true
+			break
+		}
+	}
+	if !hasFilterMatches {
+		t.Error("stats polling did not produce a FilterMatchesMsg; the SetItems cmd for re-applying the filter was not returned")
 	}
 }
