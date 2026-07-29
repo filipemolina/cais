@@ -407,7 +407,8 @@ func (m DetailsPanelModel) renderRuntimeStats(width int) string {
 	var rows []string
 
 	if container.MemUsage != "" {
-		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, memHeader, container.MemUsage))
+		memDisplay := formatMemUsage(container.MemUsage, container.MemPerc)
+		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, memHeader, memDisplay))
 	}
 	if container.NetIO != "" {
 		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, netHeader, container.NetIO))
