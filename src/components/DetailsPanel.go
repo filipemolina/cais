@@ -337,7 +337,14 @@ func (m DetailsPanelModel) View() tea.View {
 
 	parts := []string{serviceHeader, configTable}
 	if runtimeStats != "" {
-		parts = append(parts, runtimeStats)
+		// Separate the stats table from the config table with a blank
+		// line and a rule, matching the visual separation between the
+		// service header and the config table from renderServiceHeader.
+		sepRule := lipgloss.NewStyle().
+			Foreground(appstyles.Active.BorderDefault).
+			Width(bodyWidth).
+			Render(strings.Repeat("─", max(bodyWidth, 0)))
+		parts = append(parts, "", sepRule, runtimeStats)
 	}
 	parts = append(parts, buttons)
 
