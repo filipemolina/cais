@@ -660,11 +660,11 @@ func (m DetailsPanelModel) renderRuntimeStats(width int) string {
 		return ""
 	}
 
-	// Check if we have any stats data at all.
-	hasStats := container.MemUsage != "" || container.NetIO != "" || container.BlockIO != "" || container.CPUPerc != ""
-	if !hasStats {
-		return ""
-	}
+	// No up-front "do we have stats" check: it listed four of the six fields
+	// this renders, so a container reporting only PIDs or only an uptime got
+	// nothing. Every row below is already conditional and the len(rows) == 0
+	// check at the end is the same guard derived from what actually rendered,
+	// so it cannot fall out of step with the rows again.
 
 	propWidth := 14
 	valWidth := width - propWidth
