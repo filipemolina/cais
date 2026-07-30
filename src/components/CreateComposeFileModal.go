@@ -183,32 +183,53 @@ func isValidServiceName(s string) bool {
 func (m CreateComposeFileModalModel) View() tea.View {
 	errStyle := lipgloss.NewStyle().Foreground(appstyles.Active.Danger)
 	var lines []string
+	var hints string
 
+	// The title names the file being built once there is one to name, so the
+	// two later steps say which file they are filling in rather than just
+	// "New compose file". Each step advertises only the keys it answers -
+	// tab means nothing on the y/n step, and enter means nothing either.
 	switch m.step {
 	case stepFilename:
 		lines = []string{
-			"New compose file",
+			modalTitle("New compose file"),
 			"Filename (in the current directory):",
 			m.filename.View(),
 		}
+		hints = modalHints(
+			hintAs(keys.Overlay.Submit, "next"),
+			hintFor(keys.Overlay.Cancel),
+		)
 	case stepAddServicePrompt:
 		lines = []string{
-			fmt.Sprintf("Creating %s", filepath.Base(strings.TrimSpace(m.filename.Value()))),
-			"Add a first service? (y/n)",
+			modalTitle(fmt.Sprintf("Creating %s", filepath.Base(strings.TrimSpace(m.filename.Value())))),
+			"Add a first service?",
 		}
+		hints = modalHints(
+			hintAs(keys.Overlay.Yes, "add a service"),
+			hintAs(keys.Overlay.No, "skip"),
+			hintFor(keys.Overlay.Cancel),
+		)
 	case stepServiceFields:
 		lines = []string{
-			fmt.Sprintf("Creating %s", filepath.Base(strings.TrimSpace(m.filename.Value()))),
+			modalTitle(fmt.Sprintf("Creating %s", filepath.Base(strings.TrimSpace(m.filename.Value())))),
 			"Service name:",
 			m.serviceName.View(),
 			"Image:",
 			m.image.View(),
 		}
+		hints = modalHints(
+			hintFor(keys.Overlay.NextField),
+			hintAs(keys.Overlay.Submit, "create file"),
+			hintFor(keys.Overlay.Cancel),
+		)
 	}
 
 	if m.errMsg != "" {
 		lines = append(lines, errStyle.Render(m.errMsg))
 	}
+
+	lines = append(lines, "", hints)
 
 	return tea.NewView(modalSurface(
 		appstyles.Active.ModalBg,

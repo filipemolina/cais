@@ -635,7 +635,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cmds.OpenDeleteGroupModalMsg:
 		groupName := string(msg)
 		m.activeModal = components.ConfirmModal(
-			fmt.Sprintf("Delete group %q? (y/n)", groupName),
+			fmt.Sprintf("Delete group %q?", groupName),
 			cmds.DeleteGroup(m.config.configFileName, groupName),
 		)
 

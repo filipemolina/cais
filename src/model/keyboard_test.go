@@ -113,7 +113,7 @@ func TestForceQuitBeatsEveryClaimOnTheKeyboard(t *testing.T) {
 
 	t.Run("while a modal is open", func(t *testing.T) {
 		m := homeWithGroups(t)
-		m.activeModal = components.ConfirmModal("Delete group \"core\"? (y/n)", nil)
+		m.activeModal = components.ConfirmModal("Delete group \"core\"?", nil)
 
 		if !quits(t, m) {
 			t.Error("ctrl+c did not quit while a modal was open")

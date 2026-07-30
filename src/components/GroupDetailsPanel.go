@@ -158,7 +158,7 @@ func (m GroupDetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Remove destroys containers, so it goes through a
 			// confirmation first, unlike the other four actions.
 			finalCmds = append(finalCmds, cmds.OpenConfirmModal(
-				fmt.Sprintf("Remove group %q?\nThis stops and removes its containers. (y/n)", m.selectedGroup),
+				fmt.Sprintf("Remove group %q?\nThis stops and removes its containers.", m.selectedGroup),
 				cmds.RequestDockerAction("remove", m.selectedGroup, true),
 			))
 

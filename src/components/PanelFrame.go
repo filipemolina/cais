@@ -73,6 +73,27 @@ func modalSurface(bg color.Color, content string) string {
 	return appstyles.FillBackground(bg, style.Render(content))
 }
 
+// modalTitle renders a modal's heading. Every modal names itself, so a user
+// who lands on one mid-flow can tell what it is about to do without having to
+// infer it from the fields. Accent + bold is the same treatment the list-based
+// modals get from list.Styles.Title, so a titled input modal and a titled
+// picker read as the same kind of surface.
+func modalTitle(text string) string {
+	return lipgloss.NewStyle().
+		Bold(true).
+		Foreground(appstyles.Active.Accent).
+		Background(appstyles.Active.ModalBg).
+		Render(text)
+}
+
+// modalHints renders a modal's own help line, in the footer bar's format but
+// with the lighter description color the modal surface needs. Every modal
+// carries one: the footer bar is hidden behind the modal while it is open, so
+// the keys the modal takes over are advertised here or nowhere.
+func modalHints(hints ...KeyHint) string {
+	return renderKeyHints(hints, appstyles.Active.TextMuted)
+}
+
 // renderEmptyCard renders a dim, centered, rounded-border card used for the
 // empty / onboarding states. `key` is shown in the accent color inside
 // brackets, `hint` is the trailing description in a dim color. `availHeight`

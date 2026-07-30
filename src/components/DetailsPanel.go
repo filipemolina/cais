@@ -180,7 +180,7 @@ func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			finalCmds = append(finalCmds, cmds.RequestDockerAction(action, m.service.Name, false))
 		} else if key.Matches(msg, keys.Details.Remove) {
 			finalCmds = append(finalCmds, cmds.OpenConfirmModal(
-				fmt.Sprintf("Remove service %q?\nThis stops and removes its containers. (y/n)", m.service.Name),
+				fmt.Sprintf("Remove service %q?\nThis stops and removes its containers.", m.service.Name),
 				cmds.RequestDockerAction("remove", m.service.Name, false),
 			))
 		} else if key.Matches(msg, keys.Details.Logs) {
@@ -210,7 +210,7 @@ func (m DetailsPanelModel) handleEditKey(msg tea.KeyPressMsg) (DetailsPanelModel
 	case key.Matches(msg, keys.Global.Back):
 		if m.hasChanges() {
 			return m, cmds.OpenConfirmModal(
-				"Discard changes? (y/n)",
+				"Discard changes?",
 				cmds.CancelInlineEdit(),
 			)
 		}
