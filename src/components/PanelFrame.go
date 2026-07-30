@@ -78,11 +78,16 @@ func modalSurface(bg color.Color, content string) string {
 // infer it from the fields. Accent + bold is the same treatment the list-based
 // modals get from list.Styles.Title, so a titled input modal and a titled
 // picker read as the same kind of surface.
+//
+// The margin is part of the title rather than a blank line each caller
+// remembers to add, and it matches the blank row the hint line sits above: the
+// heading and the footer are the modal's chrome, and both stand off the body.
 func modalTitle(text string) string {
 	return lipgloss.NewStyle().
 		Bold(true).
 		Foreground(appstyles.Active.Accent).
 		Background(appstyles.Active.ModalBg).
+		MarginBottom(1).
 		Render(text)
 }
 
