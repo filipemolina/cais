@@ -333,3 +333,45 @@ documentation.
 - [x] **[H] Prune stray artifacts** — deleted `vhs-test.gif`/`vhs-test.tape`
   from the repo root. They were a one-off "echo hello world" VHS scratch
   test, not part of any demo.
+
+- [x] **[H] Foreground errors vanished behind an open modal** — every
+  foreground error path guarded its modal on `activeModal == nil` with no
+  `else`, so an error arriving while any modal was up was dropped: no modal,
+  no banner. Pressing `s` and then `?` before the action came back reported
+  nothing at all. The guard is right — a modal the user opened deliberately
+  is not something a late error gets to close — so the fix is a fallback,
+  not a removal: `AppModel.reportForegroundError` takes the modal when the
+  screen is free and the banner when it is not, and the eight sites that
+  repeated the guard call it. Note the asymmetry, which is load-bearing:
+  the banner path sets `lastErrorFromPoll = false` (a foreground error owns
+  the banner, so a later successful poll must not clear it), and the modal
+  path deliberately does not (it leaves the banner untouched, so a poll
+  error still showing there is still the poll's to clear). Getting that
+  backwards strands the poll error, because a recovered poll only clears
+  what it put up itself.
+
+- [x] **[H] `formatMemUsage` duplicated, and applied twice** — the function
+  existed verbatim in `components` and `apptypes`, and the value went
+  through it twice: `containerMemUsage` formatted into the list item's
+  `MemUsage`, then `ServiceListItem.Description` formatted the result again.
+  It was invisible only because nothing ever assigned
+  `ServiceListItem.MemPerc`, so the second pass had no percent to append —
+  set that field and the row reads `21.71MiB (0.07%) (0.07%)`, because the
+  second pass finds no `/` left to split on. The item now carries docker's
+  raw strings (`containerMem` returns the pair unformatted and `MemPerc` is
+  populated), `apptypes.FormatMemUsage` is the single copy, and formatting
+  happens once at render time. **The rule to keep:** the function is not
+  idempotent, so store raw and format at the edge. A test asserts the
+  non-idempotency so reintroducing format-on-the-way-in fails loudly.
+
+- [x] **[H] Runtime stats table hid partial data** — `renderRuntimeStats`
+  bailed out unless memory, CPU, network or disk I/O was set: four of the
+  six rows it can draw. A container reporting only PIDs, or only the uptime
+  that comes from `docker compose ps` rather than `docker stats`, rendered
+  nothing. The guard was redundant as well as incomplete — every row is
+  already conditional and the `len(rows) == 0` check at the end asks the
+  same question from what actually rendered — so it was dropped rather than
+  extended, which fixes the omission by construction: there is no second
+  list of fields left to fall out of step with the rows. One visible
+  consequence, accepted: with `docker stats` unavailable a running service
+  now shows a stats table holding just Uptime instead of no table at all.
