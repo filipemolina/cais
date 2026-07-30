@@ -120,7 +120,10 @@ func (m ThemePickerModalModel) View() tea.View {
 // registered theme, marks the one currently active, and starts the cursor
 // on it. Moving the cursor previews that theme live; Enter applies and
 // persists; Esc restores the original.
-func ThemePickerModal() tea.Model {
+//
+// termHeight is the terminal height in rows — used to size the list so it
+// never overflows the modal chrome (borders, title, hints).
+func ThemePickerModal(termHeight int) tea.Model {
 	currentTheme := appstyles.Active.Name
 
 	// Collect and sort theme names for a stable order.
@@ -139,14 +142,17 @@ func ThemePickerModal() tea.Model {
 		}
 	}
 
-	// pagination is off because the list is sized to show every theme.
-	// The title is rendered by modalTitle in the View function, not by the
-	// list itself.
-	picker := list.New(items, themePickerDelegate{}, 40, len(items))
+	// Chrome around the list is 9 rows (border 2, padding 2, title 2,
+	// blank 1, hints 2). Show at most as many items as fit, and at
+	// least 3. Enable pagination only when the list is clipped.
+	const themePickerChrome = 9
+	visible := min(len(items), max(3, termHeight-themePickerChrome))
+
+	picker := list.New(items, themePickerDelegate{}, 40, visible)
 	picker.SetShowTitle(false)
 	picker.SetShowHelp(false)
 	picker.SetShowStatusBar(false)
-	picker.SetShowPagination(false)
+	picker.SetShowPagination(visible < len(items))
 	picker.SetShowFilter(false)
 	picker.Select(activeIndex)
 

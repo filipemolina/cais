@@ -34,7 +34,7 @@ func TestEveryModalHasATitleAndAnExitHint(t *testing.T) {
 		{"edit group members", ServiceChecklistModalForEdit("core", []string{"web"}, []string{"web"}), "Edit members", "esc"},
 		{"create compose file", CreateComposeFileModal("."), "New compose file", "esc"},
 		{"compose file picker", ComposeFilePickerModal(".", []string{"compose.yaml"}, "compose.yaml"), "Switch compose file", "esc"},
-		{"theme picker", ThemePickerModal(), "Choose theme", "esc"},
+		{"theme picker", ThemePickerModal(40), "Choose theme", "esc"},
 		{"logs", logs, "logs: web", "esc"},
 	}
 

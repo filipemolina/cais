@@ -274,6 +274,166 @@ var Themes = map[string]Theme{
 		Starting: lipgloss.Color("#A87409"),
 		Err:      lipgloss.Color("#C0243F"),
 	}),
+
+	// catppuccin-mocha — Catppuccin Mocha (github.com/catppuccin/catppuccin)
+	"catppuccin-mocha": newTheme(themeParams{
+		Name:   "catppuccin-mocha",
+		Dark:   true,
+		Accent: lipgloss.Color("#CBA6F7"),
+		Text:   lipgloss.Color("#CDD6F4"),
+		Panel:  lipgloss.Color("#11111B"),
+		Modal:  lipgloss.Color("#45475A"),
+		Danger: lipgloss.Color("#EBA0AC"),
+
+		Running:  lipgloss.Color("#A6E3A1"),
+		Stopped:  lipgloss.Color("#7F849C"),
+		Starting: lipgloss.Color("#F9E2AF"),
+		Err:      lipgloss.Color("#F38BA8"),
+	}),
+
+	// gruvbox-dark — Gruvbox dark (github.com/morhetz/gruvbox)
+	"gruvbox-dark": newTheme(themeParams{
+		Name:   "gruvbox-dark",
+		Dark:   true,
+		Accent: lipgloss.Color("#FE8019"),
+		Text:   lipgloss.Color("#EBDBB2"),
+		Panel:  lipgloss.Color("#1D2021"),
+		Modal:  lipgloss.Color("#504945"),
+		Danger: lipgloss.Color("#FB4934"),
+
+		Running:  lipgloss.Color("#B8BB26"),
+		Stopped:  lipgloss.Color("#928374"),
+		Starting: lipgloss.Color("#FABD2F"),
+		Err:      lipgloss.Color("#FB4934"),
+	}),
+
+	// tokyo-night — Tokyo Night (github.com/folke/tokyonight.nvim)
+	"tokyo-night": newTheme(themeParams{
+		Name:   "tokyo-night",
+		Dark:   true,
+		Accent: lipgloss.Color("#7AA2F7"),
+		Text:   lipgloss.Color("#C0CAF5"),
+		Panel:  lipgloss.Color("#16161E"),
+		Modal:  lipgloss.Color("#394B70"),
+		Danger: lipgloss.Color("#DB4B4B"),
+
+		Running:  lipgloss.Color("#9ECE6A"),
+		Stopped:  lipgloss.Color("#737AA2"),
+		Starting: lipgloss.Color("#E0AF68"),
+		Err:      lipgloss.Color("#F7768E"),
+	}),
+
+	// nord — Nord (nordtheme.com)
+	"nord": newTheme(themeParams{
+		Name:   "nord",
+		Dark:   true,
+		Accent: lipgloss.Color("#88C0D0"),
+		Text:   lipgloss.Color("#D8DEE9"),
+		Panel:  lipgloss.Color("#242933"),
+		Modal:  lipgloss.Color("#4C566A"),
+		Danger: lipgloss.Color("#BF616A"),
+
+		Running:  lipgloss.Color("#A3BE8C"),
+		Stopped:  lipgloss.Color("#7B88A1"),
+		Starting: lipgloss.Color("#EBCB8B"),
+		Err:      lipgloss.Color("#BF616A"),
+	}),
+
+	// dracula — Dracula (draculatheme.com)
+	"dracula": newTheme(themeParams{
+		Name:   "dracula",
+		Dark:   true,
+		Accent: lipgloss.Color("#BD93F9"),
+		Text:   lipgloss.Color("#F8F8F2"),
+		Panel:  lipgloss.Color("#1E1F29"),
+		Modal:  lipgloss.Color("#44475A"),
+		Danger: lipgloss.Color("#FF5555"),
+
+		Running:  lipgloss.Color("#50FA7B"),
+		Stopped:  lipgloss.Color("#6272A4"),
+		Starting: lipgloss.Color("#FFB86C"),
+		Err:      lipgloss.Color("#FF5555"),
+	}),
+
+	// solarized-dark — Solarized Dark (ethanschoonover.com/solarized)
+	"solarized-dark": newTheme(themeParams{
+		Name:   "solarized-dark",
+		Dark:   true,
+		Accent: lipgloss.Color("#268BD2"),
+		Text:   lipgloss.Color("#93A1A1"),
+		Panel:  lipgloss.Color("#001A21"),
+		Modal:  lipgloss.Color("#073642"),
+		Danger: lipgloss.Color("#DC322F"),
+
+		Running:  lipgloss.Color("#859900"),
+		Stopped:  lipgloss.Color("#657B83"),
+		Starting: lipgloss.Color("#B58900"),
+		Err:      lipgloss.Color("#DC322F"),
+	}),
+
+	// one-dark — One Dark (github.com/joshdick/onedark.vim)
+	"one-dark": newTheme(themeParams{
+		Name:   "one-dark",
+		Dark:   true,
+		Accent: lipgloss.Color("#61AFEF"),
+		Text:   lipgloss.Color("#ABB2BF"),
+		Panel:  lipgloss.Color("#21252B"),
+		Modal:  lipgloss.Color("#2C323C"),
+		Danger: lipgloss.Color("#E06C75"),
+
+		Running:  lipgloss.Color("#98C379"),
+		Stopped:  lipgloss.Color("#828997"),
+		Starting: lipgloss.Color("#E5C07B"),
+		Err:      lipgloss.Color("#E06C75"),
+	}),
+
+	// everforest-dark — Everforest Dark (github.com/sainnhe/everforest)
+	"everforest-dark": newTheme(themeParams{
+		Name:   "everforest-dark",
+		Dark:   true,
+		Accent: lipgloss.Color("#A7C080"),
+		Text:   lipgloss.Color("#D3C6AA"),
+		Panel:  lipgloss.Color("#232A2E"),
+		Modal:  lipgloss.Color("#4F585E"),
+		Danger: lipgloss.Color("#E67E80"),
+
+		Running:  lipgloss.Color("#83C092"),
+		Stopped:  lipgloss.Color("#859289"),
+		Starting: lipgloss.Color("#DBBC7F"),
+		Err:      lipgloss.Color("#E67E80"),
+	}),
+
+	// rose-pine — Rosé Pine (rosepinetheme.com)
+	"rose-pine": newTheme(themeParams{
+		Name:   "rose-pine",
+		Dark:   true,
+		Accent: lipgloss.Color("#C4A7E7"),
+		Text:   lipgloss.Color("#E0DEF4"),
+		Panel:  lipgloss.Color("#191724"),
+		Modal:  lipgloss.Color("#403D52"),
+		Danger: lipgloss.Color("#EB6F92"),
+
+		Running:  lipgloss.Color("#9CCFD8"),
+		Stopped:  lipgloss.Color("#908CAA"),
+		Starting: lipgloss.Color("#F6C177"),
+		Err:      lipgloss.Color("#EB6F92"),
+	}),
+
+	// kanagawa-wave — Kanagawa Wave (github.com/rebelot/kanagawa.nvim)
+	"kanagawa-wave": newTheme(themeParams{
+		Name:   "kanagawa-wave",
+		Dark:   true,
+		Accent: lipgloss.Color("#7E9CD8"),
+		Text:   lipgloss.Color("#DCD7BA"),
+		Panel:  lipgloss.Color("#16161D"),
+		Modal:  lipgloss.Color("#223249"),
+		Danger: lipgloss.Color("#E82424"),
+
+		Running:  lipgloss.Color("#98BB6C"),
+		Stopped:  lipgloss.Color("#727169"),
+		Starting: lipgloss.Color("#FF9E3B"),
+		Err:      lipgloss.Color("#E82424"),
+	}),
 }
 
 // Active is the one Theme in effect. Everything that draws reads it fresh

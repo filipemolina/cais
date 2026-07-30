@@ -777,7 +777,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		finalCmds = append(finalCmds, m.reportForegroundError(msg.Message))
 
 	case cmds.OpenThemePickerMsg:
-		m.activeModal = components.ThemePickerModal()
+		m.activeModal = components.ThemePickerModal(m.config.terminalHeight)
 
 	case cmds.ThemeAppliedMsg:
 		// CloseModal already cleared activeModal. Report a persist
