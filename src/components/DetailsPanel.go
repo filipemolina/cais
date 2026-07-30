@@ -485,7 +485,15 @@ func (m DetailsPanelModel) View() tea.View {
 
 	if m.editing {
 		body := m.renderEditor(bodyWidth, bodyAvail)
-		screen := renderPanelFrame("Edit service", m.service.Name, m.isFocused, m.panelWidth, m.panelHeight, body)
+
+		// Combine the service name with the live validation status in the
+		// title's right-aligned area, so the user sees validation feedback
+		// without having to look at the bottom of the editor.
+		serviceName := m.service.Name
+		validation := m.validationPill()
+		right := lipgloss.JoinHorizontal(lipgloss.Left, serviceName+"  ", validation)
+
+		screen := renderPanelFrame("Edit service", right, m.isFocused, m.panelWidth, m.panelHeight, body)
 		return tea.NewView(screen)
 	}
 
@@ -917,8 +925,8 @@ func (m DetailsPanelModel) renderRuntimeStats(width int) string {
 	return lipgloss.JoinVertical(lipgloss.Left, all...)
 }
 
-// renderEditor renders the textarea plus a status line under it. The status
-// line shows live YAML validation, the last save error, and the editor keys.
+// renderEditor renders the textarea with the editor key hints below it. The
+// live YAML validation status is shown in the panel title row instead.
 func (m DetailsPanelModel) renderEditor(bodyWidth, bodyAvail int) string {
 	bg := panelBg(m.isFocused)
 	editorView := m.editor.View()
@@ -927,36 +935,42 @@ func (m DetailsPanelModel) renderEditor(bodyWidth, bodyAvail int) string {
 	// rows shorter than the editor width do not leak the terminal default.
 	editorView = appstyles.FillBackground(bg, editorView)
 
-	status := m.renderStatusLine(bodyWidth)
+	hints := m.renderEditorHints(bodyWidth)
 
-	content := lipgloss.JoinVertical(lipgloss.Left, editorView, status)
+	content := lipgloss.JoinVertical(lipgloss.Left, editorView, hints)
 	return fitBox(lipgloss.NewStyle().Background(bg), bodyWidth, bodyAvail).Render(content)
 }
 
-// renderStatusLine draws the live validation / save error and the editor keys.
-func (m DetailsPanelModel) renderStatusLine(width int) string {
-	var statusText string
-	var statusColor color.Color
+// validationPill returns a colored pill for the editor's live YAML validation
+// status, suitable for the panel title row right-aligned area. Empty when the
+// editor is not open (caller should check m.editing first).
+func (m DetailsPanelModel) validationPill() string {
+	var label string
+	var bg, fg color.Color
 
 	switch {
 	case m.saveError != "":
-		statusText = m.saveError
-		statusColor = appstyles.Active.Danger
+		label = m.saveError
+		bg, fg = appstyles.Active.Danger, appstyles.Active.InkOnDark
 	case m.validationError != "":
-		statusText = "YAML: " + m.validationError
-		statusColor = appstyles.Active.StatusStarting
+		label = "YAML: " + m.validationError
+		bg, fg = appstyles.Active.StatusStarting, appstyles.Active.InkOnDark
 	default:
-		statusText = "YAML ok"
-		statusColor = appstyles.Active.StatusRunning
+		label = "YAML ok"
+		bg, fg = appstyles.Active.StatusRunning, appstyles.Active.InkOnLight
 	}
 
-	bg := panelBg(m.isFocused)
-
-	statusStyle := lipgloss.NewStyle().
-		Foreground(statusColor).
+	return lipgloss.NewStyle().
 		Background(bg).
-		Width(width).
-		MaxWidth(width)
+		Foreground(fg).
+		Bold(true).
+		Padding(0, 1).
+		Render(label)
+}
+
+// renderEditorHints renders the editor key hints below the textarea.
+func (m DetailsPanelModel) renderEditorHints(width int) string {
+	bg := panelBg(m.isFocused)
 
 	hints := renderKeyHints([]KeyHint{
 		hintFor(keys.Details.Save),
@@ -966,15 +980,11 @@ func (m DetailsPanelModel) renderStatusLine(width int) string {
 		hintAs(keys.Global.Back, "cancel"),
 	}, appstyles.Active.TextDim)
 
-	hintsStyle := lipgloss.NewStyle().
+	return lipgloss.NewStyle().
 		Background(bg).
 		Width(width).
-		MaxWidth(width)
-
-	return lipgloss.JoinVertical(lipgloss.Left,
-		statusStyle.Render(statusText),
-		hintsStyle.Render(hints),
-	)
+		MaxWidth(width).
+		Render(hints)
 }
 
 // renderPendingAction renders a spinner with the action description in place
