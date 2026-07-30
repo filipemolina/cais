@@ -173,11 +173,15 @@ func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		if m.editing {
-			updated, cmd := m.handleEditKey(msg)
-			if cmd != nil {
-				return updated, cmd
-			}
+			updated, cmd, handled := m.handleEditKey(msg)
 			m = updated
+			if handled {
+				m.updateValidationError()
+				if cmd != nil {
+					finalCmds = append(finalCmds, cmd)
+				}
+				break
+			}
 
 			// Not a special edit key: pass it to the textarea and validate.
 			var editorCmd tea.Cmd
@@ -227,29 +231,49 @@ func (m DetailsPanelModel) forwardToEditor(msg tea.Msg) (DetailsPanelModel, tea.
 	return m, cmd
 }
 
-// handleEditKey checks whether a key in edit mode is one of the editor
-// control keys (save, open in editor, cancel). It returns the model (which
-// may be updated on exit) and the command to run for control keys, or nil
-// when the key should be passed through to the textarea as ordinary text.
-func (m DetailsPanelModel) handleEditKey(msg tea.KeyPressMsg) (DetailsPanelModel, tea.Cmd) {
+// handleEditKey answers the keys the editor owns: the control keys (save,
+// open in $EDITOR, cancel) and the ones that edit the buffer through the
+// indent policy rather than as plain text. handled reports whether the key
+// was the editor's; when it is false the caller passes the key to the
+// textarea as ordinary input.
+//
+// handled is a separate return rather than "cmd != nil" because Enter is
+// handled and produces no command - the buffer edit happens here, in place.
+func (m DetailsPanelModel) handleEditKey(msg tea.KeyPressMsg) (DetailsPanelModel, tea.Cmd, bool) {
 	switch {
 	case key.Matches(msg, keys.Details.Save):
-		return m, cmds.RequestSaveService(m.service.Name, []byte(m.editor.Value()))
+		return m, cmds.RequestSaveService(m.service.Name, []byte(m.editor.Value())), true
 
 	case key.Matches(msg, keys.Details.OpenEditor):
-		return m, cmds.OpenServiceEditor(m.service.Name)
+		return m, cmds.OpenServiceEditor(m.service.Name), true
+
+	case key.Matches(msg, keys.Editor.NewLine):
+		m.editor.InsertString("\n" + indentAfter(m.currentLine(), m.editor.Column()))
+		return m, nil, true
 
 	case key.Matches(msg, keys.Global.Back):
 		if m.hasChanges() {
 			return m, cmds.OpenConfirmModal(
 				"Discard changes?",
 				cmds.CancelInlineEdit(),
-			)
+			), true
 		}
-		return m.exitEditMode()
+		updated, cmd := m.exitEditMode()
+		return updated, cmd, true
 	}
 
-	return m, nil
+	return m, nil, false
+}
+
+// currentLine is the logical line the cursor is on. The textarea soft-wraps,
+// so this is the row in the value, not the row on screen.
+func (m DetailsPanelModel) currentLine() string {
+	lines := strings.Split(m.editor.Value(), "\n")
+	row := m.editor.Line()
+	if row < 0 || row >= len(lines) {
+		return ""
+	}
+	return lines[row]
 }
 
 // hasChanges reports whether the editor's contents differ from the fragment

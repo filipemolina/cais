@@ -105,6 +105,17 @@ type DetailsKeys struct {
 	OpenEditor  key.Binding
 }
 
+// EditorKeys act inside the inline YAML editor, and only there. The editor
+// owns the whole keyboard while it is open (see DetailsPanelModel.OwnsKeyboard),
+// which is what makes tab and shift+tab available here at all - they are the
+// panel-switching keys everywhere else, and the app stands down from them
+// while the editor holds the keyboard.
+type EditorKeys struct {
+	NewLine key.Binding
+	Indent  key.Binding
+	Outdent key.Binding
+}
+
 // FilesKeys act on the Files page's read-only file viewer. Scroll is the
 // viewport's own (the viewport answers the keystrokes); it is declared here
 // so the footer and the help overlay advertise it from the same place as
@@ -183,6 +194,14 @@ var Details = DetailsKeys{
 	EditFile:    key.NewBinding(key.WithKeys("E"), key.WithHelp("E", "file")),
 	Save:        key.NewBinding(key.WithKeys("ctrl+s"), key.WithHelp("ctrl+s", "save")),
 	OpenEditor:  key.NewBinding(key.WithKeys("ctrl+o"), key.WithHelp("ctrl+o", "editor")),
+}
+
+var Editor = EditorKeys{
+	// Matched by the editor's own handler, which indents the new line rather
+	// than letting the textarea insert a bare newline.
+	NewLine: key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "new line")),
+	Indent:  key.NewBinding(key.WithKeys("tab"), key.WithHelp("tab", "indent")),
+	Outdent: key.NewBinding(key.WithKeys("shift+tab"), key.WithHelp("shift+tab", "outdent")),
 }
 
 var Files = FilesKeys{

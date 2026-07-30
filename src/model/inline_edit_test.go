@@ -12,6 +12,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/components"
 	"github.com/filipemolina/stack-stitcher/src/constants"
+	"gopkg.in/yaml.v3"
 )
 
 const inlineEditFixture = `services:
@@ -211,6 +212,126 @@ func detailsPanel(t *testing.T, m AppModel) components.DetailsPanelModel {
 
 	t.Fatal("no DetailsPanelModel found on the Services page")
 	return components.DetailsPanelModel{}
+}
+
+// toEndOfPreviousLine moves the cursor up one row and to the end of it. The
+// editor starts every test with the cursor at the end of the buffer, on the
+// trailing empty row a fragment ending in "\n" leaves behind; this is the
+// move to reach the last real line of text.
+func toEndOfPreviousLine(m AppModel) AppModel {
+	return drive(m, tea.KeyPressMsg{Code: tea.KeyUp}, tea.KeyPressMsg{Code: tea.KeyEnd})
+}
+
+func typeText(m AppModel, s string) AppModel {
+	for _, r := range s {
+		m = drive(m, letter(r))
+	}
+	return m
+}
+
+func TestEnterKeepsTheCurrentIndent(t *testing.T) {
+	m := editingWeb(t, "web:\n  image: nginx\n")
+	m = toEndOfPreviousLine(m)
+
+	m = drive(m, tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = typeText(m, "x")
+
+	value := detailsPanel(t, m).EditorValue()
+	if !strings.Contains(value, "  image: nginx\n  x") {
+		t.Fatalf("expected the new line to keep the two-space indent, got: %q", value)
+	}
+}
+
+func TestEnterDeepensAfterABlockOpener(t *testing.T) {
+	m := editingWeb(t, "web:\n  ports:\n")
+	m = toEndOfPreviousLine(m)
+
+	m = drive(m, tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = typeText(m, "-")
+
+	value := detailsPanel(t, m).EditorValue()
+	if !strings.Contains(value, "  ports:\n    -") {
+		t.Fatalf("expected the dash to land at column 4, got: %q", value)
+	}
+}
+
+func TestEnterAlignsInsideASequenceItem(t *testing.T) {
+	m := editingWeb(t, "web:\n  environment:\n    - name: web\n")
+	m = toEndOfPreviousLine(m)
+
+	m = drive(m, tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = typeText(m, "v")
+
+	value := detailsPanel(t, m).EditorValue()
+	if !strings.Contains(value, "    - name: web\n      v") {
+		t.Fatalf("expected the new line to align under \"name\", got: %q", value)
+	}
+}
+
+func TestEnterMidLineDoesNotDeepen(t *testing.T) {
+	m := editingWeb(t, "web:\n  image: nginx\n")
+	m = toEndOfPreviousLine(m)
+
+	// "  image: nginx" - walk left off the end of "nginx" (5 characters) to
+	// land the cursor right before the value.
+	for range "nginx" {
+		m = drive(m, tea.KeyPressMsg{Code: tea.KeyLeft})
+	}
+
+	m = drive(m, tea.KeyPressMsg{Code: tea.KeyEnter})
+
+	value := detailsPanel(t, m).EditorValue()
+	if !strings.Contains(value, "  image: \n  nginx") {
+		t.Fatalf("expected a base-indent-only split with nothing lost, got: %q", value)
+	}
+	if !strings.Contains(value, "image:") || !strings.Contains(value, "nginx") {
+		t.Fatalf("split lost part of the line, got: %q", value)
+	}
+}
+
+func TestEnterKeepsTheDocumentParseable(t *testing.T) {
+	m := editingWeb(t, "web:\n  image: nginx\n")
+	m = toEndOfPreviousLine(m)
+
+	m = drive(m, tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = typeText(m, "ports:")
+	m = drive(m, tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = typeText(m, `- "8080:80"`)
+
+	panel := detailsPanel(t, m)
+	value := panel.EditorValue()
+
+	var doc any
+	if err := yaml.Unmarshal([]byte(value), &doc); err != nil {
+		t.Fatalf("built document is not valid YAML: %v\n%s", err, value)
+	}
+
+	view := ansi.Strip(m.View().Content)
+	if !strings.Contains(view, "YAML ok") {
+		t.Fatalf("expected the status line to say YAML ok, got: %s", view)
+	}
+}
+
+func TestEnterOutsideEditModeIsUnchanged(t *testing.T) {
+	m := inlineEditProject(t)
+	updated, cmd := m.Update(cmds.SetActivePageMsg("Services"))
+	m = drive(updated, collect(cmd)...)
+
+	details := constants.COMPONENT_BODY_DETAILS
+	m = drive(m, collect(m.ChangeFocus(&details))...)
+	m = drive(m, cmds.SetSelectedServiceMsg(types.ServiceConfig{Name: "web"}))
+
+	before := m
+
+	updated, cmd = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = drive(updated.(AppModel), collect(cmd)...)
+
+	if m.inlineEditing {
+		t.Fatal("Enter should not enter edit mode on the details panel")
+	}
+	if detailsPanel(t, m).EditorValue() != detailsPanel(t, before).EditorValue() {
+		t.Fatal("Enter outside edit mode should not touch the (closed) editor")
+	}
 }
 
 func TestInlineEditingOwnsTheKeyboard(t *testing.T) {
