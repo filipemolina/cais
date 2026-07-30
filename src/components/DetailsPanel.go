@@ -173,11 +173,15 @@ func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		if m.editing {
-			updated, cmd := m.handleEditKey(msg)
-			if cmd != nil {
-				return updated, cmd
-			}
+			updated, cmd, handled := m.handleEditKey(msg)
 			m = updated
+			if handled {
+				m.updateValidationError()
+				if cmd != nil {
+					finalCmds = append(finalCmds, cmd)
+				}
+				break
+			}
 
 			// Not a special edit key: pass it to the textarea and validate.
 			var editorCmd tea.Cmd
@@ -227,29 +231,143 @@ func (m DetailsPanelModel) forwardToEditor(msg tea.Msg) (DetailsPanelModel, tea.
 	return m, cmd
 }
 
-// handleEditKey checks whether a key in edit mode is one of the editor
-// control keys (save, open in editor, cancel). It returns the model (which
-// may be updated on exit) and the command to run for control keys, or nil
-// when the key should be passed through to the textarea as ordinary text.
-func (m DetailsPanelModel) handleEditKey(msg tea.KeyPressMsg) (DetailsPanelModel, tea.Cmd) {
+// handleEditKey answers the keys the editor owns: the control keys (save,
+// open in $EDITOR, cancel) and the ones that edit the buffer through the
+// indent policy rather than as plain text. handled reports whether the key
+// was the editor's; when it is false the caller passes the key to the
+// textarea as ordinary input.
+//
+// handled is a separate return rather than "cmd != nil" because Enter is
+// handled and produces no command - the buffer edit happens here, in place.
+func (m DetailsPanelModel) handleEditKey(msg tea.KeyPressMsg) (DetailsPanelModel, tea.Cmd, bool) {
 	switch {
 	case key.Matches(msg, keys.Details.Save):
-		return m, cmds.RequestSaveService(m.service.Name, []byte(m.editor.Value()))
+		return m, cmds.RequestSaveService(m.service.Name, []byte(m.editor.Value())), true
 
 	case key.Matches(msg, keys.Details.OpenEditor):
-		return m, cmds.OpenServiceEditor(m.service.Name)
+		return m, cmds.OpenServiceEditor(m.service.Name), true
+
+	case key.Matches(msg, keys.Editor.NewLine):
+		m.editor.InsertString("\n" + indentAfter(m.currentLine(), m.editor.Column()))
+		return m, nil, true
+
+	case key.Matches(msg, keys.Editor.Indent):
+		// A pure insertion at a known position, so there is no cursor to
+		// restore by hand: insert at the start of the line, then move the
+		// cursor right by the same width so the text under it does not
+		// shift away.
+		col := m.editor.Column()
+		m.editor.SetCursorColumn(0)
+		m.editor.InsertString(yamlIndent)
+		m.editor.SetCursorColumn(col + len(yamlIndent))
+		return m, nil, true
+
+	case key.Matches(msg, keys.Editor.Outdent):
+		m.outdentCurrentLine()
+		return m, nil, true
+
+	case msg.Code == tea.KeyBackspace:
+		if updated, ok := m.outdentOnBackspace(); ok {
+			return updated, nil, true
+		}
 
 	case key.Matches(msg, keys.Global.Back):
 		if m.hasChanges() {
 			return m, cmds.OpenConfirmModal(
 				"Discard changes?",
 				cmds.CancelInlineEdit(),
-			)
+			), true
 		}
-		return m.exitEditMode()
+		updated, cmd := m.exitEditMode()
+		return updated, cmd, true
 	}
 
-	return m, nil
+	return m, nil, false
+}
+
+// currentLine is the logical line the cursor is on. The textarea soft-wraps,
+// so this is the row in the value, not the row on screen.
+func (m DetailsPanelModel) currentLine() string {
+	lines := strings.Split(m.editor.Value(), "\n")
+	row := m.editor.Line()
+	if row < 0 || row >= len(lines) {
+		return ""
+	}
+	return lines[row]
+}
+
+// outdentCurrentLine removes up to one indent level of leading whitespace
+// from the current line. Up to, not exactly: a line indented less than a
+// full level (or not at all) outdents to zero rather than going negative,
+// and at column 0 with no leading whitespace it is a no-op.
+func (m *DetailsPanelModel) outdentCurrentLine() {
+	row := m.editor.Line()
+	col := m.editor.Column()
+	runes := []rune(m.currentLine())
+
+	trimmed := len(runes)
+	for i, r := range runes {
+		if r != ' ' {
+			trimmed = i
+			break
+		}
+	}
+	removed := min(trimmed, len(yamlIndent))
+	if removed == 0 {
+		return
+	}
+
+	newLine := string(runes[removed:])
+	newCol := max(0, col-removed)
+	m.replaceLine(row, newLine, newCol)
+}
+
+// outdentOnBackspace deletes back to the previous indent stop when
+// everything to the left of the cursor on the current line is spaces. It
+// reports whether it applied; when it has not, the caller falls through to
+// the textarea's ordinary backspace (deleting one character, or at column 0,
+// merging with the line above).
+func (m DetailsPanelModel) outdentOnBackspace() (DetailsPanelModel, bool) {
+	row := m.editor.Line()
+	col := m.editor.Column()
+	runes := []rune(m.currentLine())
+
+	if col <= 0 || col > len(runes) {
+		return m, false
+	}
+	for _, r := range runes[:col] {
+		if r != ' ' {
+			return m, false
+		}
+	}
+
+	newCol := ((col - 1) / len(yamlIndent)) * len(yamlIndent)
+	newLine := string(runes[:newCol]) + string(runes[col:])
+	m.replaceLine(row, newLine, newCol)
+
+	return m, true
+}
+
+// replaceLine rewrites one logical line in place. The textarea has no
+// "replace the current line" API, so this rebuilds the whole value; SetValue
+// leaves the cursor at the end of the buffer, so the row and column are
+// walked back by hand afterward. This looks redundant and is not: without
+// it, editing a line in the middle of a fragment throws the cursor to the
+// bottom of it.
+func (m *DetailsPanelModel) replaceLine(row int, text string, col int) {
+	lines := strings.Split(m.editor.Value(), "\n")
+	if row < 0 || row >= len(lines) {
+		return
+	}
+	lines[row] = text
+
+	m.editor.SetValue(strings.Join(lines, "\n"))
+
+	m.editor.MoveToBegin()
+	for i := 0; i < row; i++ {
+		m.editor.CursorDown()
+	}
+	m.editor.SetCursorColumn(col)
 }
 
 // hasChanges reports whether the editor's contents differ from the fragment
@@ -335,6 +453,14 @@ func (m *DetailsPanelModel) updateValidationError() {
 // need to see what landed in the buffer.
 func (m DetailsPanelModel) EditorValue() string {
 	return m.editor.Value()
+}
+
+// EditorCursor returns the editor's current row and column. Exported for the
+// model tests covering tab/outdent/backspace, which pin cursor position, not
+// just buffer text - that is where the SetValue-resets-the-cursor bug would
+// show up.
+func (m DetailsPanelModel) EditorCursor() (int, int) {
+	return m.editor.Line(), m.editor.Column()
 }
 
 // OwnsKeyboard reports whether the panel is holding the whole keyboard. This
