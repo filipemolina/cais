@@ -86,7 +86,7 @@ func pickerHints() string {
 }
 
 func (m ComposeFilePickerModalModel) View() tea.View {
-	content := lipgloss.JoinVertical(lipgloss.Left, m.list.View(), "", pickerHints())
+	content := lipgloss.JoinVertical(lipgloss.Left, modalTitle("Switch compose file"), m.list.View(), "", pickerHints())
 
 	return tea.NewView(modalSurface(appstyles.Active.ModalBg, content))
 }
@@ -105,15 +105,15 @@ func ComposeFilePickerModal(dir string, fileNames []string, activeName string) t
 		}
 	}
 
-	// +2 for the title row and the blank row under it; pagination is off, as
-	// in the checklist modal, because the list is sized to show every file.
-	picker := list.New(items, composeFilePickerDelegate{}, 40, len(items)+2)
-	picker.Title = "Switch compose file"
+	// pagination is off, as in the checklist modal, because the list is
+	// sized to show every file. The title is rendered by modalTitle in
+	// the View function, not by the list itself.
+	picker := list.New(items, composeFilePickerDelegate{}, 40, len(items))
+	picker.SetShowTitle(false)
 	picker.SetShowHelp(false)
 	picker.SetShowStatusBar(false)
 	picker.SetShowPagination(false)
 	picker.SetShowFilter(false)
-	picker.Styles.Title = picker.Styles.Title.Background(appstyles.Active.Accent)
 	picker.Select(activeIndex)
 
 	return ComposeFilePickerModalModel{

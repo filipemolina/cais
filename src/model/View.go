@@ -15,7 +15,7 @@ import (
 // an uncoordinated fourth red instead of either.
 func errorBannerStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Foreground(appstyles.Active.TextPrimary).
+		Foreground(appstyles.InkOn(appstyles.Active.Danger)).
 		Background(appstyles.Active.Danger).
 		Padding(0, 1)
 }

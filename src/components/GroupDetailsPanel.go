@@ -311,16 +311,17 @@ func (m GroupDetailsPanelModel) groupHeaderCard(name string, running, stopped, t
 // light-ish ALL RUNNING/MIXED pills.
 func statusPill(running, total int) string {
 	var label string
-	var bg, fg color.Color
+	var bg color.Color
 
 	switch {
 	case total > 0 && running == total:
-		label, bg, fg = "ALL RUNNING", appstyles.Active.StatusRunning, appstyles.Active.InkOnLight
+		label, bg = "ALL RUNNING", appstyles.Active.StatusRunning
 	case running == 0:
-		label, bg, fg = "STOPPED", appstyles.Active.StatusError, appstyles.Active.InkOnDark
+		label, bg = "STOPPED", appstyles.Active.StatusError
 	default:
-		label, bg, fg = "MIXED", appstyles.Active.StatusStarting, appstyles.Active.InkOnLight
+		label, bg = "MIXED", appstyles.Active.StatusStarting
 	}
+	fg := appstyles.InkOn(bg)
 
 	return lipgloss.NewStyle().
 		Background(bg).

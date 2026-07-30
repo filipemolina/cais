@@ -102,6 +102,41 @@ func TestNewThemeDerivesTiersByDirection(t *testing.T) {
 	}
 }
 
+// InkOn picks whichever of the two fixed inks has better contrast on the
+// given fill — this is the whole point of the helper. Run over every
+// registered theme to catch future regressions.
+func TestInkOnPicksTheLegibleInk(t *testing.T) {
+	fills := []struct {
+		name string
+		c    color.Color
+	}{
+		{"Accent", Active.Accent},
+		{"Danger", Active.Danger},
+		{"StatusRunning", Active.StatusRunning},
+		{"StatusStopped", Active.StatusStopped},
+		{"StatusStarting", Active.StatusStarting},
+		{"StatusError", Active.StatusError},
+	}
+
+	for name, theme := range Themes {
+		t.Run(name, func(t *testing.T) {
+			for _, fill := range fills {
+				chosen := InkOn(fill.c)
+				chosenRatio := Contrast(chosen, fill.c)
+				lightRatio := Contrast(theme.InkOnLight, fill.c)
+				darkRatio := Contrast(theme.InkOnDark, fill.c)
+
+				// The chosen ink must score at least as well as the better of
+				// the two fixed inks — anything else is a bug in InkOn.
+				if chosenRatio < lightRatio && chosenRatio < darkRatio {
+					t.Errorf("%s on %s: InkOn chose %v (ratio %.2f), but InkOnLight gives %.2f and InkOnDark gives %.2f",
+						name, fill.name, chosen, chosenRatio, lightRatio, darkRatio)
+				}
+			}
+		})
+	}
+}
+
 // InkOnLight/InkOnDark are the one deliberate exception to "derived from
 // base colors": they exist to stay legible on a status pill whose fill does
 // not itself vary with the app's theme, so they must not vary either.

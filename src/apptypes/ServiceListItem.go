@@ -33,14 +33,15 @@ func (s ServiceListItem) FilterValue() string { return s.Service.Name }
 // GroupDetailsPanel, but for a single service.
 func (s ServiceListItem) StatusPill() string {
 	var label string
-	var bg, fg color.Color
+	var bg color.Color
 
 	switch s.Status {
 	case "running":
-		label, bg, fg = "RUNNING", appstyles.Active.StatusRunning, appstyles.Active.InkOnLight
+		label, bg = "RUNNING", appstyles.Active.StatusRunning
 	default:
-		label, bg, fg = "STOPPED", appstyles.Active.StatusStopped, appstyles.Active.InkOnDark
+		label, bg = "STOPPED", appstyles.Active.StatusStopped
 	}
+	fg := appstyles.InkOn(bg)
 
 	return lipgloss.NewStyle().
 		Background(bg).

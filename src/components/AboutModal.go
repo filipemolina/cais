@@ -44,6 +44,7 @@ func (m AboutModalModel) View() tea.View {
 	label := func(s string) string { return muted.Render(s) }
 
 	sections := []string{
+		modalTitle("About"),
 		// The brand mark carries its own color (truecolor purple); render it
 		// as-is so the embedded SGR codes land untouched.
 		constants.LOGO,

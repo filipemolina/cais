@@ -113,10 +113,7 @@ func (m *LogsModalModel) resize(termWidth, termHeight int) {
 }
 
 func (m LogsModalModel) View() tea.View {
-	title := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(appstyles.Active.TextPrimary).
-		Render("logs: " + m.title)
+	title := modalTitle("logs: " + m.title)
 
 	followState := "off"
 	if m.follow {

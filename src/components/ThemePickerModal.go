@@ -111,7 +111,7 @@ func themePickerHints() string {
 }
 
 func (m ThemePickerModalModel) View() tea.View {
-	content := lipgloss.JoinVertical(lipgloss.Left, m.list.View(), "", themePickerHints())
+	content := lipgloss.JoinVertical(lipgloss.Left, modalTitle("Choose theme"), m.list.View(), "", themePickerHints())
 
 	return tea.NewView(modalSurface(appstyles.Active.ModalBg, content))
 }
@@ -139,15 +139,15 @@ func ThemePickerModal() tea.Model {
 		}
 	}
 
-	// +2 for the title row and the blank row under it; pagination is off
-	// because the list is sized to show every theme.
-	picker := list.New(items, themePickerDelegate{}, 40, len(items)+2)
-	picker.Title = "Choose theme"
+	// pagination is off because the list is sized to show every theme.
+	// The title is rendered by modalTitle in the View function, not by the
+	// list itself.
+	picker := list.New(items, themePickerDelegate{}, 40, len(items))
+	picker.SetShowTitle(false)
 	picker.SetShowHelp(false)
 	picker.SetShowStatusBar(false)
 	picker.SetShowPagination(false)
 	picker.SetShowFilter(false)
-	picker.Styles.Title = picker.Styles.Title.Background(appstyles.Active.Accent)
 	picker.Select(activeIndex)
 
 	return ThemePickerModalModel{

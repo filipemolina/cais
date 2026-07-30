@@ -37,19 +37,13 @@ func (m ErrorModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m ErrorModalModel) View() tea.View {
-	titleStyle := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(appstyles.Active.Danger).
-		Background(appstyles.Active.ModalBg).
-		MarginBottom(1)
-
 	messageStyle := lipgloss.NewStyle().
 		Foreground(appstyles.Active.TextPrimary).
 		Background(appstyles.Active.ModalBg).
 		Width(m.width)
 
 	content := lipgloss.JoinVertical(lipgloss.Left,
-		titleStyle.Render("Error"),
+		modalTitle("Error"),
 		messageStyle.Render(m.message),
 		"",
 		// Built from the binding rather than written out, so rebinding cancel
