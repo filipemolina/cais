@@ -6,6 +6,7 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
@@ -35,7 +36,21 @@ func (m ConfirmModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m ConfirmModalModel) View() tea.View {
-	return tea.NewView(modalSurface(appstyles.Active.ModalBg, m.message))
+	// The hint line is where y/n is advertised, so the messages callers pass
+	// in are plain questions - they used to each spell out "(y/n)" and none of
+	// them mentioned that esc also backs out.
+	content := lipgloss.JoinVertical(lipgloss.Left,
+		modalTitle("Confirm"),
+		m.message,
+		"",
+		modalHints(
+			hintFor(keys.Overlay.Yes),
+			hintFor(keys.Overlay.No),
+			hintFor(keys.Overlay.Cancel),
+		),
+	)
+
+	return tea.NewView(modalSurface(appstyles.Active.ModalBg, content))
 }
 
 // ConfirmModal shows message and, if the user presses 'y', runs confirm
