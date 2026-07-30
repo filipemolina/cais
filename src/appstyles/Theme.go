@@ -2,6 +2,7 @@ package appstyles
 
 import (
 	"image/color"
+	"math"
 
 	"charm.land/lipgloss/v2"
 )
@@ -144,6 +145,53 @@ func newTheme(p themeParams) Theme {
 		InkOnLight: lipgloss.Color("#151520"),
 		InkOnDark:  lipgloss.Color("#FAFAFA"),
 	}
+}
+
+// InkOn returns whichever of the theme's two fixed inks reads better on fill.
+//
+// InkOnLight/InkOnDark do not vary with the theme (see the Theme field
+// comment) because the fills they sit on - a status pill, the accent title
+// chip - are not derived from the surface tiers. What *does* vary is which of
+// the two is correct, and that is a property of the fill, not of the call
+// site. Hard-coding it worked while one dark theme existed; with a light
+// theme and ten imported palettes in the registry, the same call site draws
+// on a #BC3FBC magenta in one theme and a #A7C080 sage in another.
+func InkOn(fill color.Color) color.Color {
+	if Contrast(Active.InkOnLight, fill) >= Contrast(Active.InkOnDark, fill) {
+		return Active.InkOnLight
+	}
+	return Active.InkOnDark
+}
+
+// Contrast is the WCAG 2.x contrast ratio between two opaque colors.
+func Contrast(a, b color.Color) float64 {
+	la := relativeLuminance(a)
+	lb := relativeLuminance(b)
+	if la < lb {
+		la, lb = lb, la
+	}
+	return (la + 0.05) / (lb + 0.05)
+}
+
+// relativeLuminance is WCAG 2.x relative luminance.
+func relativeLuminance(c color.Color) float64 {
+	r, g, b := extractRGB(c)
+	r = srgbLinearize(r)
+	g = srgbLinearize(g)
+	b = srgbLinearize(b)
+	return 0.2126*r + 0.7152*g + 0.0722*b
+}
+
+func extractRGB(c color.Color) (float64, float64, float64) {
+	rgba := color.RGBAModel.Convert(c).(color.RGBA)
+	return float64(rgba.R) / 255.0, float64(rgba.G) / 255.0, float64(rgba.B) / 255.0
+}
+
+func srgbLinearize(v float64) float64 {
+	if v <= 0.04045 {
+		return v / 12.92
+	}
+	return math.Pow((v+0.055)/1.055, 2.4)
 }
 
 // DefaultTheme is the theme a fresh AppModel starts with.

@@ -124,10 +124,7 @@ func (m HelpOverlayModel) View() tea.View {
 	width := m.contentWidth()
 
 	sections := []string{
-		lipgloss.NewStyle().
-			Bold(true).
-			Foreground(appstyles.Active.TextPrimary).
-			Render("Keyboard shortcuts"),
+		modalTitle("Keyboard shortcuts"),
 	}
 
 	for _, scope := range m.catalog {

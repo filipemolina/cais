@@ -18,7 +18,7 @@ var DocStyle = lipgloss.NewStyle()
 // NormalTitle is the title chip on a panel frame - see PanelFrame.go.
 func NormalTitle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Foreground(Active.TextPrimary).
+		Foreground(InkOn(Active.Accent)).
 		Background(Active.Accent).
 		Padding(0, 1).
 		MarginLeft(2)

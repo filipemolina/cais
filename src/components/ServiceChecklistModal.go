@@ -128,7 +128,12 @@ func (m ServiceChecklistModalModel) View() tea.View {
 		submitDesc = "save changes"
 	}
 
-	content := lipgloss.JoinVertical(lipgloss.Left, m.list.View(), "", checklistHints(submitDesc))
+	title := fmt.Sprintf("Select services for %q", m.groupName)
+	if m.isEdit {
+		title = fmt.Sprintf("Edit members of %q", m.groupName)
+	}
+
+	content := lipgloss.JoinVertical(lipgloss.Left, modalTitle(title), m.list.View(), "", checklistHints(submitDesc))
 
 	return tea.NewView(modalSurface(appstyles.Active.ModalBg, content))
 }
@@ -143,16 +148,16 @@ func checklist(groupName string, serviceNames []string, preselected map[string]b
 		})
 	}
 
-	// +2 for the title row and the blank row under it, which is what the list
-	// leaves for its items. Without the pagination row switched off, the list
-	// spends a row on a paginator that this modal has no use for - it is sized
+	// The title is rendered by modalTitle in the View function, not by the
+	// list itself. Without the pagination row switched off, the list would
+	// spend a row on a paginator that this modal has no use for - it is sized
 	// to show every service at once - and takes that row out of the items,
 	// silently pushing the last services onto an unreachable second page.
-	cl := list.New(items, serviceChecklistDelegate{}, 40, len(items)+2)
+	cl := list.New(items, serviceChecklistDelegate{}, 40, len(items))
+	cl.SetShowTitle(false)
 	cl.SetShowHelp(false)
 	cl.SetShowStatusBar(false)
 	cl.SetShowPagination(false)
-	cl.Styles.Title = cl.Styles.Title.Background(appstyles.Active.Accent)
 
 	return cl
 }
@@ -163,7 +168,6 @@ func checklist(groupName string, serviceNames []string, preselected map[string]b
 // whole create flow.
 func ServiceChecklistModal(groupName string, serviceNames []string) tea.Model {
 	cl := checklist(groupName, serviceNames, nil)
-	cl.Title = fmt.Sprintf("Select services for %q", groupName)
 
 	return ServiceChecklistModalModel{
 		groupName: groupName,
@@ -182,7 +186,6 @@ func ServiceChecklistModalForEdit(groupName string, serviceNames []string, curre
 	}
 
 	cl := checklist(groupName, serviceNames, preselected)
-	cl.Title = fmt.Sprintf("Edit members of %q", groupName)
 
 	// Move the cursor to the first unchecked service so the user lands
 	// on something actionable rather than having to arrow past members

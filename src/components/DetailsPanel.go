@@ -539,13 +539,14 @@ func (m DetailsPanelModel) titlePill() string {
 	}
 
 	var label string
-	var bg, fg color.Color
+	var bg color.Color
 
 	if m.isServiceRunning(m.service.Name) {
-		label, bg, fg = "RUNNING", appstyles.Active.StatusRunning, appstyles.Active.InkOnLight
+		label, bg = "RUNNING", appstyles.Active.StatusRunning
 	} else {
-		label, bg, fg = "STOPPED", appstyles.Active.StatusError, appstyles.Active.InkOnDark
+		label, bg = "STOPPED", appstyles.Active.StatusError
 	}
+	fg := appstyles.InkOn(bg)
 
 	return lipgloss.NewStyle().
 		Background(bg).
@@ -946,19 +947,20 @@ func (m DetailsPanelModel) renderEditor(bodyWidth, bodyAvail int) string {
 // editor is not open (caller should check m.editing first).
 func (m DetailsPanelModel) validationPill() string {
 	var label string
-	var bg, fg color.Color
+	var bg color.Color
 
 	switch {
 	case m.saveError != "":
 		label = m.saveError
-		bg, fg = appstyles.Active.Danger, appstyles.Active.InkOnDark
+		bg = appstyles.Active.Danger
 	case m.validationError != "":
 		label = "YAML: " + m.validationError
-		bg, fg = appstyles.Active.StatusStarting, appstyles.Active.InkOnDark
+		bg = appstyles.Active.StatusStarting
 	default:
 		label = "YAML ok"
-		bg, fg = appstyles.Active.StatusRunning, appstyles.Active.InkOnLight
+		bg = appstyles.Active.StatusRunning
 	}
+	fg := appstyles.InkOn(bg)
 
 	return lipgloss.NewStyle().
 		Background(bg).
