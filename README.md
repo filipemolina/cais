@@ -17,7 +17,7 @@ Stack Stitcher reads a Docker **Compose** file and turns it into an interactive 
 
 ## Project status
 
-Stack Stitcher is under **active development**. Compose parsing, navigation, starting/stopping services (individually or as a whole group), creating/deleting groups, editing a group's membership, streaming live logs, bootstrapping a new compose file, and editing existing services all work from inside the TUI. `e` on a service opens an inline YAML editor in the details panel; `ctrl+s` saves, `ctrl+o` opens the fragment in your `$EDITOR`, and `esc` cancels. `E` still opens the whole compose file in `$EDITOR`. Inline editing works with real YAML, not a form, so every compose field is reachable and your comments, quoting and key order are kept. (Blank lines between services are not: the YAML library preserves comments but not blank lines, so any write closes the spacing up.) The Files page shows the loaded compose file with syntax highlighting and opens it in your editor; `b` browses the other compose files in its directory and switches the active one. See [TODO.md](TODO.md) for the current worklist and completed recent work, and [docs/ROADMAP.md](docs/ROADMAP.md) for the ordered plan to a first alpha. Feedback, issues, and ideas are genuinely welcome and help shape where it goes next.
+Stack Stitcher is under **active development**. Compose parsing, navigation, starting/stopping services (individually or as a whole group), creating/deleting groups, editing a group's membership, streaming live logs, bootstrapping a new compose file, and editing existing services all work from inside the TUI. `e` on a service opens an inline YAML editor in the details panel; `ctrl+s` saves, `ctrl+o` opens the fragment in your `$EDITOR`, and `esc` cancels. `E` still opens the whole compose file in `$EDITOR`. Inline editing works with real YAML, not a form, so every compose field is reachable and your comments, quoting and key order are kept. (Blank lines between services are not: the YAML library preserves comments but not blank lines, so any write closes the spacing up.) The editor is YAML-aware: **Enter** auto-indents the new line (matching the current line's indent, adding a level after a `:` key, aligning with the text after `- ` in lists), **Tab** and **Shift+Tab** indent and outdent the current line, **Backspace** inside leading whitespace deletes a full indent level, and pasting via **Ctrl+Shift+V** / **Cmd+V** or **Ctrl+V** works. The keybinding bar and `?` help overlay show the editor's keys while it is open. The Files page shows the loaded compose file with syntax highlighting and opens it in your editor; `b` browses the other compose files in its directory and switches the active one. See [TODO.md](TODO.md) for the current worklist and completed recent work, and [docs/ROADMAP.md](docs/ROADMAP.md) for the ordered plan to a first alpha. Feedback, issues, and ideas are genuinely welcome and help shape where it goes next.
 
 ## Features
 
@@ -119,6 +119,9 @@ two body panels.
 | `e` | Edit the service's YAML inline in the details panel | Service details panel focused |
 | `ctrl+s` | Save the inline edit | Inline editor open |
 | `ctrl+o` | Open the current inline fragment in `$EDITOR` | Inline editor open |
+| `Tab` | Indent the current line | Inline editor open |
+| `Shift+Tab` | Outdent the current line | Inline editor open |
+| `Backspace` | Delete to the previous indent level (at the start of leading whitespace) | Inline editor open |
 | `esc` | Cancel the inline edit (confirms if changed) | Inline editor open |
 | `E` | Edit the whole compose file in `$EDITOR` | Service details panel or Files page focused |
 | `b` | Browse and switch compose files | Files page focused |
@@ -171,7 +174,7 @@ On **Files** the body is a single panel showing the loaded compose file's path a
 On **Services** the body is also a two-pane layout: the Services list on the left and the Service Details panel on the right. The Service Details panel shows:
 
 - **No service selected:** a *Select a service* card prompting the user to pick from the list.
-- **Editing:** the inline YAML editor with live validation, save (ctrl+s), open in `$EDITOR` (ctrl+o), and cancel.
+- **Editing:** the inline YAML editor with live validation, save (`ctrl+s`), open in `$EDITOR` (`ctrl+o`), cancel (`esc`), YAML-aware auto-indent on **Enter**, indent/outdent via **Tab** / **Shift+Tab**, indent-level backspace, and paste support.
 - **Service selected:** a header with the service name, image, and a status line (colored dot ● with running/stopped state, health, and uptime), followed by a compact two-column PROPERTY | VALUE configuration table showing ports, container name, restart policy, networks, volumes, depends on, healthcheck, pull policy, PUID/PGID, memory limits and labels. When the container is running, a live runtime stats table (METRIC | VALUE) shows memory, CPU, network I/O, disk I/O, PIDs and uptime. Start/Stop/Restart/Pull/Remove action buttons are pinned at the bottom, with a spinner replacing them while an action is in progress.
 
 The ASCII logo lives in `src/constants/Branding.go` and is shown by the About modal (`a`).
