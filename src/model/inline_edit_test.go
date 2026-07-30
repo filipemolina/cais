@@ -7,8 +7,10 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/components"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 )
 
@@ -176,7 +178,11 @@ func TestRequestSaveServiceFailureDoesNotReload(t *testing.T) {
 	}
 }
 
-func TestInlineEditingOwnsTheKeyboard(t *testing.T) {
+// editingWeb puts the app in inline edit mode on the web service with the
+// given fragment loaded, which is the starting state for the editor tests.
+func editingWeb(t *testing.T, fragment string) AppModel {
+	t.Helper()
+
 	m := inlineEditProject(t)
 	updated, cmd := m.Update(cmds.SetActivePageMsg("Services"))
 	m = drive(updated, collect(cmd)...)
@@ -187,8 +193,28 @@ func TestInlineEditingOwnsTheKeyboard(t *testing.T) {
 	m = drive(m, cmds.SetSelectedServiceMsg(types.ServiceConfig{Name: "web"}))
 
 	// Enter edit mode.
-	updated, cmd = m.Update(cmds.InlineEditReadyMsg{ServiceName: "web", Fragment: []byte("web:\n  image: nginx\n")})
+	updated, cmd = m.Update(cmds.InlineEditReadyMsg{ServiceName: "web", Fragment: []byte(fragment)})
 	m = drive(updated, collect(cmd)...)
+
+	return m
+}
+
+// detailsPanel finds the Services page's DetailsPanelModel component.
+func detailsPanel(t *testing.T, m AppModel) components.DetailsPanelModel {
+	t.Helper()
+
+	for _, component := range m.pages["Services"] {
+		if panel, ok := component.(components.DetailsPanelModel); ok {
+			return panel
+		}
+	}
+
+	t.Fatal("no DetailsPanelModel found on the Services page")
+	return components.DetailsPanelModel{}
+}
+
+func TestInlineEditingOwnsTheKeyboard(t *testing.T) {
+	m := editingWeb(t, "web:\n  image: nginx\n")
 
 	if !m.inlineEditing {
 		t.Fatal("AppModel should record inline editing")
@@ -208,5 +234,61 @@ func TestInlineEditingOwnsTheKeyboard(t *testing.T) {
 	ctx := m.helpContext()
 	if !ctx.Editing {
 		t.Fatal("help context should report editing")
+	}
+}
+
+func TestPasteLandsInTheEditor(t *testing.T) {
+	m := editingWeb(t, "web:\n  image: nginx\n")
+
+	updated, cmd := m.Update(tea.PasteMsg{Content: "  ports:\n    - \"8080:80\"\n"})
+	m = drive(updated.(AppModel), collect(cmd)...)
+
+	value := detailsPanel(t, m).EditorValue()
+	if !strings.Contains(value, "8080:80") {
+		t.Fatalf("pasted content missing from editor buffer: %q", value)
+	}
+}
+
+func TestPasteKeepsItsOwnIndentation(t *testing.T) {
+	m := editingWeb(t, "web:\n  image: nginx\n")
+
+	updated, cmd := m.Update(tea.PasteMsg{Content: "  ports:\n    - \"8080:80\"\n"})
+	m = drive(updated.(AppModel), collect(cmd)...)
+
+	value := detailsPanel(t, m).EditorValue()
+	if !strings.Contains(value, "  ports:") {
+		t.Fatalf("pasted line lost its indentation: %q", value)
+	}
+	if !strings.Contains(value, "    - \"8080:80\"") {
+		t.Fatalf("pasted continuation line lost its indentation: %q", value)
+	}
+}
+
+func TestPasteRevalidates(t *testing.T) {
+	m := editingWeb(t, "web:\n  image: nginx\n")
+
+	updated, cmd := m.Update(tea.PasteMsg{Content: "\n  - [\n"})
+	m = drive(updated.(AppModel), collect(cmd)...)
+
+	view := ansi.Strip(m.View().Content)
+	if !strings.Contains(view, "YAML:") {
+		t.Fatalf("expected a YAML error in the status line after a bad paste, got: %s", view)
+	}
+}
+
+func TestPasteOutsideEditModeIsInert(t *testing.T) {
+	m := inlineEditProject(t)
+	updated, cmd := m.Update(cmds.SetActivePageMsg("Services"))
+	m = drive(updated, collect(cmd)...)
+
+	details := constants.COMPONENT_BODY_DETAILS
+	m = drive(m, collect(m.ChangeFocus(&details))...)
+	m = drive(m, cmds.SetSelectedServiceMsg(types.ServiceConfig{Name: "web"}))
+
+	updated, cmd = m.Update(tea.PasteMsg{Content: "  ports:\n    - \"8080:80\"\n"})
+	m = drive(updated.(AppModel), collect(cmd)...)
+
+	if m.inlineEditing {
+		t.Fatal("paste should not enter edit mode on its own")
 	}
 }
