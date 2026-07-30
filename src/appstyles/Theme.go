@@ -253,6 +253,27 @@ var Themes = map[string]Theme{
 		Starting: lipgloss.Color("#E8C547"),
 		Err:      lipgloss.Color("#EB4268"),
 	}),
+
+	// stitcher-day is stitcher-dark inverted: the same #BC3FBC magenta on a
+	// warm off-white rather than a violet near-black. The neutral carries a
+	// faint magenta bias so the greys read as chosen rather than as default
+	// terminal grey, and the status colors are darkened from their dark-theme
+	// values because a #67C58A green that reads on a near-black panel washes
+	// out entirely on a near-white one.
+	"stitcher-day": newTheme(themeParams{
+		Name:   "stitcher-day",
+		Dark:   false,
+		Accent: lipgloss.Color("#BC3FBC"),
+		Text:   lipgloss.Color("#241F2B"),
+		Panel:  lipgloss.Color("#F6F2F7"),
+		Modal:  lipgloss.Color("#FCF8FD"),
+		Danger: lipgloss.Color("#B33A3A"),
+
+		Running:  lipgloss.Color("#1E7F4E"),
+		Stopped:  lipgloss.Color("#6B6878"),
+		Starting: lipgloss.Color("#A87409"),
+		Err:      lipgloss.Color("#C0243F"),
+	}),
 }
 
 // Active is the one Theme in effect. Everything that draws reads it fresh
