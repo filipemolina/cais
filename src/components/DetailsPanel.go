@@ -251,6 +251,26 @@ func (m DetailsPanelModel) handleEditKey(msg tea.KeyPressMsg) (DetailsPanelModel
 		m.editor.InsertString("\n" + indentAfter(m.currentLine(), m.editor.Column()))
 		return m, nil, true
 
+	case key.Matches(msg, keys.Editor.Indent):
+		// A pure insertion at a known position, so there is no cursor to
+		// restore by hand: insert at the start of the line, then move the
+		// cursor right by the same width so the text under it does not
+		// shift away.
+		col := m.editor.Column()
+		m.editor.SetCursorColumn(0)
+		m.editor.InsertString(yamlIndent)
+		m.editor.SetCursorColumn(col + len(yamlIndent))
+		return m, nil, true
+
+	case key.Matches(msg, keys.Editor.Outdent):
+		m.outdentCurrentLine()
+		return m, nil, true
+
+	case msg.Code == tea.KeyBackspace:
+		if updated, ok := m.outdentOnBackspace(); ok {
+			return updated, nil, true
+		}
+
 	case key.Matches(msg, keys.Global.Back):
 		if m.hasChanges() {
 			return m, cmds.OpenConfirmModal(
@@ -274,6 +294,80 @@ func (m DetailsPanelModel) currentLine() string {
 		return ""
 	}
 	return lines[row]
+}
+
+// outdentCurrentLine removes up to one indent level of leading whitespace
+// from the current line. Up to, not exactly: a line indented less than a
+// full level (or not at all) outdents to zero rather than going negative,
+// and at column 0 with no leading whitespace it is a no-op.
+func (m *DetailsPanelModel) outdentCurrentLine() {
+	row := m.editor.Line()
+	col := m.editor.Column()
+	runes := []rune(m.currentLine())
+
+	trimmed := len(runes)
+	for i, r := range runes {
+		if r != ' ' {
+			trimmed = i
+			break
+		}
+	}
+	removed := min(trimmed, len(yamlIndent))
+	if removed == 0 {
+		return
+	}
+
+	newLine := string(runes[removed:])
+	newCol := max(0, col-removed)
+	m.replaceLine(row, newLine, newCol)
+}
+
+// outdentOnBackspace deletes back to the previous indent stop when
+// everything to the left of the cursor on the current line is spaces. It
+// reports whether it applied; when it has not, the caller falls through to
+// the textarea's ordinary backspace (deleting one character, or at column 0,
+// merging with the line above).
+func (m DetailsPanelModel) outdentOnBackspace() (DetailsPanelModel, bool) {
+	row := m.editor.Line()
+	col := m.editor.Column()
+	runes := []rune(m.currentLine())
+
+	if col <= 0 || col > len(runes) {
+		return m, false
+	}
+	for _, r := range runes[:col] {
+		if r != ' ' {
+			return m, false
+		}
+	}
+
+	newCol := ((col - 1) / len(yamlIndent)) * len(yamlIndent)
+	newLine := string(runes[:newCol]) + string(runes[col:])
+	m.replaceLine(row, newLine, newCol)
+
+	return m, true
+}
+
+// replaceLine rewrites one logical line in place. The textarea has no
+// "replace the current line" API, so this rebuilds the whole value; SetValue
+// leaves the cursor at the end of the buffer, so the row and column are
+// walked back by hand afterward. This looks redundant and is not: without
+// it, editing a line in the middle of a fragment throws the cursor to the
+// bottom of it.
+func (m *DetailsPanelModel) replaceLine(row int, text string, col int) {
+	lines := strings.Split(m.editor.Value(), "\n")
+	if row < 0 || row >= len(lines) {
+		return
+	}
+	lines[row] = text
+
+	m.editor.SetValue(strings.Join(lines, "\n"))
+
+	m.editor.MoveToBegin()
+	for i := 0; i < row; i++ {
+		m.editor.CursorDown()
+	}
+	m.editor.SetCursorColumn(col)
 }
 
 // hasChanges reports whether the editor's contents differ from the fragment
@@ -359,6 +453,14 @@ func (m *DetailsPanelModel) updateValidationError() {
 // need to see what landed in the buffer.
 func (m DetailsPanelModel) EditorValue() string {
 	return m.editor.Value()
+}
+
+// EditorCursor returns the editor's current row and column. Exported for the
+// model tests covering tab/outdent/backspace, which pin cursor position, not
+// just buffer text - that is where the SetValue-resets-the-cursor bug would
+// show up.
+func (m DetailsPanelModel) EditorCursor() (int, int) {
+	return m.editor.Line(), m.editor.Column()
 }
 
 // OwnsKeyboard reports whether the panel is holding the whole keyboard. This
