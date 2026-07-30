@@ -106,6 +106,23 @@ Total: roughly 150 lines of implementation plus tests.
 Ordered so each step is independently shippable and independently revertable.
 One commit per step, on a feature branch, merged `--no-ff`.
 
+Each step has its own document under `docs/plans/`, written to be handed to
+someone (or something) that has not read this one. They carry the exact file
+and line anchors, the code to write, the traps found while investigating, the
+test list, and an explicit "do not" section:
+
+| Step | Document | Depends on |
+|---|---|---|
+| 1 | [editor-paste.md](plans/editor-paste.md) | — |
+| 2 | [editor-indent-policy.md](plans/editor-indent-policy.md) | — |
+| 3 | [editor-enter-autoindent.md](plans/editor-enter-autoindent.md) | 2 |
+| 4 | [editor-indent-keys.md](plans/editor-indent-keys.md) | 2 |
+| 5 | [editor-key-advertising.md](plans/editor-key-advertising.md) | 4 |
+
+Step 1 is a bug fix and shares nothing with the rest — ship it first and on
+its own. Steps 2–4 are one branch, one commit each. Step 5 closes the loop by
+making the footer and help overlay tell the truth about the new keys.
+
 ### Step 1 — Route paste to the editor
 
 `src/components/DetailsPanel.go`
