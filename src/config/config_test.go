@@ -29,7 +29,7 @@ func TestRoundTrip(t *testing.T) {
 	home := t.TempDir()
 	withConfigHome(t, home)
 
-	original := Config{Theme: "stitcher-ocean"}
+	original := Config{Theme: "stitcher-slate"}
 	if err := SaveConfig(original); err != nil {
 		t.Fatalf("SaveConfig: %v", err)
 	}
@@ -89,7 +89,7 @@ func TestSaveConfigOverwrites(t *testing.T) {
 	home := t.TempDir()
 	withConfigHome(t, home)
 
-	if err := SaveConfig(Config{Theme: "stitcher-ocean"}); err != nil {
+	if err := SaveConfig(Config{Theme: "stitcher-slate"}); err != nil {
 		t.Fatalf("first SaveConfig: %v", err)
 	}
 	if err := SaveConfig(Config{Theme: "stitcher-ember"}); err != nil {

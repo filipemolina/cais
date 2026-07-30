@@ -151,3 +151,16 @@ func TestInkTokensDoNotVaryWithDark(t *testing.T) {
 		t.Error("InkOnDark differs between a dark and a light theme")
 	}
 }
+
+// SetTheme should fall back to DefaultTheme when the name is not registered,
+// so a config file naming a theme that was removed doesn't crash the app.
+func TestUnknownSavedThemeFallsBackToDefault(t *testing.T) {
+	defer SetTheme(DefaultTheme) // restore
+
+	if ok := SetTheme("made-up-theme-name"); ok {
+		t.Error("SetTheme should return false for an unknown name")
+	}
+	if Active.Name != DefaultTheme {
+		t.Errorf("after failed SetTheme, Active = %q, want %q", Active.Name, DefaultTheme)
+	}
+}
