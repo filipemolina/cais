@@ -48,15 +48,13 @@ func (m ErrorModalModel) View() tea.View {
 		Background(appstyles.Active.ModalBg).
 		Width(m.width)
 
-	hintStyle := lipgloss.NewStyle().
-		Foreground(appstyles.Active.TextDim).
-		Background(appstyles.Active.ModalBg).
-		MarginTop(1)
-
 	content := lipgloss.JoinVertical(lipgloss.Left,
 		titleStyle.Render("Error"),
 		messageStyle.Render(m.message),
-		hintStyle.Render("Press esc to dismiss"),
+		"",
+		// Built from the binding rather than written out, so rebinding cancel
+		// cannot leave this line naming the old key.
+		modalHints(hintAs(keys.Overlay.Cancel, "dismiss")),
 	)
 
 	return tea.NewView(modalSurface(appstyles.Active.ModalBg, content))
