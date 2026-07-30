@@ -54,11 +54,18 @@ func (m GroupNameModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m GroupNameModalModel) View() tea.View {
-	lines := []string{"New group name:", m.input.View()}
+	lines := []string{modalTitle("New group"), "Group name:", m.input.View()}
 	if m.errMsg != "" {
 		errStyle := lipgloss.NewStyle().Foreground(appstyles.Active.Danger)
 		lines = append(lines, errStyle.Render(m.errMsg))
 	}
+
+	// Enter is "next", not "confirm": this is step 1 of two, and it hands off
+	// to the service checklist rather than writing anything.
+	lines = append(lines, "", modalHints(
+		hintAs(keys.Overlay.Submit, "next"),
+		hintFor(keys.Overlay.Cancel),
+	))
 
 	return tea.NewView(modalSurface(
 		appstyles.Active.ModalBg,
