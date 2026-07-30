@@ -159,6 +159,14 @@ func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.containers = msg.Containers
 		}
 
+	// A terminal paste arrives as its own message, not as key presses. It only
+	// means anything to the editor, and only while the editor is open: the
+	// panel's read-only mode has nothing to paste into.
+	case tea.PasteMsg:
+		var editorCmd tea.Cmd
+		m, editorCmd = m.forwardToEditor(msg)
+		finalCmds = append(finalCmds, editorCmd)
+
 	case tea.KeyPressMsg:
 		if !m.isFocused || m.service == nil {
 			break
@@ -190,9 +198,33 @@ func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else if key.Matches(msg, keys.Details.EditFile) {
 			finalCmds = append(finalCmds, cmds.OpenEditor())
 		}
+
+	// The textarea's clipboard round trip (ctrl+v -> Paste cmd -> an unexported
+	// pasteMsg) comes back as a message this switch cannot name, so anything
+	// unrecognised goes to the editor while it is open. Safe by construction:
+	// every message the panel acts on has its own case above, so nothing that
+	// reaches here was ever the panel's to handle.
+	default:
+		var editorCmd tea.Cmd
+		m, editorCmd = m.forwardToEditor(msg)
+		finalCmds = append(finalCmds, editorCmd)
 	}
 
 	return m, tea.Batch(finalCmds...)
+}
+
+// forwardToEditor passes a message to the open editor and re-validates. It
+// is the path for everything the editor answers that is not a key press.
+func (m DetailsPanelModel) forwardToEditor(msg tea.Msg) (DetailsPanelModel, tea.Cmd) {
+	if !m.editing {
+		return m, nil
+	}
+
+	var cmd tea.Cmd
+	m.editor, cmd = m.editor.Update(msg)
+	m.updateValidationError()
+
+	return m, cmd
 }
 
 // handleEditKey checks whether a key in edit mode is one of the editor
@@ -296,6 +328,13 @@ func (m *DetailsPanelModel) updateValidationError() {
 		return
 	}
 	m.validationError = ""
+}
+
+// EditorValue returns the editor's current contents. Exported for the model
+// tests, which drive paste and indentation through the whole message path and
+// need to see what landed in the buffer.
+func (m DetailsPanelModel) EditorValue() string {
+	return m.editor.Value()
 }
 
 // OwnsKeyboard reports whether the panel is holding the whole keyboard. This
