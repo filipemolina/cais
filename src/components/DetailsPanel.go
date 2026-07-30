@@ -959,9 +959,11 @@ func (m DetailsPanelModel) renderStatusLine(width int) string {
 		MaxWidth(width)
 
 	hints := renderKeyHints([]KeyHint{
-		{Key: "ctrl+s", Desc: "save"},
-		{Key: "ctrl+o", Desc: "editor"},
-		{Key: "esc", Desc: "cancel"},
+		hintFor(keys.Details.Save),
+		hintFor(keys.Details.OpenEditor),
+		hintFor(keys.Editor.Indent),
+		hintFor(keys.Editor.Outdent),
+		hintAs(keys.Global.Back, "cancel"),
 	}, appstyles.Active.TextDim)
 
 	hintsStyle := lipgloss.NewStyle().

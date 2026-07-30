@@ -121,6 +121,64 @@ func TestCatalogAvailability(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("service details while inline editing dims Global panel keys", func(t *testing.T) {
+		catalog := Catalog(Context{Page: "Services", Focused: constants.COMPONENT_BODY_DETAILS, Editing: true, Selected: true})
+
+		global := scopeTitled(t, catalog, "Global")
+		for _, binding := range []key.Binding{Global.NextPanel, Global.PrevPanel} {
+			if entryIn(t, global, binding).Available {
+				t.Errorf("%q should be dimmed while the editor owns the keyboard", binding.Help().Key)
+			}
+		}
+		// Back is still available: esc cancels the editor.
+		if !entryIn(t, global, Global.Back).Available {
+			t.Error("esc back should be available while editing")
+		}
+
+		// Editor scope entries are lit.
+		editor := scopeTitled(t, catalog, "Editor")
+		for _, binding := range []key.Binding{Editor.Indent, Editor.Outdent} {
+			if !entryIn(t, editor, binding).Available {
+				t.Errorf("%q should be available while editing", binding.Help().Key)
+			}
+		}
+	})
+}
+
+// TestEditorKeysAreLiveOnlyWhileEditing asserts the Editor scope's entries are
+// available while editing and dimmed otherwise.
+func TestEditorKeysAreLiveOnlyWhileEditing(t *testing.T) {
+	editingCtx := Context{Page: "Services", Focused: constants.COMPONENT_BODY_DETAILS, Editing: true}
+	catalog := Catalog(editingCtx)
+
+	editor := scopeTitled(t, catalog, "Editor")
+	for _, binding := range []key.Binding{Editor.Indent, Editor.Outdent} {
+		if !entryIn(t, editor, binding).Available {
+			t.Errorf("%q should be available while editing", binding.Help().Key)
+		}
+	}
+	// Save and OpenEditor are shared with Details; they should also be lit.
+	for _, binding := range []key.Binding{Details.Save, Details.OpenEditor} {
+		if !entryIn(t, editor, binding).Available {
+			t.Errorf("%q should be available while editing", binding.Help().Key)
+		}
+	}
+	// Editor.NewLine (enter) is handled by the textarea internally, not through
+	// the key binding system, so it is not in pressableNow. It appears in the
+	// overlay but dimmed, which is fine: the overlay says it exists without
+	// making a separate availability claim.
+
+	// Without editing, all Editor scope entries are dimmed.
+	notEditingCtx := Context{Page: "Services", Focused: constants.COMPONENT_BODY_DETAILS, Selected: true}
+	catalog = Catalog(notEditingCtx)
+
+	editor = scopeTitled(t, catalog, "Editor")
+	for _, binding := range []key.Binding{Editor.Indent, Editor.Outdent} {
+		if entryIn(t, editor, binding).Available {
+			t.Errorf("%q should be dimmed when not editing", binding.Help().Key)
+		}
+	}
 }
 
 // The alt chords are the aliases the footer has no room for; the overlay is
