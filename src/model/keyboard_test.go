@@ -10,6 +10,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/components"
 	"github.com/filipemolina/stack-stitcher/src/constants"
+	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
 // letter is a plain keystroke as a terminal delivers it.
@@ -197,6 +198,32 @@ func TestNDoesNothingOnOtherPages(t *testing.T) {
 	for _, msg := range collect(cmd) {
 		if _, ok := msg.(cmds.OpenCreateGroupModalMsg); ok {
 			t.Error("n opened the create group modal on Services page")
+		}
+	}
+}
+
+// TestFooterOffersTheEditorKeysWhileEditing asserts the footer shows editor keys
+// while the inline editor is open, and does not offer page digits.
+func TestFooterOffersTheEditorKeysWhileEditing(t *testing.T) {
+	m := editingWeb(t, "web:\n  image: nginx\n")
+
+	footer := ansi.Strip(m.components.KeybindingBar.View().Content)
+
+	for _, want := range []string{
+		keys.Editor.Indent.Help().Key,
+		keys.Editor.Outdent.Help().Key,
+		keys.Details.Save.Help().Key,
+	} {
+		if !strings.Contains(footer, want) {
+			t.Errorf("footer should mention %q while editing\n  footer: %q", want, footer)
+		}
+	}
+
+	// Panel-switching keys should not appear in the left hints while the editor
+	// owns the keyboard; they are handled by the editor instead.
+	for _, absent := range []string{"tab next", "shift+tab prev"} {
+		if strings.Contains(footer, absent) {
+			t.Errorf("footer should not offer %q while editing\n  footer: %q", absent, footer)
 		}
 	}
 }

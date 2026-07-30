@@ -7,6 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
 func focusedDetails(service types.ServiceConfig) DetailsPanelModel {
@@ -229,6 +230,27 @@ func TestDetailsPanelLiveValidationReportsBadYAML(t *testing.T) {
 
 	if m.validationError == "" {
 		t.Fatal("bad YAML should set validationError")
+	}
+}
+
+// TestEditorStatusLineNamesTheEditorKeys asserts the status line reads editor
+// key names from their bindings, not from string literals.
+func TestEditorStatusLineNamesTheEditorKeys(t *testing.T) {
+	m := focusedDetails(types.ServiceConfig{Name: "web"})
+	m, _ = m.enterEditMode([]byte("web:\n  image: nginx\n"))
+
+	rendered := m.renderStatusLine(80)
+
+	for _, want := range []string{
+		keys.Details.Save.Help().Key,
+		keys.Details.OpenEditor.Help().Key,
+		keys.Editor.Indent.Help().Key,
+		keys.Editor.Outdent.Help().Key,
+		keys.Global.Back.Help().Key,
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Errorf("status line does not mention %q\n  rendered: %q", want, rendered)
+		}
 	}
 }
 

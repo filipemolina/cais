@@ -95,7 +95,7 @@ func TestFooterHints(t *testing.T) {
 		{
 			name:  "service details while inline editing",
 			model: KeybindingBarModel{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_DETAILS, selectedService: true, editing: true},
-			want:  "ctrl+s save · ctrl+o editor · esc back",
+			want:  "ctrl+s save · ctrl+o editor · tab indent · shift+tab outdent · esc back",
 		},
 		{
 			name:  "the files page offers edit, browse and scroll",

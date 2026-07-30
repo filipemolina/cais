@@ -368,6 +368,7 @@ func Active(ctx Context) []key.Binding {
 			if ctx.Editing {
 				return []key.Binding{
 					Details.Save, Details.OpenEditor,
+					Editor.Indent, Editor.Outdent,
 					Global.Back,
 				}
 			}
@@ -454,6 +455,16 @@ func Catalog(ctx Context) []Scope {
 				Details.Start, Details.Stop, Details.Restart,
 				Details.Pull, Details.Remove, Details.Logs,
 				Details.EditService, Details.EditFile,
+				Details.Save, Details.OpenEditor,
+			),
+		},
+		{
+			// Only reachable with the inline editor open, so every row here is
+			// dimmed everywhere else - which is the overlay saying "these are the
+			// editor's keys" without a sentence of prose.
+			Title: "Editor",
+			Entries: entries(
+				Editor.NewLine, Editor.Indent, Editor.Outdent,
 				Details.Save, Details.OpenEditor,
 			),
 		},
