@@ -380,10 +380,10 @@ func ServicesList(services []types.ServiceConfig, width int, height int) tea.Mod
 	servicesList.Title = "Services"
 	servicesList.Paginator.ActiveDot = " ● "
 	servicesList.Paginator.InactiveDot = " ○ "
-	servicesList.Styles.Title = servicesList.
-		Styles.
-		Title.
-		Background(appstyles.Active.Accent)
+	servicesList.Styles.Title = lipgloss.NewStyle().
+		Foreground(appstyles.InkOn(appstyles.Active.Accent)).
+		Background(appstyles.Active.Accent).
+		Padding(0, 1)
 
 	model.list = servicesList
 	model.listDelegate = listDelegate
