@@ -9,6 +9,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/components"
 	"github.com/filipemolina/stack-stitcher/src/components/chrome"
+	"github.com/filipemolina/stack-stitcher/src/components/mainmenu"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/utils"
 )
@@ -266,7 +267,7 @@ func GetInitialModel(source utils.ComposeSource) AppModel {
 			configProject:  nil,
 		},
 		components: Components{
-			MainMenu:      components.MainMenu(),
+			MainMenu:      mainmenu.New(),
 			KeybindingBar: components.KeybindingBar(),
 		},
 		pages: pages,
