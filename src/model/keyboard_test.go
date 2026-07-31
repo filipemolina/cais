@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/components"
+	"github.com/filipemolina/stack-stitcher/src/components/confirmmodal"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
@@ -114,7 +114,7 @@ func TestForceQuitBeatsEveryClaimOnTheKeyboard(t *testing.T) {
 
 	t.Run("while a modal is open", func(t *testing.T) {
 		m := homeWithGroups(t)
-		m.activeModal = components.ConfirmModal("Delete group \"core\"?", nil)
+		m.activeModal = confirmmodal.New("Delete group \"core\"?", nil)
 
 		if !quits(t, m) {
 			t.Error("ctrl+c did not quit while a modal was open")

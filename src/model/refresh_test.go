@@ -6,7 +6,7 @@ import (
 
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/components"
+	"github.com/filipemolina/stack-stitcher/src/components/confirmmodal"
 	"github.com/filipemolina/stack-stitcher/src/utils"
 
 	tea "charm.land/bubbletea/v2"
@@ -37,7 +37,7 @@ func TestShouldPollContainers(t *testing.T) {
 		t.Error("should poll after a compose project has loaded")
 	}
 
-	m.activeModal = components.ConfirmModal("Confirm?", nil)
+	m.activeModal = confirmmodal.New("Confirm?", nil)
 	if m.shouldPollContainers() {
 		t.Error("should not poll while a modal is open")
 	}
