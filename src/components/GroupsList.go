@@ -327,9 +327,9 @@ func (m GroupListModel) View() tea.View {
 	var sections []string
 
 	if len(m.list.Items()) == 0 {
-		// Render the list title even when empty, so the panel always
-		// identifies itself as the groups list.
-		titleRow := m.list.Styles.Title.Render(m.list.Title)
+		// Render the list title even when empty, using the same accent-chip
+		// style as the right panel's Details title (renderPanelFrame).
+		titleRow := appstyles.NormalTitle().Render(m.list.Title)
 		emptyStyle := lipgloss.NewStyle().
 			Foreground(appstyles.Active.TextMuted).
 			Background(bg).
@@ -391,10 +391,10 @@ func GroupsList(groups []string, width int, height int) tea.Model {
 	servicesList.Title = "Groups"
 	servicesList.Paginator.ActiveDot = " ● "
 	servicesList.Paginator.InactiveDot = " ○ "
-	servicesList.Styles.Title = servicesList.
-		Styles.
-		Title.
-		Background(appstyles.Active.Accent)
+	servicesList.Styles.Title = lipgloss.NewStyle().
+		Foreground(appstyles.InkOn(appstyles.Active.Accent)).
+		Background(appstyles.Active.Accent).
+		Padding(0, 1)
 
 	model := GroupListModel{
 		list:         servicesList,
