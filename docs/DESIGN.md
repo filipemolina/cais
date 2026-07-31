@@ -568,15 +568,24 @@ are functions for the same reason, not package-level `var`s: a `var` built at
 init freezes whichever theme was active when the package loaded, and that
 used to be the whole palette's problem before this existed.
 
-`appstyles.Themes` is the registry (`stitcher-dark`, the default, and
-`stitcher-light`), built by `appstyles.newTheme` from a handful of base
-colors - `Accent`, the text/panel/modal bases, `Danger`, the four status
-colors - with everything else derived by `Lighten`/`Darken`. A dark theme
-raises a tier's attention by lightening it, a light theme by darkening it;
-see the constructor's doc comment for why both directions use the same
-deltas. Adding a theme is choosing those base colors, not hand-tuning thirty
-derived ones. There is no switcher UI yet (post-alpha, see
-`docs/ROADMAP.md`); `Active` is the seam it will use.
+`appstyles.Themes` is the registry (14 themes: 3 Stitcher darks, 1
+Stitcher light, 10 community schemes), built by `appstyles.newTheme` from
+a handful of base colors - `Accent`, the text/panel/modal bases, `Danger`,
+the four status colors - with everything else derived by `Lighten`/`Darken`.
+A dark theme raises a tier's attention by lightening it, a light theme by
+darkening it; see the constructor's doc comment for why both directions use
+the same deltas. Adding a theme is choosing those base colors, not hand-
+tuning thirty derived ones.
+
+**The asymmetry that drives every imported palette:** `Lighten` is additive
+(+10/+20/+31 per channel at the standard deltas) and `Darken` is
+multiplicative (×0.96/×0.92/×0.88). For a dark theme this is a fixed climb
+independent of the base; for a light theme the steps shrink as the base
+approaches white. The consequence for imported colour schemes: **set `Panel`
+to that scheme's deepest background tier** (crust / bg_dim / bg0_hard /
+sumiInk0 / bg_dark), so the +8% tier (`BackgroundPanel`) lands back on the
+scheme's signature background. `Modal` must clear `BackgroundElevated` by
+≥14 per channel or the modal disappears into the focused panel.
 
 Two fields are the one deliberate exception to "derived from base colors":
 `InkOnLight`/`InkOnDark` do not vary with a theme's `Dark` flag, because a
@@ -587,6 +596,13 @@ follow `TextPrimary`, which flips. `GroupDetailsPanel.go`'s `statusPill` used
 to reach for `PanelBg`/`TextPrimary` as stand-ins for "a dark color" and "a
 light color"; that only ever worked because the one theme that existed was
 dark, and `stitcher-light` is exactly what exposed it.
+
+With the expanded registry, hard-coding which ink to use on a given fill is
+no longer survivable — the same call site draws on a `#BC3FBC` magenta in
+one theme and a `#A7C080` sage in another. The `appstyles.InkOn(fill)` helper
+picks whichever of the two fixed inks has better contrast on the fill at
+hand, and `Contrast_test.go` verifies the result clears 4.2:1 on every status
+pill, the accent chip, and the error banner for every registered theme.
 
 ### Background tiers, and sealing them
 
@@ -673,10 +689,12 @@ it, and `LoadConfig`/`SaveConfig` round-trip it automatically.
 
 Adding a theme is choosing the handful of base colors in `themeParams`
 (accent, text, panel, modal, danger, the four status colors); `newTheme`
-derives every other field. The four shipped themes (`stitcher-dark`,
-`stitcher-light`, `stitcher-ocean`, `stitcher-ember`) share the status
-and danger colors on purpose — container state is a vocabulary the user
-shouldn't have to re-learn per theme.
+derives every other field. The 14 registered themes (3 Stitcher darks,
+1 Stitcher light, and 10 community schemes: Catppuccin Mocha, Gruvbox
+Dark, Tokyo Night, Nord, Dracula, Solarized Dark, One Dark, Everforest
+Dark, Rosé Pine, Kanagawa Wave) share the status and danger colors on
+purpose — container state is a vocabulary the user shouldn't have to
+re-learn per theme.
 
 ### Saying which build this is
 

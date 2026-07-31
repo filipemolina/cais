@@ -78,8 +78,7 @@ The theme picker is done (`T` opens it, cursor previews live, Enter persists
 to `~/.config/stack-stitcher/config.yaml`). The config file exists and
 already stores the theme; default file and keybinding overrides are the
 remaining fields the keymap struct makes a load-and-merge. Additional
-themes beyond the four shipped (`stitcher-dark`, `stitcher-light`,
-`stitcher-ocean`, `stitcher-ember`). Live CPU/MEM columns from `docker
+themes beyond the 14 shipped. Live CPU/MEM columns from `docker
 stats`. Group rename. An `x`-style action menu.
 
 **UX improvements** are done: auto-select on navigation, `n` on both
