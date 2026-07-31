@@ -328,8 +328,10 @@ func (m GroupListModel) View() tea.View {
 
 	if len(m.list.Items()) == 0 {
 		// Render the list title even when empty, using the same accent-chip
-		// style as the right panel's Details title (renderPanelFrame).
-		titleRow := appstyles.NormalTitle().Render(m.list.Title)
+		// style as the right panel's Details title (renderPanelFrame). The
+		// MarginLeft(2) matches the gutter the bubbles list TitleBar adds, so
+		// the empty state's chip lines up with the non-empty one's.
+		titleRow := appstyles.NormalTitle().MarginLeft(2).Render(m.list.Title)
 		emptyStyle := lipgloss.NewStyle().
 			Foreground(appstyles.Active.TextMuted).
 			Background(bg).
@@ -342,9 +344,9 @@ func (m GroupListModel) View() tea.View {
 		sections = append(sections, appstyles.FillBackground(bg, lipgloss.JoinVertical(lipgloss.Left, titleRow, emptyContent)))
 	} else {
 		// The title chip is restyled here, on a copy, rather than in the
-		// constructor - see listTitleStyle for why.
+		// constructor - see appstyles.NormalTitle for why.
 		l := m.list
-		l.Styles.Title = listTitleStyle()
+		l.Styles.Title = appstyles.NormalTitle()
 		sections = append(sections, l.View())
 	}
 

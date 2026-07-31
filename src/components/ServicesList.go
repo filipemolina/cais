@@ -275,9 +275,9 @@ func (m ServicesListModel) View() tea.View {
 	wrapper := fitBox(listWrapperStyle.Background(bg), m.panelWidth, m.panelHeight)
 
 	// The title chip is restyled here, on a copy, rather than in the
-	// constructor - see listTitleStyle for why.
+	// constructor - see appstyles.NormalTitle for why.
 	l := m.list
-	l.Styles.Title = listTitleStyle()
+	l.Styles.Title = appstyles.NormalTitle()
 
 	// The list joins its title, rows and paginator internally, padding the
 	// short ones with unstyled spaces; seal them against the panel tier. Rows
