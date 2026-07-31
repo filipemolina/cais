@@ -161,8 +161,9 @@ advertise a key that does nothing.
 ## Status
 
 Early, and honest about it. Everything shown above works today; what follows is
-what does not, in roughly the order it is being closed
-([docs/plans/](docs/plans/) carries the sequence and the reasoning):
+what does not, in the order it is being closed — the sequence and the reasoning
+live in [docs/ROADMAP.md](docs/ROADMAP.md), and each item has a full plan of its
+own in [docs/plans/](docs/plans/):
 
 - **Adding a service** needs `E` and your `$EDITOR` — the TUI can bootstrap a
   new compose file and edit existing services, but not insert a new one yet.
@@ -170,8 +171,13 @@ what does not, in roughly the order it is being closed
   them is not visible or editable in the app, and secrets are not masked.
 - **No image search**, so "what is the tag for this" is still a browser tab.
 - **Blank lines between services are not preserved** across a write. Comments,
-  quoting and key order are. [TODO.md](TODO.md) explains why this is accepted
-  rather than fixed.
+  quoting and key order are. This is accepted rather than fixed: carrying blank
+  lines through as marker comments was built and then removed, because a blank
+  line inside a block scalar (`command: |`) is part of the string, and silently
+  rewriting your data is a worse failure than losing your spacing.
+- **The keybinding bar wraps** on terminals under roughly 130 columns, eating a
+  row or two of the panel below it. Cosmetic, visible in the demo above, and
+  first in the queue of small fixes.
 
 Issues and ideas are genuinely welcome, and at this stage they still change the
 direction.
@@ -187,10 +193,12 @@ you would have typed.
 
 ## Contributing
 
-[CONTRIBUTING.md](CONTRIBUTING.md) has the loop, how a TUI gets tested, and how a
-release is cut. [docs/DESIGN.md](docs/DESIGN.md) records *why* things are the way
-they are — read it before a big change, it will save you re-litigating decisions
-that were already made the hard way.
+[CONTRIBUTING.md](CONTRIBUTING.md) has the loop, the layout, how a TUI gets
+tested, and how a release is cut. [docs/DESIGN.md](docs/DESIGN.md) records *why*
+things are the way they are — read it before a big change, it will save you
+re-litigating decisions that were already made the hard way. If you are looking
+for something to pick up, [docs/ROADMAP.md](docs/ROADMAP.md) says what is next
+and why it is next.
 
 ## License
 
