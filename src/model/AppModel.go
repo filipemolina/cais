@@ -9,6 +9,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/components"
 	"github.com/filipemolina/stack-stitcher/src/components/chrome"
+	"github.com/filipemolina/stack-stitcher/src/components/groupslist"
 	"github.com/filipemolina/stack-stitcher/src/components/mainmenu"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/utils"
@@ -241,7 +242,7 @@ func GetInitialModel(source utils.ComposeSource) AppModel {
 	pages := make(map[string][]tea.Model)
 
 	pages["Home"] = []tea.Model{
-		components.GroupsList([]string{}, 0, 0),
+		groupslist.New([]string{}, 0, 0),
 		components.GroupDetailsPanel(),
 	}
 

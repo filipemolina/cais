@@ -1,4 +1,4 @@
-package components
+package groupslist
 
 import (
 	"fmt"
@@ -98,7 +98,7 @@ func (d GroupsListCustomDelegate) Render(w io.Writer, m list.Model, index int, l
  * Implementation of tea.Model
  */
 
-type GroupListModel struct {
+type Model struct {
 	list         list.Model
 	listDelegate GroupsListCustomDelegate
 	// activeGroup is the name of the group the cursor is on. The cursor
@@ -141,7 +141,7 @@ func plural(n int, word string) string {
 // syncActiveIndex points the delegate at the row holding activeGroup, or at
 // no row at all when it isn't in the list. Runs on both the list and the
 // selection changing, since they arrive as unordered separate messages.
-func (m *GroupListModel) syncActiveIndex() {
+func (m *Model) syncActiveIndex() {
 	active := -1
 
 	for i, item := range m.list.Items() {
@@ -155,7 +155,7 @@ func (m *GroupListModel) syncActiveIndex() {
 	m.list.SetDelegate(m.listDelegate)
 }
 
-func (m GroupListModel) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return nil
 }
 
@@ -164,7 +164,7 @@ func (m GroupListModel) Init() tea.Cmd {
 // not commands. Only while typing - once a filter is applied and the cursor is
 // back in the rows, the panel keys mean what they always mean, and esc clears
 // the filter. See model.AppModel.keyboardOwned.
-func (m GroupListModel) OwnsKeyboard() bool {
+func (m Model) OwnsKeyboard() bool {
 	return m.list.FilterState() == list.Filtering
 }
 
@@ -172,18 +172,18 @@ func (m GroupListModel) OwnsKeyboard() bool {
 // is cleared by esc alone, and the key only reaches the list while the list
 // is focused. AppModel's "back" checks this before it takes focus away - see
 // model.AppModel.escKept.
-func (m GroupListModel) KeepsEsc() bool {
+func (m Model) KeepsEsc() bool {
 	return m.isFocused && m.list.FilterState() == list.FilterApplied
 }
 
 // FilterState exposes how much of the keyboard the list has taken, so
 // AppModel can snapshot it into the help overlay's context.
-func (m GroupListModel) FilterState() list.FilterState {
+func (m Model) FilterState() list.FilterState {
 	return m.list.FilterState()
 }
 
 // footerHeight is the rows the stats line takes below the list.
-func (m GroupListModel) footerHeight() int {
+func (m Model) footerHeight() int {
 	if !m.hasStats {
 		return 0
 	}
@@ -194,7 +194,7 @@ func (m GroupListModel) footerHeight() int {
 // resizeList sizes the inner list to the space left inside the panel box
 // after the wrapper padding and the stats footer. Called whenever either the
 // box or the footer changes.
-func (m *GroupListModel) resizeList() {
+func (m *Model) resizeList() {
 	h, v := chrome.ListWrapperStyle.GetFrameSize()
 
 	m.list.SetSize(
@@ -203,7 +203,7 @@ func (m *GroupListModel) resizeList() {
 	)
 }
 
-func (m GroupListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var finalCmds []tea.Cmd
 
 	// The footer advertises different keys depending on this, so the transition
@@ -315,7 +315,7 @@ func (m GroupListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(finalCmds...)
 }
 
-func (m GroupListModel) View() tea.View {
+func (m Model) View() tea.View {
 	// 3-tier background system: tier 3 (panel) when unfocused,
 	// tier 4 (elevated) when focused. The focus state is shown by the
 	// background lifting, not by a border.
@@ -384,7 +384,8 @@ func (m GroupListModel) View() tea.View {
  * Initializer function
  */
 
-func GroupsList(groups []string, width int, height int) tea.Model {
+// New builds the groups list.
+func New(groups []string, width int, height int) tea.Model {
 	var items []list.Item
 
 	for _, group := range groups {
@@ -405,7 +406,7 @@ func GroupsList(groups []string, width int, height int) tea.Model {
 	servicesList.Paginator.ActiveDot = " ● "
 	servicesList.Paginator.InactiveDot = " ○ "
 
-	model := GroupListModel{
+	model := Model{
 		list:         servicesList,
 		listDelegate: listDelegate,
 		componentId:  1,

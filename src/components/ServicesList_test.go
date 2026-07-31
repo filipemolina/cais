@@ -12,6 +12,27 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 )
 
+// messagesFrom flattens what a command produced, walking batches, so a test can
+// assert on a message without caring how it got bundled.
+func messagesFrom(cmd tea.Cmd) []tea.Msg {
+	if cmd == nil {
+		return nil
+	}
+
+	msg := cmd()
+
+	if batch, ok := msg.(tea.BatchMsg); ok {
+		var msgs []tea.Msg
+		for _, inner := range batch {
+			msgs = append(msgs, messagesFrom(inner)...)
+		}
+
+		return msgs
+	}
+
+	return []tea.Msg{msg}
+}
+
 func servicesOf(names ...string) []types.ServiceConfig {
 	services := make([]types.ServiceConfig, 0, len(names))
 	for _, name := range names {

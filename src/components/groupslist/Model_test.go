@@ -1,4 +1,4 @@
-package components
+package groupslist
 
 import (
 	"fmt"
@@ -22,10 +22,10 @@ func groupNames(n int) cmds.SetGroupsListMsg {
 
 // focusedGroupsList is a groups list holding n groups, focused, and sized to a
 // panel short enough that the groups do not all fit on one page.
-func focusedGroupsList(t *testing.T, n int) GroupListModel {
+func focusedGroupsList(t *testing.T, n int) Model {
 	t.Helper()
 
-	var model tea.Model = GroupsList(nil, 40, 20)
+	var model tea.Model = New(nil, 40, 20)
 	for _, msg := range []tea.Msg{
 		cmds.SetBodyLayoutMsg{LeftWidth: 40, Height: 20},
 		groupNames(n),
@@ -34,9 +34,9 @@ func focusedGroupsList(t *testing.T, n int) GroupListModel {
 		model, _ = model.Update(msg)
 	}
 
-	groups, ok := model.(GroupListModel)
+	groups, ok := model.(Model)
 	if !ok {
-		t.Fatalf("expected a GroupListModel, got %T", model)
+		t.Fatalf("expected a Model, got %T", model)
 	}
 	if groups.list.Paginator.TotalPages < 2 {
 		t.Fatalf("wanted a list of at least two pages, got %d", groups.list.Paginator.TotalPages)
@@ -93,9 +93,9 @@ func TestDeleteKeyDoesNotAlsoPageTheList(t *testing.T) {
 		t.Errorf("d did not open the delete confirm, got %#v", msgs)
 	}
 
-	after, ok := model.(GroupListModel)
+	after, ok := model.(Model)
 	if !ok {
-		t.Fatalf("expected a GroupListModel, got %T", model)
+		t.Fatalf("expected a Model, got %T", model)
 	}
 	if after.list.Paginator.Page != startPage {
 		t.Errorf("d moved the list from page %d to page %d", startPage, after.list.Paginator.Page)
@@ -112,10 +112,10 @@ func TestKeepsEscOnlyWhileFocusedWithAnAppliedFilter(t *testing.T) {
 		t.Error("an unfiltered list kept esc")
 	}
 
-	apply := func(m GroupListModel, msgs ...tea.Msg) GroupListModel {
+	apply := func(m Model, msgs ...tea.Msg) Model {
 		for _, msg := range msgs {
 			updated, _ := m.Update(msg)
-			m = updated.(GroupListModel)
+			m = updated.(Model)
 		}
 		return m
 	}
@@ -146,9 +146,9 @@ func TestEnterStartsTheHighlightedGroup(t *testing.T) {
 
 	// Move the cursor down to trigger auto-select (cursor goes from 0 to 1).
 	model, _ := groups.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
-	moved, ok := model.(GroupListModel)
+	moved, ok := model.(Model)
 	if !ok {
-		t.Fatalf("expected a GroupListModel, got %T", model)
+		t.Fatalf("expected a Model, got %T", model)
 	}
 
 	// Verify auto-select happened (index 1 = group-01).
@@ -183,9 +183,9 @@ func TestPanelLettersDoNotPageTheList(t *testing.T) {
 
 			model, _ := press(t, groups, keystroke)
 
-			after, ok := model.(GroupListModel)
+			after, ok := model.(Model)
 			if !ok {
-				t.Fatalf("expected a GroupListModel, got %T", model)
+				t.Fatalf("expected a Model, got %T", model)
 			}
 			if after.list.Paginator.Page != startPage {
 				t.Errorf("%q moved the list from page %d to page %d", keystroke, startPage, after.list.Paginator.Page)
@@ -205,9 +205,9 @@ func TestFilteringOwnsTheKeyboard(t *testing.T) {
 	}
 
 	model, _ := press(t, groups, "/")
-	filtering, ok := model.(GroupListModel)
+	filtering, ok := model.(Model)
 	if !ok {
-		t.Fatalf("expected a GroupListModel, got %T", model)
+		t.Fatalf("expected a Model, got %T", model)
 	}
 	if filtering.list.FilterState() != list.Filtering {
 		t.Fatalf("/ did not start a filter, state is %v", filtering.list.FilterState())
@@ -232,9 +232,9 @@ func TestFilteringOwnsTheKeyboard(t *testing.T) {
 		model, _ = model.Update(tea.KeyPressMsg{Code: rune(keystroke[0]), Text: keystroke})
 	}
 
-	typed, ok := model.(GroupListModel)
+	typed, ok := model.(Model)
 	if !ok {
-		t.Fatalf("expected a GroupListModel, got %T", model)
+		t.Fatalf("expected a Model, got %T", model)
 	}
 	if got := typed.list.FilterValue(); got != "nd " {
 		t.Errorf("the filter holds %q, so the keystrokes did not all land as text", got)
@@ -250,9 +250,9 @@ func TestEscapeLeavesTheFilter(t *testing.T) {
 	model, _ := press(t, groups, "/")
 	model, _ = model.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
 
-	after, ok := model.(GroupListModel)
+	after, ok := model.(Model)
 	if !ok {
-		t.Fatalf("expected a GroupListModel, got %T", model)
+		t.Fatalf("expected a Model, got %T", model)
 	}
 	if after.list.FilterState() != list.Unfiltered {
 		t.Errorf("esc left the list in filter state %v", after.list.FilterState())
@@ -267,18 +267,18 @@ func TestTheListKeepsItsOwnNavigation(t *testing.T) {
 	groups := focusedGroupsList(t, 12)
 
 	model, _ := press(t, groups, "G")
-	atEnd, ok := model.(GroupListModel)
+	atEnd, ok := model.(Model)
 	if !ok {
-		t.Fatalf("expected a GroupListModel, got %T", model)
+		t.Fatalf("expected a Model, got %T", model)
 	}
 	if atEnd.list.Index() != len(atEnd.list.Items())-1 {
 		t.Errorf("G left the cursor at index %d of %d", atEnd.list.Index(), len(atEnd.list.Items()))
 	}
 
 	model, _ = press(t, atEnd, "g")
-	atStart, ok := model.(GroupListModel)
+	atStart, ok := model.(Model)
 	if !ok {
-		t.Fatalf("expected a GroupListModel, got %T", model)
+		t.Fatalf("expected a Model, got %T", model)
 	}
 	if atStart.list.Index() != 0 {
 		t.Errorf("g left the cursor at index %d rather than the first row", atStart.list.Index())
@@ -296,7 +296,7 @@ func TestCursorMovementAutoSelects(t *testing.T) {
 
 	// Move down one row (cursor goes from 0 to 1).
 	model, cmd := groups.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
-	moved := model.(GroupListModel)
+	moved := model.(Model)
 
 	// Auto-select should have fired (index 1 = group-01).
 	if moved.activeGroup != "group-01" {
@@ -316,7 +316,7 @@ func TestCursorMovementAutoSelects(t *testing.T) {
 
 	// Move down again (cursor goes from 1 to 2).
 	model, _ = moved.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
-	moved2 := model.(GroupListModel)
+	moved2 := model.(Model)
 
 	if moved2.activeGroup != "group-02" {
 		t.Errorf("after second j: activeGroup = %q, want group-02", moved2.activeGroup)
@@ -330,7 +330,7 @@ func TestCursorMovementUpAutoSelects(t *testing.T) {
 	// Move down twice (cursor goes to index 2).
 	model, _ := groups.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	model, _ = model.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
-	moved := model.(GroupListModel)
+	moved := model.(Model)
 
 	if moved.activeGroup != "group-02" {
 		t.Fatalf("after two j: activeGroup = %q, want group-02", moved.activeGroup)
@@ -338,7 +338,7 @@ func TestCursorMovementUpAutoSelects(t *testing.T) {
 
 	// Move up (cursor goes from 2 to 1).
 	model, _ = moved.Update(tea.KeyPressMsg{Code: 'k', Text: "k"})
-	movedUp := model.(GroupListModel)
+	movedUp := model.(Model)
 
 	if movedUp.activeGroup != "group-01" {
 		t.Errorf("after k: activeGroup = %q, want group-01", movedUp.activeGroup)

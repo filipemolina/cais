@@ -13,6 +13,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/components/aboutmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/confirmmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/errormodal"
+	"github.com/filipemolina/stack-stitcher/src/components/groupslist"
 	"github.com/filipemolina/stack-stitcher/src/components/helpoverlay"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
@@ -145,7 +146,7 @@ func TestListTitleChipFollowsTheActiveTheme(t *testing.T) {
 		model tea.Model
 		title string
 	}{
-		"groups":   {GroupsList([]string{"core", "edge"}, 60, 20), "Groups"},
+		"groups":   {groupslist.New([]string{"core", "edge"}, 60, 20), "Groups"},
 		"services": {ServicesList([]types.ServiceConfig{{Name: "web"}}, 60, 20), "Services"},
 	}
 
