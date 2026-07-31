@@ -95,14 +95,9 @@ Screenshot demo/screenshot-themes.png
 Escape
 Sleep 1s
 
-# --- Every key on one screen ----------------------------------------------
-Type "1"
-Sleep 500ms
-Type "?"
-Sleep 2s
-Screenshot demo/screenshot-help.png
-Escape
-Sleep 1s
+# The `?` overlay is deliberately not captured here: it is taller than the
+# 720px this tape records at, so the shot would show it clipped. It needs its
+# own tape at a taller Height if it is ever wanted.
 
 Type "q"
 Sleep 1s
