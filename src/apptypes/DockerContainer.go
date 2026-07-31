@@ -1,9 +1,12 @@
 package apptypes
 
 type DockerContainer struct {
-	Command      string
-	CreatedAt    string
-	HealthStatus string
+	Command   string
+	CreatedAt string
+	// docker compose ps names this field "Health". Without the tag, the
+	// field never binds and the HEALTH column reads "-" for every
+	// container, healthy ones included.
+	HealthStatus string `json:"Health"`
 	ID           string
 	Image        string
 	Labels       string
