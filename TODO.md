@@ -9,11 +9,16 @@ step, **[H]** = housekeeping.
 **This file is the flat list of what is left. `docs/ROADMAP.md` is the order to
 do it in, and why** — it carries the decisions already taken with the owner, so
 work resumed mid-sequence does not re-litigate them. Phases 0–9 of that roadmap
-are done — every tab is live and the alpha roadmap is complete. What remains is
-the post-alpha list. (See `docs/ROADMAP.md`.)
+are done — every tab is live and the alpha roadmap is complete. The post-alpha
+sequence, which runs through the plans in `docs/plans/` and ends at
+`launch-and-outreach.md`, is in `docs/ROADMAP.md` §*The order after the alpha*.
 
-`README.md`, `docs/DESIGN.md`, `docs/ROADMAP.md`, and this file are the current
-documentation.
+`README.md`, `docs/DESIGN.md`, `docs/ROADMAP.md`, `docs/plans/`, and this file
+are the current documentation.
+
+Two open items below are launch gates rather than nice-to-haves, and are
+called out as such in the roadmap: **write safety** (new, see below) and the
+**footer wrap on a narrow terminal**, which is visible in the demo recording.
 
 ---
 
@@ -257,6 +262,23 @@ documentation.
   documents the loop. Verified with `goreleaser check` and a snapshot build.
   No Windows target: the app shells out to `docker compose` and hands the
   terminal to `$EDITOR`, and neither has been tried there.
+
+- [ ] **[S] Write safety for the compose file** — a launch gate, from
+  `docs/plans/launch-and-outreach.md`. The app rewrites the user's compose
+  file in place and the only safety net is that an invalid write is refused.
+  There is no backup, no undo, and the one thing a write does not preserve
+  (blank lines between services) is documented in this file rather than
+  anywhere the user will see it. Minimum: write a `.bak` beside the file on
+  the first write of a session, or notice the file is not in a git repo and
+  say so once. Nobody lets an unfamiliar tool rewrite the file their homelab
+  runs on without one of those.
+
+- [ ] **[H] `TestRigRenameGroup` is flaky** — fails roughly one run in three,
+  on `main`, independent of any current branch (four `-count=1` runs on
+  2026-07-31: two passes, two failures). Same family as the bootstrap-test
+  flakiness that turned out to be a real app bug rather than a rig timing
+  problem, so start by asking what else the app is doing to itself during a
+  rename before adding a wait.
 
 - [ ] **[S] Expand test coverage via the e2e rig** — `src/model/rig_test.go`
   already drives the app in-process (used for the bootstrap flow). Extend

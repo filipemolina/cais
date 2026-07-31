@@ -2,12 +2,16 @@ package utils
 
 import "testing"
 
+// The key is "Health", which is what `docker compose ps --format json`
+// actually emits — the fixtures used to say "HealthStatus" (the Go field
+// name), which no real Docker ever sends, so the tests passed while the
+// HEALTH column was blank against a live daemon.
 const arrayFixture = `[
-  {"ID": "abc123", "Names": "stack-web-1", "Service": "web", "State": "running", "HealthStatus": "healthy"},
+  {"ID": "abc123", "Names": "stack-web-1", "Service": "web", "State": "running", "Health": "healthy"},
   {"ID": "def456", "Names": "stack-db-1", "Service": "db", "State": "exited"}
 ]`
 
-const ndjsonFixture = `{"ID": "abc123", "Names": "stack-web-1", "Service": "web", "State": "running", "HealthStatus": "healthy"}
+const ndjsonFixture = `{"ID": "abc123", "Names": "stack-web-1", "Service": "web", "State": "running", "Health": "healthy"}
 {"ID": "def456", "Names": "stack-db-1", "Service": "db", "State": "exited"}
 `
 
@@ -23,6 +27,10 @@ func TestParseContainers_JSONArray(t *testing.T) {
 
 	if containers[0].ID != "abc123" || containers[0].Service != "web" || containers[0].State != "running" {
 		t.Errorf("unexpected first container: %+v", containers[0])
+	}
+
+	if containers[0].HealthStatus != "healthy" {
+		t.Errorf("HealthStatus = %q, want %q — the json tag is what binds compose's \"Health\" key", containers[0].HealthStatus, "healthy")
 	}
 
 	if containers[1].ID != "def456" || containers[1].Service != "db" || containers[1].State != "exited" {
@@ -42,6 +50,10 @@ func TestParseContainers_NDJSON(t *testing.T) {
 
 	if containers[0].ID != "abc123" || containers[0].Service != "web" || containers[0].State != "running" {
 		t.Errorf("unexpected first container: %+v", containers[0])
+	}
+
+	if containers[0].HealthStatus != "healthy" {
+		t.Errorf("HealthStatus = %q, want %q — the json tag is what binds compose's \"Health\" key", containers[0].HealthStatus, "healthy")
 	}
 
 	if containers[1].ID != "def456" || containers[1].Service != "db" || containers[1].State != "exited" {
