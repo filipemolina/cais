@@ -1,236 +1,197 @@
 # Stack Stitcher
 
-![Stack Stitcher — Groups page](./demo/screenshot-groups.png)
-
-> A fast, keyboard-driven terminal UI for managing your self-hosted Docker Compose services.
+**Run your self-hosted stack from the terminal — without leaving your compose file behind.**
 
 [![CI](https://github.com/filipemolina/stack-stitcher/actions/workflows/ci.yml/badge.svg)](https://github.com/filipemolina/stack-stitcher/actions/workflows/ci.yml)
 ![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Status](https://img.shields.io/badge/status-work%20in%20progress-orange)
 
-Stack Stitcher reads a Docker **Compose** file and turns it into an interactive TUI, so you can browse and operate the services in your homelab or self-hosted stack without memorizing `docker compose` commands. It parses your `compose.yml` with the same specification library Docker itself uses, and renders everything through [Charm](https://charm.sh)'s Bubble Tea and Lip Gloss.
+![Stack Stitcher — starting a group, tailing its logs, editing a service](./demo/demo.gif)
 
-> **New here?** Read [docs/DESIGN.md](docs/DESIGN.md) for the guiding principles
-> (groups-first navigation, group vs profile terminology, the data model).
-> It will save you from re-litigating decisions that are already made.
+Stack Stitcher is a keyboard-driven terminal UI for a homelab that runs on
+Docker Compose. It reads your `compose.yml`, groups the services the way you
+already think about them, and gives you one key each for start, stop, restart,
+pull, logs and edit — over SSH, with nothing extra to host, nothing listening on
+a port, and no state of its own.
 
-## Project status
+Your compose file stays the source of truth. Every change the TUI makes is
+written back into that file, comments and key order intact, so `docker compose`
+on the command line and Stack Stitcher never disagree about what your stack is.
 
-Stack Stitcher is under **active development**. Compose parsing, navigation, starting/stopping services (individually or as a whole group), creating, renaming and deleting groups, editing a group's membership, streaming live logs, bootstrapping a new compose file, and editing existing services all work from inside the TUI. `e` on a service opens an inline YAML editor in the details panel; `ctrl+s` saves, `ctrl+o` opens the fragment in your `$EDITOR`, and `esc` cancels. `E` still opens the whole compose file in `$EDITOR`. Inline editing works with real YAML, not a form, so every compose field is reachable and your comments, quoting and key order are kept. (Blank lines between services are not: the YAML library preserves comments but not blank lines, so any write closes the spacing up.) The editor is YAML-aware: **Enter** auto-indents the new line (matching the current line's indent, adding a level after a `:` key, aligning with the text after `- ` in lists), **Tab** and **Shift+Tab** indent and outdent the current line, **Backspace** inside leading whitespace deletes a full indent level, and pasting via **Ctrl+Shift+V** / **Cmd+V** or **Ctrl+V** works. The keybinding bar and `?` help overlay show the editor's keys while it is open. The Files page shows the loaded compose file with syntax highlighting and opens it in your editor; `b` browses the other compose files in its directory and switches the active one. See [TODO.md](TODO.md) for the current worklist and completed recent work, and [docs/ROADMAP.md](docs/ROADMAP.md) for the ordered plan to a first alpha. Feedback, issues, and ideas are genuinely welcome and help shape where it goes next.
+## Why
 
-## Features
+A self-hosted stack grows into thirty services in one file, and the day-to-day
+work becomes the same handful of questions. *Is the \*arr stack up? Why did
+Navidrome stop? What port did I give Kavita? What breaks if I bump this image?*
 
-- **Reads standard Compose files.** Uses the official [`compose-go`](https://github.com/compose-spec/compose-go) parser, so it understands the same `compose.yml` your Docker setup already relies on — no custom config format to learn.
-- **Keyboard-first TUI.** Built on [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Bubbles](https://github.com/charmbracelet/bubbles), and [Lip Gloss](https://github.com/charmbracelet/lipgloss) for a responsive, styled terminal experience.
-- **Start/stop a whole group together.** Compose "profiles" group related services (e.g. everything a self-hosted app needs); Stack Stitcher lets you Start/Stop/Restart/Pull/Remove all of them in one keypress instead of remembering which services belong together.
-- **Create, delete, and re-member groups from the TUI.** Make a group by naming it and picking its services, change which services belong later, or delete it — all written back to your compose file with comments and key order preserved.
-- **See the file you're acting on.** The Files page shows the loaded compose file's path and its raw contents with syntax highlighting, opens it in your `$EDITOR`, and `b` browses the other compose files in its directory to switch the active one.
-- **Start/stop a single service.** The same five actions are available for one service at a time from the Services page.
-- **Stream live logs.** Press `l` on a focused service or group panel to open a full-screen overlay that tails `docker compose logs -f` in real time, with follow-mode and scrollback.
-- **Automatically refreshed status.** Container state is rechecked every five seconds while a compose project is loaded and no modal is open, so status panels reflect changes made outside Stack Stitcher.
-- **Full-height, context-aware layout.** The app fills the terminal with a pinned header (wordmark + tabs) and footer (keybinding bar); the body region stretches to use every available row. Tabs show user-facing labels such as **Groups** for Home and **Files** for Compose Files, while the underlying page IDs stay the same.
-- **Theme picker.** Press `T` to open a modal with 14 built-in themes: three Stitcher darks (`stitcher-dark`, `stitcher-ember`, `stitcher-slate`), one Stitcher light (`stitcher-day`), and ten community schemes (Catppuccin Mocha, Gruvbox Dark, Tokyo Night, Nord, Dracula, Solarized Dark, One Dark, Everforest Dark, Rosé Pine, Kanagawa Wave). Cursor movement previews each theme live; Enter applies and persists your choice.
+Answering those from the shell means `docker compose ps`, then scrolling for the
+service, then `docker compose logs -f --tail 100 sonarr`, then opening the file
+in an editor to check the port you set eight months ago. Answering them from a
+web GUI means running one more service, giving it the Docker socket, and
+clicking through five screens — and if that GUI writes your stack, it usually
+owns it, not your file.
 
-## Requirements
+Stack Stitcher is the third option: the file you already have, made operable.
 
-- **Go 1.26+** — to build from source.
-- **Docker** with the Compose plugin available on your `PATH`.
-- A Compose file describing your services: `compose.yaml`, `compose.yml`, `docker-compose.yaml`, or `docker-compose.yml`.
+## What it does
 
-## Installation
+**Groups, not a flat list of containers.** A group is a Compose `profiles:`
+tag — the \*arr stack, the media servers, the infra underneath them. Start all
+four with `s`, tail all four with `l`, and see at a glance which are running,
+which are healthy, and on what ports.
+
+![The Groups page — a group selected, its member services and their state](./demo/screenshot-groups.png)
+
+**Everything a self-hoster checks, on one screen.** Ports, restart policy,
+networks, volumes, `depends_on`, healthcheck, PUID/PGID and image — beside live
+memory, CPU, network and disk I/O for the running container.
+
+![The Services page — one service's configuration and live runtime stats](./demo/screenshot-service.png)
+
+**Edit the compose file in place, as YAML.** `e` opens the service's own
+fragment in an inline editor: real YAML, not a form, so every Compose field is
+reachable. It validates as you type, auto-indents on Enter, indents with
+`tab`/`shift+tab`, and refuses to write a fragment that would not parse as
+Compose. `ctrl+o` hands the same fragment to your `$EDITOR` if you would rather
+finish there.
+
+![The inline YAML editor open on a service, with live validation](./demo/screenshot-editor.png)
+
+**Logs without leaving.** `l` streams `docker compose logs -f` for a service or
+a whole group in an overlay, with follow mode and scrollback.
+
+![Streaming logs for a service](./demo/screenshot-logs.png)
+
+<details>
+<summary>More screens</summary>
+
+**The compose file itself,** syntax-highlighted and scrollable. `E` opens it in
+your `$EDITOR`; `b` browses the other compose files in the same directory and
+switches which one the app is driving.
+
+![The Files page — the loaded compose file with syntax highlighting](./demo/screenshot-files.png)
+
+**Fourteen themes,** previewed live as you move the cursor: four Stitcher
+themes (one of them light) plus Catppuccin Mocha, Gruvbox Dark, Tokyo Night,
+Nord, Dracula, Solarized Dark, One Dark, Everforest Dark, Rosé Pine and
+Kanagawa Wave. `Enter` persists your choice.
+
+![The theme picker, previewing a theme live over the Files page](./demo/screenshot-themes.png)
+
+</details>
+
+Also: create, rename, delete groups and change which services belong to them;
+confirm-guarded removes; a status re-poll every five seconds so panels reflect
+changes made outside the app; and a `?` overlay listing every key, with the ones
+that do nothing on the current screen dimmed.
+
+## Where it fits
+
+| | |
+| --- | --- |
+| **lazydocker, ctop** | Excellent at *what is running*. They read the daemon, not your compose file, so they cannot change it. Stack Stitcher is aimed at *what your stack is* — and writes it. |
+| **Portainer, Dockge, Komodo** | Web GUIs, and capable ones. They are also a service you host, secure, update and expose. Stack Stitcher is a binary you run over SSH; nothing listens on a port. |
+| **`docker compose` + `vim`** | What most of us actually do. Stack Stitcher is that, minus the remembering: which services belong together, which file is being acted on, what the flags were. |
+
+If you already live in a terminal and your stack is one compose file you care
+about, that is the gap this fills.
+
+## Install
 
 ```bash
 go install github.com/filipemolina/stack-stitcher@latest
 ```
 
-Or clone the repository and build the binary:
+Or build from source:
 
 ```bash
 git clone https://github.com/filipemolina/stack-stitcher.git
 cd stack-stitcher
-make build
+make build     # installs to $(go env GOPATH)/bin, usually ~/go/bin
 ```
 
-`make build` runs `go build` with the current `git describe` stamped in, so
-`stitch --version` reports the build it came from. It installs the
-binary to `$(go env GOPATH)/bin` (usually `~/go/bin`). Ensure that directory is
-on your `PATH`; no `sudo` or manual move is needed.
+There are no downloadable binaries yet — the release pipeline is built (a `v*`
+tag builds Linux and macOS, amd64 and arm64) but nothing is tagged, so `go
+install` or a clone is the way in for now.
+
+**Requirements:** Docker with the Compose plugin on your `PATH`, a terminal, and
+Go 1.26+ to build. No Windows build — the app shells out to `docker compose` and
+hands the terminal to your `$EDITOR`, and neither has been tried there.
+
+## Use
 
 ```bash
-command -v stitch
+stitch                                  # the compose file in this directory
+stitch --dir ~/homelab/media            # resolve one in that directory
+stitch --file ~/homelab/compose.prod.yml  # open exactly this file
 ```
 
-To run it during development without building:
+With no flags it auto-detects `compose.yaml`, `compose.yml`,
+`docker-compose.yaml`, `docker-compose.yml` — the same order Docker uses. The
+file that won is named in the footer, and it is passed as `--file` to every
+`docker compose` call, so the commands always act on the file the panels
+describe. In a directory with no compose file at all, the app offers to write
+one.
 
-```bash
-make dev   # equivalent to: go run main.go
-```
+### Keys
 
-## Usage
+`?` lists every key in context. The ones worth knowing:
 
-Run Stack Stitcher from a directory that contains your Compose file:
+| Key | Action |
+| --- | --- |
+| `1` `2` `3` | Groups / Services / Files (`[` and `]` step through them) |
+| `↑` `↓` `k` `j` | Move the cursor — the details panel follows it |
+| `Tab` | Move focus between the list and the details panel |
+| `s` `t` `r` `p` `x` | Start · Stop · Restart · Pull · Remove (`x` confirms first) |
+| `l` | Stream logs — for the service, or for every service in the group |
+| `e` | Edit: a service's YAML inline, or a group's membership |
+| `E` | Open the whole compose file in `$EDITOR` |
+| `n` `R` `d` | New group · Rename group · Delete group |
+| `/` | Filter the list by name |
+| `T` `?` `a` `q` | Themes · Help · About · Quit |
 
-```bash
-stitch
-```
+Start/Stop/Restart/Pull/Remove run `docker compose` underneath — scoped to every
+service in the group on the Groups page, to one service on the Services page.
 
-It auto-detects the compose file in the current directory, checking in order: `compose.yaml`, `compose.yml`, `docker-compose.yaml`, `docker-compose.yml` — the same order Docker itself uses. Whichever file won is named in the footer, so you can always see what you are acting on; when several of those names exist, the footer marks the winner with `+N` and the `?` overlay lists the rest. Whatever it resolves is then passed to every `docker compose` call as `--file`, so the commands act on the file the panels describe.
+Every binding is declared once, in [`src/keys/Keys.go`](src/keys/Keys.go); the
+footer and the `?` overlay render from that same declaration, so they cannot
+advertise a key that does nothing.
 
-To work on a project somewhere else, point at it instead of `cd`-ing there:
+## Status
 
-```bash
-stitch --dir ~/homelab/media      # resolve a compose file in that directory
-stitch --file ~/homelab/media/compose.prod.yaml   # open exactly this file
-```
+Early, and honest about it. Everything shown above works today; what follows is
+what does not, in roughly the order it is being closed
+([docs/plans/](docs/plans/) carries the sequence and the reasoning):
 
-`-d` and `-f` are the short forms. `--dir` resolves in the usual order; `--file` opens the file you name, whatever it is called. They can't be combined — either one on its own already does the job. A path that doesn't exist is reported before the UI starts, not inside it.
+- **Adding a service** needs `E` and your `$EDITOR` — the TUI can bootstrap a
+  new compose file and edit existing services, but not insert a new one yet.
+- **No `.env` surface.** Values are interpolated correctly; the file that holds
+  them is not visible or editable in the app, and secrets are not masked.
+- **No image search**, so "what is the tag for this" is still a browser tab.
+- **Blank lines between services are not preserved** across a write. Comments,
+  quoting and key order are. [TODO.md](TODO.md) explains why this is accepted
+  rather than fixed.
 
-```bash
-stitch --version   # the release it was built from, or the commit
-stitch --help
-```
+Issues and ideas are genuinely welcome, and at this stage they still change the
+direction.
 
-### Key bindings
+## Built with
 
-Pages are switched with the digit shown on each nav tab — `1` Groups, `2`
-Services, `3` Files — or with `[` and `]` to step through them. `Alt` plus the
-tab's first letter still works as an alias for terminals that send Option as
-Alt (macOS Terminal.app and iTerm2 do not, unless you change a setting). The
-nav itself never takes keyboard focus, so `Tab` is free to move between the
-two body panels.
+Go, [Bubble Tea](https://github.com/charmbracelet/bubbletea) /
+[Lip Gloss](https://github.com/charmbracelet/lipgloss) for the UI, and
+[compose-go](https://github.com/compose-spec/compose-go) — the same parser
+Docker itself uses — for the file. Docker actions shell out to the
+`docker compose` CLI rather than binding the SDK, so what the app does is what
+you would have typed.
 
-| Key | Action | Where |
-| --- | --- | --- |
-| `1`–`3` | Jump to Groups / Services / Files | Everywhere |
-| `[` / `]` | Step to the previous / next page | Everywhere |
-| `Tab` / `Shift+Tab` | Move focus between the two body panels | Everywhere |
-| `Esc` | Back to the list panel | Details panel focused |
-| `↑`/`↓` `k`/`j` | Move the cursor — the details panel follows it, no separate select step | Groups/Services list focused |
-| `Space` / `Enter` | **Start** the highlighted group or service | Groups/Services list focused |
-| `s` | Start | A group or service panel focused |
-| `t` | Stop | A group or service panel focused |
-| `r` | Restart | A group or service panel focused |
-| `p` | Pull | A group or service panel focused |
-| `x` | Remove (asks for confirmation) | A group or service panel focused |
-| `n` | Create a new group | Either panel on the Groups page |
-| `e` | Edit the highlighted group's membership | Groups panel focused |
-| `R` | Rename the highlighted group | Groups panel focused |
-| `d` | Delete the highlighted group | Groups panel focused |
-| `e` | Edit the service's YAML inline in the details panel | Service details panel focused |
-| `ctrl+s` | Save the inline edit | Inline editor open |
-| `ctrl+o` | Open the current inline fragment in `$EDITOR` | Inline editor open |
-| `Tab` | Indent the current line | Inline editor open |
-| `Shift+Tab` | Outdent the current line | Inline editor open |
-| `Backspace` | Delete to the previous indent level (at the start of leading whitespace) | Inline editor open |
-| `esc` | Cancel the inline edit (confirms if changed) | Inline editor open |
-| `E` | Edit the whole compose file in `$EDITOR` | Service details panel or Files page focused |
-| `b` | Browse and switch compose files | Files page focused |
-| `↑`/`↓` `k`/`j` `PgUp`/`PgDn` | Scroll the compose file | Files page focused |
-| `l` | View live logs (streaming overlay) | A group or service panel focused |
-| `g` / `G` | Jump to the first / last row | Groups/Services list focused |
-| `/` | Filter the list by name | Groups/Services list focused |
-| `Enter` / `Esc` | Apply / abandon the filter you are typing | Filtering a list |
-| `Esc` | Clear an applied filter | A filtered list focused |
-| `f` | Toggle follow (auto-scroll) | Logs overlay open |
-| `↑`/`↓` `PgUp`/`PgDn` | Scroll logs | Logs overlay open |
-| `Esc` | Close the logs overlay | Logs overlay open |
-| `T` | Open theme picker | Everywhere except while typing |
-| `?` | Help overlay: every key, unavailable ones dimmed | Everywhere except while typing |
-| `a` | About: version, license, repo link | Everywhere except while typing |
-| `q` | Quit | Everywhere except while typing |
-| `Ctrl+C` | Quit, whatever is on screen | Everywhere |
-| `Enter` | Confirm | Any modal |
-| `Esc` | Cancel / close | Any modal |
-| `y` / `n` | Answer a confirmation | Confirmation modal open |
-| `Space` | Toggle the highlighted service | Service checklist modal open |
+## Contributing
 
-Start/Stop/Restart/Pull/Remove run `docker compose` under the hood — scoped to the selected group (every service tagged with it) on the Home page, or to just the selected service on the Services page.
-
-Every binding above is declared once, in [`src/keys/Keys.go`](src/keys/Keys.go).
-The panels match against it, and the footer bar and the `?` help overlay render
-from it, so changing a key there changes it everywhere and both follow. The
-overlay also lists the keys the footer has no room for (`Alt`+letter page
-aliases, `g`/`G`, `Shift+Tab`, `Ctrl+C`, and `a` for About). If you are adding a key, that's the
-file — see [docs/DESIGN.md](docs/DESIGN.md) for the tiers and the rules they
-follow.
-
-While you are typing a filter or editing a service inline, the component has the
-whole keyboard, so `n`, `d`, `q` and the page digits are letters rather than
-commands; `Enter` applies the filter and `Esc` abandons it. `Ctrl+C` is the
-exception that always quits, whatever is on screen.
-
-### UI overview
-
-Stack Stitcher fills the terminal. The top bar shows the `▌ Stack Stitcher` wordmark and page tabs; the body stretches to use all remaining rows, and the keybinding bar at the bottom is context-aware (action hints are hidden until a group or service is selected). The bar also names the compose file in use, dimmed on the right next to the global keys, shortening it and then dropping it as the terminal narrows.
-
-On **Home** the body is a two-pane layout: the Groups list on the left and the Group Details panel on the right. The Group Details panel no longer renders the large ASCII logo. Instead it shows:
-
-- **No groups yet:** a *Getting started* card explaining that groups are Compose profiles and how to create one.
-- **Groups exist, none selected:** a *Select a group* card prompting the user to pick from the list.
-- **Group selected:** a header card with the group name, a status pill (ALL RUNNING / MIXED / STOPPED), and a running/stopped/services summary, followed by a member-services table (status dot, NAME, IMAGE, STATE, HEALTH, UPTIME, PORTS). When nothing is running a "Press `s` to start." footnote appears, and Start/Stop/Restart/Pull/Remove action buttons are pinned at the bottom.
-
-On **Files** the body is a single panel showing the loaded compose file's path and its raw contents with syntax highlighting, which you can scroll and open in your `$EDITOR` with `E`. `b` opens a picker listing the other compose files in the same directory so you can switch the active one.
-
-On **Services** the body is also a two-pane layout: the Services list on the left and the Service Details panel on the right. The Service Details panel shows:
-
-- **No service selected:** a *Select a service* card prompting the user to pick from the list.
-- **Editing:** the inline YAML editor with live validation, save (`ctrl+s`), open in `$EDITOR` (`ctrl+o`), cancel (`esc`), YAML-aware auto-indent on **Enter**, indent/outdent via **Tab** / **Shift+Tab**, indent-level backspace, and paste support.
-- **Service selected:** a header with the service name, image, and a status line (colored dot ● with running/stopped state, health, and uptime), followed by a compact two-column PROPERTY | VALUE configuration table showing ports, container name, restart policy, networks, volumes, depends on, healthcheck, pull policy, PUID/PGID, memory limits and labels. When the container is running, a live runtime stats table (METRIC | VALUE) shows memory, CPU, network I/O, disk I/O, PIDs and uptime. Start/Stop/Restart/Pull/Remove action buttons are pinned at the bottom, with a spinner replacing them while an action is in progress.
-
-The ASCII logo lives in `src/constants/Branding.go` and is shown by the About modal (`a`).
-
-## Tech stack
-
-- **Language:** Go
-- **TUI:** Bubble Tea, Bubbles, Lip Gloss (Charm)
-- **Compose parsing:** `compose-spec/compose-go`
-- **Docker actions:** shells out to the `docker compose` CLI (no Docker SDK dependency)
-
-## Project layout
-
-```
-.
-├── main.go            # Entry point — starts the Bubble Tea program
-├── src/
-│   ├── model/         # Top-level Bubble Tea model (AppModel, Update, View, Init)
-│   ├── components/    # Nested Bubble Tea models — one per panel (lists, details, buttons)
-│   ├── cmds/          # Message types + the tea.Cmds that produce them
-│   ├── apptypes/      # Shared data types (list items, docker container, pages)
-│   ├── keys/          # Every keybinding, declared once — components, the footer, and the ? overlay all read it
-│   ├── utils/         # Non-Bubble Tea logic (compose file loading, docker exec, parsing)
-│   ├── appstyles/     # Lip Gloss colors/styles + 14 registered themes (1 light, 13 dark)
-│   ├── config/        # Persistent user preferences (theme, stored in ~/.config/stack-stitcher)
-│   ├── highlight/     # Read-only YAML syntax highlighting for the Files page viewer
-│   └── constants/     # Layout widths, branding, focusable component list
-├── demo/              # VHS script + recorded demo gif
-├── docs/              # DESIGN.md (why), ROADMAP.md (what's next), historical specs & plans
-├── .github/workflows/ # CI on every push and PR, releases on a v* tag
-├── .goreleaser.yaml   # what a tagged release builds
-├── CONTRIBUTING.md    # the loop, how to test a TUI, how a release is cut
-├── TODO.md            # current worklist and completed recent work
-├── Makefile           # dev / build targets
-├── go.mod
-└── go.sum
-```
-
-## Development
-
-```bash
-make dev           # run locally
-make build         # install to $(go env GOPATH)/bin
-
-go build ./...     # compile every package
-go vet ./...       # static checks
-go test ./...      # test suite
-gofmt -l .         # must print nothing
-```
-
-CI runs all four on every push and pull request, with `go test -race`.
-
-Contributions, issues, and feature ideas are welcome — see
-[CONTRIBUTING.md](CONTRIBUTING.md).
+[CONTRIBUTING.md](CONTRIBUTING.md) has the loop, how a TUI gets tested, and how a
+release is cut. [docs/DESIGN.md](docs/DESIGN.md) records *why* things are the way
+they are — read it before a big change, it will save you re-litigating decisions
+that were already made the hard way.
 
 ## License
 
-Released under the [MIT License](LICENSE). © 2026 Filipe Molina.
+[MIT](LICENSE). © 2026 Filipe Molina.
