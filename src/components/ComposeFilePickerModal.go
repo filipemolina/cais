@@ -95,7 +95,11 @@ func (m ComposeFilePickerModalModel) View() tea.View {
 // active compose file. activeName (the base name of the loaded file) is
 // marked, and the cursor starts on it. Enter switches to the highlighted
 // file, Esc cancels.
-func ComposeFilePickerModal(dir string, fileNames []string, activeName string) tea.Model {
+//
+// termHeight is the terminal height in rows - a directory can hold more
+// compose files than the screen has room for, so the list is sized to fit
+// rather than to len(items). See modalListHeight.
+func ComposeFilePickerModal(dir string, fileNames []string, activeName string, termHeight int) tea.Model {
 	items := make([]list.Item, 0, len(fileNames))
 	activeIndex := 0
 	for i, name := range fileNames {
@@ -105,14 +109,17 @@ func ComposeFilePickerModal(dir string, fileNames []string, activeName string) t
 		}
 	}
 
-	// pagination is off, as in the checklist modal, because the list is
-	// sized to show every file. The title is rendered by modalTitle in
-	// the View function, not by the list itself.
-	picker := list.New(items, composeFilePickerDelegate{}, 40, len(items))
+	// The title is rendered by modalTitle in the View function, not by the
+	// list itself. Pagination is off while every file fits - the paginator
+	// would cost a row the list has no use for - and on when it doesn't, so
+	// the files past the fold stay reachable and are visibly there.
+	visible := modalListHeight(len(items), termHeight)
+
+	picker := list.New(items, composeFilePickerDelegate{}, 40, visible)
 	picker.SetShowTitle(false)
 	picker.SetShowHelp(false)
 	picker.SetShowStatusBar(false)
-	picker.SetShowPagination(false)
+	picker.SetShowPagination(visible < len(items))
 	picker.SetShowFilter(false)
 	picker.Select(activeIndex)
 

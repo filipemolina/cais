@@ -95,6 +95,43 @@ func modalTitle(text string) string {
 		Render(text)
 }
 
+// modalListChrome is the rows a list-in-a-modal spends on everything that is
+// not a list row: modalSurface's border (2) and padding (2), the modalTitle
+// and the blank row its margin leaves (2), the blank row above the hints (1),
+// and the two hint lines (2).
+const modalListChrome = 9
+
+// modalListHeight is the height to build a modal's list with so the modal
+// fits a terminal termHeight rows tall.
+//
+// renderWithModal (src/model/View.go) centers a modal by clamping y to 0, so
+// a modal taller than the terminal does not scroll or shrink - it loses its
+// hint line and bottom border off the bottom of the screen. A list sized to
+// len(items) is therefore a latent overflow on any project big enough, and
+// the caller pairs this with SetShowPagination(height < len(items)) so the
+// rows that no longer fit stay reachable and say so.
+//
+// The floor of 3 is deliberate: below about 12 rows there is no honest answer,
+// and a terminal that short cannot show the modal's own chrome either.
+func modalListHeight(items, termHeight int) int {
+	return min(items, max(3, termHeight-modalListChrome))
+}
+
+// listTitleStyle is the accent chip a bubbles list renders its Title with.
+//
+// It is a function rather than a var for the reason appstyles/styles.go gives
+// for NormalTitle, and it has to be *applied* in each list's View for the same
+// reason: the panel lists are constructed once in AppModel and never rebuilt,
+// so a style assigned in the constructor freezes whichever theme was active at
+// startup. The chip then stops following the theme picker's live preview while
+// every other pixel around it repaints.
+func listTitleStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(appstyles.InkOn(appstyles.Active.Accent)).
+		Background(appstyles.Active.Accent).
+		Padding(0, 1)
+}
+
 // modalHints renders a modal's own help line, in the footer bar's format but
 // with the lighter description color the modal surface needs. Every modal
 // carries one: the footer bar is hidden behind the modal while it is open, so

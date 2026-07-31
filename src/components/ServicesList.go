@@ -274,11 +274,16 @@ func (m ServicesListModel) View() tea.View {
 
 	wrapper := fitBox(listWrapperStyle.Background(bg), m.panelWidth, m.panelHeight)
 
+	// The title chip is restyled here, on a copy, rather than in the
+	// constructor - see listTitleStyle for why.
+	l := m.list
+	l.Styles.Title = listTitleStyle()
+
 	// The list joins its title, rows and paginator internally, padding the
 	// short ones with unstyled spaces; seal them against the panel tier. Rows
 	// arrive already sealed against their own background, so this only fills
 	// what the list itself left bare.
-	v := tea.NewView(wrapper.Render(appstyles.FillBackground(bg, m.list.View())))
+	v := tea.NewView(wrapper.Render(appstyles.FillBackground(bg, l.View())))
 	return v
 }
 
@@ -380,11 +385,6 @@ func ServicesList(services []types.ServiceConfig, width int, height int) tea.Mod
 	servicesList.Title = "Services"
 	servicesList.Paginator.ActiveDot = " ● "
 	servicesList.Paginator.InactiveDot = " ○ "
-	servicesList.Styles.Title = lipgloss.NewStyle().
-		Foreground(appstyles.InkOn(appstyles.Active.Accent)).
-		Background(appstyles.Active.Accent).
-		Padding(0, 1)
-
 	model.list = servicesList
 	model.listDelegate = listDelegate
 

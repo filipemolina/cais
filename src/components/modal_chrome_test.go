@@ -1,11 +1,15 @@
 package components
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/compose-spec/compose-go/v2/types"
+	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
@@ -29,11 +33,11 @@ func TestEveryModalHasATitleAndAnExitHint(t *testing.T) {
 		{"help", HelpOverlay(keys.Context{Page: "Home"}, nil, 100), "Keyboard shortcuts", "esc"},
 		{"confirm", ConfirmModal("Delete group \"core\"?", nil), "Confirm", "esc"},
 		{"error", ErrorModal("boom", 100), "Error", "esc"},
-		{"group name", GroupNameModal(nil, []string{"web"}), "New group", "esc"},
-		{"service checklist", ServiceChecklistModal("core", []string{"web"}), "Select services", "esc"},
-		{"edit group members", ServiceChecklistModalForEdit("core", []string{"web"}, []string{"web"}), "Edit members", "esc"},
+		{"group name", GroupNameModal(nil, []string{"web"}, 40), "New group", "esc"},
+		{"service checklist", ServiceChecklistModal("core", []string{"web"}, 40), "Select services", "esc"},
+		{"edit group members", ServiceChecklistModalForEdit("core", []string{"web"}, []string{"web"}, 40), "Edit members", "esc"},
 		{"create compose file", CreateComposeFileModal("."), "New compose file", "esc"},
-		{"compose file picker", ComposeFilePickerModal(".", []string{"compose.yaml"}, "compose.yaml"), "Switch compose file", "esc"},
+		{"compose file picker", ComposeFilePickerModal(".", []string{"compose.yaml"}, "compose.yaml", 40), "Switch compose file", "esc"},
 		{"theme picker", ThemePickerModal(40), "Choose theme", "esc"},
 		{"logs", logs, "logs: web", "esc"},
 	}
@@ -79,5 +83,87 @@ func TestCreateComposeFileModalHintsEveryStep(t *testing.T) {
 		if !strings.Contains(frame, want) {
 			t.Errorf("service fields step does not advertise %q:\n%s", want, frame)
 		}
+	}
+}
+
+// A modal whose body is a list is the one shape that can outgrow the screen:
+// the item count comes from the user's project, not from the code. View.go's
+// renderWithModal clamps a modal's y to 0 rather than scrolling it, so an
+// oversized modal loses its hint line and bottom border off the bottom edge
+// with no way to reach them. Every list-backed modal has to size itself to
+// the terminal instead of to len(items).
+func TestListModalsFitAShortTerminal(t *testing.T) {
+	const termHeight = 24
+
+	// More items than a 24-row terminal can hold, whichever modal they land in.
+	many := make([]string, 40)
+	for i := range many {
+		many[i] = fmt.Sprintf("service-%02d", i)
+	}
+
+	cases := []struct {
+		name  string
+		modal tea.Model
+	}{
+		{"compose file picker", ComposeFilePickerModal(".", many, many[0], termHeight)},
+		{"service checklist", ServiceChecklistModal("core", many, termHeight)},
+		{"edit group members", ServiceChecklistModalForEdit("core", many, many[:2], termHeight)},
+		{"theme picker", ThemePickerModal(termHeight)},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if h := lipgloss.Height(tc.modal.View().Content); h > termHeight {
+				t.Errorf("modal is %d rows tall in a %d-row terminal", h, termHeight)
+			}
+		})
+	}
+}
+
+// The panel lists are constructed once in AppModel and never rebuilt, so any
+// color baked into the list's own Styles at construction survives a theme
+// switch and leaves the title chip painted in the startup theme while the
+// rest of the frame repaints. This is the guard for that: the chip's fill has
+// to be the *currently* active accent, whichever theme was active when the
+// list was built.
+func TestListTitleChipFollowsTheActiveTheme(t *testing.T) {
+	defer appstyles.SetTheme(appstyles.DefaultTheme)
+
+	// The truecolor background SGR lipgloss emits for the active accent.
+	accentFill := func() string {
+		r, g, b, _ := appstyles.Active.Accent.RGBA()
+		return fmt.Sprintf("48;2;%d;%d;%d", r>>8, g>>8, b>>8)
+	}
+
+	// Built under the default theme, as AppModel builds them at startup.
+	lists := map[string]struct {
+		model tea.Model
+		title string
+	}{
+		"groups":   {GroupsList([]string{"core", "edge"}, 60, 20), "Groups"},
+		"services": {ServicesList([]types.ServiceConfig{{Name: "web"}}, 60, 20), "Services"},
+	}
+
+	for name, tc := range lists {
+		t.Run(name, func(t *testing.T) {
+			// Switch away from the theme the list was constructed under.
+			appstyles.SetTheme("gruvbox-dark")
+
+			var titleRow string
+			for _, line := range strings.Split(tc.model.View().Content, "\n") {
+				if strings.Contains(ansi.Strip(line), tc.title) {
+					titleRow = line
+					break
+				}
+			}
+			if titleRow == "" {
+				t.Fatalf("no %q title row in the rendered list", tc.title)
+			}
+
+			if want := accentFill(); !strings.Contains(titleRow, want) {
+				t.Errorf("title chip is not filled with the active accent (%s) - a style is frozen:\n%q",
+					want, titleRow)
+			}
+		})
 	}
 }

@@ -621,7 +621,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case cmds.OpenCreateGroupModalMsg:
 		if m.config.configProject != nil {
-			m.activeModal = components.GroupNameModal(m.allGroupNames(), m.config.configProject.ServiceNames())
+			m.activeModal = components.GroupNameModal(
+				m.allGroupNames(), m.config.configProject.ServiceNames(),
+				m.config.terminalHeight,
+			)
 		}
 
 	case cmds.OpenLogsModalMsg:
@@ -644,6 +647,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			members := m.groupMembers(msg.GroupName)
 			m.activeModal = components.ServiceChecklistModalForEdit(
 				msg.GroupName, m.config.configProject.ServiceNames(), members,
+				m.config.terminalHeight,
 			)
 		}
 
@@ -900,6 +904,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.activeModal = components.ComposeFilePickerModal(
 			msg.Dir, msg.Files, filepath.Base(m.config.configFileName),
+			m.config.terminalHeight,
 		)
 
 	case cmds.SwitchComposeFileMsg:

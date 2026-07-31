@@ -142,7 +142,12 @@ func (m ContainersListModel) View() tea.View {
 			Padding(0, 1, 1, 1)
 	}
 
-	renderedList := wrapper.Render(m.list.View())
+	// The title chip is restyled here, on a copy, rather than in the
+	// constructor - see listTitleStyle for why.
+	l := m.list
+	l.Styles.Title = listTitleStyle()
+
+	renderedList := wrapper.Render(l.View())
 
 	v := tea.NewView(renderedList)
 	return v
@@ -166,10 +171,6 @@ func ContainersList(containers []apptypes.ContainerListItem, width int, height i
 	servicesList.Title = "Services"
 	servicesList.Paginator.ActiveDot = " ● "
 	servicesList.Paginator.InactiveDot = " ○ "
-	servicesList.Styles.Title = lipgloss.NewStyle().
-		Foreground(appstyles.InkOn(appstyles.Active.Accent)).
-		Background(appstyles.Active.Accent).
-		Padding(0, 1)
 
 	return ContainersListModel{
 		list:        servicesList,

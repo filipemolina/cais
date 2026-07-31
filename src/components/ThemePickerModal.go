@@ -142,11 +142,7 @@ func ThemePickerModal(termHeight int) tea.Model {
 		}
 	}
 
-	// Chrome around the list is 9 rows (border 2, padding 2, title 2,
-	// blank 1, hints 2). Show at most as many items as fit, and at
-	// least 3. Enable pagination only when the list is clipped.
-	const themePickerChrome = 9
-	visible := min(len(items), max(3, termHeight-themePickerChrome))
+	visible := modalListHeight(len(items), termHeight)
 
 	picker := list.New(items, themePickerDelegate{}, 40, visible)
 	picker.SetShowTitle(false)
