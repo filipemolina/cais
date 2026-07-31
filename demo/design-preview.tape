@@ -14,7 +14,7 @@ Set TypingSpeed 60ms
 # Set TERM explicitly (bubble tea needs it for the alternate-screen
 # buffer) and run the app with absolute paths. The && chain makes the
 # whole thing one typed command so vhs doesn't need a complex setup.
-Type "cd /home/filipe/Documents/projects/tui/demo/fixtures && export TERM=xterm-256color && /home/filipe/go/bin/stack-stitcher"
+Type "cd /home/filipe/Documents/projects/tui/demo/fixtures && export TERM=xterm-256color && /home/filipe/go/bin/stitch"
 Enter
 Sleep 4s
 

@@ -21,7 +21,7 @@ var errVersionRequested = errors.New("version requested")
 func main() {
 	source, err := parseFlags(os.Args[1:])
 	if errors.Is(err, errVersionRequested) {
-		fmt.Println("stack-stitcher", constants.Version())
+		fmt.Println("stitch", constants.Version())
 		os.Exit(0)
 	}
 	if err != nil {
@@ -30,7 +30,7 @@ func main() {
 		if errors.Is(err, flag.ErrHelp) {
 			os.Exit(0)
 		}
-		fmt.Fprintln(os.Stderr, "stack-stitcher:", err)
+		fmt.Fprintln(os.Stderr, "stitch:", err)
 		os.Exit(1)
 	}
 
@@ -60,7 +60,7 @@ func main() {
 func parseFlags(args []string) (utils.ComposeSource, error) {
 	var source utils.ComposeSource
 
-	flags := flag.NewFlagSet("stack-stitcher", flag.ContinueOnError)
+	flags := flag.NewFlagSet("stitch", flag.ContinueOnError)
 	flags.Usage = func() {
 		fmt.Fprint(flags.Output(), usage)
 	}
@@ -117,7 +117,7 @@ func parseFlags(args []string) (utils.ComposeSource, error) {
 const usage = `Stack Stitcher - a terminal UI for Docker Compose.
 
 Usage:
-  stack-stitcher [flags]
+  stitch [flags]
 
 Flags:
   -f, --file PATH   open this compose file

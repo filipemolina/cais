@@ -80,5 +80,5 @@ git tag -a v0.1.0 -m "v0.1.0"
 git push origin v0.1.0
 ```
 
-`stack-stitcher --version` reports the stamp. An unstamped local build reports
+`stitch --version` reports the stamp. An unstamped local build reports
 its commit instead, which is what a bug report wants anyway.
