@@ -15,6 +15,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/components/errormodal"
 	"github.com/filipemolina/stack-stitcher/src/components/groupslist"
 	"github.com/filipemolina/stack-stitcher/src/components/helpoverlay"
+	"github.com/filipemolina/stack-stitcher/src/components/serviceslist"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
@@ -147,7 +148,7 @@ func TestListTitleChipFollowsTheActiveTheme(t *testing.T) {
 		title string
 	}{
 		"groups":   {groupslist.New([]string{"core", "edge"}, 60, 20), "Groups"},
-		"services": {ServicesList([]types.ServiceConfig{{Name: "web"}}, 60, 20), "Services"},
+		"services": {serviceslist.New([]types.ServiceConfig{{Name: "web"}}, 60, 20), "Services"},
 	}
 
 	for name, tc := range lists {

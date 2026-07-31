@@ -11,6 +11,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/components/groupslist"
 	"github.com/filipemolina/stack-stitcher/src/components/mainmenu"
+	"github.com/filipemolina/stack-stitcher/src/components/serviceslist"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/utils"
 )
@@ -247,7 +248,7 @@ func GetInitialModel(source utils.ComposeSource) AppModel {
 	}
 
 	pages["Services"] = []tea.Model{
-		components.ServicesList([]types.ServiceConfig{}, 0, 0),
+		serviceslist.New([]types.ServiceConfig{}, 0, 0),
 		components.DetailsPanel(nil),
 	}
 

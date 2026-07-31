@@ -1,4 +1,4 @@
-package components
+package serviceslist
 
 import (
 	"testing"
@@ -43,23 +43,23 @@ func servicesOf(names ...string) []types.ServiceConfig {
 }
 
 // drive feeds messages through the list in order and hands back the model.
-func drive(t *testing.T, model tea.Model, msgs ...tea.Msg) ServicesListModel {
+func drive(t *testing.T, model tea.Model, msgs ...tea.Msg) Model {
 	t.Helper()
 
 	for _, msg := range msgs {
 		model, _ = model.Update(msg)
 	}
 
-	list, ok := model.(ServicesListModel)
+	list, ok := model.(Model)
 	if !ok {
-		t.Fatalf("expected a ServicesListModel, got %T", model)
+		t.Fatalf("expected a Model, got %T", model)
 	}
 
 	return list
 }
 
 func TestActiveRowFollowsTheSelectedService(t *testing.T) {
-	list := drive(t, ServicesList(nil, 80, 24),
+	list := drive(t, New(nil, 80, 24),
 		cmds.SetServicesListMsg(servicesOf("api", "db", "web")),
 		cmds.SetSelectedServiceMsg(types.ServiceConfig{Name: "web"}),
 	)
@@ -73,7 +73,7 @@ func TestActiveRowFollowsTheSelectedService(t *testing.T) {
 // tea.Batch makes no promise about their order. Whichever lands first, the
 // pair has to converge on the same row.
 func TestActiveRowConvergesWhenSelectionArrivesFirst(t *testing.T) {
-	list := drive(t, ServicesList(nil, 80, 24),
+	list := drive(t, New(nil, 80, 24),
 		cmds.SetSelectedServiceMsg(types.ServiceConfig{Name: "web"}),
 		cmds.SetServicesListMsg(servicesOf("api", "db", "web")),
 	)
@@ -87,7 +87,7 @@ func TestActiveRowConvergesWhenSelectionArrivesFirst(t *testing.T) {
 // changes the list would otherwise leave the highlight on whatever service
 // moved into the old row.
 func TestActiveRowTracksTheServiceAcrossAReorder(t *testing.T) {
-	model := ServicesList(nil, 80, 24)
+	model := New(nil, 80, 24)
 
 	list := drive(t, model,
 		cmds.SetServicesListMsg(servicesOf("api", "db", "web")),
@@ -102,7 +102,7 @@ func TestActiveRowTracksTheServiceAcrossAReorder(t *testing.T) {
 }
 
 func TestNoActiveRowWhenTheSelectedServiceIsGone(t *testing.T) {
-	list := drive(t, ServicesList(nil, 80, 24),
+	list := drive(t, New(nil, 80, 24),
 		cmds.SetServicesListMsg(servicesOf("api", "db", "web")),
 		cmds.SetSelectedServiceMsg(types.ServiceConfig{Name: "web"}),
 		cmds.SetServicesListMsg(servicesOf("api", "db")),
@@ -116,16 +116,16 @@ func TestNoActiveRowWhenTheSelectedServiceIsGone(t *testing.T) {
 // Enter starts the selected service. Selection happens automatically on cursor
 // movement, so we move the cursor first, then press enter.
 func TestEnterStartsTheHighlightedService(t *testing.T) {
-	list := drive(t, ServicesList(nil, 80, 24),
+	list := drive(t, New(nil, 80, 24),
 		cmds.SetServicesListMsg(servicesOf("api", "db", "web")),
 		cmds.SetFocusMsg(1),
 	)
 
 	// Move the cursor down to trigger auto-select (cursor goes from 0 to 1).
 	model, _ := list.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
-	moved, ok := model.(ServicesListModel)
+	moved, ok := model.(Model)
 	if !ok {
-		t.Fatalf("expected a ServicesListModel, got %T", model)
+		t.Fatalf("expected a Model, got %T", model)
 	}
 
 	// Verify auto-select happened (index 1 = db).
@@ -152,7 +152,7 @@ func TestEnterStartsTheHighlightedService(t *testing.T) {
 // Nothing is active until something is selected. The zero value would point
 // at row 0 and render the first service as though the user had picked it.
 func TestNoActiveRowBeforeAnySelection(t *testing.T) {
-	list := drive(t, ServicesList(nil, 80, 24),
+	list := drive(t, New(nil, 80, 24),
 		cmds.SetServicesListMsg(servicesOf("api", "db", "web")),
 	)
 
@@ -172,7 +172,7 @@ func TestNoActiveRowBeforeAnySelection(t *testing.T) {
 func TestFilterSurvivesStatsPolling(t *testing.T) {
 	services := servicesOf("api", "cache", "db", "web")
 
-	model := drive(t, ServicesList(services, 80, 24),
+	model := drive(t, New(services, 80, 24),
 		cmds.SetFocusMsg(1),
 	)
 
