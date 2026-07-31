@@ -1,4 +1,4 @@
-package components
+package logsmodal
 
 import (
 	"context"
@@ -37,7 +37,7 @@ func logsModalWrapper() lipgloss.Style {
 		Background(appstyles.Active.PanelBg)
 }
 
-type LogsModalModel struct {
+type Model struct {
 	viewport viewport.Model
 	logCh    <-chan string
 	cancel   context.CancelFunc
@@ -48,11 +48,11 @@ type LogsModalModel struct {
 	err      error
 }
 
-func (m LogsModalModel) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m LogsModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case cmds.LogLineMsg:
 		m.lines = append(m.lines, string(msg))
@@ -103,7 +103,7 @@ func (m LogsModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // resize recomputes the viewport dimensions from the current terminal size,
 // leaving room for the wrapper chrome plus the title and footer lines.
-func (m *LogsModalModel) resize(termWidth, termHeight int) {
+func (m *Model) resize(termWidth, termHeight int) {
 	width := int(float32(termWidth) * 0.9)
 	height := int(float32(termHeight) * 0.9)
 
@@ -113,7 +113,7 @@ func (m *LogsModalModel) resize(termWidth, termHeight int) {
 	m.viewport.SetHeight(max(1, height-v-2))
 }
 
-func (m LogsModalModel) View() tea.View {
+func (m Model) View() tea.View {
 	title := chrome.ModalTitle("logs: " + m.title)
 
 	followState := "off"
@@ -153,15 +153,15 @@ func (m LogsModalModel) View() tea.View {
 	return tea.NewView(logsModalWrapper().Render(content))
 }
 
-// LogsModal opens a near-full-screen overlay streaming logs for target (a
+// New opens a near-full-screen overlay streaming logs for target (a
 // service when isGroup is false, a group otherwise), from composeFile. It
 // starts the stream immediately and returns the model plus the initial
 // WaitForLog cmd; on a start failure it returns a model that just displays
 // the error.
-func LogsModal(target string, isGroup bool, composeFile string, termWidth, termHeight int) (tea.Model, tea.Cmd) {
+func New(target string, isGroup bool, composeFile string, termWidth, termHeight int) (tea.Model, tea.Cmd) {
 	vp := viewport.New()
 
-	m := LogsModalModel{
+	m := Model{
 		viewport: vp,
 		title:    target,
 		follow:   true,

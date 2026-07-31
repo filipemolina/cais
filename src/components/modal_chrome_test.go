@@ -15,6 +15,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/components/errormodal"
 	"github.com/filipemolina/stack-stitcher/src/components/groupslist"
 	"github.com/filipemolina/stack-stitcher/src/components/helpoverlay"
+	"github.com/filipemolina/stack-stitcher/src/components/logsmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/serviceslist"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
@@ -24,7 +25,7 @@ import (
 // This is the regression guard for both: a new modal that skips either shows
 // up here rather than as a user stuck on an unlabelled box.
 func TestEveryModalHasATitleAndAnExitHint(t *testing.T) {
-	logs, _ := LogsModal("web", false, "compose.yaml", 100, 40)
+	logs, _ := logsmodal.New("web", false, "compose.yaml", 100, 40)
 
 	cases := []struct {
 		name  string
