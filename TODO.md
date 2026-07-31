@@ -208,9 +208,19 @@ documentation.
   roughly 60 columns the context hints plus the global keys exceed the width,
   and the bar wraps to two or three lines, eating body rows. The bar needs to
   shed hints in priority order the way the file name already does. Same
-  terminals show two other overflows worth fixing together: the group details
-  table collides its column headers (`NAMEIMAGSTATHEALT…`) and the action
-  buttons wrap into each other.
+  terminals show one other overflow worth fixing together: the group details
+  table collides its column headers (`NAMEIMAGSTATHEALT…`).
+
+  The third overflow named here — the action buttons wrapping into each other —
+  is fixed. The row sheds whole buttons in a declared priority order (remove
+  first, then pull, then logs; the three lifecycle verbs are what a very narrow
+  panel keeps) rather than letting lipgloss wrap on the cell. Worth reading
+  before doing the footer: it is the same shape of fix the footer needs, and
+  `renderActionButtons` in `src/components/PanelFrame.go` is the worked example.
+  Note that the wrap never spilled the frame — the panels clip their body with
+  `MaxHeight`, so a six-button row wrapping to thirty-one rows was absorbed by
+  eating the member table instead. The footer has no such clip, which is why it
+  is the more visible of the two.
 
 - [x] **[S] Centralize color into a `Theme`** — `appstyles.Theme`
   (`src/appstyles/Theme.go`) is one field per semantic token, built by a

@@ -159,6 +159,32 @@ func TestWCAGContrastAgainstSurfaces(t *testing.T) {
 					t.Errorf("%s as text on panel: ratio = %.2f, want ≥ 2.6", s.label, ratio)
 				}
 			}
+
+			// The recessed tier carries text of its own: the details panels'
+			// action chips sit on it, and its ink is the four tiers below.
+			// Recessed is the darkest surface in a dark theme but the lightest
+			// in a light one, so it is the surface where a light-theme text
+			// tier would fail first - it needs its own floors rather than
+			// inheriting the panel's by assumption.
+			recessed := theme.BackgroundRecessed
+
+			type inkCase struct {
+				label string
+				c     color.Color
+				floor float64
+			}
+			inks := []inkCase{
+				{"TextPrimary", theme.TextPrimary, 4.5},
+				{"TextDim", theme.TextDim, 2.2},
+				{"Accent", theme.Accent, 3.0},
+				{"StatusError", theme.StatusError, 2.6},
+			}
+			for _, ink := range inks {
+				ratio := Contrast(ink.c, recessed)
+				if ratio < ink.floor {
+					t.Errorf("%s on recessed: ratio = %.2f, want ≥ %.1f", ink.label, ratio, ink.floor)
+				}
+			}
 		})
 	}
 }
