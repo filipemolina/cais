@@ -16,6 +16,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/components"
+	"github.com/filipemolina/stack-stitcher/src/components/aboutmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/components/confirmmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/errormodal"
@@ -785,7 +786,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		)
 
 	case cmds.OpenAboutModalMsg:
-		m.activeModal = components.AboutModal()
+		m.activeModal = aboutmodal.New()
 
 	case cmds.OpenErrorModalMsg:
 		finalCmds = append(finalCmds, m.reportForegroundError(msg.Message))

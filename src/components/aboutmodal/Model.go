@@ -1,4 +1,4 @@
-package components
+package aboutmodal
 
 import (
 	"fmt"
@@ -14,17 +14,17 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
-// AboutModalModel is the About overlay: the ASCII brand mark reserved for it
+// Model is the About overlay: the ASCII brand mark reserved for it
 // (constants.LOGO), the version, the license, and the repo link. It is a
 // read-only surface like the help overlay, and closes on the same three keys:
 // the one that opened it (a toggle would be a fourth binding for one job), esc
 // (the cancel every overlay answers), and q (the quitter's habit, which closes
 // the overlay rather than quitting the app while it owns the keyboard).
-type AboutModalModel struct{}
+type Model struct{}
 
-func (m AboutModalModel) Init() tea.Cmd { return nil }
+func (m Model) Init() tea.Cmd { return nil }
 
-func (m AboutModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
 		switch {
 		case key.Matches(keyMsg, keys.Global.About),
@@ -36,7 +36,7 @@ func (m AboutModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m AboutModalModel) View() tea.View {
+func (m Model) View() tea.View {
 	primary := lipgloss.NewStyle().Bold(true).Foreground(appstyles.Active.TextPrimary)
 	accent := lipgloss.NewStyle().Bold(true).Foreground(appstyles.Active.Accent)
 	dim := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim)
@@ -71,7 +71,7 @@ func (m AboutModalModel) View() tea.View {
 	))
 }
 
-// AboutModal builds the About overlay.
-func AboutModal() tea.Model {
-	return AboutModalModel{}
+// New builds the About overlay.
+func New() tea.Model {
+	return Model{}
 }

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/x/ansi"
-	"github.com/filipemolina/stack-stitcher/src/components"
+	"github.com/filipemolina/stack-stitcher/src/components/aboutmodal"
 
 	tea "charm.land/bubbletea/v2"
 )
@@ -20,8 +20,8 @@ func TestPressingAOpensTheAboutModal(t *testing.T) {
 	if m.activeModal == nil {
 		t.Fatal("a did not open a modal")
 	}
-	if _, ok := m.activeModal.(components.AboutModalModel); !ok {
-		t.Fatalf("a opened %T, want an AboutModalModel", m.activeModal)
+	if _, ok := m.activeModal.(aboutmodal.Model); !ok {
+		t.Fatalf("a opened %T, want an aboutmodal.Model", m.activeModal)
 	}
 }
 
