@@ -1,8 +1,15 @@
-# Roadmap to the first alpha
+# Roadmap
 
 This is the ordered plan the current work follows, and it is **live**.
-`TODO.md` is the flat worklist; this file is the order and the reasoning, so
-picking up mid-sequence does not mean re-deciding what was already settled.
+`TODO.md` is the flat worklist and `docs/plans/` holds the plan for each
+individual piece of work; **this file is the order they happen in, and why**,
+so picking up mid-sequence does not mean re-deciding what was already settled.
+
+It has two halves. *Where we are* is the road to the first alpha, which is
+finished — every phase in it is done, and the design each one produced now
+lives in `docs/DESIGN.md`. *The order after the alpha* is the live part: the
+sequence through the plans in `docs/plans/`, ending at the one that announces
+the thing.
 
 The aim is not a finished product. It is a foundation someone else can extend
 without re-litigating decisions, plus enough polish to publish a first alpha.
@@ -72,25 +79,57 @@ because they are now how the app works rather than a plan.
 That is the whole roadmap to the alpha: every tab is live, and the first
 group-membership wall is gone. What follows is the post-alpha list.
 
-## Explicitly post-alpha
+## The order after the alpha
 
-The theme picker is done (`T` opens it, cursor previews live, Enter persists
-to `~/.config/stack-stitcher/config.yaml`). The config file exists and
-already stores the theme; default file and keybinding overrides are the
-remaining fields the keymap struct makes a load-and-merge. Additional
-themes beyond the 14 shipped. Live CPU/MEM columns from `docker
-stats`. An `x`-style action menu.
+Everything below is written up in full in `docs/plans/`. **This table is the
+order to do them in; each plan is the how.** The destination is
+`docs/plans/launch-and-outreach.md`, which is last on purpose: it is the one
+that measures whether the rest are done.
 
-**UX improvements** are done: auto-select on navigation, `n` on both
-panels, action feedback with spinner, and error modals for foreground
-errors (see `docs/PLAN-UX-IMPROVEMENTS.md`).
+| # | Plan | Why it sits here |
+| --- | --- | --- |
+| 1 | `component-package-restructure.md` | First, because it is pure churn and gets more expensive every week. Four of the plans below add components; doing the move first means they land in the new shape instead of being rewritten into it. The plan reaches the same conclusion on its own ("recommended, before the feature plans"), and names the clinching argument: any in-flight branch touching `src/components` conflicts with it. |
+| 2 | `image-search.md` — **Phase 1 only** (`n` adds a service) | The biggest hole in the lifecycle, and the one every later plan is blocked on. `ApplyServiceFragment` can edit a service but not create one, so "add a service" means leaving the app. Phases 2–4 (Docker Hub search, tag picker) are the *feature*; Phase 1 is the *foundation*, and splitting it out is what unblocks 3, 4 and 8. |
+| 3 | `service-aware-empty-state.md` | Small, and it belongs directly after step 2 rather than before it: once `n` can add a service, the first-run empty state can say something useful to a user with an empty file instead of explaining a concept they cannot act on yet. Doing it earlier means writing that copy twice. |
+| 4 | `healthcheck-insertion.md` | ~2 days, and it completes a lifecycle stage the ask names explicitly. It depends on nothing from steps 2–3 in code, but it reads as a natural pair with them: adding a service and giving it a working probe are the same sitting for the user. |
+| 5 | `env-secrets.md` | The largest of the feature plans and the last lifecycle gap. Placed after the smaller ones so the pattern for "a new page with its own modals" is already established twice over — and so a long branch is not the thing blocking everything else. Has open owner decisions listed in its *Who decides* section; settle those before starting, not during. |
+| 6 | `cross-platform-testing.md` | Before the release work, not after: it costs $0 on GitHub's runners and it answers *what actually works on macOS and Windows*. Publishing binaries first and finding out afterwards is the wrong order. |
+| 7 | `release-distribution.md` | Now the tool is worth installing, make it installable by people without a Go toolchain — which today is most of the audience. |
+| 8 | `launch-and-outreach.md` | The announcement, and the gate: it opens with the lifecycle checklist that steps 2–5 close. |
+| — | `ai-service-authoring.md` | **Deliberately out of the sequence.** It is the only plan that adds a dependency on something outside the repo, its own Phase 1 (an offline catalog) delivers most of the value with none of that, and it needs step 2's insert path to exist first. Pick it up after the launch, or take its Phase 1 alone at any point. |
 
-The **service details panel** was redesigned to match the visual polish
-of the group details panel: a service header with status dot, a compact
-two-column configuration table curated for self-host enthusiasts, and an
-improved runtime stats table. All existing functionality (inline editor,
-docker actions, logs modal) preserved. See `docs/DESIGN.md` §Services
-layout.
+Three items in that sequence are not plans and would otherwise fall through the
+cracks:
+
+- **Cut a `v0.1.0` tag early — before step 1, not at step 7.** The pipeline
+  already drafts a release on a `v*` tag, so this is an afternoon, and several
+  of the directories worth being listed in require a first release older than
+  four months (`launch-and-outreach.md` §Directories). The clock starts at the
+  tag, so starting it now costs nothing and saves a wait later.
+- **A write-safety story, before step 8.** The app rewrites the user's compose
+  file and there is no backup, no undo, and no prominent statement of what a
+  write does not preserve. This is the risk that does not survive contact with
+  a stranger's forty-service homelab. Sized in `launch-and-outreach.md`.
+- **The footer's narrow-terminal wrap** (`TODO.md`, still open). It is visible
+  in the demo recording, which makes it the one open bug a first-time visitor
+  is guaranteed to see.
+
+### Done, and kept for the record
+
+The plans in `docs/plans/` that have already landed: `theme-picker-modal.md`
+and `theme-overhaul.md` (14 themes, live preview, persisted), `group-rename.md`
+(`R`), and the five editor steps — `editor-paste.md`,
+`editor-indent-policy.md`, `editor-enter-autoindent.md`,
+`editor-indent-keys.md`, `editor-key-advertising.md`.
+
+Also done and not carrying a plan file: the **UX improvements** (auto-select on
+navigation, `n` on both panels, spinner feedback, error modals — see
+`docs/PLAN-UX-IMPROVEMENTS.md`) and the **service details panel** redesign
+(`docs/DESIGN.md` §Services layout).
+
+Still unplanned, and intentionally so: live CPU/MEM columns from `docker
+stats`, an `x`-style action menu, and the remaining config fields (default
+file, keybinding overrides) that the config struct was shaped to absorb.
 
 ## Loose ends worth knowing about
 
