@@ -2,6 +2,7 @@ package components
 
 import (
 	"image/color"
+	"strings"
 
 	"charm.land/lipgloss/v2"
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
@@ -54,4 +55,18 @@ func listRowBg(isActive bool, isParentFocused bool) color.Color {
 	}
 
 	return panelBg(isParentFocused)
+}
+
+// barColumn renders the nav's ▌ indicator once per line of content, so the
+// bar spans a multi-line row's full height instead of a sliver at its top.
+// bg may be nil to leave the cell background unset.
+func barColumn(fg color.Color, bg color.Color, content string) string {
+	style := lipgloss.NewStyle().Foreground(fg)
+	if bg != nil {
+		style = style.Background(bg)
+	}
+
+	lines := max(1, strings.Count(content, "\n")+1)
+	bar := style.Render("▌")
+	return strings.Repeat(bar+"\n", lines-1) + bar
 }
