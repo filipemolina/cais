@@ -2,6 +2,7 @@ package components
 
 import (
 	"image/color"
+	"strings"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
@@ -30,18 +31,37 @@ func dockerActionFor(msg tea.KeyPressMsg) (string, bool) {
 	return "", false
 }
 
+// actionButtonKeys are the bindings the action row stands for, in the order it
+// shows them. The row is built from the bindings rather than from five literal
+// label/shortcut pairs so that it cannot claim a key the handlers don't answer
+// to - the same rule the footer and the help overlay already follow. See the
+// package doc on src/keys.
+func actionButtonKeys() []key.Binding {
+	return []key.Binding{
+		keys.Details.Start, keys.Details.Stop, keys.Details.Restart,
+		keys.Details.Pull, keys.Details.Remove,
+	}
+}
+
 // renderActionButtons renders the shared Start/Stop/Restart/Pull/Remove row
 // used by both DetailsPanel and GroupDetailsPanel, right-aligned within the
 // panel body width it is given. `bg` is the panel's background tier, which the
 // buttons sit flush on.
-func renderActionButtons(width int, bg color.Color) string {
-	startButton := Button("Start", "s", bg).View().Content
-	stopButton := Button("Stop", "t", bg).View().Content
-	restartButton := Button("Restart", "r", bg).View().Content
-	pullButton := Button("Pull", "p", bg).View().Content
-	removeButton := Button("Remove", "x", bg).View().Content
+//
+// `ctx` is the same screen state the footer reports, and it decides which
+// buttons are live. Before it was threaded through, the row painted all five
+// identically whatever the screen was doing, which read as a promise that s/t/
+// r/p/x work at all times - they only work while the details panel holds focus.
+// Asking keys.Live is what makes the row and the footer one statement rather
+// than two that happen to agree.
+func renderActionButtons(width int, bg color.Color, ctx keys.Context) string {
+	buttons := make([]string, 0, 5)
+	for _, binding := range actionButtonKeys() {
+		help := binding.Help()
+		buttons = append(buttons, Button(buttonLabel(help.Desc), help.Key, bg, keys.Live(ctx, binding)).View().Content)
+	}
 
-	row := lipgloss.JoinHorizontal(lipgloss.Left, startButton, stopButton, restartButton, pullButton, removeButton)
+	row := lipgloss.JoinHorizontal(lipgloss.Left, buttons...)
 
 	// JoinHorizontal pads each button up to the tallest one with unstyled
 	// spaces, which is the dark band that used to sit behind this row.
@@ -52,6 +72,17 @@ func renderActionButtons(width int, bg color.Color) string {
 		AlignHorizontal(lipgloss.Right).
 		Background(bg).
 		Render(row)
+}
+
+// buttonLabel is a binding's help description as a button label: the footer
+// prints "start" mid-sentence, a button is captioned "Start". Capitalizing the
+// footer's word is what lets both come from the one binding.
+func buttonLabel(desc string) string {
+	if desc == "" {
+		return desc
+	}
+
+	return strings.ToUpper(desc[:1]) + desc[1:]
 }
 
 // modalSurface wraps a modal's content in the shared modal chrome: an accent

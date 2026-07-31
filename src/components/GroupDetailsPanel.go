@@ -15,6 +15,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/compose-spec/compose-go/v2/types"
+	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 	"github.com/mattn/go-runewidth"
 )
@@ -206,6 +207,23 @@ func (m GroupDetailsPanelModel) runningCount(members []types.ServiceConfig) int 
 	return running
 }
 
+// actionContext is this panel's screen state in the shape keys.Active reads -
+// the Home page twin of DetailsPanelModel.actionContext, and the same reasoning
+// about reporting the list as focused when this pane is not.
+func (m GroupDetailsPanelModel) actionContext() keys.Context {
+	focused := constants.COMPONENT_BODY_LIST
+	if m.isFocused {
+		focused = constants.COMPONENT_BODY_DETAILS
+	}
+
+	return keys.Context{
+		Page:          "Home",
+		Focused:       focused,
+		Selected:      m.selectedGroup != "",
+		PendingAction: m.pendingAction != nil,
+	}
+}
+
 // renderBody builds the panel body for the current state: onboarding,
 // nothing-selected, or a selected group's header + member table + actions.
 func (m GroupDetailsPanelModel) renderBody() string {
@@ -233,7 +251,7 @@ func (m GroupDetailsPanelModel) renderBody() string {
 	stopped := len(members) - running
 
 	headerCard := m.groupHeaderCard(m.selectedGroup, running, stopped, len(members), bodyWidth)
-	buttons := renderActionButtons(bodyWidth, bg)
+	buttons := renderActionButtons(bodyWidth, bg, m.actionContext())
 
 	footnoteBlock := ""
 	if running == 0 && len(members) > 0 {
