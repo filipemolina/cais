@@ -9,6 +9,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/components"
 	"github.com/filipemolina/stack-stitcher/src/components/chrome"
+	"github.com/filipemolina/stack-stitcher/src/components/composefilepanel"
 	"github.com/filipemolina/stack-stitcher/src/components/groupslist"
 	"github.com/filipemolina/stack-stitcher/src/components/mainmenu"
 	"github.com/filipemolina/stack-stitcher/src/components/serviceslist"
@@ -256,7 +257,7 @@ func GetInitialModel(source utils.ComposeSource) AppModel {
 	// from this map renders an empty body, which used to drop the app out of
 	// the alternate screen and look like a crash.
 	pages["Compose Files"] = []tea.Model{
-		components.ComposeFilePanel(),
+		composefilepanel.New(),
 	}
 
 	return AppModel{
