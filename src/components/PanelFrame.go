@@ -162,6 +162,54 @@ func buttonLabel(desc string) string {
 	return strings.ToUpper(desc[:1]) + desc[1:]
 }
 
+// panelRule is the thin horizontal line both details panels separate their
+// sections with. One helper rather than five copies of the same three-line
+// style, so the panels cannot drift to different rules.
+func panelRule(width int) string {
+	return lipgloss.NewStyle().
+		Foreground(appstyles.Active.BorderDefault).
+		Width(width).
+		Render(strings.Repeat("─", max(width, 0)))
+}
+
+// panelBodyWithActions lays out a details panel's body: `content` at the top,
+// `footer` on the body's last rows, and blank rows between them. Both details
+// panels build their body through here, which is what makes the action row land
+// on the same line of both rather than wherever each panel's content happens to
+// end - see "The action row" in docs/DESIGN.md.
+//
+// The content is clipped before the footer is attached, so a panel whose
+// content outgrows its box loses its last rows rather than its actions. Doing
+// it the other way round - joining first and clipping the result - takes the
+// bottom off, which is exactly the row that has to survive.
+func panelBodyWithActions(width, avail int, bg color.Color, content, footer string) string {
+	contentAvail := max(0, avail-lipgloss.Height(footer))
+
+	parts := make([]string, 0, 3)
+	if contentAvail > 0 {
+		content = lipgloss.NewStyle().MaxHeight(contentAvail).Render(content)
+		parts = append(parts, content)
+
+		if gap := contentAvail - lipgloss.Height(content); gap > 0 {
+			parts = append(parts, lipgloss.NewStyle().
+				Background(bg).
+				Width(max(0, width)).
+				Height(gap).
+				Render(""))
+		}
+	}
+	parts = append(parts, footer)
+
+	body := lipgloss.JoinVertical(lipgloss.Left, parts...)
+
+	// Safety cap: a miscount must never grow the panel past its body region.
+	if avail > 0 {
+		body = lipgloss.NewStyle().MaxHeight(avail).Render(body)
+	}
+
+	return body
+}
+
 // modalSurface wraps a modal's content in the shared modal chrome: an accent
 // rounded border, padding, and a background sealed against `bg` so the modal
 // reads as one opaque surface over the page it is composited onto. Modals in

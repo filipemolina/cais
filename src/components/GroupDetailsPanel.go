@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"image/color"
 	"slices"
-	"strings"
 
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
@@ -250,48 +249,28 @@ func (m GroupDetailsPanelModel) renderBody() string {
 	running := m.runningCount(members)
 	stopped := len(members) - running
 
-	headerCard := m.groupHeaderCard(m.selectedGroup, running, stopped, len(members), bodyWidth)
-	buttons := renderActionButtons(bodyWidth, bg, m.actionContext())
+	content := lipgloss.JoinVertical(lipgloss.Left,
+		m.groupHeaderCard(m.selectedGroup, running, stopped, len(members), bodyWidth),
+		m.renderMemberTable(members, bodyWidth),
+	)
 
-	footnoteBlock := ""
+	// The footnote rides with the action row rather than with the table: it is
+	// about the actions, so it belongs against them at the foot of the panel.
+	var footerParts []string
 	if running == 0 && len(members) > 0 {
-		footnoteBlock = lipgloss.JoinVertical(lipgloss.Left, "",
+		footerParts = append(footerParts, "",
 			lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Render("Press s to start."))
-	}
-	footnoteH := 0
-	if footnoteBlock != "" {
-		footnoteH = lipgloss.Height(footnoteBlock)
-	}
-
-	hCard := lipgloss.Height(headerCard)
-	buttonsH := lipgloss.Height(buttons)
-
-	tableAvail := bodyAvail - hCard - footnoteH - buttonsH
-	if tableAvail < 0 {
-		tableAvail = 0
-	}
-	tableBlock := m.renderMemberTable(members, bodyWidth, tableAvail)
-
-	parts := []string{headerCard, tableBlock}
-	if footnoteBlock != "" {
-		parts = append(parts, footnoteBlock)
 	}
 
 	// Show a spinner in the buttons area while an action is pending.
 	if m.pendingAction != nil {
-		parts = append(parts, m.renderPendingAction(bodyWidth, bg))
+		footerParts = append(footerParts, m.renderPendingAction(bodyWidth, bg))
 	} else {
-		parts = append(parts, buttons)
+		footerParts = append(footerParts, renderActionButtons(bodyWidth, bg, m.actionContext()))
 	}
 
-	bodyContent := lipgloss.JoinVertical(lipgloss.Left, parts...)
-
-	// Safety cap: a miscount must never grow the panel past its body region.
-	if bodyAvail > 0 {
-		bodyContent = lipgloss.NewStyle().MaxHeight(bodyAvail).Render(bodyContent)
-	}
-
-	return bodyContent
+	return panelBodyWithActions(bodyWidth, bodyAvail, bg,
+		content, lipgloss.JoinVertical(lipgloss.Left, footerParts...))
 }
 
 // groupHeaderCard renders the selected group's name and a
@@ -310,12 +289,7 @@ func (m GroupDetailsPanelModel) groupHeaderCard(name string, running, stopped, t
 		Width(width).
 		Render(summary)
 
-	rule := lipgloss.NewStyle().
-		Foreground(appstyles.Active.BorderDefault).
-		Width(width).
-		Render(strings.Repeat("─", max(width, 0)))
-
-	return lipgloss.JoinVertical(lipgloss.Left, nameRow, summaryRow, rule)
+	return lipgloss.JoinVertical(lipgloss.Left, nameRow, summaryRow, panelRule(width))
 }
 
 // statusPill renders a filled pill whose color reflects the group's state:
@@ -349,19 +323,14 @@ func statusPill(running, total int) string {
 		Render(label)
 }
 
-// renderMemberTable renders the column headers, a separator, and one row
-// per member service, then fills (or clips) to exactly `avail` rows so the
-// action buttons stay pinned at the bottom of the panel.
-func (m GroupDetailsPanelModel) renderMemberTable(members []types.ServiceConfig, width, avail int) string {
+// renderMemberTable renders the column headers, a separator, and one row per
+// member service, at its natural height. The blank rows between it and the
+// action row are panelBodyWithActions's job, so the table does not have to
+// know how much of the panel is left below it.
+func (m GroupDetailsPanelModel) renderMemberTable(members []types.ServiceConfig, width int) string {
 	cols := computeCols(width)
 
-	header := renderTableHeader(cols, width)
-	rule := lipgloss.NewStyle().
-		Foreground(appstyles.Active.BorderDefault).
-		Width(width).
-		Render(strings.Repeat("─", max(width, 0)))
-
-	parts := []string{header, rule}
+	parts := []string{renderTableHeader(cols, width), panelRule(width)}
 
 	if len(members) == 0 {
 		parts = append(parts, lipgloss.NewStyle().
@@ -375,17 +344,9 @@ func (m GroupDetailsPanelModel) renderMemberTable(members []types.ServiceConfig,
 		}
 	}
 
-	content := lipgloss.JoinVertical(lipgloss.Left, parts...)
-
-	if avail < 1 {
-		avail = 1
-	}
-
 	return lipgloss.NewStyle().
-		Height(avail).
-		MaxHeight(avail).
 		Width(width).
-		Render(content)
+		Render(lipgloss.JoinVertical(lipgloss.Left, parts...))
 }
 
 func (m GroupDetailsPanelModel) renderMemberRow(cols tableCols, width int, svc types.ServiceConfig) string {
