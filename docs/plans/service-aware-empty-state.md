@@ -1,5 +1,12 @@
 # Service-Aware Empty State — Implementation Plan
 
+> **Before you start.** Work on a feature branch of small commits, merged
+> `--no-ff`; `go build ./... && go vet ./... && go test ./... && gofmt -l .`
+> green at **every** commit, not just at the tip — `docs/ROADMAP.md`
+> §Conventions is the full contract and `CONTRIBUTING.md` explains how a TUI
+> gets tested. Behaviour that only shows on screen gets checked in the real app
+> with VHS before it is committed. **Step 3 of the post-alpha order** — after `image-search.md` Phase 1, because the empty state's copy depends on `n` being able to add a service.
+
 ## Problem
 
 When a user opens Stack Stitcher for the first time with a compose file that

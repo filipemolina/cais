@@ -1,5 +1,12 @@
 # Plan: .env Secrets Support — Management Surface + Masking Discipline
 
+> **Before you start.** Work on a feature branch of small commits, merged
+> `--no-ff`; `go build ./... && go vet ./... && go test ./... && gofmt -l .`
+> green at **every** commit, not just at the tip — `docs/ROADMAP.md`
+> §Conventions is the full contract and `CONTRIBUTING.md` explains how a TUI
+> gets tested. Behaviour that only shows on screen gets checked in the real app
+> with VHS before it is committed. **Step 5 of the post-alpha order,** and the largest of them — it is two branches, not one; see §Implementation order.
+
 Feature request: *"add support to secrets on a .env file."* Researched the field
 (dotenv-tui, dockge, Portainer, k9s, compose's own semantics, the encrypted-.env
 ecosystem), read the actual code the app runs (`compose-go v2.12.1` in the module
@@ -134,6 +141,11 @@ raw inline edit, `$EDITOR` handover, mode hygiene, parse-error reporting.
 
 ## Design decisions
 
+Every decision below is **decided**, not proposed. Where this plan once
+offered a recommendation in parentheses, the recommendation is now the
+instruction; §Alternatives records what was rejected and why, so the reasoning
+survives without reopening the choice.
+
 ### D1. Where it lives: a new page, label "Env"
 
 The decision checklist in `docs/DESIGN.md` §6.1: a feature that is neither group
@@ -156,6 +168,19 @@ Label: **"Env"**, not "Secrets" — the file holds non-secrets too (`TZ`,
 `PUID`), and calling it Secrets invites users to treat it as a vault, which it
 is not (see Research, compose `secrets:`).
 
+**A fourth tab contradicts a written decision; re-take it in this phase.**
+`docs/ROADMAP.md` §Decisions already taken says *"Tabs for the alpha are
+Groups, Services, Files. No dead placeholder tabs."* The alpha has shipped, so
+the constraint has expired — but it is written down, so the phase that adds
+the tab **must also update that line in `docs/ROADMAP.md`**, or the repo
+contradicts itself. A doc edit, not a discussion.
+
+The mechanics D1 claims are verified: `Global.Page`'s help text is
+`fmt.Sprintf("1-%d", len(apptypes.PageTitles))` (`Keys.go:153-156`), so the
+digit hint becomes `1-4` by itself, and `PageShortcut` derives the chord from
+the label's first letter (`Pages.go:33-46`) — Groups/Services/Files are g/s/f,
+so **"Env" takes `alt+e` with no collision.**
+
 ### D2. The view: key/value table, mask-by-default, no classification here
 
 The page body is a table: KEY | VALUE | (mode of the file, one line in the
@@ -165,16 +190,29 @@ header). Key facts:
   key name or value shape. Fixed width, not length-matched: mask length must
   not leak `sk_live_…` vs `sk_test_…` (the k9s lesson — masks hide content,
   and length is content).
-- **`Enter` / `r` reveals the selected row.** Reveal is per-row, transient:
+- **`Enter` / `v` reveals the selected row.** Reveal is per-row, transient:
   any navigation (arrow keys), page switch, modal open, or focus change
   re-masks. No auto-timeout timer in v1: a timer is untestable in the rig and
   the navigation rule already closes the leak window (the value is only on
   screen while the row is selected). A config knob (`mask: false` for users
-  who want plain view) is a follow-up.
-- **`c` copies the revealed value** to the system clipboard
-  (`github.com/atotto/clipboard`, already an indirect dep) with a transient
-  confirmation on the status line. Copying is the deliberate act — clipboard
-  managers make auto-clear unreliable; say so in the docs rather than fake it.
+  who want plain view) is a follow-up. (`v`, not `r` — `r` is
+  `Details.Restart`; see D4.)
+- **`c` copies the revealed value using `tea.SetClipboard`** — *not*
+  `github.com/atotto/clipboard` — with a transient confirmation on the status
+  line. This matters more than it looks: atotto shells out to `pbcopy` on
+  macOS and `xclip`/`xsel` on Linux, and **neither exists on a headless server
+  reached over SSH**, which is this app's core audience. `c` would fail exactly
+  where the app is most used, and it would look like a bug in the feature.
+  `tea.SetClipboard` writes the value with **OSC 52**, an escape sequence the
+  *terminal* interprets, so over SSH it lands in the clipboard of the machine
+  the human is actually sitting at. Verified present in
+  `charm.land/bubbletea/v2@v2.0.7/clipboard.go` (`SetClipboard`,
+  `ClipboardMsg`); it is a `tea.Cmd`, so it tests like every other command,
+  and it removes a dependency from this plan rather than adding one.
+  OSC 52 gives **no acknowledgement**, so the confirmation must say the copy
+  was *sent*, not that it succeeded (some terminals ship it disabled — tmux
+  needs `set -g set-clipboard on`). Its two costs are stated in §Security
+  drawbacks; do not paper over them.
 - **No heuristics on this page.** Mask-all has zero false negatives in the one
   place that exists to show secrets; classification (dotenv-tui's key-name +
   value-shape lists) moves to the details panels (D3), where showing *some*
@@ -191,6 +229,17 @@ page and the interpolation agree.
 The only env values rendered outside the new page today are PUID/PGID
 (`DetailsPanel.go:824`, `BasicInfo.go:49`) — not secrets. The rule going
 forward, in one `src/utils/SecretHint.go` helper:
+
+```go
+// SecretHint reports whether a value under this env key should be masked by
+// default when something other than the Env page renders it. Key name only -
+// value-shape heuristics are deliberately not used (see D3).
+//
+// It is a hint, not a guarantee: the Env page masks everything regardless,
+// and this exists so the next panel to render arbitrary env values does the
+// safe thing without its author having to think about it.
+func SecretHint(key string) bool
+```
 
 - Key-name patterns (suffix/prefix/contains on the uppercased key):
   `KEY`, `TOKEN`, `SECRET`, `PASSWORD`, `PASS`, `CREDENTIAL`, `APIKEY`,
@@ -214,18 +263,32 @@ forward, in one `src/utils/SecretHint.go` helper:
 
 ### D4. Operations
 
-| Key | Action |
-|---|---|
-| `Enter` / `r` | reveal selected value (re-mask on any navigation) |
-| `c` | copy revealed value to clipboard + confirm |
-| `a` | add variable (modal: key field + masked value field) |
-| `e` | edit value of selected key (inline masked input) |
-| `d` | delete key (confirm modal; deletes *all* occurrences, count shown) |
-| `o` | raw inline edit of the whole file (textarea, dotenv validation on save) |
-| `E` | open the file in `$EDITOR` (reuses the existing handover) |
-| `m` | chmod 600 (only shown/offered when the file is world-readable) |
+These letters are final. Two earlier drafts of this table used `a` and `r`;
+both collide with live global bindings, so they are listed under *Do not*.
 
-`a`/`e`'s value input uses a masked text field (renders `••`, stores real
+| Key | Action | Why this key |
+|---|---|---|
+| `Enter` / `v` | reveal selected value (re-mask on any navigation) | `v` for view; unbound anywhere today. **Not `r`** — `r` is `Details.Restart` (`Keys.go:196`), and reusing it is the exact collision the `R`-for-rename comment exists to avoid |
+| `c` | copy revealed value (OSC 52) + confirm | free |
+| `n` | new variable (modal: key field + masked value field) | already declared as `List.New` (`Keys.go:172`) and gated to Home (`src/model/Update.go:441`), so Env is free to use it. **Not `a`** — `a` is `Global.About` (`Keys.go:161`), live on every page. "One verb is one binding": the verb *new* is `n` wherever it appears |
+| `e` | edit value of selected key (inline masked input) | `List.Edit` / `Details.EditService` — same verb |
+| `d` | delete key (confirm modal; deletes *all* occurrences, count shown) | `List.Delete` — same verb |
+| `o` | raw inline edit of the whole file (textarea, dotenv validation on save) | free |
+| `E` | open the file in `$EDITOR` (reuses the existing handover) | `Details.EditFile` — same verb |
+| `m` | chmod 600 (offered only when the file is world-readable) | free. **Unix only** — see below |
+
+**`m` and the world-readable warning are gated behind `runtime.GOOS !=
+"windows"`.** `docs/plans/release-distribution.md` ships Windows binaries, and
+Unix permission bits do not survive there: `os.Stat().Mode().Perm()` reports
+something plausible and `Chmod` mostly does nothing. Show neither the warning
+nor the key on Windows rather than shipping a control that lies. One `if` —
+but written down, because otherwise it arrives as a bug report from the first
+Windows user.
+
+Note for whoever writes the keymap: `h` is spoken for by
+`docs/plans/healthcheck-insertion.md`. Do not spend it here.
+
+`n`/`e`'s value input uses a masked text field (renders `••`, stores real
 bytes) — the same reveal discipline applied to input. `o` is the Files-page
 model (raw bytes, line-oriented); save validates by parsing with the dotenv
 parser and reports errors on the status line without touching the file,
@@ -242,6 +305,20 @@ All writes go through `utils.ReplaceFileAtomically` (already exists,
    with a regular file and the original target keeps the old secret. Resolve
    `filepath.EvalSymlinks` first and atomic-write the resolved target. Detect
    and warn on the status line that the file is a symlink.
+
+   Three consequences, all of which must be handled:
+
+   - **The failure surface moves.** The temp file is created next to the file
+     being replaced (`AtomicWrite.go:26`), so resolving moves the write into
+     the *target's* directory. A read-only secrets directory now fails at
+     `CreateTemp`, not at rename, and the error must name the **resolved**
+     path or the user cannot tell which file could not be written.
+   - **The mode carried over is the target's, not the symlink's.** That is
+     correct; say so in a comment so nobody "fixes" it later.
+   - **`EvalSymlinks` errors on a dangling symlink.** Treat that as "present
+     but broken": report it on the status line, offer no write, and **do not
+     create a regular file at the symlink's path** — that would silently
+     detach the user's dotfiles setup.
 2. **Line-preserving edits.** Only the lines that changed are rewritten.
    Comments, blank lines, key order, quoting, `export ` prefixes, CRLF
    endings and BOM survive — the same house value the compose writer already
@@ -250,10 +327,32 @@ All writes go through `utils.ReplaceFileAtomically` (already exists,
    compose-go parses (quote when the value contains `#`, a space, or is empty;
    escape `\`, `"` inside quotes) — with tests that a value survives
    parse → write → parse unchanged.
-3. **File mode.** New `.env` created `0600` (a change from
-   `ReplaceFileAtomically`'s `0644` default — the env writer passes an explicit
-   mode). Existing mode preserved. When the file is world-readable (`0644`),
-   the status line warns and `m` offers the chmod.
+3. **File mode — and the mode must be applied *before* the bytes are
+   written.** New `.env` created `0600`; existing mode preserved; when the
+   file is world-readable the status line warns and `m` offers the chmod (Unix
+   only, D4).
+
+   Read `src/utils/AtomicWrite.go:39-49` before touching this. `os.CreateTemp`
+   opens at 0600, and `ReplaceFileAtomically` then **chmods the temp file up to
+   0644 when the target does not exist, before `temp.Write`**. A mode variant
+   that chmods *after* the rename therefore leaves the secret world-readable
+   for the entire duration of the write, and on a busy box that window is real.
+
+   Add a variant rather than changing the existing function, so no current
+   caller changes behaviour:
+
+   ```go
+   // ReplaceFileAtomicallyWithMode is ReplaceFileAtomically with an explicit
+   // mode for a file that does not exist yet. The mode is applied at the same
+   // point the 0644 default is applied today - before the write, not after
+   // the rename - so a 0600 file is never briefly world-readable.
+   func ReplaceFileAtomicallyWithMode(fileName string, contents []byte, mode os.FileMode) error
+   ```
+
+   `ReplaceFileAtomically` becomes a one-line call into it with its current
+   0644/preserve behaviour. Tests: a `.env` the app creates is `0600`; a
+   pre-existing `0644` `.env` is still `0644` after a write (D5.3 preserves —
+   `m` is how the user tightens it).
 4. **Duplicates.** The parser is last-wins (verified: `out[key] = value` in
    `dotenv/parser.go`), so the effective value is the *last* occurrence. The
    table shows one row per key; a duplicate-key warning goes on the status
@@ -328,6 +427,11 @@ in force.
    shrinks the window; it does not close it.
 2. **Clipboard managers** retain copied values. `c` is explicit and confirmed;
    auto-clear is unreliable across platforms/managers — document, don't fake.
+   OSC 52 (D2) adds two of its own, and both belong in the README: the secret
+   travels in the terminal's **output stream**, so a logged or recorded session
+   captures it; and the sequence is **unacknowledged and sometimes disabled**
+   (tmux needs `set -g set-clipboard on`), so the app can only report that the
+   copy was sent.
 3. **argv discipline.** No code path may pass a secret value to a `docker`
    argument (it would show in `ps`). The app's docker calls take no env values
    today; the new code adds none. A code-review note, not a feature.
@@ -363,18 +467,35 @@ in force.
 6. **Auto-timeout re-mask timer.** Rejected: untestable in the rig, and the
    navigation-based re-mask covers the leak window. Config knob later if
    users ask.
+7. **`github.com/atotto/clipboard` for `c`.** Rejected in favour of
+   `tea.SetClipboard` (D2): atotto needs `pbcopy`/`xclip`/`xsel` on the
+   machine running the app, which a headless server does not have.
+8. **Warning that `.env` is tracked by git.** Tempting and cheap-looking
+   (`git ls-files --error-unmatch .env`), but it makes the app shell out to a
+   tool it otherwise never needs, and it is wrong in a worktree without git.
+   One sentence in the README (".env holds secrets; add it to .gitignore")
+   does the same job for free.
+9. **Reading `.env.example` to prefill keys on the add form.** dotenv-tui's
+   feature, genuinely nice, and a follow-up — already listed as out of scope,
+   repeated here because "we already parse dotenv files" makes it look like a
+   two-line addition at exactly the wrong moment.
 
-## Who decides / blockers
+## Decisions taken — nothing here is open
 
-- **No external sign-off.** Everything is repo-local; no money, no accounts,
-  no new dependencies beyond what already exists.
-- **Owner decisions (recommendation in parens):** new "Env" tab vs Files-page
-  toggle (new tab, D1); mask-all vs heuristic (mask-all, D2); `m` chmod action
-  vs warn-only (action, D5.3 — ~15 lines and directly serves the "secrets"
-  ask); reload-on-write vs manual reload (reload, D6 — manual reload would be
-  a stale-view bug the moment a user edits `.env` and wonders why nothing
-  changed); keymap bindings for `a`/`c`/`d`/`e`/`o`/`m` (the table in D4 is
-  the draft; final letters live in `src/keys`).
+This section used to list five choices for the owner. They are all decided, in
+each case the way the plan already recommended. Recorded here so an
+implementer never has to ask, and so the reasoning is not re-litigated:
+
+| Question | Decision | Where |
+|---|---|---|
+| New "Env" tab, or a toggle on the Files page? | **New tab.** The Files page is a raw-bytes viewport; this needs a value table with per-row operations | D1 (and update the ROADMAP's three-tab line in the same phase) |
+| Mask everything, or classify by heuristic? | **Mask everything, fixed width.** Zero false negatives in the one place that exists to show secrets | D2 |
+| `m` to chmod, or warn only? | **`m` chmods,** Unix only | D4, D5.3 |
+| Reload the project after a write, or leave it to the user? | **Reload.** Manual would be a stale-view bug the moment someone edits `.env` and wonders why nothing changed | D6 |
+| Which letters? | **`v` `c` `n` `e` `d` `o` `E` `m`** — final, and `a`/`r` are forbidden | D4 |
+
+**No external sign-off.** Everything is repo-local: no money, no accounts, and
+no new direct dependencies (D2's clipboard decision removes one).
 
 ## Blast radius per step
 
@@ -384,24 +505,37 @@ in force.
 | 2 — load-path truth | `src/utils/ReadConfigFile.go`, `src/cmds/GetConfig.go`, reload messages | The compose-load message carries `.env` path + loaded flag; `src/model` message structs grow fields — all existing consumers compile-checked by the compiler |
 | 3 — Env page, masked table, reveal/copy | `src/apptypes/Pages.go`, `src/keys/Keys.go`, new `src/components/EnvPanel.go`, `src/cmds/GetEnvFileContents.go`(+`SaveEnvFile.go`), `src/model/Update.go`, `src/model/View.go` | Fourth tab: digits `1`–`4`, `[`/`]`, new `alt+e` chord; footer, help overlay, and keybinding bar gain the page's keys; `?` overlay lists them (existing mechanism) |
 | 4 — add/edit/delete + masked input | modal components (pattern: `GroupNameModal`/`ConfirmModal`), edit-command plumbing | Reuses `OpenConfirmModal`; new value-input component |
-| 5 — write path: symlink, mode, line-preserving writes, dupes | `src/utils/ApplyEnvEdit.go` (+tests), `AtomicWrite` gains a mode parameter | **`ReplaceFileAtomically`'s default-mode callers must be swept** — changing its signature touches every existing writer (`ApplyServiceFragment`, group writes); keep the old function and add the mode variant to limit blast radius |
+| 5 — write path: symlink, mode, line-preserving writes, dupes | `src/utils/ApplyEnvEdit.go` (+tests), `src/utils/AtomicWrite.go` gains `ReplaceFileAtomicallyWithMode` (D5.3) | **No existing caller changes.** Adding the variant and leaving `ReplaceFileAtomically` as a one-line call into it is what keeps this step off every current writer (`ApplyServiceFragment`, the group writes). Changing the existing signature instead would touch all of them |
 | 6 — reload-on-write + status line | `src/model/Update.go` | Background reload already exists; re-interpolation failures go down the existing error path |
 | 7 — docs + demo | `README.md`, `docs/DESIGN.md`, `TODO.md`, demo tape | README keybindings table, DESIGN §The Env page, fixture `.env` in `demo/fixtures` |
 
-## Implementation order
+## Implementation order — two phases, two branches
 
-1. **Step 1 + 2 first** — the helper and the load-path truth. Small, isolated,
-   testable, and everything else depends on them. (`go build ./... && go vet
-   ./... && go test ./...` green at every commit, per ROADMAP conventions.)
-2. **Step 3** — the page with a *read-only* masked table + reveal + copy.
-   This is the visible core; demo it before building writes.
-3. **Steps 4 + 5 together** — the operations and the write path are one
+This is **two** feature branches, each merged `--no-ff` with its own ROADMAP
+row, not one long one. The split is load-bearing: a masked, revealable,
+copyable view of `.env` is useful on its own, it is where all the visual risk
+lives, and it lets the write path — symlinks, modes, round-tripping — land
+against a UI that already exists instead of at the same time as one.
+
+**Phase A — the read-only page (steps 1–3).** Shippable alone.
+
+1. **Steps 1 + 2** — the `secretHint` helper and the load-path truth. Small,
+   isolated, testable, and everything else depends on them.
+2. **Step 3** — the page: masked table, reveal, copy. Demo it before building
+   any write path.
+
+**Phase B — the write path (steps 4–7).**
+
+3. **Steps 4 + 5 together** — the operations and the writer are one
    deliverable (add/edit/delete is meaningless without the safe writer), and
    the writer's edge cases (symlink, mode, dupes, round-trip) are a single
    test suite.
 4. **Step 6** — reload-on-write, then the status-line truth (D7) once the
    reload message carries the fields.
 5. **Step 7** — docs + demo tape, last.
+
+`go build ./... && go vet ./... && go test ./... && gofmt -l .` green at every
+commit in both phases, per `docs/ROADMAP.md` §Conventions.
 
 ## Acceptance criteria
 
@@ -434,153 +568,29 @@ in force.
 11. Demo tape renders the masked Env page with the fixture `.env`; no real
     secret appears in any committed fixture.
 
-## Review pass — 2026-07-31 (changes to make before implementing)
+## Review pass — 2026-07-31
 
-A second reader went through this plan against the code it names. The plan
-stands; nine things in it are wrong, unstated, or cheaper done another way.
-**These override the sections above where they conflict.**
+A second reader went through this plan against the code it names and found
+nine things that were wrong, unstated, or cheaper done another way. **All nine
+are now folded into the sections above**, so this plan says one thing once and
+can be read straight through:
 
-### R1. `a` for "add variable" collides with a global key
+| Was | Now lives in |
+|---|---|
+| `a` for add collides with `Global.About` | D4 — the key is `n` |
+| `r` for reveal collides with `Details.Restart` | D2, D4 — the key is `v` |
+| atotto/clipboard fails over SSH | D2 — `tea.SetClipboard` (OSC 52), costs in §Security drawbacks |
+| 0600 must be applied before the write, not after the rename | D5.3, with the `ReplaceFileAtomicallyWithMode` signature |
+| Symlink resolution moves the failure surface, carries the target's mode, and breaks on a dangling link | D5.1 |
+| A fourth tab contradicts a recorded ROADMAP decision | D1 — re-take it and edit the line in the same phase |
+| `m` (chmod) is meaningless on Windows | D4 — gated on `runtime.GOOS` |
+| The read-only page is a shippable unit | §Implementation order — two phases, two branches |
+| Two more things to reject explicitly | §Alternatives 8 and 9 |
 
-`a` is `Global.About` (`src/keys/Keys.go:161`), live on every page. The D4
-table cannot have it.
-
-The right key is already declared: **`n` — `List.New`, "new"**
-(`Keys.go:172`). It is bound on Home only (`src/model/Update.go:441` gates it
-with `m.activePage == "Home"`), so the Services and Env pages leave it free,
-and "one verb is one binding" (the rule at the top of `src/keys/Keys.go`) says
-the verb *new* is `n` wherever it appears.
-
-### R2. `r` for "reveal" is `Details.Restart`
-
-`r` is restart (`Keys.go:196`). Reusing it for reveal is exactly the collision
-the `R`-for-rename comment was written to avoid ("uppercase so it does not
-collide with the details panel's lowercase r").
-
-Use **`v`** (view/reveal) — unbound anywhere today. The revised D4 table:
-
-| Key | Action | Why this key |
-|---|---|---|
-| `v` | reveal selected value | free; "view" |
-| `c` | copy revealed value | free |
-| `n` | new variable | `List.New`, R1 |
-| `e` | edit value | `List.Edit`/`Details.EditService` — same verb |
-| `d` | delete key | `List.Delete` — same verb |
-| `o` | raw edit of the whole file | free |
-| `E` | open in `$EDITOR` | `Details.EditFile` — same verb |
-| `m` | chmod 600 | free (see R7 for Windows) |
-
-Note for whoever writes the keymap: `h` is spoken for by
-`docs/plans/healthcheck-insertion.md`. Do not spend it here.
-
-### R3. Use `tea.SetClipboard`, not `github.com/atotto/clipboard`
-
-D2 proposes atotto. atotto shells out to `pbcopy` on macOS and
-`xclip`/`xsel` on Linux — neither of which exists on a headless server reached
-over SSH, which is this app's core audience. `c` would fail precisely where the
-app is most used, and the failure would look like a bug in the feature.
-
-Bubble Tea v2 already ships the right mechanism: `tea.SetClipboard` writes the
-value with **OSC 52**, an escape sequence the *terminal* interprets — so over
-SSH it lands in the clipboard of the machine the human is sitting at, which is
-what they actually wanted. Verified present in
-`charm.land/bubbletea/v2@v2.0.7/clipboard.go` (`SetClipboard`, `ClipboardMsg`).
-It is a `tea.Cmd`, so it also tests like every other command.
-
-Two costs, both worth stating in §Security drawbacks rather than hiding:
-OSC 52 puts the secret into the terminal's *output stream* (a logged or
-recorded session captures it), and some terminals ship it disabled — tmux
-needs `set -g set-clipboard on`. So `c` needs a status-line confirmation that
-says the request was *sent*, not that it succeeded; OSC 52 gives no
-acknowledgement. Also: this removes a dependency from the plan rather than
-adding one — atotto stays indirect.
-
-### R4. The 0600 mode must be set before the bytes are written
-
-D5.3 says "New `.env` created `0600`". Read `src/utils/AtomicWrite.go:39-49`
-before implementing: `os.CreateTemp` opens at 0600, and
-`ReplaceFileAtomically` then **chmods the temp file up to 0644 when the target
-does not exist**, before `temp.Write`. A mode variant that chmods after the
-rename leaves the secret world-readable for the whole write — and on a busy
-box that window is real.
-
-So: `ReplaceFileAtomicallyWithMode(fileName string, contents []byte, mode
-os.FileMode)`, applying the mode at the same point the existing function does
-(before the write), with the existing function calling it with its current
-0644/preserve behaviour so no existing caller changes. Test it by asserting
-the mode of a `.env` created by the app is `0600`, and that a pre-existing
-`0644` `.env` keeps `0644` (D5.3 preserves; `m` is how the user tightens it).
-
-### R5. Symlink resolution has two consequences the plan doesn't state
-
-D5.1 resolves with `filepath.EvalSymlinks` and writes the target. Correct — and
-it moves the write into the *target's* directory, because the temp file is
-created next to the file being replaced (`AtomicWrite.go:26`). Therefore:
-
-1. The failure surface moves. A read-only secrets directory fails at
-   `CreateTemp`, not at rename, and the error must name the **resolved** path
-   or the user will not understand which file the app could not write.
-2. The mode carried over is the target's, not the symlink's. That is right,
-   and worth a comment so nobody "fixes" it later.
-3. `EvalSymlinks` errors on a **dangling** symlink. Treat that as "present but
-   broken": show it on the status line, offer no write, and do **not** create a
-   regular file at the symlink's path — that would silently detach the user's
-   dotfiles setup.
-
-### R6. A fourth tab needs the owner to reopen a recorded decision
-
-`docs/ROADMAP.md` §Decisions already taken: *"Tabs for the alpha are Groups,
-Services, Files. No dead placeholder tabs."* The alpha shipped, so the
-constraint has arguably expired — but it is written down, and D1 adds a tab, so
-the decision has to be re-taken and the ROADMAP line updated in the same phase.
-That is a doc edit, not a discussion, but skipping it leaves the repo
-contradicting itself.
-
-The mechanics D1 claims do hold, verified: `Global.Page`'s help text is
-`fmt.Sprintf("1-%d", len(apptypes.PageTitles))` (`Keys.go:153-156`), so the
-digit hint becomes `1-4` on its own, and `PageShortcut` derives the chord from
-the label's first letter (`Pages.go:33-46`) — Groups/Services/Files are g/s/f,
-so **"Env" takes `alt+e` with no collision**.
-
-### R7. `m` (chmod) is meaningless on Windows
-
-`docs/plans/release-distribution.md` ships Windows binaries. Unix permission
-bits do not survive there: `os.Stat().Mode().Perm()` reports something
-plausible and `Chmod` mostly does nothing. Gate both the world-readable
-warning and the `m` action behind `runtime.GOOS != "windows"`, and say so in
-the footer's absence rather than showing a control that lies. One `if`, but it
-has to be in the plan or it will ship as a bug report from the first Windows
-user.
-
-### R8. Split the phase: read-only Env page is a shippable unit
-
-§Implementation order already sequences steps 1–2, then 3, then 4+5. Make that
-split formal: **steps 1–3 are one phase** (branch, `--no-ff` merge, ROADMAP
-row) and **steps 4–7 are the second**. A masked, revealable, copyable view of
-`.env` is useful on its own, it is where all the visual risk lives, and it
-lets the write path — the part with symlinks, modes and round-tripping — land
-against a UI that already exists rather than at the same time as one.
-
-### R9. Two additions to the "considered and rejected" list
-
-So they do not get invented mid-implementation:
-
-- **Warning that `.env` is tracked by git.** Tempting and cheap-looking
-  (`git ls-files --error-unmatch .env`), but it makes the app shell out to a
-  tool it otherwise never needs, and it is wrong in a worktree without git.
-  A sentence in the README (".env holds secrets; add it to .gitignore") does
-  the same job for free.
-- **Reading `.env.example` to prefill keys on the add form.** That is
-  dotenv-tui's feature, it is genuinely nice, and it is a follow-up — listed
-  in §Scope as out, repeated here because "we already parse dotenv files" makes
-  it look like a two-line addition at exactly the wrong moment.
-
-### Unchanged by this review
-
-Mask-all with a fixed width (D2), the raw-lines-not-parsed-map table (D2), the
-`secretHint` boundary and its deliberately-unmasked list (D3), reload-on-write
-(D6), the status-line truth including `COMPOSE_DISABLE_ENV_FILE` (D7), and
-every entry in §Edge cases. Those were checked against the same code and hold.
+Checked against the same code and unchanged: mask-all at fixed width (D2), the
+raw-lines-not-parsed-map table (D2), the `secretHint` boundary and its
+deliberately-unmasked list (D3), reload-on-write (D6), the status-line truth
+including `COMPOSE_DISABLE_ENV_FILE` (D7), and every entry in §Edge cases.
 
 ## Do not
 
@@ -595,8 +605,10 @@ every entry in §Edge cases. Those were checked against the same code and hold.
 - Do not put an auto-timeout re-mask timer in v1 (Alternatives §6).
 - Do not touch `secrets:`/docker-swarm secret handling — out of scope by
   decision, not by accident.
-- Do not bind `a` or `r` on the Env page (review R1, R2), and do not add
-  `github.com/atotto/clipboard` as a direct dependency (R3).
-- Do not chmod after the rename (R4), and do not create a regular file where a
-  dangling symlink was (R5).
-- Do not add git-awareness or `.env.example` prefilling (R9).
+- Do not bind `a` or `r` on the Env page (D4 — they are `Global.About` and
+  `Details.Restart`), and do not add `github.com/atotto/clipboard` as a direct
+  dependency (D2).
+- Do not chmod after the rename (D5.3), and do not create a regular file where
+  a dangling symlink was (D5.1).
+- Do not show the world-readable warning or the `m` key on Windows (D4).
+- Do not add git-awareness or `.env.example` prefilling (Alternatives 8, 9).

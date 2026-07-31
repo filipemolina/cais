@@ -1,5 +1,12 @@
 # Plan: One Folder per Model — Restructure `src/components`
 
+> **Before you start.** Work on a feature branch of small commits, merged
+> `--no-ff`; `go build ./... && go vet ./... && go test ./... && gofmt -l .`
+> green at **every** commit, not just at the tip — `docs/ROADMAP.md`
+> §Conventions is the full contract and `CONTRIBUTING.md` explains how a TUI
+> gets tested. Behaviour that only shows on screen gets checked in the real app
+> with VHS before it is committed. **Step 1 of the post-alpha order** (`docs/ROADMAP.md` §The order after the alpha) — nothing else should be in flight in `src/components` while this runs.
+
 Ask: *"restructuring the project's sub models so they have the same file
 structure as the main model (model name as a folder, then a View, Model and
 Update files for each model)."*
@@ -297,13 +304,17 @@ extra checks, because a restructure is exactly where a silent change hides:
    renames (`R100`) and import lines, nothing else. Any commit with a large
    `+`/`-` on a file that was supposed to move is a commit to re-read.
 
-## Effort / gain
+## Effort / gain — decided: option 2
+
+**Do the full restructure, Phases 1–6.** The table is the reasoning, not a
+menu; option 3 in it is explicitly a different plan and must not be smuggled
+into this one.
 
 | Option | Effort | Gain | Verdict |
 |---|---|---|---|
 | 0 — leave it flat | 0 | zero risk; the package keeps growing and every helper stays implicitly global to 25 files | defensible, and it gets worse per feature |
 | 1 — `chrome` only (Phase 1) | ~0.5 day | fixes the actual problem: shared rendering is now a named thing with an API, not ambient state | **the minimum worth doing** |
-| **2 — full restructure (Phases 1–6)** | **~2–3 days** | the asked-for shape; each model gets a namespace; new components have an obvious home; the compiler starts enforcing what is shared | **recommended, before the feature plans** |
+| **2 — full restructure (Phases 1–6)** | **~2–3 days** | the asked-for shape; each model gets a namespace; new components have an obvious home; the compiler starts enforcing what is shared | **← build this**, and before the feature plans |
 | 3 — 2 + `src/model` split by page | +2 days | `Update.go` is 972 lines and growing | separate plan; do not smuggle it in here |
 
 **What this does not buy:** no user-visible change, no performance change, no

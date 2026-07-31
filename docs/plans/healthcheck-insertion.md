@@ -1,5 +1,12 @@
 # Plan: Guided Healthcheck Insertion
 
+> **Before you start.** Work on a feature branch of small commits, merged
+> `--no-ff`; `go build ./... && go vet ./... && go test ./... && gofmt -l .`
+> green at **every** commit, not just at the tip — `docs/ROADMAP.md`
+> §Conventions is the full contract and `CONTRIBUTING.md` explains how a TUI
+> gets tested. Behaviour that only shows on screen gets checked in the real app
+> with VHS before it is committed. **Step 4 of the post-alpha order.**
+
 Feature request (discovery session, nothing implemented): *"A lot of my services
 don't have health checks. Is there an easy way to add a functional health check
 to a service only by editing the compose.yml file?"*
@@ -287,12 +294,15 @@ Every commit stays `go build ./... && go vet ./... && go test ./...` green;
 the work lands as a small feature branch merged `--no-ff`, per ROADMAP.md
 conventions.
 
-## Effort / gain — the honest call
+## Effort / gain — decided: option 1
+
+**Build option 1.** The table below is why, kept because the reasoning is worth
+having; it is not a menu to pick from.
 
 | Option | Effort | Gain | Verdict |
 | --- | --- | --- | --- |
 | 0 — Do nothing; add a README paragraph ("healthchecks are compose YAML, `e` to edit, `s` to apply") | ~0.5 day | discoverability only; the two real failure modes (bad probe tool, apply gap) untouched | defensible floor |
-| **1 — `h` + catalog + validated insert + apply hint** | **~2 days** (data layer is a table + one yaml.Node function; modal and key reuse existing patterns) | the actual ask: one keypress to a working, reviewed-by-Docker healthcheck, with feedback that it took effect | **recommended** |
+| **1 — `h` + catalog + validated insert + apply hint** | **~2 days** (data layer is a table + one yaml.Node function; modal and key reuse existing patterns) | the actual ask: one keypress to a working, reviewed-by-Docker healthcheck, with feedback that it took effect | **← build this** |
 | 2 — 1 + `docker compose exec` test-once | +1 day | closes the only remaining "is it functional?" doubt before trusting a check | defer; revisit if users report wrong guesses |
 
 **Verdict:** worth it, at the small end. Reasons: the app already surfaces
@@ -305,10 +315,13 @@ feature's ceiling is inherently capped — compose-only healthchecks can never b
 deliverable is guidance plus validation, not automation; and for a user happy
 to write YAML by hand, the inline editor already covers the literal request.
 
-**Decision owners:** the key (`h` vs another unbound key — maintainer call,
-`h` recommended); direct validated write vs editor-prefill (this plan
-recommends direct write for ease, with the generic tier's port typed inline
-in the same modal so nothing low-confidence lands unexamined); catalog
-scope (the 4+1 rows above vs a longer community catalog — small is better:
-each row is a correctness claim about an image, and wrong rows make
-`unhealthy`).
+**Decisions taken — nothing here is open.** These were once listed for the
+maintainer to settle; they are settled, each the way this plan recommended:
+
+- **The key is `h`.** Unbound today, mnemonic, and reserved against
+  `docs/plans/env-secrets.md`, which was told not to spend it.
+- **Direct validated write, not editor-prefill.** The generic tier's port is
+  typed inline in the same modal, so nothing low-confidence lands unexamined.
+- **The catalog stays at the 4+1 rows above.** It does not grow into a
+  community catalog: every row is a correctness claim about an image, and a
+  wrong row produces a container stuck at `unhealthy`. Small is safer.

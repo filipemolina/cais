@@ -1,5 +1,12 @@
 # Plan: Search Docker Images From Inside the TUI
 
+> **Before you start.** Work on a feature branch of small commits, merged
+> `--no-ff`; `go build ./... && go vet ./... && go test ./... && gofmt -l .`
+> green at **every** commit, not just at the tip — `docs/ROADMAP.md`
+> §Conventions is the full contract and `CONTRIBUTING.md` explains how a TUI
+> gets tested. Behaviour that only shows on screen gets checked in the real app
+> with VHS before it is committed. **Step 2 of the post-alpha order** — but only **Phase 1** is step 2; Phases 2-4 come after the rest of the lifecycle. Do it after the package restructure (step 1), so new files land in the new layout.
+
 Feature request: *"a feature where the user could search for docker images from
 inside the TUI, so it would be even easier to set up the entire server without
 having to go out of the TUI."*
@@ -224,11 +231,16 @@ it emits on submit. `CreateComposeFileModal` renders it as its third step;
 `AddServiceModal` renders it as its whole body. Phases 2 and 3 then add search
 and tags in one place and both flows get them.
 
-Two honest caveats. First, if parameterising that step turns out to need more
-than a title and a submit-message factory, stop and copy it instead — a shared
-component with five knobs is worse than sixty duplicated lines. Second, do this
-**after** the `component-package-restructure` (step 1 in `docs/ROADMAP.md`), so
-the extracted file is placed in the new layout rather than moved twice.
+**The shared component takes exactly two parameters: a title string, and a
+function that turns `(name, image)` into the `tea.Cmd` to run on submit.**
+That is the whole contract — do not add a third. If a third looks necessary,
+that is the signal to stop and copy the step into `AddServiceModal` instead;
+sixty duplicated lines beat a shared component with five knobs. Nothing else
+about the flow changes in that case, so it is a local decision, not a redesign.
+
+Do this **after** the `component-package-restructure` (step 1 in
+`docs/ROADMAP.md`), so the extracted file is placed in the new layout rather
+than moved twice.
 
 There is a second-order cleanup available once `AddServiceFragment` exists:
 `WriteNewComposeFile` currently seeds the first service itself, and could
