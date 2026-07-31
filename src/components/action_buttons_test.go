@@ -3,10 +3,15 @@ package components
 import (
 	"fmt"
 	"image/color"
+	"slices"
 	"strings"
 	"testing"
 
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/keys"
@@ -77,10 +82,183 @@ func TestActionButtonsKeepTheirShapeWhenDimmed(t *testing.T) {
 		t.Errorf("dimming changed the row's layout:\n got %q\nwant %q", got, want)
 	}
 
-	for _, label := range []string{"s Start", "t Stop", "r Restart", "p Pull", "x Remove"} {
+	for _, label := range []string{"s Start", "t Stop", "r Restart", "p Pull", "x Remove", "l Logs"} {
 		if !strings.Contains(ansi.Strip(unfocused), label) {
 			t.Errorf("dimmed row is missing %q", label)
 		}
+	}
+}
+
+// The row is the panel's action set, so it has to be the whole set. It was a
+// hand-written five that left out `l logs` while the footer offered it, which
+// made the two disagree about what the panel can do.
+func TestActionRowCoversEveryActionTheFooterOffers(t *testing.T) {
+	for _, page := range []string{"Home", "Services"} {
+		t.Run(page, func(t *testing.T) {
+			ctx := detailsContext(page, true)
+
+			inRow := make(map[string]bool)
+			for _, button := range actionButtons() {
+				inRow[button.binding.Help().Key] = true
+			}
+
+			for _, binding := range keys.Active(ctx) {
+				help := binding.Help()
+
+				// The footer also carries navigation and list keys; the row is
+				// only about the panel's own verbs, which are the Details ones.
+				if !isDetailsAction(binding) {
+					continue
+				}
+
+				if !inRow[help.Key] {
+					t.Errorf("footer offers %q (%s) on a focused details panel but the action row has no button for it", help.Key, help.Desc)
+				}
+			}
+		})
+	}
+}
+
+// isDetailsAction reports whether a binding is one of the details panel's own
+// verbs, as opposed to a list or global key that happens to be live beside it.
+// Edit and EditFile are excluded deliberately: they open an editor rather than
+// act on the container, and the row is the container's controls.
+func isDetailsAction(binding key.Binding) bool {
+	for _, action := range []key.Binding{
+		keys.Details.Start, keys.Details.Stop, keys.Details.Restart,
+		keys.Details.Pull, keys.Details.Remove, keys.Details.Logs,
+	} {
+		if slices.Equal(action.Keys(), binding.Keys()) && action.Help() == binding.Help() {
+			return true
+		}
+	}
+
+	return false
+}
+
+// The destructive verb is not the peer of "restart", and the row says so.
+func TestRemoveIsColoredAsDestructive(t *testing.T) {
+	row := renderActionButtons(80, appstyles.Active.BackgroundElevated, detailsContext("Home", true))
+
+	if !strings.Contains(row, fgSGR(appstyles.Active.StatusError)) {
+		t.Error("the remove button is not colored as destructive")
+	}
+}
+
+// lipgloss wraps on the cell, not on the control, so a row wider than its panel
+// used to break a button across two lines and push the panel's content out of
+// its box. The row sheds whole buttons instead, lowest priority first, and what
+// is shed is still on the footer and still pressable.
+func TestActionRowShedsButtonsRatherThanWrapping(t *testing.T) {
+	ctx := detailsContext("Home", true)
+
+	full := renderActionButtons(80, appstyles.Active.BackgroundElevated, ctx)
+	if h := lipgloss.Height(full); h != 1 {
+		t.Fatalf("a row that fits is %d rows tall, want 1", h)
+	}
+
+	// Every width from "nothing fits" up to the full row: none may wrap, none
+	// may overflow the panel, and none may render a partial button.
+	for width := 0; width <= lipgloss.Width(full); width++ {
+		row := renderActionButtons(width, appstyles.Active.BackgroundElevated, ctx)
+
+		if h := lipgloss.Height(row); h != 1 {
+			t.Errorf("width %d: row is %d rows tall, want 1", width, h)
+		}
+		if w := lipgloss.Width(row); w > max(width, 0) {
+			t.Errorf("width %d: row rendered %d columns wide", width, w)
+		}
+
+		// A surviving button is whole: its key and its word, never a fragment.
+		stripped := ansi.Strip(row)
+		for _, button := range actionButtons() {
+			help := button.binding.Help()
+			if strings.Contains(stripped, help.Key+" "+buttonLabel(help.Desc)[:1]) &&
+				!strings.Contains(stripped, help.Key+" "+buttonLabel(help.Desc)) {
+				t.Errorf("width %d: %q is rendered as a fragment: %q", width, help.Desc, stripped)
+			}
+		}
+	}
+}
+
+// The panels clip their body with MaxHeight, so the wrap never spilled the
+// frame - it was absorbed, which is why it read as "the buttons look mangled"
+// rather than "the layout is broken". A six-button row wrapped to thirty-one
+// rows at the narrowest widths, and the clip ate the group's member table to
+// pay for them.
+//
+// The wrap itself is guarded one test up, at the row, which is where it is
+// observable. This is the standing guard that the frame stays inside the box
+// AppModel gave it at any width - it would not have caught the wrap, and is
+// not claimed to.
+func TestNarrowPanelsStayInsideTheirBox(t *testing.T) {
+	services := []types.ServiceConfig{
+		{Name: "prowlarr", Image: "lscr.io/linuxserver/prowlarr:latest", Profiles: []string{"arr"}},
+		{Name: "radarr", Image: "lscr.io/linuxserver/radarr:latest", Profiles: []string{"arr"}},
+	}
+
+	for _, width := range []int{100, 80, 60, 50, 40, 30, 24, 16, 10} {
+		const height = 20
+
+		group := GroupDetailsPanel().(GroupDetailsPanelModel)
+		group.services = services
+		group.selectedGroup = "arr"
+		group.panelWidth, group.panelHeight = width, height
+		group.isFocused = true
+
+		service := DetailsPanel(&services[0]).(DetailsPanelModel)
+		service.panelWidth, service.panelHeight = width, height
+		service.isFocused = true
+
+		panels := map[string]tea.Model{"group": group, "service": service}
+		for name, panel := range panels {
+			frame := panel.View().Content
+
+			if got := lipgloss.Height(frame); got != height {
+				t.Errorf("%s panel at width %d: %d rows tall, want %d", name, width, got, height)
+			}
+			if got := lipgloss.Width(frame); got > width {
+				t.Errorf("%s panel at width %d: %d columns wide, want ≤ %d", name, width, got, width)
+			}
+		}
+	}
+}
+
+// Shedding follows the declared order, so a panel that can only hold three
+// controls holds the three lifecycle verbs - not whichever happened to be
+// listed first.
+func TestActionRowShedsInPriorityOrder(t *testing.T) {
+	ctx := detailsContext("Home", true)
+
+	// Widths descend, so each step may only ever lose buttons.
+	previous := map[string]bool{}
+	first := true
+
+	for width := lipgloss.Width(renderActionButtons(80, appstyles.Active.BackgroundElevated, ctx)); width >= 0; width-- {
+		stripped := ansi.Strip(renderActionButtons(width, appstyles.Active.BackgroundElevated, ctx))
+
+		present := map[string]bool{}
+		for _, button := range actionButtons() {
+			help := button.binding.Help()
+			present[help.Desc] = strings.Contains(stripped, help.Key+" "+buttonLabel(help.Desc))
+		}
+
+		if !first {
+			for desc, was := range previous {
+				if !was && present[desc] {
+					t.Fatalf("width %d: %q came back after being shed", width, desc)
+				}
+			}
+		}
+
+		// remove is shed before pull, pull before logs, logs before restart.
+		for _, pair := range [][2]string{{"remove", "pull"}, {"pull", "logs"}, {"logs", "restart"}, {"restart", "stop"}, {"stop", "start"}} {
+			if present[pair[0]] && !present[pair[1]] {
+				t.Errorf("width %d: %q survived while %q was shed, which inverts the drop order", width, pair[0], pair[1])
+			}
+		}
+
+		previous, first = present, false
 	}
 }
 
@@ -89,8 +267,8 @@ func TestActionButtonsKeepTheirShapeWhenDimmed(t *testing.T) {
 func TestActionButtonsRenderTheBindingsOwnHelp(t *testing.T) {
 	row := ansi.Strip(renderActionButtons(80, appstyles.Active.BackgroundElevated, detailsContext("Home", true)))
 
-	for _, binding := range actionButtonKeys() {
-		help := binding.Help()
+	for _, button := range actionButtons() {
+		help := button.binding.Help()
 		want := help.Key + " " + buttonLabel(help.Desc)
 
 		if !strings.Contains(row, want) {

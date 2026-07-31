@@ -501,8 +501,8 @@ Home is the launchpad. Its body is a two-pane layout:
   onboarding card; when groups exist but none is selected it prompts the user
   to pick one; when a group is selected it shows a header card with a status
   pill, a running/stopped/services summary, a member-services table (status
-  dot, NAME, IMAGE, STATE, HEALTH, UPTIME, PORTS), and pinned
-  Start/Stop/Restart/Pull/Remove action buttons.
+  dot, NAME, IMAGE, STATE, HEALTH, UPTIME, PORTS), and a pinned action row
+  (see *The action row* below).
 
 The large ASCII logo is no longer rendered here; it remains reserved for a
 future About modal.
@@ -542,9 +542,9 @@ body is a two-pane layout:
     memory usage + percentage, CPU usage, network I/O, disk I/O, PIDs count,
     and uptime.
     
-    Start/Stop/Restart/Pull/Remove action buttons are pinned at the bottom,
-    matching the group panel exactly. While a docker action is pending, the
-    buttons are replaced by a spinner with the action description.
+    The action row is pinned at the bottom, matching the group panel exactly
+    (see *The action row* below). While a docker action is pending, the row is
+    replaced by a spinner with the action description.
 
   The service details panel deliberately omits the PUID/PGID row when neither
   is set (since they are optional env-var-derived fields specific to certain
@@ -553,6 +553,60 @@ body is a two-pane layout:
   tells them whether it comes back after a crash, volumes tell them what data
   is persisted, depends_on reveals startup ordering, and the resource limits
   help diagnose OOM kills — all common concerns when running a home server.
+
+### The action row
+
+Both details panels pin the same action row to the bottom of their body:
+`s Start`, `t Stop`, `r Restart`, `p Pull`, `x Remove`, `l Logs`, rendered by
+`renderActionButtons` in `src/components/PanelFrame.go`. Three rules govern it.
+
+**It says what `keys.Active` says.** The row takes a `keys.Context` — the same
+screen state the footer bar reports — and asks `keys.Live` for each binding. A
+button is drawn in the accent exactly when the footer is still offering that
+key, and dimmed otherwise. This is the same rule as *Where keybindings live*
+above, applied to a second surface: the row is not allowed to have an opinion
+about what is pressable, because a surface with its own opinion is a surface
+that can drift from the handlers. It previously had one — it painted every
+button identically forever, which promised the action keys worked when the
+panel was unfocused and they did not.
+
+Neither panel special-cases the unfocused state. It reports the *list* as the
+focused component, which is true, and `keys.Active` returns the list's keys,
+none of which are action bindings. The row dims by the same rule that empties
+those keys out of the footer, with no second code path to keep in sync.
+
+Unavailable buttons are **dimmed, not hidden**, so the row keeps its shape as
+Tab moves focus rather than reflowing the panel body underneath it. A dim
+control is also the right affordance for the planned mouse support, where a
+click on an unfocused panel's button should focus the panel and then act.
+
+**It is a chip, not a box.** Each button is a filled surface on
+`BackgroundRecessed` with `Padding(0, 1)` and no border — the shape the status
+pills and the title chip already use, on the tier the empty-state cards use for
+"inset into this panel". It was previously a rounded accent-outlined box three
+rows tall, the only element in the app built that way. The chip carries its own
+surface rather than its parent's tier, which is the reverse of what the boxed
+version did: focus is legible in the ink now, so the surface is free to stay
+put, and the recess deepens on its own when focus lifts the panel from tier 3
+to tier 4. Remove is inked in `StatusError` in both of its live states, so the
+destructive verb is not presented as the peer of `Restart`.
+
+Because a chip is one row rather than three, the row is now the same height as
+the pending-action spinner that replaces it — so starting an action no longer
+shifts the panel body by two rows.
+
+**It sheds rather than wraps.** lipgloss wraps on the cell, not on the control,
+so a row wider than its panel broke a button across lines; at the narrowest
+widths a six-button row wrapped to thirty-one. The panels clip their body with
+`MaxHeight`, so this never spilled the frame — it was absorbed by eating the
+member table instead, which is why it read as "the buttons look mangled" rather
+than "the layout is broken". The row now drops whole buttons until it fits, in
+a declared order that is deliberately *not* the display order: remove goes
+first (a cramped click target is the last thing a destructive action should
+have), then pull (the rarest), then logs; the three lifecycle verbs are what a
+very narrow panel keeps. Everything shed is still on the footer and still
+pressable, which is what makes shedding safe — the row is a convenience and a
+future mouse surface, never the only way to reach an action.
 
 ### Color lives on a Theme
 

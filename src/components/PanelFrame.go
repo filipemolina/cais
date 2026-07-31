@@ -2,6 +2,7 @@ package components
 
 import (
 	"image/color"
+	"slices"
 	"strings"
 
 	"charm.land/bubbles/v2/key"
@@ -31,40 +32,79 @@ func dockerActionFor(msg tea.KeyPressMsg) (string, bool) {
 	return "", false
 }
 
-// actionButtonKeys are the bindings the action row stands for, in the order it
-// shows them. The row is built from the bindings rather than from five literal
-// label/shortcut pairs so that it cannot claim a key the handlers don't answer
-// to - the same rule the footer and the help overlay already follow. See the
-// package doc on src/keys.
-func actionButtonKeys() []key.Binding {
-	return []key.Binding{
-		keys.Details.Start, keys.Details.Stop, keys.Details.Restart,
-		keys.Details.Pull, keys.Details.Remove,
+// actionButton is one control in the row: the binding it stands for, and the
+// two things the row needs to know that the binding does not carry.
+type actionButton struct {
+	binding key.Binding
+	// drop is this button's place in the row's degradation order, lowest first.
+	// It is separate from the slice order because the order to shed in is not
+	// the order to read in: remove goes first because it is destructive and a
+	// cramped click target is the last thing a destructive action should have,
+	// then pull because it is the rarest, then logs; the three lifecycle verbs
+	// are what a two-inch-wide panel keeps.
+	drop int
+	// danger marks the destructive one. It is a field rather than a comparison
+	// against keys.Details.Remove at render time so that the row states its own
+	// policy in one table instead of hiding it in a conditional.
+	danger bool
+}
+
+// actionButtons are the bindings the row stands for, in the order it shows
+// them - the same order the footer lists them in, so the eye can move between
+// the two without re-sorting.
+//
+// The row is built from the bindings rather than from literal label/shortcut
+// pairs so that it cannot claim a key the handlers don't answer to; that is the
+// rule the footer and the help overlay already follow, and it is why logs is
+// here at all. The row used to be a hand-written five that omitted `l logs`
+// while the footer offered it, so the panel's own actions were advertised in
+// two places that listed different things.
+func actionButtons() []actionButton {
+	return []actionButton{
+		{binding: keys.Details.Start, drop: 5},
+		{binding: keys.Details.Stop, drop: 4},
+		{binding: keys.Details.Restart, drop: 3},
+		{binding: keys.Details.Pull, drop: 1},
+		{binding: keys.Details.Remove, drop: 0, danger: true},
+		{binding: keys.Details.Logs, drop: 2},
 	}
 }
 
-// renderActionButtons renders the shared Start/Stop/Restart/Pull/Remove row
-// used by both DetailsPanel and GroupDetailsPanel, right-aligned within the
-// panel body width it is given. `bg` is the panel's background tier, which the
-// buttons sit flush on.
+// actionButtonGap is the column between two chips. The chips carry their own
+// fill, so the gap is what makes them read as separate controls.
+const actionButtonGap = 1
+
+// renderActionButtons renders the action row shared by DetailsPanel and
+// GroupDetailsPanel, right-aligned within the panel body width it is given.
+// `bg` is the panel's background tier, which the row sits on and the chips are
+// recessed into.
 //
 // `ctx` is the same screen state the footer reports, and it decides which
-// buttons are live. Before it was threaded through, the row painted all five
-// identically whatever the screen was doing, which read as a promise that s/t/
-// r/p/x work at all times - they only work while the details panel holds focus.
-// Asking keys.Live is what makes the row and the footer one statement rather
-// than two that happen to agree.
+// buttons are live. Before it was threaded through, the row painted every
+// button identically whatever the screen was doing, which read as a promise
+// that s/t/r/p/x/l work at all times - they only work while the details panel
+// holds focus. Asking keys.Live is what makes the row and the footer one
+// statement rather than two that happen to agree.
+//
+// A row too wide for the panel sheds buttons rather than wrapping. lipgloss
+// wraps on the cell, not on the control, so an overflowing row used to break a
+// chip across two lines and push the panel's own content out of its box; every
+// shed key is still on the footer and still pressable, which a mangled row is
+// not. See the narrow-terminal entry in TODO.md.
 func renderActionButtons(width int, bg color.Color, ctx keys.Context) string {
-	buttons := make([]string, 0, 5)
-	for _, binding := range actionButtonKeys() {
-		help := binding.Help()
-		buttons = append(buttons, Button(buttonLabel(help.Desc), help.Key, bg, keys.Live(ctx, binding)).View().Content)
+	shown := actionButtons()
+
+	row := joinActionButtons(shown, bg, ctx)
+	for len(shown) > 0 && lipgloss.Width(row) > width {
+		shown = slices.DeleteFunc(shown, func(b actionButton) bool {
+			return b.drop == lowestDrop(shown)
+		})
+		row = joinActionButtons(shown, bg, ctx)
 	}
 
-	row := lipgloss.JoinHorizontal(lipgloss.Left, buttons...)
-
-	// JoinHorizontal pads each button up to the tallest one with unstyled
-	// spaces, which is the dark band that used to sit behind this row.
+	// The chips are opaque and the gaps are painted, so there is nothing left
+	// unstyled inside the row; the seal is kept for the alignment padding the
+	// Width() below adds around it.
 	row = appstyles.FillBackground(bg, row)
 
 	return lipgloss.NewStyle().
@@ -72,6 +112,43 @@ func renderActionButtons(width int, bg color.Color, ctx keys.Context) string {
 		AlignHorizontal(lipgloss.Right).
 		Background(bg).
 		Render(row)
+}
+
+// joinActionButtons renders buttons into a single row on bg, each chip's
+// enabled state resolved against ctx.
+func joinActionButtons(buttons []actionButton, bg color.Color, ctx keys.Context) string {
+	if len(buttons) == 0 {
+		return ""
+	}
+
+	gap := lipgloss.NewStyle().Background(bg).Render(strings.Repeat(" ", actionButtonGap))
+
+	parts := make([]string, 0, len(buttons)*2-1)
+	for i, button := range buttons {
+		if i > 0 {
+			parts = append(parts, gap)
+		}
+
+		help := button.binding.Help()
+		parts = append(parts, Button(ButtonSpec{
+			Text:     buttonLabel(help.Desc),
+			Shortcut: help.Key,
+			Enabled:  keys.Live(ctx, button.binding),
+			Danger:   button.danger,
+		}).View().Content)
+	}
+
+	return lipgloss.JoinHorizontal(lipgloss.Left, parts...)
+}
+
+// lowestDrop is the drop rank of the next button to shed.
+func lowestDrop(buttons []actionButton) int {
+	lowest := buttons[0].drop
+	for _, button := range buttons[1:] {
+		lowest = min(lowest, button.drop)
+	}
+
+	return lowest
 }
 
 // buttonLabel is a binding's help description as a button label: the footer
