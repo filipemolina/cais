@@ -47,7 +47,7 @@ free option differs per kind:
   **untried**, not **proven fine** — and "untried" can be fixed by CI.
 - `CONTRIBUTING.md` (Releases section): "GoReleaser ... builds for linux and
   darwin (amd64 and arm64)". The docs mirror the current, Windows-less state.
-- `demo/demo.tape` and `demo/design-preview.tape` exist — VHS is already part
+- `demo/demo.tape` and `demo/screenshots.tape` exist — VHS is already part
   of the project's workflow. `demo.tape`'s header records that VHS "needs
   ttyd + ffmpeg too".
 
