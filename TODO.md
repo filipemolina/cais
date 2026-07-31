@@ -214,12 +214,21 @@ called out as such in the roadmap: **write safety** (new, see below) and the
   footer can only count. The footer's global group gained `? help`.
 
 - [ ] **[S] The footer wraps on a narrow terminal** — predates the compose
-  file segment (which drops itself rather than contributing to this). Below
-  roughly 60 columns the context hints plus the global keys exceed the width,
-  and the bar wraps to two or three lines, eating body rows. The bar needs to
-  shed hints in priority order the way the file name already does. Same
-  terminals show one other overflow worth fixing together: the group details
-  table collides its column headers (`NAMEIMAGSTATHEALT…`).
+  file segment (which drops itself rather than contributing to this). The
+  context hints plus the global keys exceed the width and the bar wraps to two
+  or three lines, eating body rows. The bar needs to shed hints in priority
+  order the way the file name already does. Same terminals show one other
+  overflow worth fixing together: the group details table collides its column
+  headers (`NAMEIMAGSTATHEALT…`).
+
+  **"Below roughly 60 columns" was wrong — it is closer to 130.** Measured
+  while recording the README screenshots (2026-07-31): at 1280px / 16pt
+  (~133 columns) the Groups footer pushes `q quit` onto a second line; at
+  1440px (~150 columns) it fits. The logs overlay advertises more keys and so
+  wraps wider still. This moves the item's priority: it is not an edge case for
+  people on narrow terminals, it is what a normal terminal looks like — and it
+  is visible in `demo/demo.gif`, which makes it the first bug a visitor sees.
+  `docs/plans/launch-and-outreach.md` lists it as a launch gate for that reason.
 
   The third overflow named here — the action buttons wrapping into each other —
   is fixed. The row sheds whole buttons in a declared priority order (remove
@@ -299,14 +308,21 @@ called out as such in the roadmap: **write safety** (new, see below) and the
   was not added — the "and/or" left it optional, and a fixed timeout risks
   expiring an error the user is still reading.
 
-- [x] **[S] Re-record `demo/demo.gif`** — re-recorded against real containers:
-  start a group, tail its logs, stop it, switch pages with a digit, start one
-  service, open the `?` overlay. It is 3.9MB against the old 226KB, and mostly
-  not because it is longer: since the theme work every frame paints the full
+- [x] **[S] Re-record `demo/demo.gif`** — done twice. The first pass recorded
+  against real containers and landed at 3.9MB (up from 226KB, and mostly not
+  because it was longer: since the theme work every frame paints the full
   screen instead of leaving most of it black, so frames no longer compress to
-  nothing. The tape documents the `mpdecimate` + shared-palette pass that
-  brings it down from 5.1MB — worth another look if it needs to be smaller
-  still, most likely by cutting the logs section, which is the densest part.
+  nothing).
+
+  Re-done on 2026-07-31 against the new homelab fixture, and the size problem
+  is solved: **2.4MB, from a 12MB raw recording**, while being longer than
+  either predecessor. The palette pass alone was not enough; what worked is
+  three filters together — `mpdecimate`, `fps=10`, and rendering at 900px wide,
+  which is roughly what GitHub displays a README image at anyway. Recording
+  large and scaling down beats recording small, because the footer wrap above
+  gets worse the narrower the terminal is. `demo/screenshots.tape` is the
+  companion that produces the five stills; both tapes export a throwaway
+  `XDG_CONFIG_HOME` so a recording cannot overwrite the recorder's own theme.
 
 - [x] **[S] Auto-select on navigation** — arrow keys in the list
   automatically select the item under the cursor, updating the details panel
@@ -342,6 +358,19 @@ called out as such in the roadmap: **write safety** (new, see below) and the
   Branch: `service-details-redesign`.
 
 ## Housekeeping
+
+- [x] **[H] The HEALTH column was never populated** — `docker compose ps
+  --format json` emits the key `Health`; `apptypes.DockerContainer` called the
+  field `HealthStatus` with no json tag, so `encoding/json` never matched it.
+  Every container read `-` in the group member table and in the service status
+  line, healthy ones included. Fixed with a `json:"Health"` tag.
+
+  **The reason it survived this long is the part worth keeping:** the parser
+  tests passed. Their fixtures used `"HealthStatus"` — the Go field name, which
+  no Docker ever sends — so the test agreed with the code and both were wrong
+  about reality. The fixtures now carry the real key and assert the parsed
+  value. A fixture invented from the struct instead of captured from the tool
+  tests nothing but itself.
 
 - [x] **[H] Document the current build/install path** — README now correctly
   says that `make build` runs `go install .` and installs to

@@ -42,6 +42,10 @@ sections.
 Do not re-open these without asking:
 
 - **Tabs for the alpha are Groups, Services, Files.** No dead placeholder tabs.
+  *Scoped to the alpha, which has shipped.* `docs/plans/env-secrets.md` adds a
+  fourth ("Env"), and the phase that lands it must rewrite this line rather than
+  leave the repo arguing with itself. The rule that outlives the count is the
+  second sentence: no tab ships empty.
 - **Pages switch with digits `1`–`3` and `[`/`]`,** keeping `alt`+letter as an alias.
 - **No statistics page.** Resource numbers belong as columns in the tables that
   already exist, not on a page of their own. `docker stats` is slow, it needs its
@@ -77,7 +81,7 @@ build this is*, *Editing group membership*, *The Files page*) rather than here,
 because they are now how the app works rather than a plan.
 
 That is the whole roadmap to the alpha: every tab is live, and the first
-group-membership wall is gone. What follows is the post-alpha list.
+group-membership wall is gone. What follows is the live part.
 
 ## The order after the alpha
 
@@ -133,13 +137,21 @@ file, keybinding overrides) that the config struct was shaped to absorb.
 
 ## Loose ends worth knowing about
 
-- **`CPU: 0.0` in the services list is not telemetry.**
-  `src/apptypes/ServiceListItem.go` renders `service.CPUPercent`, which is the
-  *configured* `cpus:` limit from compose-go — 0.0 for nearly every file, but it
-  reads as live usage. Drop or relabel it until real stats land.
-- **The footer wraps below roughly 60 columns**, and so do the details table
-  headers and the action buttons. Tracked in `TODO.md`; the bar needs to shed
-  hints in priority order the way the compose file name already does.
+- ~~**`CPU: 0.0` in the services list is not telemetry.**~~ **Fixed** — and no
+  longer possible: `CPUPercent` does not exist anywhere in `src/` (verified
+  2026-07-31). `ServiceListItem` renders memory only, from real `docker stats`
+  values stored raw and formatted once at render time.
+- **The footer wraps far earlier than this file used to claim.** The old figure
+  here was "below roughly 60 columns"; it is closer to **130**. Measured while
+  recording the README screenshots on 2026-07-31: at 1280px / 16pt (~133
+  columns) the Groups footer wraps `q quit` onto a second line, and at 1440px
+  (~150 columns) it fits. The logs-overlay context, which advertises more keys,
+  wraps wider still. That makes it the one open bug a first-time visitor is
+  guaranteed to see, since it is visible in `demo/demo.gif`. Tracked in
+  `TODO.md`; the bar needs to shed hints in priority order the way the compose
+  file name already does. The details table headers and the action buttons had
+  the same problem — the buttons are fixed (`renderActionButtons` sheds whole
+  buttons in a declared order), and that fix is the worked example for this one.
 - **Panel keypresses through the e2e rig — fixed.** `TODO.md` has the details:
   panel keys need `Text` set on the `tea.KeyPressMsg` because `key.Matches`
   compares `msg.String()` against the binding strings. `TestRigGroupListEditKey`
