@@ -200,11 +200,42 @@ field nobody can edit."* A "new service" wizard with fields for ports, volumes,
 environment and restart policy would re-introduce exactly that. Two fields,
 then YAML.
 
-`CreateComposeFileModal` (`src/components/CreateComposeFileModal.go`) is the
-component to copy: it is already a multi-step modal with a name field, an image
-field, per-step key handling and inline validation (`isValidServiceName`,
-`CreateComposeFileModal.go:166`). Reuse `isValidServiceName` rather than
-writing a second one.
+**Extract the step from `CreateComposeFileModal`; do not copy it.** The
+bootstrap flow already asks these two questions. `CreateComposeFileModal`
+(`src/components/CreateComposeFileModal.go`) has a `stepServiceFields` step
+holding a name input and an image input, tab between them
+(`keys.Overlay.NextField`), esc to cancel, and all three validations this modal
+needs — empty name, empty image, invalid name — with their messages already
+written (`updateServiceFields`, `CreateComposeFileModal.go:127`;
+`isValidServiceName`, `:166`). The only thing that differs at the end is which
+command it emits: `cmds.CreateComposeFile(path, name, image)` there,
+`cmds.AddService(name, image)` here.
+
+The argument for extracting rather than copying is Phases 2 and 3. If
+`AddServiceModal` is a clone, `/`-to-search and the tag picker get built into
+the clone — and the **bootstrap flow becomes the one place in the app where
+image search does not work.** That is the first service a new user ever
+creates, in an empty directory, at the exact moment they are least likely to
+know the image name. Every later phase would widen the gap.
+
+So: one shared component — call it `ServiceFieldsStep` — owning the two inputs,
+their validation and their key handling, parameterised by its title and by what
+it emits on submit. `CreateComposeFileModal` renders it as its third step;
+`AddServiceModal` renders it as its whole body. Phases 2 and 3 then add search
+and tags in one place and both flows get them.
+
+Two honest caveats. First, if parameterising that step turns out to need more
+than a title and a submit-message factory, stop and copy it instead — a shared
+component with five knobs is worse than sixty duplicated lines. Second, do this
+**after** the `component-package-restructure` (step 1 in `docs/ROADMAP.md`), so
+the extracted file is placed in the new layout rather than moved twice.
+
+There is a second-order cleanup available once `AddServiceFragment` exists:
+`WriteNewComposeFile` currently seeds the first service itself, and could
+instead write an empty `services:` map and hand off to `AddServiceFragment` —
+collapsing two write paths into one. Phase 1's test list already covers
+inserting into a file with no `services:` key, which is the case that makes it
+work. Optional, and only worth doing if it comes out smaller.
 
 ### D3. Search is a step *inside* the image field, not a page
 
@@ -307,7 +338,9 @@ The whole feature minus the network. Ships alone.
 |---|---|
 | `src/utils/ServiceFragment.go` | `+AddServiceFragment` (D5) |
 | `src/utils/ServiceFragment_test.go` | insert into a normal file; into a file with no `services:`; duplicate name refused; comments and key order elsewhere in the file unchanged; the file is untouched when validation fails |
-| `src/components/AddServiceModal.go` | new — two-step modal (name, image), modelled on `CreateComposeFileModal` |
+| `src/components/ServiceFieldsStep.go` | new — the name+image step **extracted** from `CreateComposeFileModal.stepServiceFields` (D2): two inputs, tab between them, the three existing validations, parameterised by title and submit-message factory |
+| `src/components/CreateComposeFileModal.go` | its third step becomes the extracted component. Behaviour identical — the bootstrap flow must look and behave exactly as it does today, which its existing tests already pin |
+| `src/components/AddServiceModal.go` | new — thin: the extracted step plus the `n`-on-Services entry point |
 | `src/components/AddServiceModal_test.go` | validation messages, step transitions, Esc at each step |
 | `src/cmds/OpenAddServiceModal.go`, `src/cmds/AddService.go` | new — the open command and the request/response pair |
 | `src/model/Update.go` | widen the `keys.List.New` gate (`:441`) to the Services page; handle `AddServiceMsg` → reload config → select the new service → open the inline editor on it |
@@ -326,8 +359,8 @@ new service. `docker compose config` on the resulting file exits 0.
 | `src/utils/DockerSearch.go` | new — `SearchImages(term string, limit int) ([]ImageResult, error)`; `exec.Command("docker", "search", "--format", "json", "--no-trunc", "--limit", …, term)`; decode **line-delimited** JSON with all-string fields (§Research) |
 | `src/utils/DockerSearch_test.go` | decoding fixtures captured from the real command (including the string `"true"`/`"false"` for `IsOfficial` and a `StarCount` of `"0"`); a stderr-only failure; empty output |
 | `src/cmds/SearchImages.go` | new — the search command and its result message |
-| `src/components/AddServiceModal.go` | `/` swaps the body to the results list; Enter fills the image field; Esc restores the typed text |
-| Tests | results render name/stars/official; Enter fills the field; a failed search leaves typing intact |
+| `src/components/ServiceFieldsStep.go` | `/` swaps the body to the results list; Enter fills the image field; Esc restores the typed text. In the shared step, not in `AddServiceModal` — which is what makes the bootstrap flow inherit search for free (D2) |
+| Tests | results render name/stars/official; Enter fills the field; a failed search leaves typing intact; **and the same `/` works from the bootstrap flow's service step** |
 
 Acceptance: `/` then `sonarr` then Enter lists `linuxserver/sonarr` among the
 results; Enter on it puts `linuxserver/sonarr` in the image field; with `docker`
