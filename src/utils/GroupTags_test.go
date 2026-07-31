@@ -366,3 +366,95 @@ func TestSetGroupMembers_PreservesComments(t *testing.T) {
 		t.Errorf("expected the # core services comment to survive, got:\n%s", raw)
 	}
 }
+
+func TestRenameGroupTag_RetagsEveryCarrier(t *testing.T) {
+	path := writeFixture(t, baseFixture)
+
+	if err := RenameGroupTag(path, "core", "core2"); err != nil {
+		t.Fatalf("RenameGroupTag: %v", err)
+	}
+
+	for _, service := range []string{"app", "db"} {
+		if got := readServiceGroups(t, path, service); !slices.Equal(got, []string{"core2"}) {
+			t.Errorf("%s groups = %v, want [core2]", service, got)
+		}
+	}
+
+	// A service that never carried the tag must be untouched and must not
+	// gain a profiles key.
+	if hasGroupsKey(t, path, "cache") {
+		t.Error("cache gained a profiles key from a rename that did not involve it")
+	}
+}
+
+func TestRenameGroupTag_PreservesOtherProfiles(t *testing.T) {
+	path := writeFixture(t, multiTagFixture)
+
+	if err := RenameGroupTag(path, "core", "core2"); err != nil {
+		t.Fatalf("RenameGroupTag: %v", err)
+	}
+
+	appGot := readServiceGroups(t, path, "app")
+	want := []string{"core2", "extra"}
+	if !slices.Equal(appGot, want) {
+		t.Errorf("app groups = %v, want %v (extra must survive the rename)", appGot, want)
+	}
+
+	dbGot := readServiceGroups(t, path, "db")
+	if !slices.Equal(dbGot, []string{"core2"}) {
+		t.Errorf("db groups = %v, want [core2]", dbGot)
+	}
+}
+
+func TestRenameGroupTag_PreservesComments(t *testing.T) {
+	path := writeFixture(t, baseFixture)
+
+	if err := RenameGroupTag(path, "core", "core2"); err != nil {
+		t.Fatalf("RenameGroupTag: %v", err)
+	}
+
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading result file: %v", err)
+	}
+
+	if !strings.Contains(string(raw), "core services") {
+		t.Errorf("expected the # core services comment to survive, got:\n%s", raw)
+	}
+}
+
+func TestRenameGroupTag_NotFoundLeavesFileUntouched(t *testing.T) {
+	path := writeFixture(t, baseFixture)
+
+	err := RenameGroupTag(path, "nope", "core2")
+	if err == nil {
+		t.Fatal("expected an error when no service carries the group")
+	}
+
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading result file: %v", err)
+	}
+
+	if string(raw) != baseFixture {
+		t.Errorf("failed rename modified the file:\n%s", raw)
+	}
+}
+
+func TestRenameGroupTag_MergesIntoExistingName(t *testing.T) {
+	// Renaming onto a name some other service already carries merges the
+	// tags; uniqueness is the modal's job, not the writer's - the same split
+	// as AddGroupTag. The result is a duplicate entry on app, which docker
+	// treats as one profile and the UI dedups on load.
+	path := writeFixture(t, multiTagFixture)
+
+	if err := RenameGroupTag(path, "extra", "core"); err != nil {
+		t.Fatalf("RenameGroupTag: %v", err)
+	}
+
+	appGot := readServiceGroups(t, path, "app")
+	want := []string{"core", "core"}
+	if !slices.Equal(appGot, want) {
+		t.Errorf("app groups = %v, want %v (merge, no dedup at the writer)", appGot, want)
+	}
+}

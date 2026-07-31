@@ -160,6 +160,13 @@ func TestNoBackgroundBleedInModals(t *testing.T) {
 				},
 			},
 			{
+				name: "rename group prompt",
+				msgs: []tea.Msg{
+					cmds.GetConfigMsg{FileName: "compose.yaml", Project: project()},
+					cmds.OpenRenameGroupModalMsg{GroupName: "frontend"},
+				},
+			},
+			{
 				name: "delete group confirmation",
 				msgs: []tea.Msg{
 					cmds.GetConfigMsg{FileName: "compose.yaml", Project: project()},

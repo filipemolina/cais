@@ -54,8 +54,14 @@ This means:
 - **Editing a group's membership** = reconciling tags so exactly the chosen
   services carry it (see *Editing group membership* below).
 - **A group can become empty** if its last service is removed or untagged.
-- **Renaming a group** is currently not supported (would require multi-file
-  YAML rewriting).
+- **Renaming a group** is a value rename: replace the tag wherever it
+  appears in the loaded compose file (`utils.RenameGroupTag`). Nothing else
+  in a compose file references a profile by name (unlike service names,
+  which `depends_on:` references), so a rename cannot leave dangling
+  references the way a service rename would. The rename is scoped to the
+  file the app has loaded; a service whose tag lives in *another* file of a
+  multi-file project keeps the old name (the app loads exactly one file —
+  see *Which compose file*).
 
 This is a deliberate constraint: we don't add a separate "groups" file or a
 sidecar index. The user's `compose.yml` is the source of truth.

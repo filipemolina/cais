@@ -79,7 +79,7 @@ to `~/.config/stack-stitcher/config.yaml`). The config file exists and
 already stores the theme; default file and keybinding overrides are the
 remaining fields the keymap struct makes a load-and-merge. Additional
 themes beyond the 14 shipped. Live CPU/MEM columns from `docker
-stats`. Group rename. An `x`-style action menu.
+stats`. An `x`-style action menu.
 
 **UX improvements** are done: auto-select on navigation, `n` on both
 panels, action feedback with spinner, and error modals for foreground

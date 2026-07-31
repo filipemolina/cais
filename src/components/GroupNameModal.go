@@ -18,6 +18,14 @@ type GroupNameModalModel struct {
 	existingGroups []string
 	serviceNames   []string
 	errMsg         string
+	// isRename switches step 1 of the create flow into the whole rename
+	// flow: Enter writes the rename instead of advancing to the service
+	// checklist, and uniqueness is judged against the other groups - the
+	// name being renamed is not a collision.
+	isRename bool
+	// currentName is the group being renamed; the input is pre-filled with
+	// it and a submit that leaves it unchanged is refused.
+	currentName string
 	// termHeight is carried rather than used here: this modal is one text
 	// input tall, but step 2 is a list of every service and has to be sized
 	// to the screen. Update builds it directly, so the height has to arrive
@@ -38,14 +46,27 @@ func (m GroupNameModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(keyMsg, keys.Overlay.Submit):
 			name := m.input.Value()
 
-			if name == "" {
+			switch {
+			case name == "":
 				m.errMsg = "Group name can't be empty"
 				return m, nil
-			}
 
-			if slices.Contains(m.existingGroups, name) {
+			case m.isRename && name == m.currentName:
+				// The same name would still rewrite the whole file (closing
+				// blank lines - see README's YAML caveat), so refuse it as a
+				// no-op rather than doing the write.
+				m.errMsg = fmt.Sprintf("Group is already named %q", name)
+				return m, nil
+
+			case slices.Contains(m.existingGroups, name):
+				// For a rename, the group being renamed is itself in
+				// existingGroups; the currentName guard above already
+				// rejected it, so this only fires for a genuine collision.
 				m.errMsg = fmt.Sprintf("Group %q already exists", name)
 				return m, nil
+
+			case m.isRename:
+				return m, cmds.CloseModal(cmds.RequestRenameGroup(m.currentName, name))
 			}
 
 			return ServiceChecklistModal(name, m.serviceNames, m.termHeight), nil
@@ -59,16 +80,24 @@ func (m GroupNameModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m GroupNameModalModel) View() tea.View {
-	lines := []string{modalTitle("New group"), "Group name:", m.input.View()}
+	title := "New group"
+	submitDesc := "next"
+	if m.isRename {
+		title = "Rename group"
+		submitDesc = "rename"
+	}
+
+	lines := []string{modalTitle(title), "Group name:", m.input.View()}
 	if m.errMsg != "" {
 		errStyle := lipgloss.NewStyle().Foreground(appstyles.Active.Danger)
 		lines = append(lines, errStyle.Render(m.errMsg))
 	}
 
-	// Enter is "next", not "confirm": this is step 1 of two, and it hands off
-	// to the service checklist rather than writing anything.
+	// Enter is "next" on the create flow (step 1 of two, handing off to
+	// the service checklist rather than writing anything) and "rename" on
+	// the rename flow (the only step, which writes).
 	lines = append(lines, "", modalHints(
-		hintAs(keys.Overlay.Submit, "next"),
+		hintAs(keys.Overlay.Submit, submitDesc),
 		hintFor(keys.Overlay.Cancel),
 	))
 
@@ -92,5 +121,26 @@ func GroupNameModal(existingGroups []string, serviceNames []string, termHeight i
 		existingGroups: existingGroups,
 		serviceNames:   serviceNames,
 		termHeight:     termHeight,
+	}
+}
+
+// GroupNameModalForRename is the rename flow: prompt for the group's new
+// name, pre-filled with the current one (cursor at end; ctrl+u clears it
+// wholesale). Enter writes the rename via RequestRenameGroup; Esc cancels.
+// Uniqueness excludes the current name, so renaming core to core gets its
+// own message rather than "already exists". No termHeight: unlike the
+// create flow there is no step-2 checklist to size to the screen.
+func GroupNameModalForRename(currentName string, existingGroups []string) tea.Model {
+	input := textinput.New()
+	input.Placeholder = "e.g. core"
+	input.SetWidth(30)
+	input.SetValue(currentName)
+	input.Focus()
+
+	return GroupNameModalModel{
+		input:          input,
+		existingGroups: existingGroups,
+		isRename:       true,
+		currentName:    currentName,
 	}
 }

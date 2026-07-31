@@ -651,6 +651,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			)
 		}
 
+	case cmds.OpenRenameGroupModalMsg:
+		if m.config.configProject != nil {
+			m.activeModal = components.GroupNameModalForRename(
+				msg.GroupName, m.allGroupNames(),
+			)
+		}
+
 	// Observed, not handled: these are on their way to the panels, and
 	// AppModel only notes what was picked so a reload can restore it.
 	case cmds.SetSelectedServiceMsg:
@@ -820,6 +827,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.config.configFileName, msg.GroupName, msg.Members,
 		))
 
+	case cmds.RenameGroupRequestMsg:
+		// Same split as CreateGroupRequestMsg: the modal knows the names,
+		// AppModel knows the file the rename must be written into.
+		finalCmds = append(finalCmds, cmds.RenameGroup(
+			m.config.configFileName, msg.GroupName, msg.NewName,
+		))
+
 	case cmds.EditGroupMsg:
 		m.lastErrorFromPoll = false
 		if msg.Err != nil {
@@ -827,6 +841,25 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			m.lastError = ""
 			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
+		}
+		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
+			finalCmds = append(finalCmds, bodyCmd)
+		}
+
+	case cmds.RenameGroupMsg:
+		m.lastErrorFromPoll = false
+		if msg.Err != nil {
+			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
+		} else {
+			m.lastError = ""
+			// Keep the renamed group selected: configSyncCmds re-selects
+			// selection.groupName after the reload, and it still holds the
+			// old name until now. On failure the old selection stands.
+			m.selection.groupName = msg.NewName
+			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
+		}
+		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
+			finalCmds = append(finalCmds, cfCmd)
 		}
 		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
 			finalCmds = append(finalCmds, bodyCmd)

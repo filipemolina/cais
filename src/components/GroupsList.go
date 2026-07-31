@@ -242,6 +242,11 @@ func (m GroupListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if selectedGroup, ok := m.list.SelectedItem().(apptypes.GroupListItem); ok {
 				finalCmds = append(finalCmds, cmds.OpenEditGroupModal(string(selectedGroup)))
 			}
+
+		case key.Matches(msg, keys.List.Rename):
+			if selectedGroup, ok := m.list.SelectedItem().(apptypes.GroupListItem); ok {
+				finalCmds = append(finalCmds, cmds.OpenRenameGroupModal(string(selectedGroup)))
+			}
 		}
 
 	case cmds.SetHomeStatsMsg:

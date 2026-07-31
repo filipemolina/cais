@@ -97,9 +97,14 @@ documentation.
   emits `cmds.EditGroupRequestMsg`; `AppModel` binds the loaded file and runs
   `cmds.EditGroup`. This was Phase 8's first half.
 
-- [ ] **[P] Group rename** — `DESIGN.md` §3 lists it as unsupported. It's a
-  straightforward `yaml.Node` walk (retag every service that carries the
-  name); worth doing once membership editing exists.
+- [x] **[P] Group rename** — `R` on the groups list opens a rename prompt
+  pre-filled with the group's current name; Enter writes a single
+  read-modify-write pass that retags every service carrying the old name
+  (`utils.RenameGroupTag`). The unchanged name and name collisions are
+  refused inline; a successful rename keeps the group selected through the
+  reload. Scoped to the loaded compose file, like every other group op —
+  tags in other files of a multi-file project keep the old name (see
+  `docs/DESIGN.md` §3).
 
 - [x] **[P] `--file` / `--directory` flag** — `-f`/`--file` opens exactly the
   file named; `-d`/`--dir` resolves one inside that directory in Docker's

@@ -44,7 +44,7 @@ func TestCatalogAvailability(t *testing.T) {
 		catalog := Catalog(Context{Page: "Home", Focused: constants.COMPONENT_BODY_LIST})
 
 		listScope := scopeTitled(t, catalog, "List")
-		for _, binding := range []key.Binding{List.Select, List.New, List.Edit, List.Delete, List.Filter, List.Navigate, List.GoToStart, List.GoToEnd} {
+		for _, binding := range []key.Binding{List.Select, List.New, List.Edit, List.Delete, List.Rename, List.Filter, List.Navigate, List.GoToStart, List.GoToEnd} {
 			if !entryIn(t, listScope, binding).Available {
 				t.Errorf("%q should be available on a populated groups list", binding.Help().Key)
 			}
@@ -115,7 +115,7 @@ func TestCatalogAvailability(t *testing.T) {
 		if !entryIn(t, listScope, List.New).Available {
 			t.Error("n new should be available on an empty list - it makes the first group")
 		}
-		for _, binding := range []key.Binding{List.Select, List.Edit, List.Delete, List.Filter} {
+		for _, binding := range []key.Binding{List.Select, List.Edit, List.Delete, List.Rename, List.Filter} {
 			if entryIn(t, listScope, binding).Available {
 				t.Errorf("%q should be dimmed on an empty list", binding.Help().Key)
 			}
