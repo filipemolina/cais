@@ -1,5 +1,12 @@
 # Plan: Test Stack Stitcher on Windows and macOS for Free
 
+> **Before you start.** Work on a feature branch of small commits, merged
+> `--no-ff`; `go build ./... && go vet ./... && go test ./... && gofmt -l .`
+> green at **every** commit, not just at the tip — `docs/ROADMAP.md`
+> §Conventions is the full contract and `CONTRIBUTING.md` explains how a TUI
+> gets tested. Behaviour that only shows on screen gets checked in the real app
+> with VHS before it is committed. **Step 6 of the post-alpha order,** before the release work rather than after it.
+
 The ask (from a discovery session): *"Is there a way I can test this tool on a
 Windows and a Mac machine for free, using some kind of online testing
 platform?"* The plan below is the researched answer, written down.
@@ -187,10 +194,12 @@ real Windows, the evidence exists to revisit it.
 - **No external sign-off.** All three steps are repo-local, use no new
   accounts, no money, no secrets. The only external dependency (public GitHub
   repo) already holds.
-- **Inline decisions for the maintainer** (each has a recommendation above):
-  required vs `continue-on-error` Windows/macOS jobs (required); ride vs pin
-  `-latest` labels (ride); boot-smoke only vs VHS screenshots (boot-smoke
-  first); zip vs tar.gz for Windows (zip).
+- **Four decisions, all taken** — they were once listed as maintainer calls
+  with a recommendation each; the recommendation is now the instruction:
+  Windows and macOS jobs are **required**, not `continue-on-error`; the
+  `-latest` runner labels are **ridden, not pinned**; **boot-smoke first**, VHS
+  screenshots only if the smoke test proves insufficient; Windows archives are
+  **zip**.
 
 ## Blast radius per step
 
