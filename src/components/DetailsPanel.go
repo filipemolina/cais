@@ -522,32 +522,20 @@ func (m DetailsPanelModel) View() tea.View {
 
 	bg := panelBg(m.isFocused)
 
-	serviceHeader := m.renderServiceHeader(bodyWidth)
-	configTable := m.renderConfigTable(bodyWidth)
-	runtimeStats := m.renderRuntimeStats(bodyWidth)
+	parts := []string{m.renderServiceHeader(bodyWidth)}
+	if tables := m.renderTables(bodyWidth); tables != "" {
+		parts = append(parts, tables)
+	}
 
-	var buttons string
+	var footer string
 	if m.pendingAction != nil {
-		buttons = m.renderPendingAction(bodyWidth, bg)
+		footer = m.renderPendingAction(bodyWidth, bg)
 	} else {
-		buttons = renderActionButtons(bodyWidth, bg, m.actionContext())
+		footer = renderActionButtons(bodyWidth, bg, m.actionContext())
 	}
 
-	parts := []string{serviceHeader, configTable}
-	if runtimeStats != "" {
-		// Separate the stats table from the config table with a blank
-		// line and a rule, matching the visual separation between the
-		// service header and the config table from renderServiceHeader.
-		sepRule := lipgloss.NewStyle().
-			Foreground(appstyles.Active.BorderDefault).
-			Width(bodyWidth).
-			Render(strings.Repeat("─", max(bodyWidth, 0)))
-		parts = append(parts, "", sepRule, runtimeStats)
-	}
-	parts = append(parts, buttons)
-
-	body := lipgloss.JoinVertical(lipgloss.Left, parts...)
-	body = lipgloss.NewStyle().MaxHeight(bodyAvail).Render(body)
+	body := panelBodyWithActions(bodyWidth, bodyAvail, bg,
+		lipgloss.JoinVertical(lipgloss.Left, parts...), footer)
 
 	screen := renderPanelFrame("Details", m.titlePill(), m.isFocused, m.panelWidth, m.panelHeight, body)
 	return tea.NewView(screen)
@@ -602,16 +590,16 @@ func (m DetailsPanelModel) renderServiceHeader(width int) string {
 		Bold(true).
 		Foreground(appstyles.Active.TextPrimary).
 		Width(width).
-		Render(name)
+		Render(truncate(name, width))
 
-	var imagePart string
-	if image != "" {
-		imagePart = " (" + image + ")"
-	}
+	// The image is set flush left in muted text, the same shape the group
+	// header's summary line has. It used to be parenthesised and indented by a
+	// space, which was the only line in either panel that did not start on the
+	// body's left edge.
 	subtitleRow := lipgloss.NewStyle().
 		Foreground(appstyles.Active.TextMuted).
 		Width(width).
-		Render(imagePart)
+		Render(truncate(image, width))
 
 	// Status line with dot, state, health, uptime.
 	var statusParts []string
@@ -629,56 +617,119 @@ func (m DetailsPanelModel) renderServiceHeader(width int) string {
 	dot := lipgloss.NewStyle().Foreground(dotColor).Render("●")
 	statusParts = append(statusParts, dot, " ", stateLabel)
 
+	// " · " between the facts, the separator the group header's summary line
+	// uses. The double space this had before made the same line read as two.
+	sep := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Render(" · ")
+
 	if hasContainer && container.HealthStatus != "" && container.HealthStatus != "-" {
-		hlColor := healthColor(container.HealthStatus)
-		hl := lipgloss.NewStyle().Foreground(hlColor).Render("· " + container.HealthStatus)
-		statusParts = append(statusParts, "  ", hl)
+		hl := lipgloss.NewStyle().Foreground(healthColor(container.HealthStatus)).Render(container.HealthStatus)
+		statusParts = append(statusParts, sep, hl)
 	}
 
 	if hasContainer && container.RunningFor != "" {
-		up := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Render("· " + container.RunningFor)
-		statusParts = append(statusParts, "  ", up)
+		up := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Render(container.RunningFor)
+		statusParts = append(statusParts, sep, up)
 	}
 
 	statusRow := lipgloss.NewStyle().
 		Width(width).
 		Render(lipgloss.JoinHorizontal(lipgloss.Left, statusParts...))
 
-	rule := lipgloss.NewStyle().
-		Foreground(appstyles.Active.BorderDefault).
-		Width(width).
-		Render(strings.Repeat("─", max(width, 0)))
-
-	return lipgloss.JoinVertical(lipgloss.Left, nameRow, subtitleRow, statusRow, "", rule)
+	// No blank row before the rule: the group's header card closes on the rule
+	// directly, and the two headers have to read as the same component.
+	return lipgloss.JoinVertical(lipgloss.Left, nameRow, subtitleRow, statusRow, panelRule(width))
 }
 
-// renderConfigTable renders the service's compose configuration as a compact
-// two-column table (Property | Value), matching the visual language of
-// GroupDetailsPanelModel.renderMemberTable.
-func (m DetailsPanelModel) renderConfigTable(width int) string {
+// propRow is one row of a labelled two-column table: the property name and
+// the value lines under it. Values are a slice because a property like ports
+// can carry several, each on its own continuation row.
+type propRow struct {
+	label  string
+	values []string
+}
+
+// propTableCols splits a table's width into the label and value columns.
+func propTableCols(width int) (int, int) {
 	propWidth := 14
 	valWidth := width - propWidth
 	if valWidth < 8 {
 		valWidth = 8
-		propWidth = width - valWidth
-		if propWidth < 4 {
-			propWidth = 4
-		}
+		propWidth = max(4, width-valWidth)
 	}
 
+	return propWidth, valWidth
+}
+
+// renderPropTable renders a two-column table - a dim bold heading row, a rule
+// under it, then one row per entry - in the same visual language as the group
+// panel's member table. Both of the service panel's tables are this function;
+// they differ only in their heading and their rows.
+//
+// Returns "" for an empty row set, so a caller can drop the whole section
+// rather than leave a heading with nothing under it.
+func renderPropTable(heading string, width int, rows []propRow) string {
+	if len(rows) == 0 {
+		return ""
+	}
+
+	propWidth, valWidth := propTableCols(width)
 	dim := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Bold(true)
 
-	headerRow := lipgloss.JoinHorizontal(lipgloss.Left,
-		dim.Width(propWidth).Render("PROPERTY"),
-		dim.Width(valWidth).Render("VALUE"),
+	lines := make([]string, 0, 2+len(rows))
+	lines = append(lines,
+		lipgloss.JoinHorizontal(lipgloss.Left,
+			dim.Width(propWidth).Render(heading),
+			dim.Width(valWidth).Render("VALUE"),
+		),
+		panelRule(width),
 	)
 
-	rule := lipgloss.NewStyle().
-		Foreground(appstyles.Active.BorderDefault).
-		Width(width).
-		Render(strings.Repeat("─", max(width, 0)))
+	for _, row := range rows {
+		lines = append(lines, renderPropRow(propWidth, valWidth, row))
+	}
 
-	var rows []string
+	return lipgloss.JoinVertical(lipgloss.Left, lines...)
+}
+
+// renderPropRow builds one row: a left-aligned property name in dim text and a
+// right-filling value in primary text. When a property has several values, the
+// label row-spans them visually by appearing only on the first line.
+//
+// Values are truncated to their column, as the member table's cells are: a
+// value wider than the column would otherwise wrap onto a line with no label
+// beside it, which reads as a continuation row that isn't one.
+func renderPropRow(propWidth, valWidth int, row propRow) string {
+	propStyle := lipgloss.NewStyle().
+		Foreground(appstyles.Active.TextDim).
+		Width(propWidth).
+		Render(truncate(row.label, propWidth))
+
+	if len(row.values) == 0 {
+		return lipgloss.JoinHorizontal(lipgloss.Left, propStyle, lipgloss.NewStyle().Width(valWidth).Render("—"))
+	}
+
+	valStyle := lipgloss.NewStyle().Foreground(appstyles.Active.TextPrimary).Width(valWidth)
+
+	// First value on the same row as the property.
+	out := lipgloss.JoinHorizontal(lipgloss.Left, propStyle, valStyle.Render(truncate(row.values[0], valWidth)))
+
+	// Subsequent values on continuation rows (blank property cell).
+	for _, v := range row.values[1:] {
+		cont := lipgloss.JoinHorizontal(lipgloss.Left,
+			lipgloss.NewStyle().Width(propWidth).Render(""),
+			valStyle.Render(truncate(v, valWidth)),
+		)
+		out = lipgloss.JoinVertical(lipgloss.Left, out, cont)
+	}
+
+	return out
+}
+
+// configRows collects the compose configuration the panel reports, in display
+// order. Every entry is conditional: a service states only what it defines, so
+// the table has no rows reading "Healthcheck —".
+func (m DetailsPanelModel) configRows() []propRow {
+	var rows []propRow
 
 	svc := *m.service
 
@@ -696,17 +747,17 @@ func (m DetailsPanelModel) renderConfigTable(width int) string {
 			}
 			portLines = append(portLines, portStr)
 		}
-		rows = append(rows, m.configRow(propWidth, valWidth, "Ports", portLines...))
+		rows = append(rows, propRow{"Ports", portLines})
 	}
 
 	// Container name
 	if svc.ContainerName != "" {
-		rows = append(rows, m.configRow(propWidth, valWidth, "Container", svc.ContainerName))
+		rows = append(rows, propRow{"Container", []string{svc.ContainerName}})
 	}
 
 	// Restart policy
 	if svc.Restart != "" {
-		rows = append(rows, m.configRow(propWidth, valWidth, "Restart", svc.Restart))
+		rows = append(rows, propRow{"Restart", []string{svc.Restart}})
 	}
 
 	// Networks
@@ -715,7 +766,7 @@ func (m DetailsPanelModel) renderConfigTable(width int) string {
 		for name := range svc.Networks {
 			netNames = append(netNames, name)
 		}
-		rows = append(rows, m.configRow(propWidth, valWidth, "Networks", strings.Join(netNames, ", ")))
+		rows = append(rows, propRow{"Networks", []string{strings.Join(netNames, ", ")}})
 	}
 
 	// Volumes summary
@@ -737,7 +788,7 @@ func (m DetailsPanelModel) renderConfigTable(width int) string {
 		if volCount > 0 {
 			volParts = append(volParts, fmt.Sprintf("%d volume", volCount))
 		}
-		rows = append(rows, m.configRow(propWidth, valWidth, "Volumes", strings.Join(volParts, ", ")))
+		rows = append(rows, propRow{"Volumes", []string{strings.Join(volParts, ", ")}})
 	}
 
 	// Healthcheck
@@ -751,7 +802,7 @@ func (m DetailsPanelModel) renderConfigTable(width int) string {
 			test = test[:24] + "…"
 		}
 		if test != "" {
-			rows = append(rows, m.configRow(propWidth, valWidth, "Healthcheck", test))
+			rows = append(rows, propRow{"Healthcheck", []string{test}})
 		}
 	}
 
@@ -761,12 +812,12 @@ func (m DetailsPanelModel) renderConfigTable(width int) string {
 		for name := range svc.DependsOn {
 			deps = append(deps, name)
 		}
-		rows = append(rows, m.configRow(propWidth, valWidth, "Depends on", strings.Join(deps, ", ")))
+		rows = append(rows, propRow{"Depends on", []string{strings.Join(deps, ", ")}})
 	}
 
 	// Pull policy
 	if svc.PullPolicy != "" {
-		rows = append(rows, m.configRow(propWidth, valWidth, "Pull", svc.PullPolicy))
+		rows = append(rows, propRow{"Pull", []string{svc.PullPolicy}})
 	}
 
 	// PUID / PGID (common in self-hosted stacks)
@@ -780,7 +831,7 @@ func (m DetailsPanelModel) renderConfigTable(width int) string {
 		if pgidOk && pgid != nil {
 			idParts = append(idParts, "PGID="+*pgid)
 		}
-		rows = append(rows, m.configRow(propWidth, valWidth, "IDs", strings.Join(idParts, "  ")))
+		rows = append(rows, propRow{"IDs", []string{strings.Join(idParts, "  ")}})
 	}
 
 	// Memory limits
@@ -792,161 +843,123 @@ func (m DetailsPanelModel) renderConfigTable(width int) string {
 		memLimits = append(memLimits, "reservation="+units.BytesSize(float64(svc.MemReservation)))
 	}
 	if len(memLimits) > 0 {
-		rows = append(rows, m.configRow(propWidth, valWidth, "Memory", strings.Join(memLimits, ", ")))
+		rows = append(rows, propRow{"Memory", []string{strings.Join(memLimits, ", ")}})
 	}
 
 	// Labels (useful for reverse-proxy configs, etc.)
 	if len(svc.Labels) > 0 {
-		rows = append(rows, m.configRow(propWidth, valWidth, "Labels", fmt.Sprintf("%d keys", len(svc.Labels))))
+		rows = append(rows, propRow{"Labels", []string{fmt.Sprintf("%d keys", len(svc.Labels))}})
 	}
 
-	if len(rows) == 0 {
-		return ""
-	}
-
-	all := make([]string, 0, 2+len(rows))
-	all = append(all, headerRow, rule)
-	all = append(all, rows...)
-
-	return lipgloss.JoinVertical(lipgloss.Left, all...)
+	return rows
 }
 
-// configRow builds one row of the config table: a left-aligned property
-// name in muted text and a right-filling value in primary text. When value
-// lines span multiple entries, the property label row-spans them visually
-// by appearing only on the first line.
-func (m DetailsPanelModel) configRow(propWidth, valWidth int, prop string, values ...string) string {
-	propStyle := lipgloss.NewStyle().
-		Foreground(appstyles.Active.TextDim).
-		Width(propWidth).
-		Render(prop)
-
-	if len(values) == 0 {
-		return lipgloss.JoinHorizontal(lipgloss.Left, propStyle, lipgloss.NewStyle().Width(valWidth).Render("—"))
-	}
-
-	valStyle := lipgloss.NewStyle().Foreground(appstyles.Active.TextPrimary).Width(valWidth)
-
-	// First value on the same row as the property.
-	firstVal := valStyle.Render(values[0])
-	row := lipgloss.JoinHorizontal(lipgloss.Left, propStyle, firstVal)
-
-	// Subsequent values on continuation rows (blank property cell).
-	for _, v := range values[1:] {
-		cont := lipgloss.JoinHorizontal(lipgloss.Left,
-			lipgloss.NewStyle().Width(propWidth).Render(""),
-			valStyle.Render(v),
-		)
-		row = lipgloss.JoinVertical(lipgloss.Left, row, cont)
-	}
-
-	return row
-}
-
-// renderRuntimeStats renders a card with live container stats (memory,
-// CPU, network I/O, disk I/O, PIDs, uptime) as a compact two-column table.
-// Returns an empty string when the service has no running container or no
-// stats data.
-func (m DetailsPanelModel) renderRuntimeStats(width int) string {
+// runtimeRows collects the live container stats the panel reports. Empty when
+// the service has no running container.
+//
+// No up-front "do we have stats" check: it listed four of the six fields this
+// gathers, so a container reporting only PIDs or only an uptime got nothing.
+// Every entry below is already conditional, so the caller's "no rows, no
+// table" rule is derived from what there actually is to show.
+func (m DetailsPanelModel) runtimeRows() []propRow {
 	if m.service == nil {
-		return ""
+		return nil
 	}
 
 	container, ok := m.containerForService(m.service.Name)
 	if !ok || container.State != "running" {
-		return ""
+		return nil
 	}
 
-	// No up-front "do we have stats" check: it listed four of the six fields
-	// this renders, so a container reporting only PIDs or only an uptime got
-	// nothing. Every row below is already conditional and the len(rows) == 0
-	// check at the end is the same guard derived from what actually rendered,
-	// so it cannot fall out of step with the rows again.
-
-	propWidth := 14
-	valWidth := width - propWidth
-	if valWidth < 8 {
-		valWidth = 8
-		propWidth = width - valWidth
-		if propWidth < 4 {
-			propWidth = 4
-		}
-	}
-
-	dim := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Bold(true)
-
-	headerRow := lipgloss.JoinHorizontal(lipgloss.Left,
-		dim.Width(propWidth).Render("METRIC"),
-		dim.Width(valWidth).Render("VALUE"),
-	)
-
-	rule := lipgloss.NewStyle().
-		Foreground(appstyles.Active.BorderDefault).
-		Width(width).
-		Render(strings.Repeat("─", max(width, 0)))
-
-	var rows []string
-	valStyle := lipgloss.NewStyle().Foreground(appstyles.Active.TextPrimary).Width(valWidth)
-	propStyle := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Width(propWidth)
+	var rows []propRow
 
 	if container.MemUsage != "" {
-		memDisplay := apptypes.FormatMemUsage(container.MemUsage, container.MemPerc)
-		row := lipgloss.JoinHorizontal(lipgloss.Left,
-			propStyle.Render("Memory"),
-			valStyle.Render(memDisplay),
-		)
-		rows = append(rows, row)
+		rows = append(rows, propRow{"Memory", []string{apptypes.FormatMemUsage(container.MemUsage, container.MemPerc)}})
 	}
 
 	if container.CPUPerc != "" {
-		row := lipgloss.JoinHorizontal(lipgloss.Left,
-			propStyle.Render("CPU"),
-			valStyle.Render(container.CPUPerc),
-		)
-		rows = append(rows, row)
+		rows = append(rows, propRow{"CPU", []string{container.CPUPerc}})
 	}
 
 	if container.NetIO != "" {
-		row := lipgloss.JoinHorizontal(lipgloss.Left,
-			propStyle.Render("Network I/O"),
-			valStyle.Render(container.NetIO),
-		)
-		rows = append(rows, row)
+		rows = append(rows, propRow{"Network I/O", []string{container.NetIO}})
 	}
 
 	if container.BlockIO != "" {
-		row := lipgloss.JoinHorizontal(lipgloss.Left,
-			propStyle.Render("Disk I/O"),
-			valStyle.Render(container.BlockIO),
-		)
-		rows = append(rows, row)
+		rows = append(rows, propRow{"Disk I/O", []string{container.BlockIO}})
 	}
 
 	if container.PIDs != "" {
-		row := lipgloss.JoinHorizontal(lipgloss.Left,
-			propStyle.Render("PIDs"),
-			valStyle.Render(container.PIDs),
-		)
-		rows = append(rows, row)
+		rows = append(rows, propRow{"PIDs", []string{container.PIDs}})
 	}
 
 	if container.RunningFor != "" {
-		row := lipgloss.JoinHorizontal(lipgloss.Left,
-			propStyle.Render("Uptime"),
-			valStyle.Render(container.RunningFor),
-		)
-		rows = append(rows, row)
+		rows = append(rows, propRow{"Uptime", []string{container.RunningFor}})
 	}
 
-	if len(rows) == 0 {
-		return ""
+	return rows
+}
+
+// renderConfigTable and renderRuntimeStats are the two tables the panel shows,
+// at the width they are given.
+func (m DetailsPanelModel) renderConfigTable(width int) string {
+	return renderPropTable("PROPERTY", width, m.configRows())
+}
+
+func (m DetailsPanelModel) renderRuntimeStats(width int) string {
+	return renderPropTable("METRIC", width, m.runtimeRows())
+}
+
+// tablesMinSideBySide is the body width from which the config and runtime
+// tables sit next to each other instead of stacking. Below it each column
+// would be too narrow to hold a value like "PUID=1002  PGID=1001" without
+// truncating it, and a truncated table is worse than a tall one.
+const tablesMinSideBySide = 72
+
+// tablesGutter is the blank column between the two tables. It is what makes
+// them read as two tables rather than a four-column one.
+const tablesGutter = 3
+
+// renderTables lays the config and runtime tables out for the width available.
+//
+// Side by side when there is room, because stacked they used a fifth of the
+// panel's width and twice its height - a value column of seventy blank columns
+// beside a table that had run off the bottom of what the eye takes in at once.
+// The group panel keeps one full-width table because it has one table; this is
+// the same table style spent on two.
+func (m DetailsPanelModel) renderTables(width int) string {
+	if width >= tablesMinSideBySide {
+		colWidth := (width - tablesGutter) / 2
+
+		config := m.renderConfigTable(colWidth)
+		stats := m.renderRuntimeStats(colWidth)
+
+		// Only when there are two: a stopped service has no runtime table, and
+		// a half-width config table with nothing beside it is just a narrower
+		// version of the wasted width this avoids.
+		if config != "" && stats != "" {
+			return lipgloss.JoinHorizontal(lipgloss.Top,
+				config,
+				lipgloss.NewStyle().Width(tablesGutter).Render(""),
+				stats,
+			)
+		}
 	}
 
-	all := make([]string, 0, 2+len(rows))
-	all = append(all, headerRow, rule)
-	all = append(all, rows...)
+	config := m.renderConfigTable(width)
+	stats := m.renderRuntimeStats(width)
 
-	return lipgloss.JoinVertical(lipgloss.Left, all...)
+	switch {
+	case stats == "":
+		return config
+	case config == "":
+		return stats
+	}
+
+	// Stacked, the two tables need the same blank-line-and-rule separation the
+	// header has from the config table, or they read as one table that changed
+	// its mind about its heading halfway down.
+	return lipgloss.JoinVertical(lipgloss.Left, config, "", panelRule(width), stats)
 }
 
 // renderEditor renders the textarea with the editor key hints below it. The
