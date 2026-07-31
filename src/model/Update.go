@@ -17,6 +17,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/components"
 	"github.com/filipemolina/stack-stitcher/src/components/chrome"
+	"github.com/filipemolina/stack-stitcher/src/components/confirmmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/errormodal"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/keys"
@@ -639,7 +640,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case cmds.OpenDeleteGroupModalMsg:
 		groupName := string(msg)
-		m.activeModal = components.ConfirmModal(
+		m.activeModal = confirmmodal.New(
 			fmt.Sprintf("Delete group %q?", groupName),
 			cmds.DeleteGroup(m.config.configFileName, groupName),
 		)
@@ -807,7 +808,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case cmds.OpenConfirmModalMsg:
-		m.activeModal = components.ConfirmModal(msg.Message, msg.Follow)
+		m.activeModal = confirmmodal.New(msg.Message, msg.Follow)
 
 	case cmds.CloseModalMsg:
 		m.activeModal = nil
