@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
@@ -274,5 +275,77 @@ func TestActionButtonsRenderTheBindingsOwnHelp(t *testing.T) {
 		if !strings.Contains(row, want) {
 			t.Errorf("action row does not render %q for binding %v", want, help)
 		}
+	}
+}
+
+// panelActionRowLine is the 0-based line of `screen` the action row sits on,
+// found by the shortcut of the first button the row shows. -1 when the row is
+// not on the screen at all.
+func panelActionRowLine(screen string) int {
+	want := keys.Details.Start.Help().Key + " " + buttonLabel(keys.Details.Start.Help().Desc)
+
+	for i, line := range strings.Split(screen, "\n") {
+		if strings.Contains(ansi.Strip(line), want) {
+			return i
+		}
+	}
+
+	return -1
+}
+
+// Both panels are documented as pinning the action row to the bottom of their
+// body ("The action row" in docs/DESIGN.md), and the group panel did it while
+// the service panel let the row land wherever its tables happened to end -
+// mid-panel, with a dozen blank rows under it. The two are one layout now
+// (panelBodyWithActions), so this pins both to the same line: the last body
+// row, which is the frame's bottom padding row minus one.
+func TestDetailsPanelsPinActionRowToBottom(t *testing.T) {
+	const height = 40
+
+	service := focusedDetails(types.ServiceConfig{Name: "web", Image: "nginx:latest"})
+	sized, _ := service.Update(cmds.SetBodyLayoutMsg{LeftWidth: 40, RightWidth: 90, Height: height})
+	service = sized.(DetailsPanelModel)
+
+	group := GroupDetailsPanel().(GroupDetailsPanelModel)
+	for _, msg := range []tea.Msg{
+		cmds.SetBodyLayoutMsg{LeftWidth: 40, RightWidth: 90, Height: height},
+		cmds.SetServicesListMsg([]types.ServiceConfig{{Name: "web", Profiles: []string{"stack"}}}),
+		cmds.SetSelectedGroupMsg("stack"),
+	} {
+		updated, _ := group.Update(msg)
+		group = updated.(GroupDetailsPanelModel)
+	}
+	group.isFocused = true
+
+	// The frame pads by one row at the bottom, so the last body row is the
+	// second-to-last line of the panel.
+	want := height - 2
+
+	for name, screen := range map[string]string{
+		"service": service.View().Content,
+		"group":   group.View().Content,
+	} {
+		if got := panelActionRowLine(screen); got != want {
+			t.Errorf("%s panel: action row on line %d of %d, want %d\n%s",
+				name, got, lipgloss.Height(screen), want, ansi.Strip(screen))
+		}
+	}
+}
+
+// A panel too short for its content has to lose content, not actions: the row
+// is the panel's floor, and a body that pushed it off the bottom would take
+// the only visible affordance for start/stop with it.
+func TestServiceDetailsKeepsActionRowWhenContentOverflows(t *testing.T) {
+	m := focusedDetails(types.ServiceConfig{Name: "web", Image: "nginx:latest"})
+	sized, _ := m.Update(cmds.SetBodyLayoutMsg{LeftWidth: 40, RightWidth: 90, Height: 12})
+	m = sized.(DetailsPanelModel)
+
+	screen := m.View().Content
+
+	if got, want := panelActionRowLine(screen), 12-2; got != want {
+		t.Errorf("action row on line %d, want %d\n%s", got, want, ansi.Strip(screen))
+	}
+	if got := lipgloss.Height(screen); got != 12 {
+		t.Errorf("panel is %d rows tall, want 12", got)
 	}
 }

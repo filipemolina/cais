@@ -521,26 +521,34 @@ body is a two-pane layout:
   - **Editing:** the inline YAML editor replaces the view entirely, showing
     the service's YAML fragment in a `textarea` with live validation on the
     status line below.
-  - **Service selected:** a header section with the service name (bold), the
-    image in parentheses, and a status line with a coloured dot (●), state
-    label, health status (coloured by state), and uptime — all on a single
-    row, separated by · markers. A thin rule separates the header from the
-    content below.
+  - **Service selected:** a header card in the group header card's shape —
+    name (bold), image (muted), and a status line with a coloured dot (●),
+    state label, health status (coloured by state) and uptime, separated by
+    ` · ` — closing on a thin rule. Every line starts on the body's left edge;
+    the image used to be parenthesised and indented by one space, which was the
+    only line in either panel that did not.
     
     Beneath the header is a compact two-column table (PROPERTY | VALUE)
     showing the service's compose configuration. Properties are shown in dim
-    text, values in primary text. Multi-value properties (e.g. ports) indent
-    continuation rows below the first value. The table rows shown depend on
-    what the service defines, and include: ports, container name, restart
-    policy, connected networks, volumes summary (count by bind/volume type),
-    healthcheck command (trimmed for brevity), depends_on, pull policy,
-    PUID/PGID (common in self-hosted *arr stacks), memory limits (in
-    human-readable form via `docker/go-units`), and label count.
+    text, values in primary text, truncated to their column as the member
+    table's cells are. Multi-value properties (e.g. ports) indent continuation
+    rows below the first value. The table rows shown depend on what the service
+    defines, and include: ports, container name, restart policy, connected
+    networks, volumes summary (count by bind/volume type), healthcheck command
+    (trimmed for brevity), depends_on, pull policy, PUID/PGID (common in
+    self-hosted *arr stacks), memory limits (in human-readable form via
+    `docker/go-units`), and label count.
     
     When the service has a running container with stats data, a live runtime
-    stats table (METRIC | VALUE) appears below the config table, showing
-    memory usage + percentage, CPU usage, network I/O, disk I/O, PIDs count,
-    and uptime.
+    stats table (METRIC | VALUE) joins it, showing memory usage + percentage,
+    CPU usage, network I/O, disk I/O, PIDs count, and uptime. **The two tables
+    sit side by side** once the panel body is 72 columns or wider, and stack
+    (separated by a blank row and a rule) below that. Stacked at every width,
+    they spent a fifth of the panel's columns and twice its rows: a value
+    column seventy blanks wide, under a table that had run off the bottom of
+    what the eye takes in at once. Both are the same function
+    (`renderPropTable`) differing only in heading and rows; the group panel
+    keeps one full-width table because it *has* one table.
     
     The action row is pinned at the bottom, matching the group panel exactly
     (see *The action row* below). While a docker action is pending, the row is
@@ -558,7 +566,19 @@ body is a two-pane layout:
 
 Both details panels pin the same action row to the bottom of their body:
 `s Start`, `t Stop`, `r Restart`, `p Pull`, `x Remove`, `l Logs`, rendered by
-`renderActionButtons` in `src/components/PanelFrame.go`. Three rules govern it.
+`renderActionButtons` in `src/components/PanelFrame.go`. Four rules govern it.
+
+**It is pinned by one layout, not by each panel's arithmetic.**
+`panelBodyWithActions` takes a panel's content and its footer and pads between
+them, so the row lands on the body's last line whatever the content above it
+did. The group panel used to pin it by stretching its member table to fill the
+gap and the service panel not at all — the row simply followed its last stats
+row, which on a tall terminal left it floating mid-panel above a dozen blank
+rows. The content is clipped *before* the footer is attached, so a panel whose
+content outgrows its box loses its last rows rather than its actions: joining
+first and clipping the result takes the bottom off, which is the one row that
+has to survive. `TestDetailsPanelsPinActionRowToBottom` pins both panels to the
+same line.
 
 **It says what `keys.Active` says.** The row takes a `keys.Context` — the same
 screen state the footer bar reports — and asks `keys.Live` for each binding. A
