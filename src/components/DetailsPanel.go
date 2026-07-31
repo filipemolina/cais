@@ -16,6 +16,7 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/docker/go-units"
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 	"gopkg.in/yaml.v3"
 )
@@ -471,6 +472,28 @@ func (m DetailsPanelModel) OwnsKeyboard() bool {
 	return m.editing
 }
 
+// actionContext is what the panel knows about the screen, in the shape
+// keys.Active reads. The panel is the Services page's right pane, so the page
+// and the component id are constants here; the only question is whether this
+// pane holds focus, and when it does not, focus is on the list beside it. That
+// is deliberately not special-cased: reporting the list as focused makes
+// keys.Active return the list's keys, none of which are the action bindings, so
+// the buttons dim by the same rule that empties them out of the footer.
+func (m DetailsPanelModel) actionContext() keys.Context {
+	focused := constants.COMPONENT_BODY_LIST
+	if m.isFocused {
+		focused = constants.COMPONENT_BODY_DETAILS
+	}
+
+	return keys.Context{
+		Page:          "Services",
+		Focused:       focused,
+		Selected:      m.service != nil,
+		Editing:       m.editing,
+		PendingAction: m.pendingAction != nil,
+	}
+}
+
 func (m DetailsPanelModel) View() tea.View {
 	bodyWidth := max(1, panelBodyWidth(m.panelWidth))
 	bodyAvail := max(1, panelBodyHeight(m.panelHeight))
@@ -507,7 +530,7 @@ func (m DetailsPanelModel) View() tea.View {
 	if m.pendingAction != nil {
 		buttons = m.renderPendingAction(bodyWidth, bg)
 	} else {
-		buttons = renderActionButtons(bodyWidth, bg)
+		buttons = renderActionButtons(bodyWidth, bg, m.actionContext())
 	}
 
 	parts := []string{serviceHeader, configTable}
