@@ -595,7 +595,7 @@ reads legibly on a green pill has to stay dark whichever theme is active, not
 follow `TextPrimary`, which flips. `GroupDetailsPanel.go`'s `statusPill` used
 to reach for `PanelBg`/`TextPrimary` as stand-ins for "a dark color" and "a
 light color"; that only ever worked because the one theme that existed was
-dark, and `stitcher-light` is exactly what exposed it.
+dark, and the first light theme is exactly what exposed it.
 
 With the expanded registry, hard-coding which ink to use on a given fill is
 no longer survivable — the same call site draws on a `#BC3FBC` magenta in
@@ -689,12 +689,15 @@ it, and `LoadConfig`/`SaveConfig` round-trip it automatically.
 
 Adding a theme is choosing the handful of base colors in `themeParams`
 (accent, text, panel, modal, danger, the four status colors); `newTheme`
-derives every other field. The 14 registered themes (3 Stitcher darks,
-1 Stitcher light, and 10 community schemes: Catppuccin Mocha, Gruvbox
+derives every other field. The 14 registered themes are 3 Stitcher darks,
+1 Stitcher light, and 10 community schemes (Catppuccin Mocha, Gruvbox
 Dark, Tokyo Night, Nord, Dracula, Solarized Dark, One Dark, Everforest
-Dark, Rosé Pine, Kanagawa Wave) share the status and danger colors on
-purpose — container state is a vocabulary the user shouldn't have to
-re-learn per theme.
+Dark, Rosé Pine, Kanagawa Wave). The three Stitcher darks share one set of
+status and danger colors on purpose — container state is a vocabulary the
+user shouldn't have to re-learn between them. An imported scheme brings its
+own, because a Stitcher green dropped into Gruvbox would read as the one
+thing on screen that isn't Gruvbox; what stays constant there is the
+*mapping* (green runs, amber starts, red errs), not the hex.
 
 ### Saying which build this is
 

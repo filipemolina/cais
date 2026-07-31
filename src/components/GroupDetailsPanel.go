@@ -304,11 +304,11 @@ func (m GroupDetailsPanelModel) groupHeaderCard(name string, running, stopped, t
 // green when every service is running, amber when mixed, red when none run.
 //
 // The pill's ink (fg) does not follow the app's theme: InkOnLight/InkOnDark
-// are fixed regardless of Dark, because the pill's own fill (green, amber,
-// red) is fixed too. Using PanelBg/TextPrimary here used to work only by
-// coincidence, because the only theme that existed was dark - PanelBg is a
-// light color in stitcher-light, which would have put light text on the
-// light-ish ALL RUNNING/MIXED pills.
+// are fixed regardless of Dark, because the pill's own fill is a status color
+// rather than a surface tier. What the fill *is* varies per theme, though, so
+// appstyles.InkOn picks whichever of the two inks reads on it rather than
+// this call site guessing - see appstyles/Contrast_test.go, which holds every
+// theme's pill ink to 4.2:1.
 func statusPill(running, total int) string {
 	var label string
 	var bg color.Color

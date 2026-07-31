@@ -76,7 +76,10 @@ func modalSurface(bg color.Color, content string) string {
 // modalTitle renders a modal's heading. Every modal names itself, so a user
 // who lands on one mid-flow can tell what it is about to do without having to
 // infer it from the fields. The accent background creates a highlighted bar
-// that stands out from the modal body.
+// that stands out from the modal body; the ink comes from appstyles.InkOn
+// rather than TextPrimary, because TextPrimary is chosen to read on the
+// *panel* tiers and most themes pair a light TextPrimary with a pastel
+// Accent - #CDD6F4 on catppuccin's #CBA6F7 mauve scores 1.40.
 //
 // The margin is part of the title rather than a blank line each caller
 // remembers to add, and it matches the blank row the hint line sits above: the
@@ -84,7 +87,7 @@ func modalSurface(bg color.Color, content string) string {
 func modalTitle(text string) string {
 	return lipgloss.NewStyle().
 		Bold(true).
-		Foreground(appstyles.Active.TextPrimary).
+		Foreground(appstyles.InkOn(appstyles.Active.Accent)).
 		Background(appstyles.Active.Accent).
 		PaddingLeft(1).
 		PaddingRight(1).
