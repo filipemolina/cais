@@ -28,7 +28,7 @@ Set Theme "Dracula"
 Set CursorBlink false
 Set TypingSpeed 60ms
 
-Type "cd demo/fixtures && stack-stitcher"
+Type "cd demo/fixtures && stitch"
 Enter
 Sleep 2s
 

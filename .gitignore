@@ -3,7 +3,7 @@
 
 # Compiled binary from `go build .` in the repo root. `make build` installs
 # to $(go env GOPATH)/bin instead, so nothing here needs to be tracked.
-/stack-stitcher
+/stitch
 
 # Screenshots and mock data
 mocks/

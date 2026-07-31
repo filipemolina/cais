@@ -52,13 +52,13 @@ cd stack-stitcher
 make build
 ```
 
-`make build` runs `go install .` with the current `git describe` stamped in, so
-`stack-stitcher --version` reports the build it came from. It installs the
+`make build` runs `go build` with the current `git describe` stamped in, so
+`stitch --version` reports the build it came from. It installs the
 binary to `$(go env GOPATH)/bin` (usually `~/go/bin`). Ensure that directory is
 on your `PATH`; no `sudo` or manual move is needed.
 
 ```bash
-command -v stack-stitcher
+command -v stitch
 ```
 
 To run it during development without building:
@@ -72,7 +72,7 @@ make dev   # equivalent to: go run main.go
 Run Stack Stitcher from a directory that contains your Compose file:
 
 ```bash
-stack-stitcher
+stitch
 ```
 
 It auto-detects the compose file in the current directory, checking in order: `compose.yaml`, `compose.yml`, `docker-compose.yaml`, `docker-compose.yml` — the same order Docker itself uses. Whichever file won is named in the footer, so you can always see what you are acting on; when several of those names exist, the footer marks the winner with `+N` and the `?` overlay lists the rest. Whatever it resolves is then passed to every `docker compose` call as `--file`, so the commands act on the file the panels describe.
@@ -80,15 +80,15 @@ It auto-detects the compose file in the current directory, checking in order: `c
 To work on a project somewhere else, point at it instead of `cd`-ing there:
 
 ```bash
-stack-stitcher --dir ~/homelab/media      # resolve a compose file in that directory
-stack-stitcher --file ~/homelab/media/compose.prod.yaml   # open exactly this file
+stitch --dir ~/homelab/media      # resolve a compose file in that directory
+stitch --file ~/homelab/media/compose.prod.yaml   # open exactly this file
 ```
 
 `-d` and `-f` are the short forms. `--dir` resolves in the usual order; `--file` opens the file you name, whatever it is called. They can't be combined — either one on its own already does the job. A path that doesn't exist is reported before the UI starts, not inside it.
 
 ```bash
-stack-stitcher --version   # the release it was built from, or the commit
-stack-stitcher --help
+stitch --version   # the release it was built from, or the commit
+stitch --help
 ```
 
 ### Key bindings

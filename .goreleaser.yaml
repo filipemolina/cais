@@ -5,8 +5,8 @@ before:
     - go mod tidy
 
 builds:
-  - id: stack-stitcher
-    binary: stack-stitcher
+  - id: stitch
+    binary: stitch
     main: .
     env:
       - CGO_ENABLED=0
