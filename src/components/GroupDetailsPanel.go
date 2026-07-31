@@ -8,6 +8,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/spinner"
@@ -16,7 +17,6 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/keys"
-	"github.com/mattn/go-runewidth"
 )
 
 type GroupDetailsPanelModel struct {
@@ -27,7 +27,7 @@ type GroupDetailsPanelModel struct {
 	panelHeight   int
 	isFocused     bool
 	componentId   int
-	pendingAction *PendingAction
+	pendingAction *chrome.PendingAction
 	spinner       spinner.Model
 }
 
@@ -102,7 +102,7 @@ func (m GroupDetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.panelHeight = msg.Height
 
 	case cmds.SetPendingActionMsg:
-		m.pendingAction = &PendingAction{Action: msg.Action, Target: msg.Target, IsGroup: msg.IsGroup}
+		m.pendingAction = &chrome.PendingAction{Action: msg.Action, Target: msg.Target, IsGroup: msg.IsGroup}
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(m.spinner.Tick())
 		finalCmds = append(finalCmds, cmd)
@@ -148,7 +148,7 @@ func (m GroupDetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			break
 		}
 
-		if action, ok := dockerActionFor(msg); ok {
+		if action, ok := chrome.DockerActionFor(msg); ok {
 			actionCmd := cmds.RequestDockerAction(action, m.selectedGroup, true)
 			finalCmds = append(finalCmds, actionCmd)
 		}
@@ -176,7 +176,7 @@ func (m GroupDetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // the panel.
 func (m GroupDetailsPanelModel) View() tea.View {
 	body := m.renderBody()
-	screen := renderPanelFrame("Details", m.titlePill(), m.isFocused, m.panelWidth, m.panelHeight, body)
+	screen := chrome.PanelFrame("Details", m.titlePill(), m.isFocused, m.panelWidth, m.panelHeight, body)
 
 	return tea.NewView(screen)
 }
@@ -226,20 +226,20 @@ func (m GroupDetailsPanelModel) actionContext() keys.Context {
 // renderBody builds the panel body for the current state: onboarding,
 // nothing-selected, or a selected group's header + member table + actions.
 func (m GroupDetailsPanelModel) renderBody() string {
-	bodyWidth := max(1, panelBodyWidth(m.panelWidth))
-	bodyAvail := max(1, panelBodyHeight(m.panelHeight))
-	bg := panelBg(m.isFocused)
+	bodyWidth := max(1, chrome.PanelBodyWidth(m.panelWidth))
+	bodyAvail := max(1, chrome.PanelBodyHeight(m.panelHeight))
+	bg := chrome.PanelBg(m.isFocused)
 
 	// No groups exist anywhere yet -> onboarding.
 	if len(m.knownGroups()) == 0 {
-		return renderEmptyCard(bodyWidth, bodyAvail, bg, "Getting started",
+		return chrome.EmptyCard(bodyWidth, bodyAvail, bg, "Getting started",
 			"Groups are Compose profiles: sets of services you run together. Add a `profiles:` key to a service in your compose file to make one.",
 			"n", "new group")
 	}
 
 	// Groups exist but none is selected.
 	if m.selectedGroup == "" {
-		return renderEmptyCard(bodyWidth, bodyAvail, bg, "Select a group",
+		return chrome.EmptyCard(bodyWidth, bodyAvail, bg, "Select a group",
 			"Pick a group from the list to see its services.",
 			"↑/↓", "to browse")
 	}
@@ -266,10 +266,10 @@ func (m GroupDetailsPanelModel) renderBody() string {
 	if m.pendingAction != nil {
 		footerParts = append(footerParts, m.renderPendingAction(bodyWidth, bg))
 	} else {
-		footerParts = append(footerParts, renderActionButtons(bodyWidth, bg, m.actionContext()))
+		footerParts = append(footerParts, chrome.ActionButtons(bodyWidth, bg, m.actionContext()))
 	}
 
-	return panelBodyWithActions(bodyWidth, bodyAvail, bg,
+	return chrome.PanelBodyWithActions(bodyWidth, bodyAvail, bg,
 		content, lipgloss.JoinVertical(lipgloss.Left, footerParts...))
 }
 
@@ -281,7 +281,7 @@ func (m GroupDetailsPanelModel) groupHeaderCard(name string, running, stopped, t
 		Bold(true).
 		Foreground(appstyles.Active.TextPrimary).
 		Width(width).
-		Render(truncate(name, width))
+		Render(chrome.Truncate(name, width))
 
 	summary := fmt.Sprintf("%d running · %d stopped · %d services", running, stopped, total)
 	summaryRow := lipgloss.NewStyle().
@@ -289,7 +289,7 @@ func (m GroupDetailsPanelModel) groupHeaderCard(name string, running, stopped, t
 		Width(width).
 		Render(summary)
 
-	return lipgloss.JoinVertical(lipgloss.Left, nameRow, summaryRow, panelRule(width))
+	return lipgloss.JoinVertical(lipgloss.Left, nameRow, summaryRow, chrome.PanelRule(width))
 }
 
 // statusPill renders a filled pill whose color reflects the group's state:
@@ -330,7 +330,7 @@ func statusPill(running, total int) string {
 func (m GroupDetailsPanelModel) renderMemberTable(members []types.ServiceConfig, width int) string {
 	cols := computeCols(width)
 
-	parts := []string{renderTableHeader(cols, width), panelRule(width)}
+	parts := []string{renderTableHeader(cols, width), chrome.PanelRule(width)}
 
 	if len(members) == 0 {
 		parts = append(parts, lipgloss.NewStyle().
@@ -380,12 +380,12 @@ func (m GroupDetailsPanelModel) renderMemberRow(cols tableCols, width int, svc t
 	}
 
 	dot := lipgloss.NewStyle().Foreground(dotColor).Width(cols.dot).Render("●")
-	name := lipgloss.NewStyle().Foreground(appstyles.Active.TextPrimary).Width(cols.name).Render(truncate(svc.Name, cols.name))
-	img := lipgloss.NewStyle().Foreground(appstyles.Active.TextMuted).Width(cols.image).Render(truncate(image, cols.image))
-	st := lipgloss.NewStyle().Foreground(stateColor(state)).Width(cols.state).Render(truncate(state, cols.state))
-	hl := lipgloss.NewStyle().Foreground(healthColor(health)).Width(cols.health).Render(truncate(health, cols.health))
-	up := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Width(cols.uptime).Render(truncate(uptime, cols.uptime))
-	pt := lipgloss.NewStyle().Foreground(appstyles.Active.TextMuted).Width(cols.ports).Render(truncate(ports, cols.ports))
+	name := lipgloss.NewStyle().Foreground(appstyles.Active.TextPrimary).Width(cols.name).Render(chrome.Truncate(svc.Name, cols.name))
+	img := lipgloss.NewStyle().Foreground(appstyles.Active.TextMuted).Width(cols.image).Render(chrome.Truncate(image, cols.image))
+	st := lipgloss.NewStyle().Foreground(stateColor(state)).Width(cols.state).Render(chrome.Truncate(state, cols.state))
+	hl := lipgloss.NewStyle().Foreground(chrome.HealthColor(health)).Width(cols.health).Render(chrome.Truncate(health, cols.health))
+	up := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Width(cols.uptime).Render(chrome.Truncate(uptime, cols.uptime))
+	pt := lipgloss.NewStyle().Foreground(appstyles.Active.TextMuted).Width(cols.ports).Render(chrome.Truncate(ports, cols.ports))
 
 	row := lipgloss.JoinHorizontal(lipgloss.Left, dot, name, img, st, hl, up, pt)
 
@@ -416,19 +416,6 @@ func stateColor(state string) color.Color {
 	}
 
 	return appstyles.Active.StatusStopped
-}
-
-func healthColor(health string) color.Color {
-	switch health {
-	case "healthy":
-		return appstyles.Active.StatusRunning
-	case "unhealthy":
-		return appstyles.Active.StatusError
-	case "starting":
-		return appstyles.Active.StatusStarting
-	default:
-		return appstyles.Active.TextDim
-	}
 }
 
 // tableCols holds the per-column widths for the member table.
@@ -515,21 +502,10 @@ func widestColumn(c tableCols) string {
 	return widest
 }
 
-// truncate hard-truncates s to w display columns, appending an ellipsis
-// when it is shortened. lipgloss Width wraps rather than truncates, so
-// cells are pre-truncated to keep every row on a single line.
-func truncate(s string, w int) string {
-	if w <= 0 {
-		return ""
-	}
-
-	return runewidth.Truncate(s, w, "…")
-}
-
 // renderPendingAction renders a spinner with the action description in place
 // of the action buttons while a docker action is in progress.
 func (m GroupDetailsPanelModel) renderPendingAction(width int, bg color.Color) string {
-	desc := actionDescription(m.pendingAction.Action, m.pendingAction.Target, m.pendingAction.IsGroup)
+	desc := chrome.ActionDescription(m.pendingAction.Action, m.pendingAction.Target, m.pendingAction.IsGroup)
 
 	style := lipgloss.NewStyle().
 		Foreground(appstyles.Active.TextPrimary).
@@ -543,6 +519,6 @@ func (m GroupDetailsPanelModel) renderPendingAction(width int, bg color.Color) s
 func GroupDetailsPanel() tea.Model {
 	return GroupDetailsPanelModel{
 		componentId: 2,
-		spinner:     newSpinner(),
+		spinner:     chrome.NewSpinner(),
 	}
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
@@ -46,7 +47,7 @@ func (d GroupsListCustomDelegate) Render(w io.Writer, m list.Model, index int, l
 		titleColor = appstyles.Active.TextMuted
 	}
 
-	rowBg := listRowBg(isActive, d.isParentFocused)
+	rowBg := chrome.ListRowBg(isActive, d.isParentFocused)
 
 	// The row's left edge is the same solid bar the nav uses for its active
 	// tab ("▌"), so list rows and the nav agree on thickness. State is carried
@@ -82,7 +83,7 @@ func (d GroupsListCustomDelegate) Render(w io.Writer, m list.Model, index int, l
 
 	// The bar spans the row's full height, one ▌ per line, rather than a sliver
 	// at the top - the nav's single-line bar stretched to the row's height.
-	bar := barColumn(barColor, rowBg, content)
+	bar := chrome.BarColumn(barColor, rowBg, content)
 
 	// Seal the row against its own background before handing it to the list, so
 	// the active row keeps its lighter surface color instead of being flattened
@@ -194,7 +195,7 @@ func (m GroupListModel) footerHeight() int {
 // after the wrapper padding and the stats footer. Called whenever either the
 // box or the footer changes.
 func (m *GroupListModel) resizeList() {
-	h, v := listWrapperStyle.GetFrameSize()
+	h, v := chrome.ListWrapperStyle.GetFrameSize()
 
 	m.list.SetSize(
 		max(0, m.panelWidth-h),
@@ -318,15 +319,15 @@ func (m GroupListModel) View() tea.View {
 	// 3-tier background system: tier 3 (panel) when unfocused,
 	// tier 4 (elevated) when focused. The focus state is shown by the
 	// background lifting, not by a border.
-	bg := panelBg(m.isFocused)
+	bg := chrome.PanelBg(m.isFocused)
 
 	// The panel fills exactly the box AppModel handed it, so the tier-3
 	// background covers the full body region and both panels are the same
 	// height regardless of how much content they hold.
-	wrapper := fitBox(listWrapperStyle.Background(bg), m.panelWidth, m.panelHeight)
+	wrapper := chrome.FitBox(chrome.ListWrapperStyle.Background(bg), m.panelWidth, m.panelHeight)
 
 	// Rows left for the sections below, inside the wrapper padding.
-	frameW, frameH := listWrapperStyle.GetFrameSize()
+	frameW, frameH := chrome.ListWrapperStyle.GetFrameSize()
 	contentWidth := max(0, m.panelWidth-frameW)
 	contentHeight := max(0, m.panelHeight-frameH)
 
@@ -334,7 +335,7 @@ func (m GroupListModel) View() tea.View {
 
 	if len(m.list.Items()) == 0 {
 		// Render the list title even when empty, using the same accent-chip
-		// style as the right panel's Details title (renderPanelFrame). The
+		// style as the right panel's Details title (chrome.PanelFrame). The
 		// MarginLeft(2) matches the gutter the bubbles list TitleBar adds, so
 		// the empty state's chip lines up with the non-empty one's.
 		titleRow := appstyles.NormalTitle().MarginLeft(2).Render(m.list.Title)
@@ -344,7 +345,7 @@ func (m GroupListModel) View() tea.View {
 			Padding(2, 2)
 		// Width-constrained so the hint wraps inside the panel instead of
 		// widening it past its box.
-		emptyContent := fitBox(emptyStyle, contentWidth, max(0, contentHeight-m.footerHeight())).Render(
+		emptyContent := chrome.FitBox(emptyStyle, contentWidth, max(0, contentHeight-m.footerHeight())).Render(
 			"No groups yet.\nPress n to create one, or add profiles to services in your compose file.",
 		)
 		sections = append(sections, appstyles.FillBackground(bg, lipgloss.JoinVertical(lipgloss.Left, titleRow, emptyContent)))
@@ -367,7 +368,7 @@ func (m GroupListModel) View() tea.View {
 			Padding(0, 1)
 
 		frameW, _ := footerStyle.GetFrameSize()
-		sections = append(sections, fitBox(footerStyle, contentWidth, 0).Render(statsLine(m.stats, contentWidth-frameW)))
+		sections = append(sections, chrome.FitBox(footerStyle, contentWidth, 0).Render(statsLine(m.stats, contentWidth-frameW)))
 	}
 
 	// JoinVertical pads the shorter of the stats footer / list out to the

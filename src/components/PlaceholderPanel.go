@@ -2,6 +2,7 @@ package components
 
 import (
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 
 	tea "charm.land/bubbletea/v2"
@@ -34,17 +35,17 @@ func (m PlaceholderPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m PlaceholderPanelModel) View() tea.View {
-	bodyWidth := max(1, panelBodyWidth(m.panelWidth))
-	bodyAvail := max(1, panelBodyHeight(m.panelHeight))
+	bodyWidth := max(1, chrome.PanelBodyWidth(m.panelWidth))
+	bodyAvail := max(1, chrome.PanelBodyHeight(m.panelHeight))
 
 	// The panel's title pill already names the page, so the card leads with its
 	// state instead of repeating the name.
 	//
 	// Not focusable, so it always renders on the unfocused panel tier.
-	body := renderEmptyCard(bodyWidth, bodyAvail, panelBg(false),
+	body := chrome.EmptyCard(bodyWidth, bodyAvail, chrome.PanelBg(false),
 		"Not built yet", m.message, "", "")
 
-	return tea.NewView(renderPanelFrame(m.title, "", false, m.panelWidth, m.panelHeight, body))
+	return tea.NewView(chrome.PanelFrame(m.title, "", false, m.panelWidth, m.panelHeight, body))
 }
 
 // PlaceholderPanel returns a page body that says the page is not built yet.

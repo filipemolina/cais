@@ -6,6 +6,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
@@ -43,15 +44,15 @@ func (m ErrorModalModel) View() tea.View {
 		Width(m.width)
 
 	content := lipgloss.JoinVertical(lipgloss.Left,
-		modalTitle("Error"),
+		chrome.ModalTitle("Error"),
 		messageStyle.Render(m.message),
 		"",
 		// Built from the binding rather than written out, so rebinding cancel
 		// cannot leave this line naming the old key.
-		modalHints(hintAs(keys.Overlay.Cancel, "dismiss")),
+		chrome.ModalHints(chrome.HintAs(keys.Overlay.Cancel, "dismiss")),
 	)
 
-	return tea.NewView(modalSurface(appstyles.Active.ModalBg, content))
+	return tea.NewView(chrome.ModalSurface(appstyles.Active.ModalBg, content))
 }
 
 // ErrorModal creates a new error modal with the given message.

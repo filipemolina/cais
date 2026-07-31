@@ -12,6 +12,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
@@ -75,20 +76,20 @@ func (m ComposeFilePickerModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // checklist modal's, so the modal stays as narrow as its list.
 func pickerHints() string {
 	return lipgloss.JoinVertical(lipgloss.Left,
-		renderKeyHints([]KeyHint{
-			hintFor(keys.List.Navigate),
+		chrome.RenderKeyHints([]chrome.KeyHint{
+			chrome.HintFor(keys.List.Navigate),
 		}, appstyles.Active.TextMuted),
-		renderKeyHints([]KeyHint{
-			hintAs(keys.Overlay.Submit, "switch file"),
-			hintFor(keys.Overlay.Cancel),
+		chrome.RenderKeyHints([]chrome.KeyHint{
+			chrome.HintAs(keys.Overlay.Submit, "switch file"),
+			chrome.HintFor(keys.Overlay.Cancel),
 		}, appstyles.Active.TextMuted),
 	)
 }
 
 func (m ComposeFilePickerModalModel) View() tea.View {
-	content := lipgloss.JoinVertical(lipgloss.Left, modalTitle("Switch compose file"), m.list.View(), "", pickerHints())
+	content := lipgloss.JoinVertical(lipgloss.Left, chrome.ModalTitle("Switch compose file"), m.list.View(), "", pickerHints())
 
-	return tea.NewView(modalSurface(appstyles.Active.ModalBg, content))
+	return tea.NewView(chrome.ModalSurface(appstyles.Active.ModalBg, content))
 }
 
 // ComposeFilePickerModal lists the YAML files in dir for switching the
@@ -98,7 +99,7 @@ func (m ComposeFilePickerModalModel) View() tea.View {
 //
 // termHeight is the terminal height in rows - a directory can hold more
 // compose files than the screen has room for, so the list is sized to fit
-// rather than to len(items). See modalListHeight.
+// rather than to len(items). See chrome.ModalListHeight.
 func ComposeFilePickerModal(dir string, fileNames []string, activeName string, termHeight int) tea.Model {
 	items := make([]list.Item, 0, len(fileNames))
 	activeIndex := 0
@@ -109,11 +110,11 @@ func ComposeFilePickerModal(dir string, fileNames []string, activeName string, t
 		}
 	}
 
-	// The title is rendered by modalTitle in the View function, not by the
+	// The title is rendered by chrome.ModalTitle in the View function, not by the
 	// list itself. Pagination is off while every file fits - the paginator
 	// would cost a row the list has no use for - and on when it doesn't, so
 	// the files past the fold stay reachable and are visibly there.
-	visible := modalListHeight(len(items), termHeight)
+	visible := chrome.ModalListHeight(len(items), termHeight)
 
 	picker := list.New(items, composeFilePickerDelegate{}, 40, visible)
 	picker.SetShowTitle(false)

@@ -16,6 +16,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/components"
+	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 	"github.com/filipemolina/stack-stitcher/src/utils"
@@ -541,7 +542,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cmds.RunDockerActionMsg:
 		// The panel asked for the action; AppModel is what knows which compose
 		// file it has to run against.
-		m.pendingAction = &components.PendingAction{
+		m.pendingAction = &chrome.PendingAction{
 			Action:  msg.Action,
 			Target:  msg.Target,
 			IsGroup: msg.IsGroup,

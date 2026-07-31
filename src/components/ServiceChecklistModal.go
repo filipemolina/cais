@@ -11,6 +11,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
@@ -111,13 +112,13 @@ func (m ServiceChecklistModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // where TextDim barely separates from the background.
 func checklistHints(submitDesc string) string {
 	return lipgloss.JoinVertical(lipgloss.Left,
-		renderKeyHints([]KeyHint{
-			hintFor(keys.List.Navigate),
-			hintFor(keys.Overlay.Toggle),
+		chrome.RenderKeyHints([]chrome.KeyHint{
+			chrome.HintFor(keys.List.Navigate),
+			chrome.HintFor(keys.Overlay.Toggle),
 		}, appstyles.Active.TextMuted),
-		renderKeyHints([]KeyHint{
-			hintAs(keys.Overlay.Submit, submitDesc),
-			hintFor(keys.Overlay.Cancel),
+		chrome.RenderKeyHints([]chrome.KeyHint{
+			chrome.HintAs(keys.Overlay.Submit, submitDesc),
+			chrome.HintFor(keys.Overlay.Cancel),
 		}, appstyles.Active.TextMuted),
 	)
 }
@@ -133,14 +134,14 @@ func (m ServiceChecklistModalModel) View() tea.View {
 		title = fmt.Sprintf("Edit members of %q", m.groupName)
 	}
 
-	content := lipgloss.JoinVertical(lipgloss.Left, modalTitle(title), m.list.View(), "", checklistHints(submitDesc))
+	content := lipgloss.JoinVertical(lipgloss.Left, chrome.ModalTitle(title), m.list.View(), "", checklistHints(submitDesc))
 
-	return tea.NewView(modalSurface(appstyles.Active.ModalBg, content))
+	return tea.NewView(chrome.ModalSurface(appstyles.Active.ModalBg, content))
 }
 
 // checklist builds the inner list shared by both constructors. termHeight is
 // the terminal height in rows; a compose file can define more services than
-// the screen has room for, so the list is sized to fit. See modalListHeight.
+// the screen has room for, so the list is sized to fit. See chrome.ModalListHeight.
 func checklist(serviceNames []string, preselected map[string]bool, termHeight int) list.Model {
 	items := make([]list.Item, 0, len(serviceNames))
 	for _, name := range serviceNames {
@@ -150,13 +151,13 @@ func checklist(serviceNames []string, preselected map[string]bool, termHeight in
 		})
 	}
 
-	// The title is rendered by modalTitle in the View function, not by the
+	// The title is rendered by chrome.ModalTitle in the View function, not by the
 	// list itself. Pagination is off while every service fits, because the
 	// paginator would take a row out of the items and silently push the last
 	// services onto an unreachable second page. Once the terminal is too
 	// short to show them all that is no longer a lie the modal can tell, so
 	// the paginator comes back and says which page the cursor is on.
-	visible := modalListHeight(len(items), termHeight)
+	visible := chrome.ModalListHeight(len(items), termHeight)
 
 	cl := list.New(items, serviceChecklistDelegate{}, 40, visible)
 	cl.SetShowTitle(false)

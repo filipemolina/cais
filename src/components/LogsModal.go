@@ -7,6 +7,7 @@ import (
 
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/utils"
 
 	"charm.land/bubbles/v2/key"
@@ -113,7 +114,7 @@ func (m *LogsModalModel) resize(termWidth, termHeight int) {
 }
 
 func (m LogsModalModel) View() tea.View {
-	title := modalTitle("logs: " + m.title)
+	title := chrome.ModalTitle("logs: " + m.title)
 
 	followState := "off"
 	if m.follow {
@@ -122,10 +123,10 @@ func (m LogsModalModel) View() tea.View {
 
 	// Built from the bindings rather than written out, so rebinding follow or
 	// cancel cannot leave this line advertising the old key.
-	footer := renderKeyHints([]KeyHint{
-		hintAs(keys.List.Navigate, "scroll"),
-		hintAs(keys.Overlay.Follow, fmt.Sprintf("follow (%s)", followState)),
-		hintAs(keys.Overlay.Cancel, "quit"),
+	footer := chrome.RenderKeyHints([]chrome.KeyHint{
+		chrome.HintAs(keys.List.Navigate, "scroll"),
+		chrome.HintAs(keys.Overlay.Follow, fmt.Sprintf("follow (%s)", followState)),
+		chrome.HintAs(keys.Overlay.Cancel, "quit"),
 	}, appstyles.Active.TextMuted)
 
 	if m.ended {
