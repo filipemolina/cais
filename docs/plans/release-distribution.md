@@ -1,5 +1,12 @@
 # Plan: Releases People Can Actually Download — Linux, macOS, Windows
 
+> **Before you start.** Work on a feature branch of small commits, merged
+> `--no-ff`; `go build ./... && go vet ./... && go test ./... && gofmt -l .`
+> green at **every** commit, not just at the tip — `docs/ROADMAP.md`
+> §Conventions is the full contract and `CONTRIBUTING.md` explains how a TUI
+> gets tested. Behaviour that only shows on screen gets checked in the real app
+> with VHS before it is committed. **Step 7 of the post-alpha order.** One exception, worth doing now rather than waiting: cut a `v0.1.0` tag early — several directories require a first release four months old, and the clock starts at the tag.
+
 Ask: *"How to produce releases so people can download them for Linux, Mac and
 Windows. It doesn't need to be a release for every single available
 architecture and OS, but mainly the ones more used by the self-hosting
@@ -301,7 +308,7 @@ if it does.
 Acceptance: a winget PR opens automatically on tag; once merged,
 `winget install stitch` works.
 
-## Owner decisions and blockers
+## What is decided, and what still needs the owner
 
 Unlike the other plans in this folder, this one has **external dependencies**:
 
@@ -313,9 +320,23 @@ Unlike the other plans in this folder, this one has **external dependencies**:
 | AUR | an AUR account + an SSH deploy key secret | yes |
 | **macOS code signing / notarization** | an Apple Developer account, ~$99/year | **no — out of scope**, hence D6's xattr path |
 
-Recommendations, all inline above: include `linux/armv7`, skip `windows/arm64`,
-ship deb/rpm/apk, take the attestation over cosign, tap before core, Scoop
-before winget, no Docker image, no Apple account.
+**The technical choices are decided,** not recommended: include `linux/armv7`,
+skip `windows/arm64`, ship deb/rpm/apk, take the attestation over cosign, tap
+before core, Scoop before winget, no Docker image, no Apple account. Implement
+them as written.
+
+**What genuinely still needs you** — everything below Phase 2 requires
+something no implementer can create on their own, so a phase that reaches one
+of these stops there and asks:
+
+| Blocked on | What it needs from the owner |
+|---|---|
+| Homebrew tap, Scoop bucket (Phase 3) | Two new public repos, and a PAT stored as an Actions secret |
+| winget (Phase 4) | A fork of `microsoft/winget-pkgs`, and Microsoft's review |
+| AUR (Phase 4, on demand only) | An AUR account and an SSH deploy key secret |
+| macOS signing/notarization | An Apple Developer account at ~$99/year — **out of scope**, which is why D6 documents the xattr path instead |
+
+Phases 1 and 2 are repo-local and need none of it. Those are the ones to do.
 
 ## Edge cases and risks
 

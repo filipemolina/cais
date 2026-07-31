@@ -1,5 +1,12 @@
 # Plan: Free AI Help When Adding a Service
 
+> **Before you start.** Work on a feature branch of small commits, merged
+> `--no-ff`; `go build ./... && go vet ./... && go test ./... && gofmt -l .`
+> green at **every** commit, not just at the tip — `docs/ROADMAP.md`
+> §Conventions is the full contract and `CONTRIBUTING.md` explains how a TUI
+> gets tested. Behaviour that only shows on screen gets checked in the real app
+> with VHS before it is committed. **Deliberately outside the post-alpha order** (`docs/ROADMAP.md`) — it is the only plan that depends on something outside the repo, and it needs `image-search.md` Phase 1 to exist first. Its own Phase 1 is takeable at any time.
+
 Feature request: *"adding free AI features, namely, AI help when adding a new
 service, so the AI would fill the service configuration options with sensible
 defaults."*
