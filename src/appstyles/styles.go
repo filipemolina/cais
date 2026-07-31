@@ -15,11 +15,20 @@ import "charm.land/lipgloss/v2"
 // handling.
 var DocStyle = lipgloss.NewStyle()
 
-// NormalTitle is the title chip on a panel frame - see PanelFrame.go.
+// NormalTitle is THE accent title chip: bold ink derived from the theme
+// accent on an accent background, with one space of padding on each side.
+// Every title - the Details/GroupDetails frames, the Services, Groups and
+// Containers list titles, and every modal heading - renders through this one
+// style, so a theme or style change here lands on all of them at once. See
+// PanelFrame.go.
+//
+// The style deliberately carries no margin: the left gutter is the container's
+// job. A bubbles list provides it via its internal TitleBar padding, and the
+// panel frame adds MarginLeft(2) to match that gutter - see renderPanelFrame.
 func NormalTitle() lipgloss.Style {
 	return lipgloss.NewStyle().
+		Bold(true).
 		Foreground(InkOn(Active.Accent)).
 		Background(Active.Accent).
-		Padding(0, 1).
-		MarginLeft(2)
+		Padding(0, 1)
 }

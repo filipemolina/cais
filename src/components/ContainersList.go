@@ -143,9 +143,9 @@ func (m ContainersListModel) View() tea.View {
 	}
 
 	// The title chip is restyled here, on a copy, rather than in the
-	// constructor - see listTitleStyle for why.
+	// constructor - see appstyles.NormalTitle for why.
 	l := m.list
-	l.Styles.Title = listTitleStyle()
+	l.Styles.Title = appstyles.NormalTitle()
 
 	renderedList := wrapper.Render(l.View())
 

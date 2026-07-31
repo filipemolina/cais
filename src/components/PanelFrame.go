@@ -75,22 +75,15 @@ func modalSurface(bg color.Color, content string) string {
 
 // modalTitle renders a modal's heading. Every modal names itself, so a user
 // who lands on one mid-flow can tell what it is about to do without having to
-// infer it from the fields. The accent background creates a highlighted bar
-// that stands out from the modal body; the ink comes from appstyles.InkOn
-// rather than TextPrimary, because TextPrimary is chosen to read on the
-// *panel* tiers and most themes pair a light TextPrimary with a pastel
-// Accent - #CDD6F4 on catppuccin's #CBA6F7 mauve scores 1.40.
+// infer it from the fields. It is the shared accent chip - appstyles.NormalTitle
+// - stood off the body by its own margin, so a style or theme change to the
+// chip lands on modals and panes alike.
 //
-// The margin is part of the title rather than a blank line each caller
-// remembers to add, and it matches the blank row the hint line sits above: the
-// heading and the footer are the modal's chrome, and both stand off the body.
+// The margin replaces the blank line each caller would otherwise have to add -
+// it matches the blank row the hint line sits above: the heading and the
+// footer are the modal's chrome, and both stand off the body.
 func modalTitle(text string) string {
-	return lipgloss.NewStyle().
-		Bold(true).
-		Foreground(appstyles.InkOn(appstyles.Active.Accent)).
-		Background(appstyles.Active.Accent).
-		PaddingLeft(1).
-		PaddingRight(1).
+	return appstyles.NormalTitle().
 		MarginBottom(1).
 		Render(text)
 }
@@ -115,21 +108,6 @@ const modalListChrome = 9
 // and a terminal that short cannot show the modal's own chrome either.
 func modalListHeight(items, termHeight int) int {
 	return min(items, max(3, termHeight-modalListChrome))
-}
-
-// listTitleStyle is the accent chip a bubbles list renders its Title with.
-//
-// It is a function rather than a var for the reason appstyles/styles.go gives
-// for NormalTitle, and it has to be *applied* in each list's View for the same
-// reason: the panel lists are constructed once in AppModel and never rebuilt,
-// so a style assigned in the constructor freezes whichever theme was active at
-// startup. The chip then stops following the theme picker's live preview while
-// every other pixel around it repaints.
-func listTitleStyle() lipgloss.Style {
-	return lipgloss.NewStyle().
-		Foreground(appstyles.InkOn(appstyles.Active.Accent)).
-		Background(appstyles.Active.Accent).
-		Padding(0, 1)
 }
 
 // modalHints renders a modal's own help line, in the footer bar's format but
@@ -218,11 +196,14 @@ func renderEmptyCard(width, availHeight int, bg color.Color, title, body, key, h
 //
 // Callers embed their action buttons at the bottom of `body`, which pins the
 // action row to the bottom of the panel.
+// The chip itself is appstyles.NormalTitle; the MarginLeft(2) here is the
+// frame's own left gutter, matching the 2 columns the bubbles list TitleBar
+// adds inside the list wrappers - see appstyles.NormalTitle.
 func renderPanelFrame(title string, titleRight string, isFocused bool, width int, height int, body string) string {
 	bg := panelBg(isFocused)
 
 	style := fitBox(wrapperStyle.Background(bg), width, height)
-	titleRow := appstyles.NormalTitle().Render(title)
+	titleRow := appstyles.NormalTitle().MarginLeft(2).Render(title)
 
 	if titleRight != "" {
 		gap := max(0, panelBodyWidth(width)-lipgloss.Width(titleRow)-lipgloss.Width(titleRight))
