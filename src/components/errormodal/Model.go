@@ -1,4 +1,4 @@
-package components
+package errormodal
 
 import (
 	"charm.land/bubbles/v2/key"
@@ -10,17 +10,17 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
-// ErrorModalModel is a modal that displays an error message and closes on
-// esc or any dismiss key. It is used for foreground errors (docker actions,
-// config loads) where a modal is less disruptive than the banner.
-type ErrorModalModel struct {
+// Model is a modal that displays an error message and closes on esc or any
+// dismiss key. It is used for foreground errors (docker actions, config
+// loads) where a modal is less disruptive than the banner.
+type Model struct {
 	message string
 	width   int
 }
 
-func (m ErrorModalModel) Init() tea.Cmd { return nil }
+func (m Model) Init() tea.Cmd { return nil }
 
-func (m ErrorModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	keyMsg, ok := msg.(tea.KeyPressMsg)
 	if !ok {
 		return m, nil
@@ -37,7 +37,7 @@ func (m ErrorModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m ErrorModalModel) View() tea.View {
+func (m Model) View() tea.View {
 	messageStyle := lipgloss.NewStyle().
 		Foreground(appstyles.Active.TextPrimary).
 		Background(appstyles.Active.ModalBg).
@@ -55,15 +55,15 @@ func (m ErrorModalModel) View() tea.View {
 	return tea.NewView(chrome.ModalSurface(appstyles.Active.ModalBg, content))
 }
 
-// ErrorModal creates a new error modal with the given message.
-func ErrorModal(message string, terminalWidth int) tea.Model {
+// New creates a new error modal with the given message.
+func New(message string, terminalWidth int) tea.Model {
 	// Constrain the message width to half the terminal or 60, whichever is smaller.
 	width := min(60, terminalWidth/2)
 	if width < 20 {
 		width = 20
 	}
 
-	return ErrorModalModel{
+	return Model{
 		message: message,
 		width:   width,
 	}

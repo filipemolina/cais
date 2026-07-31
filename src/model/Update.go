@@ -17,6 +17,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/components"
 	"github.com/filipemolina/stack-stitcher/src/components/chrome"
+	"github.com/filipemolina/stack-stitcher/src/components/errormodal"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 	"github.com/filipemolina/stack-stitcher/src/utils"
@@ -111,7 +112,7 @@ func (m *AppModel) reportForegroundError(message string) tea.Cmd {
 		// a background poll whose error is still showing there. Clearing
 		// lastErrorFromPoll here would strand that error, since a recovered
 		// poll only clears what it put up itself.
-		m.activeModal = components.ErrorModal(message, m.config.terminalWidth)
+		m.activeModal = errormodal.New(message, m.config.terminalWidth)
 		return nil
 	}
 
