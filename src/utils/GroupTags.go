@@ -180,6 +180,47 @@ func SetGroupMembers(fileName string, groupName string, members []string) error 
 	return writeComposeNode(fileName, doc)
 }
 
+// RenameGroupTag replaces every profiles entry equal to oldName with
+// newName in the compose file at fileName. Other profiles and every other
+// key are untouched. Nothing else in a compose file references a profile
+// by name (unlike service names, which depends_on references - which is
+// why service renames are refused), so a rename cannot leave dangling
+// references. Returns an error when no service carries oldName, which
+// catches the file having changed since the caller last synced it.
+func RenameGroupTag(fileName string, oldName string, newName string) error {
+	doc, err := readComposeNode(fileName)
+	if err != nil {
+		return err
+	}
+
+	servicesNode, err := servicesMappingNode(doc)
+	if err != nil {
+		return err
+	}
+
+	renamed := false
+	for i := 0; i+1 < len(servicesNode.Content); i += 2 {
+		serviceNode := servicesNode.Content[i+1]
+		profilesNode := findMappingValue(serviceNode, "profiles")
+		if profilesNode == nil {
+			continue
+		}
+
+		for _, item := range profilesNode.Content {
+			if item.Value == oldName {
+				item.Value = newName
+				renamed = true
+			}
+		}
+	}
+
+	if !renamed {
+		return fmt.Errorf("group %q not found in compose file", oldName)
+	}
+
+	return writeComposeNode(fileName, doc)
+}
+
 // ensureGroupTag adds groupName to serviceNode's profiles sequence if it is
 // not already present. Creates the profiles key and sequence if absent.
 func ensureGroupTag(serviceNode *yaml.Node, groupName string) {

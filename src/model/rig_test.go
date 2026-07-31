@@ -152,6 +152,37 @@ func TestRigGroupListEditKey(t *testing.T) {
 	}
 }
 
+// TestRigRenameGroup drives the rename flow end to end: R opens the prompt,
+// typing a new name and Enter write the compose file through the real
+// reload, and the re-derived list shows the renamed group.
+func TestRigRenameGroup(t *testing.T) {
+	setupProjectDir(t)
+
+	r := newRig(t)
+	if !r.WaitFor("core", 3*time.Second) {
+		t.Fatal("groups never rendered")
+	}
+
+	r.Send(letterKey('R'))
+
+	if !r.WaitFor("Rename group", 3*time.Second) {
+		t.Fatalf("rename prompt never opened. Output:\n%s", r.Output())
+	}
+
+	// The input is pre-filled with "core"; typing appends at the cursor.
+	r.Send(letterKey('2'))
+	r.Send(keyPress(tea.KeyEnter))
+
+	// The modal closes, then the reloaded list shows the new name. Wait for
+	// the modal to go first so "core2" cannot be matched inside its input.
+	if !r.WaitForNot("Rename group", 3*time.Second) {
+		t.Fatalf("rename modal did not close. Output:\n%s", r.Output())
+	}
+	if !r.WaitFor("core2", 3*time.Second) {
+		t.Fatalf("renamed group never appeared in the list. Output:\n%s", r.Output())
+	}
+}
+
 // setupProjectDir drops a minimal compose project in a temp dir and moves
 // the test there. Extracted here so other rig panel-key tests can reuse it.
 func setupProjectDir(t *testing.T) {

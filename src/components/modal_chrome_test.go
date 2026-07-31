@@ -34,6 +34,7 @@ func TestEveryModalHasATitleAndAnExitHint(t *testing.T) {
 		{"confirm", ConfirmModal("Delete group \"core\"?", nil), "Confirm", "esc"},
 		{"error", ErrorModal("boom", 100), "Error", "esc"},
 		{"group name", GroupNameModal(nil, []string{"web"}, 40), "New group", "esc"},
+		{"rename group", GroupNameModalForRename("core", nil), "Rename group", "esc"},
 		{"service checklist", ServiceChecklistModal("core", []string{"web"}, 40), "Select services", "esc"},
 		{"edit group members", ServiceChecklistModalForEdit("core", []string{"web"}, []string{"web"}, 40), "Edit members", "esc"},
 		{"create compose file", CreateComposeFileModal("."), "New compose file", "esc"},

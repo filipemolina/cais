@@ -65,9 +65,10 @@ type GlobalKeys struct {
 }
 
 // ListKeys act on the body's left panel: the groups list and the services
-// list. New, Edit and Delete only mean something on the groups list, which
-// is the only list whose contents the app can modify. The services list is
-// read-only; its services are created by editing the compose file.
+// list. New, Edit, Delete and Rename only mean something on the groups
+// list, which is the only list whose contents the app can modify. The
+// services list is read-only; its services are created by editing the
+// compose file.
 //
 // Filter, ClearFilter, GoToStart and GoToEnd belong to the bubbles list
 // rather than to a handler here, and are declared anyway so the footer and
@@ -79,6 +80,7 @@ type ListKeys struct {
 	New          key.Binding
 	Edit         key.Binding
 	Delete       key.Binding
+	Rename       key.Binding
 	Filter       key.Binding
 	ClearFilter  key.Binding
 	ApplyFilter  key.Binding
@@ -167,10 +169,14 @@ var List = ListKeys{
 	// Enter is an alias for space: same verb, same binding, so every panel
 	// matches either. The help advertises space alone - the alias is for the
 	// muscle memory that expects enter to choose, not another key to learn.
-	Select:      key.NewBinding(key.WithKeys("space", "enter"), key.WithHelp("space", "start")),
-	New:         key.NewBinding(key.WithKeys("n"), key.WithHelp("n", "new")),
-	Edit:        key.NewBinding(key.WithKeys("e"), key.WithHelp("e", "edit")),
-	Delete:      key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "delete")),
+	Select: key.NewBinding(key.WithKeys("space", "enter"), key.WithHelp("space", "start")),
+	New:    key.NewBinding(key.WithKeys("n"), key.WithHelp("n", "new")),
+	Edit:   key.NewBinding(key.WithKeys("e"), key.WithHelp("e", "edit")),
+	Delete: key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "delete")),
+	// R on the groups list renames the highlighted group. Uppercase so it
+	// does not collide with the details panel's lowercase r (restart); the
+	// same shape as E next to e on the services panel.
+	Rename:      key.NewBinding(key.WithKeys("R"), key.WithHelp("R", "rename")),
 	Filter:      key.NewBinding(key.WithKeys("/"), key.WithHelp("/", "filter")),
 	ClearFilter: key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "clear filter")),
 	// The same keystrokes as Overlay.Submit and Overlay.Cancel, because a
@@ -331,10 +337,10 @@ func Active(ctx Context) []key.Binding {
 		switch ctx.Focused {
 		case constants.COMPONENT_BODY_LIST:
 			// New is offered even with no groups - it is how the first one gets
-			// made - but Edit and Delete need something to act on.
+			// made - but Edit, Delete and Rename need something to act on.
 			own := []key.Binding{List.New}
 			if !ctx.ListEmpty {
-				own = append(own, List.Edit, List.Delete)
+				own = append(own, List.Edit, List.Delete, List.Rename)
 			}
 
 			return listKeys(ctx, own...)
@@ -453,7 +459,7 @@ func Catalog(ctx Context) []Scope {
 		{
 			Title: "List",
 			Entries: append(
-				entries(List.Select, List.New, List.Edit, List.Delete, List.Filter, List.ClearFilter, List.Navigate),
+				entries(List.Select, List.New, List.Edit, List.Delete, List.Rename, List.Filter, List.ClearFilter, List.Navigate),
 				Entry{Binding: List.GoToStart, Available: listNavigable},
 				Entry{Binding: List.GoToEnd, Available: listNavigable},
 			),
