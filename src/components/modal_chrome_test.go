@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/stack-stitcher/src/components/aboutmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/confirmmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/errormodal"
 	"github.com/filipemolina/stack-stitcher/src/keys"
@@ -31,7 +32,7 @@ func TestEveryModalHasATitleAndAnExitHint(t *testing.T) {
 		// out. Every modal answers esc; About and Help also close on q.
 		exitKey string
 	}{
-		{"about", AboutModal(), "stack-stitcher", "esc"},
+		{"about", aboutmodal.New(), "stack-stitcher", "esc"},
 		{"help", HelpOverlay(keys.Context{Page: "Home"}, nil, 100), "Keyboard shortcuts", "esc"},
 		{"confirm", confirmmodal.New("Delete group \"core\"?", nil), "Confirm", "esc"},
 		{"error", errormodal.New("boom", 100), "Error", "esc"},
