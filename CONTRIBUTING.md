@@ -16,6 +16,30 @@ If you want to work on something sizeable, open an issue first. That is not
 process for its own sake — the roadmap has an order to it, and some entries
 depend on earlier ones landing.
 
+## The layout
+
+```
+main.go              # entry point — flags, config load, starts the Bubble Tea program
+src/
+├── model/           # the top-level Bubble Tea model (AppModel, Init, Update, View)
+├── components/      # one nested model per panel, list, modal and overlay
+├── cmds/            # message types, and the tea.Cmds that produce them
+├── apptypes/        # shared data types (list items, docker container, pages)
+├── keys/            # every keybinding, declared once — panels, footer and ? all read it
+├── utils/           # the non-Bubble Tea half: compose loading, YAML writing, docker exec
+├── appstyles/       # the Theme type and the 14 registered themes
+├── config/          # persisted preferences (~/.config/stack-stitcher/config.yaml)
+├── highlight/       # read-only YAML highlighting for the Files page
+└── constants/       # layout widths, branding, focusable component list
+demo/                # VHS tapes, the recorded gif and screenshots, and their fixture stack
+docs/                # DESIGN.md (why), ROADMAP.md (order), plans/ (what's next, in sequence)
+```
+
+Two seams are worth knowing before you touch anything: `src/keys` is the single
+declaration of every binding, and `appstyles.Active` is the single source of
+color — read it fresh at each call site (`appstyles.Active.TextPrimary`, never a
+cached package-level `var`) or a theme switch will not repaint what you wrote.
+
 ## The loop
 
 ```bash
