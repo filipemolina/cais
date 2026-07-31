@@ -138,8 +138,10 @@ func (m ServiceChecklistModalModel) View() tea.View {
 	return tea.NewView(modalSurface(appstyles.Active.ModalBg, content))
 }
 
-// checklist builds the inner list shared by both constructors.
-func checklist(groupName string, serviceNames []string, preselected map[string]bool) list.Model {
+// checklist builds the inner list shared by both constructors. termHeight is
+// the terminal height in rows; a compose file can define more services than
+// the screen has room for, so the list is sized to fit. See modalListHeight.
+func checklist(serviceNames []string, preselected map[string]bool, termHeight int) list.Model {
 	items := make([]list.Item, 0, len(serviceNames))
 	for _, name := range serviceNames {
 		items = append(items, apptypes.CheckableServiceItem{
@@ -149,15 +151,18 @@ func checklist(groupName string, serviceNames []string, preselected map[string]b
 	}
 
 	// The title is rendered by modalTitle in the View function, not by the
-	// list itself. Without the pagination row switched off, the list would
-	// spend a row on a paginator that this modal has no use for - it is sized
-	// to show every service at once - and takes that row out of the items,
-	// silently pushing the last services onto an unreachable second page.
-	cl := list.New(items, serviceChecklistDelegate{}, 40, len(items))
+	// list itself. Pagination is off while every service fits, because the
+	// paginator would take a row out of the items and silently push the last
+	// services onto an unreachable second page. Once the terminal is too
+	// short to show them all that is no longer a lie the modal can tell, so
+	// the paginator comes back and says which page the cursor is on.
+	visible := modalListHeight(len(items), termHeight)
+
+	cl := list.New(items, serviceChecklistDelegate{}, 40, visible)
 	cl.SetShowTitle(false)
 	cl.SetShowHelp(false)
 	cl.SetShowStatusBar(false)
-	cl.SetShowPagination(false)
+	cl.SetShowPagination(visible < len(items))
 
 	return cl
 }
@@ -166,8 +171,8 @@ func checklist(groupName string, serviceNames []string, preselected map[string]b
 // services get tagged with groupName. Space toggles the highlighted
 // service, Enter confirms (requires at least one checked), Esc cancels the
 // whole create flow.
-func ServiceChecklistModal(groupName string, serviceNames []string) tea.Model {
-	cl := checklist(groupName, serviceNames, nil)
+func ServiceChecklistModal(groupName string, serviceNames []string, termHeight int) tea.Model {
+	cl := checklist(serviceNames, nil, termHeight)
 
 	return ServiceChecklistModalModel{
 		groupName: groupName,
@@ -179,13 +184,13 @@ func ServiceChecklistModal(groupName string, serviceNames []string) tea.Model {
 // existing group's membership. Services that already belong to the group
 // are pre-checked; Enter saves the diff (including empty, which removes
 // the group entirely). Esc cancels without writing.
-func ServiceChecklistModalForEdit(groupName string, serviceNames []string, currentMembers []string) tea.Model {
+func ServiceChecklistModalForEdit(groupName string, serviceNames []string, currentMembers []string, termHeight int) tea.Model {
 	preselected := make(map[string]bool, len(currentMembers))
 	for _, name := range currentMembers {
 		preselected[name] = true
 	}
 
-	cl := checklist(groupName, serviceNames, preselected)
+	cl := checklist(serviceNames, preselected, termHeight)
 
 	// Move the cursor to the first unchecked service so the user lands
 	// on something actionable rather than having to arrow past members

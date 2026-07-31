@@ -341,7 +341,11 @@ func (m GroupListModel) View() tea.View {
 		)
 		sections = append(sections, appstyles.FillBackground(bg, lipgloss.JoinVertical(lipgloss.Left, titleRow, emptyContent)))
 	} else {
-		sections = append(sections, m.list.View())
+		// The title chip is restyled here, on a copy, rather than in the
+		// constructor - see listTitleStyle for why.
+		l := m.list
+		l.Styles.Title = listTitleStyle()
+		sections = append(sections, l.View())
 	}
 
 	// The stats sit on the panel's last row rather than above the list title:
@@ -391,10 +395,6 @@ func GroupsList(groups []string, width int, height int) tea.Model {
 	servicesList.Title = "Groups"
 	servicesList.Paginator.ActiveDot = " ● "
 	servicesList.Paginator.InactiveDot = " ○ "
-	servicesList.Styles.Title = lipgloss.NewStyle().
-		Foreground(appstyles.InkOn(appstyles.Active.Accent)).
-		Background(appstyles.Active.Accent).
-		Padding(0, 1)
 
 	model := GroupListModel{
 		list:         servicesList,
