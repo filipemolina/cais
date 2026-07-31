@@ -1,4 +1,4 @@
-package components
+package composefilepanel
 
 import (
 	"strings"
@@ -29,7 +29,7 @@ import (
 // would let Tab strand focus on a component id that does not exist here,
 // blurring the one panel the page has. Always-focused also means the E key
 // and scrolling always work, matching what the footer advertises.
-type ComposeFilePanelModel struct {
+type Model struct {
 	viewport    viewport.Model
 	filePath    string
 	content     string
@@ -39,9 +39,9 @@ type ComposeFilePanelModel struct {
 	panelHeight int
 }
 
-func (m ComposeFilePanelModel) Init() tea.Cmd { return nil }
+func (m Model) Init() tea.Cmd { return nil }
 
-func (m ComposeFilePanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	// Sizing comes from AppModel like every other panel. The single panel
 	// takes the whole body row: both panel widths plus the gutter.
@@ -91,14 +91,14 @@ func (m ComposeFilePanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // resizeViewport constrains the inner viewport to the panel box minus the
 // frame chrome and the title row.
-func (m *ComposeFilePanelModel) resizeViewport() {
+func (m *Model) resizeViewport() {
 	frameW, frameH := chrome.WrapperStyle.GetFrameSize()
 	// 2 for the title row and the blank row under it.
 	m.viewport.SetWidth(max(1, m.panelWidth-frameW))
 	m.viewport.SetHeight(max(1, m.panelHeight-frameH-2))
 }
 
-func (m ComposeFilePanelModel) View() tea.View {
+func (m Model) View() tea.View {
 	// Always the focused tier: see the note on the model.
 	bg := chrome.PanelBg(true)
 
@@ -179,12 +179,12 @@ func composeFileViewportKeyMap() viewport.KeyMap {
 	}
 }
 
-// ComposeFilePanel builds the read-only file viewer for the Files page.
-func ComposeFilePanel() tea.Model {
+// New builds the read-only file viewer for the Files page.
+func New() tea.Model {
 	vp := viewport.New()
 	vp.KeyMap = composeFileViewportKeyMap()
 
-	return ComposeFilePanelModel{
+	return Model{
 		viewport: vp,
 	}
 }
