@@ -1,4 +1,4 @@
-package components
+package mainmenu
 
 import (
 	"fmt"
@@ -13,11 +13,11 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/constants"
 )
 
-// MainMenuModel is the top nav bar. It is not focusable and handles no keys:
+// Model is the top nav bar. It is not focusable and handles no keys:
 // pages are switched with the global digit keys that it advertises by
 // rendering each tab's digit before its label. All it tracks is which page is
 // active, so it can highlight that tab.
-type MainMenuModel struct {
+type Model struct {
 	items             []string
 	selectedItemIndex int
 	terminalWidth     int
@@ -28,11 +28,11 @@ type MainMenuModel struct {
 // is dropped instead.
 const versionGutter = 4
 
-func (m MainMenuModel) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m MainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.terminalWidth = msg.Width
@@ -67,7 +67,7 @@ func tabLabel(page string, index int, fg color.Color, bold bool) string {
 	return digit + label
 }
 
-func (m MainMenuModel) View() tea.View {
+func (m Model) View() tea.View {
 	// The whole nav sits on tier 2 background. No bottom border — the
 	// tier 2 vs tier 3/4 background contrast handles the section break.
 	navStyle := lipgloss.NewStyle().
@@ -140,14 +140,15 @@ func (m MainMenuModel) View() tea.View {
 	return tea.NewView(navStyle.Render(menuRow))
 }
 
-func MainMenu() tea.Model {
+// New builds the top nav bar.
+func New() tea.Model {
 	items := []string{}
 
 	for _, page := range apptypes.PageTitles {
 		items = append(items, page)
 	}
 
-	m := MainMenuModel{items: items}
+	m := Model{items: items}
 
 	return m
 }

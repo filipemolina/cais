@@ -1,4 +1,4 @@
-package components
+package mainmenu
 
 import (
 	"strings"
@@ -13,7 +13,7 @@ import (
 func navAt(t *testing.T, width int) string {
 	t.Helper()
 
-	nav, _ := MainMenu().Update(tea.WindowSizeMsg{Width: width, Height: 24})
+	nav, _ := New().Update(tea.WindowSizeMsg{Width: width, Height: 24})
 
 	return ansi.Strip(nav.View().Content)
 }
