@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/components"
+	"github.com/filipemolina/stack-stitcher/src/components/helpoverlay"
 	"github.com/filipemolina/stack-stitcher/src/utils"
 )
 
@@ -34,7 +34,7 @@ func TestForegroundErrorOpensModalWhenScreenIsFree(t *testing.T) {
 // action that silently did nothing.
 func TestForegroundErrorFallsBackToBannerWhenModalIsOpen(t *testing.T) {
 	m := GetInitialModel(utils.ComposeSource{})
-	m.activeModal = components.HelpOverlay(m.helpContext(), m.config.configFiles, 80)
+	m.activeModal = helpoverlay.New(m.helpContext(), m.config.configFiles, 80)
 	openType := fmt.Sprintf("%T", m.activeModal)
 
 	m.reportForegroundError("docker start failed")
@@ -71,7 +71,7 @@ func TestForegroundErrorModalKeepsPollOwnershipOfTheBanner(t *testing.T) {
 // real Update path, not just the helper.
 func TestDockerActionErrorReachesBannerThroughUpdate(t *testing.T) {
 	m := GetInitialModel(utils.ComposeSource{})
-	m.activeModal = components.HelpOverlay(m.helpContext(), m.config.configFiles, 80)
+	m.activeModal = helpoverlay.New(m.helpContext(), m.config.configFiles, 80)
 
 	m = updateForTest(t, m, cmds.DockerActionMsg{Err: errors.New("docker start failed")})
 

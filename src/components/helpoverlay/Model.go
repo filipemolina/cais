@@ -1,4 +1,4 @@
-package components
+package helpoverlay
 
 import (
 	"strings"
@@ -16,20 +16,20 @@ import (
 // places on wide terminals rather than stretching into one unreadable line.
 const helpOverlayMaxWidth = 64
 
-// HelpOverlayModel is the ? overlay: every key in the app, grouped by scope
+// Model is the ? overlay: every key in the app, grouped by scope
 // and rendered from keys.Catalog, so what it says is what the handlers do.
 // Rows the user could not press in the screen it was opened from are dimmed.
 // It also names the compose-file candidates that lost to the loaded one - the
 // footer only has room to count them.
-type HelpOverlayModel struct {
+type Model struct {
 	catalog      []keys.Scope
 	composeFiles []string
 	termWidth    int
 }
 
-func (m HelpOverlayModel) Init() tea.Cmd { return nil }
+func (m Model) Init() tea.Cmd { return nil }
 
-func (m HelpOverlayModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.termWidth = msg.Width
@@ -52,7 +52,7 @@ func (m HelpOverlayModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // contentWidth is the column the overlay's hints wrap to: the terminal minus
 // the modal chrome and a margin, capped.
-func (m HelpOverlayModel) contentWidth() int {
+func (m Model) contentWidth() int {
 	return max(24, min(helpOverlayMaxWidth, m.termWidth-16))
 }
 
@@ -121,7 +121,7 @@ func renderComposeFiles(files []string) string {
 	return lipgloss.JoinVertical(lipgloss.Left, lines...)
 }
 
-func (m HelpOverlayModel) View() tea.View {
+func (m Model) View() tea.View {
 	width := m.contentWidth()
 
 	sections := []string{
@@ -152,11 +152,11 @@ func (m HelpOverlayModel) View() tea.View {
 	))
 }
 
-// HelpOverlay builds the help overlay for the screen described by ctx (which
+// New builds the help overlay for the screen described by ctx (which
 // keys are pressable), the compose-file candidates in priority order, and the
 // terminal width for wrapping.
-func HelpOverlay(ctx keys.Context, composeFiles []string, termWidth int) tea.Model {
-	return HelpOverlayModel{
+func New(ctx keys.Context, composeFiles []string, termWidth int) tea.Model {
+	return Model{
 		catalog:      keys.Catalog(ctx),
 		composeFiles: composeFiles,
 		termWidth:    termWidth,

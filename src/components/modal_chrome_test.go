@@ -13,6 +13,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/components/aboutmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/confirmmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/errormodal"
+	"github.com/filipemolina/stack-stitcher/src/components/helpoverlay"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
@@ -33,7 +34,7 @@ func TestEveryModalHasATitleAndAnExitHint(t *testing.T) {
 		exitKey string
 	}{
 		{"about", aboutmodal.New(), "stack-stitcher", "esc"},
-		{"help", HelpOverlay(keys.Context{Page: "Home"}, nil, 100), "Keyboard shortcuts", "esc"},
+		{"help", helpoverlay.New(keys.Context{Page: "Home"}, nil, 100), "Keyboard shortcuts", "esc"},
 		{"confirm", confirmmodal.New("Delete group \"core\"?", nil), "Confirm", "esc"},
 		{"error", errormodal.New("boom", 100), "Error", "esc"},
 		{"group name", GroupNameModal(nil, []string{"web"}, 40), "New group", "esc"},
