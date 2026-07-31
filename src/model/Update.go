@@ -20,6 +20,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/components/confirmmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/errormodal"
+	"github.com/filipemolina/stack-stitcher/src/components/helpoverlay"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 	"github.com/filipemolina/stack-stitcher/src/utils"
@@ -779,7 +780,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case cmds.OpenHelpModalMsg:
-		m.activeModal = components.HelpOverlay(
+		m.activeModal = helpoverlay.New(
 			m.helpContext(),
 			m.config.configFiles,
 			m.config.terminalWidth,
