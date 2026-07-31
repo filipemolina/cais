@@ -327,15 +327,19 @@ func (m GroupListModel) View() tea.View {
 	var sections []string
 
 	if len(m.list.Items()) == 0 {
+		// Render the list title even when empty, so the panel always
+		// identifies itself as the groups list.
+		titleRow := m.list.Styles.Title.Render(m.list.Title)
 		emptyStyle := lipgloss.NewStyle().
 			Foreground(appstyles.Active.TextMuted).
 			Background(bg).
 			Padding(2, 2)
 		// Width-constrained so the hint wraps inside the panel instead of
 		// widening it past its box.
-		sections = append(sections, fitBox(emptyStyle, contentWidth, max(0, contentHeight-m.footerHeight())).Render(
+		emptyContent := fitBox(emptyStyle, contentWidth, max(0, contentHeight-m.footerHeight())).Render(
 			"No groups yet.\nPress n to create one, or add profiles to services in your compose file.",
-		))
+		)
+		sections = append(sections, appstyles.FillBackground(bg, lipgloss.JoinVertical(lipgloss.Left, titleRow, emptyContent)))
 	} else {
 		sections = append(sections, m.list.View())
 	}

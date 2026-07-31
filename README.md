@@ -30,7 +30,7 @@ Stack Stitcher is under **active development**. Compose parsing, navigation, sta
 - **Stream live logs.** Press `l` on a focused service or group panel to open a full-screen overlay that tails `docker compose logs -f` in real time, with follow-mode and scrollback.
 - **Automatically refreshed status.** Container state is rechecked every five seconds while a compose project is loaded and no modal is open, so status panels reflect changes made outside Stack Stitcher.
 - **Full-height, context-aware layout.** The app fills the terminal with a pinned header (wordmark + tabs) and footer (keybinding bar); the body region stretches to use every available row. Tabs show user-facing labels such as **Groups** for Home and **Files** for Compose Files, while the underlying page IDs stay the same.
-- **Theme picker.** Press `T` to open a modal with 14 built-in themes — dark, light, and everything in between. Cursor movement previews each theme live; Enter applies and persists your choice.
+- **Theme picker.** Press `T` to open a modal with 14 built-in themes: three Stitcher darks (`stitcher-dark`, `stitcher-ember`, `stitcher-slate`), one Stitcher light (`stitcher-day`), and ten community schemes (Catppuccin Mocha, Gruvbox Dark, Tokyo Night, Nord, Dracula, Solarized Dark, One Dark, Everforest Dark, Rosé Pine, Kanagawa Wave). Cursor movement previews each theme live; Enter applies and persists your choice.
 
 ## Requirements
 
@@ -198,7 +198,7 @@ The ASCII logo lives in `src/constants/Branding.go` and is shown by the About mo
 │   ├── apptypes/      # Shared data types (list items, docker container, pages)
 │   ├── keys/          # Every keybinding, declared once — components, the footer, and the ? overlay all read it
 │   ├── utils/         # Non-Bubble Tea logic (compose file loading, docker exec, parsing)
-│   ├── appstyles/     # Lip Gloss colors/styles + 14 registered themes
+│   ├── appstyles/     # Lip Gloss colors/styles + 14 registered themes (1 light, 13 dark)
 │   ├── config/        # Persistent user preferences (theme, stored in ~/.config/stack-stitcher)
 │   ├── highlight/     # Read-only YAML syntax highlighting for the Files page viewer
 │   └── constants/     # Layout widths, branding, focusable component list
