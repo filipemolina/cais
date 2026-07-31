@@ -8,6 +8,7 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/components"
+	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/utils"
 )
@@ -81,7 +82,7 @@ type AppModel struct {
 	inlineEditing bool
 	// pendingAction tracks a docker action that is currently running.
 	// While set, action keys are disabled and a spinner is shown.
-	pendingAction *components.PendingAction
+	pendingAction *chrome.PendingAction
 	// waitingForStats is true while a GetContainerStats command is in flight.
 	// When set, GetRunningContainersMsg is not forwarded to components to
 	// avoid a flicker where stats disappear for one render cycle.

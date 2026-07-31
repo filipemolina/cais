@@ -9,6 +9,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/highlight"
 	"github.com/filipemolina/stack-stitcher/src/keys"
@@ -91,7 +92,7 @@ func (m ComposeFilePanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // resizeViewport constrains the inner viewport to the panel box minus the
 // frame chrome and the title row.
 func (m *ComposeFilePanelModel) resizeViewport() {
-	frameW, frameH := wrapperStyle.GetFrameSize()
+	frameW, frameH := chrome.WrapperStyle.GetFrameSize()
 	// 2 for the title row and the blank row under it.
 	m.viewport.SetWidth(max(1, m.panelWidth-frameW))
 	m.viewport.SetHeight(max(1, m.panelHeight-frameH-2))
@@ -99,25 +100,25 @@ func (m *ComposeFilePanelModel) resizeViewport() {
 
 func (m ComposeFilePanelModel) View() tea.View {
 	// Always the focused tier: see the note on the model.
-	bg := panelBg(true)
+	bg := chrome.PanelBg(true)
 
-	bodyWidth := max(1, panelBodyWidth(m.panelWidth))
-	bodyAvail := max(1, panelBodyHeight(m.panelHeight))
+	bodyWidth := max(1, chrome.PanelBodyWidth(m.panelWidth))
+	bodyAvail := max(1, chrome.PanelBodyHeight(m.panelHeight))
 
 	var body string
 	switch {
 	case m.filePath == "":
-		body = renderEmptyCard(bodyWidth, bodyAvail, bg,
+		body = chrome.EmptyCard(bodyWidth, bodyAvail, bg,
 			"No compose file",
 			"No compose file is loaded. Run Stack Stitcher from a directory with a compose file, or use --file/--dir.",
 			"", "")
 	case m.readErr != nil:
-		body = renderEmptyCard(bodyWidth, bodyAvail, bg,
+		body = chrome.EmptyCard(bodyWidth, bodyAvail, bg,
 			"Could not read file",
 			m.readErr.Error(),
 			"E", "edit in $EDITOR")
 	case m.loaded && strings.TrimSpace(m.content) == "":
-		body = renderEmptyCard(bodyWidth, bodyAvail, bg,
+		body = chrome.EmptyCard(bodyWidth, bodyAvail, bg,
 			"Empty file",
 			"The compose file is empty.",
 			"E", "edit in $EDITOR")
@@ -146,7 +147,7 @@ func (m ComposeFilePanelModel) View() tea.View {
 			Render(m.filePath)
 	}
 
-	screen := renderPanelFrame(title, titleRight, true, m.panelWidth, m.panelHeight, body)
+	screen := chrome.PanelFrame(title, titleRight, true, m.panelWidth, m.panelHeight, body)
 	return tea.NewView(screen)
 }
 

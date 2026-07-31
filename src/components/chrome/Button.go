@@ -1,4 +1,4 @@
-package components
+package chrome
 
 import (
 	"image/color"
@@ -8,11 +8,11 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 )
 
-// ButtonSpec is one action control: the verb, the key that runs it, and the
+// buttonSpec is one action control: the verb, the key that runs it, and the
 // two facts that decide how it is painted. It is a struct rather than a
 // parameter list because the last two are booleans, and `Button("Remove", "x",
 // false, true)` says nothing at the call site about which is which.
-type ButtonSpec struct {
+type buttonSpec struct {
 	Text     string
 	Shortcut string
 	// Enabled is whether the key can be pressed right now. A disabled button
@@ -26,15 +26,15 @@ type ButtonSpec struct {
 	Danger bool
 }
 
-type ButtonModel struct {
-	spec ButtonSpec
+type buttonModel struct {
+	spec buttonSpec
 }
 
-func (m ButtonModel) Init() tea.Cmd {
+func (m buttonModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m ButtonModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m buttonModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
@@ -53,7 +53,7 @@ func (m ButtonModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // reverse of what it did as an outlined box. Focus is legible in the ink now -
 // accent when live, dim when not - so the surface is free to stay put, and the
 // recess deepens on its own when focus lifts the panel from tier 3 to tier 4.
-func (m ButtonModel) View() tea.View {
+func (m buttonModel) View() tea.View {
 	surface := appstyles.Active.BackgroundRecessed
 
 	// The key is the accent and the label is plain text, matching how a
@@ -80,6 +80,6 @@ func (m ButtonModel) View() tea.View {
 	return tea.NewView(lipgloss.NewStyle().Background(surface).Padding(0, 1).Render(content))
 }
 
-func Button(spec ButtonSpec) tea.Model {
-	return ButtonModel{spec: spec}
+func button(spec buttonSpec) tea.Model {
+	return buttonModel{spec: spec}
 }

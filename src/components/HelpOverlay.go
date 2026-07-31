@@ -8,6 +8,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
@@ -124,7 +125,7 @@ func (m HelpOverlayModel) View() tea.View {
 	width := m.contentWidth()
 
 	sections := []string{
-		modalTitle("Keyboard shortcuts"),
+		chrome.ModalTitle("Keyboard shortcuts"),
 	}
 
 	for _, scope := range m.catalog {
@@ -138,14 +139,14 @@ func (m HelpOverlayModel) View() tea.View {
 	// The overlay's own keys, built from the same bindings as everything
 	// else: it owns the keyboard while open, and an overlay advertises its
 	// own keys because the footer is hidden beneath it.
-	hint := renderKeyHints([]KeyHint{
-		hintAs(keys.Global.Help, "close"),
-		hintAs(keys.Overlay.Cancel, "close"),
-		hintAs(keys.Global.Quit, "close"),
+	hint := chrome.RenderKeyHints([]chrome.KeyHint{
+		chrome.HintAs(keys.Global.Help, "close"),
+		chrome.HintAs(keys.Overlay.Cancel, "close"),
+		chrome.HintAs(keys.Global.Quit, "close"),
 	}, appstyles.Active.TextMuted)
 	sections = append(sections, hint)
 
-	return tea.NewView(modalSurface(
+	return tea.NewView(chrome.ModalSurface(
 		appstyles.Active.ModalBg,
 		strings.Join(sections, "\n\n"),
 	))

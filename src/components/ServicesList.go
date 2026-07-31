@@ -13,6 +13,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
@@ -47,7 +48,7 @@ func (d servicesListCustomDelegate) Render(w io.Writer, m list.Model, index int,
 		titleColor = appstyles.Active.TextMuted
 	}
 
-	rowBg := listRowBg(isActive, d.isParentFocused)
+	rowBg := chrome.ListRowBg(isActive, d.isParentFocused)
 
 	// The row's left edge is the same solid bar the nav uses for its active
 	// tab ("▌"), so list rows and the nav agree on thickness. State is carried
@@ -84,7 +85,7 @@ func (d servicesListCustomDelegate) Render(w io.Writer, m list.Model, index int,
 
 	// The bar spans the row's full height, one ▌ per line, rather than a sliver
 	// at the top - the nav's single-line bar stretched to the row's height.
-	bar := barColumn(barColor, rowBg, content)
+	bar := chrome.BarColumn(barColor, rowBg, content)
 
 	// Seal the row against its own background before handing it to the list:
 	// JoinVertical pads the description out to the title's width with unstyled
@@ -166,7 +167,7 @@ func (m ServicesListModel) FilterState() list.FilterState {
 // resizeList sizes the inner list to the space left inside the panel box
 // after the wrapper padding.
 func (m *ServicesListModel) resizeList() {
-	h, v := listWrapperStyle.GetFrameSize()
+	h, v := chrome.ListWrapperStyle.GetFrameSize()
 
 	m.list.SetSize(
 		max(0, m.panelWidth-h),
@@ -271,9 +272,9 @@ func (m ServicesListModel) View() tea.View {
 	// Same 3-tier treatment as the groups list: focus lifts the panel from
 	// tier 3 to tier 4 rather than adding a border, so the panel's box stays
 	// the same size whether or not it is focused.
-	bg := panelBg(m.isFocused)
+	bg := chrome.PanelBg(m.isFocused)
 
-	wrapper := fitBox(listWrapperStyle.Background(bg), m.panelWidth, m.panelHeight)
+	wrapper := chrome.FitBox(chrome.ListWrapperStyle.Background(bg), m.panelWidth, m.panelHeight)
 
 	// The title chip is restyled here, on a copy, rather than in the
 	// constructor - see appstyles.NormalTitle for why.

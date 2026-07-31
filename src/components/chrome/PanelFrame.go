@@ -1,4 +1,4 @@
-package components
+package chrome
 
 import (
 	"image/color"
@@ -12,12 +12,12 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
-// dockerActionFor returns the `docker compose` action a keypress asks for.
+// DockerActionFor returns the `docker compose` action a keypress asks for.
 // Both details panels read it, which is what makes "s starts a group" and
 // "s starts a service" the same fact rather than two switch statements that
 // happen to agree. Remove is absent on purpose: it is destructive, so it goes
 // through a confirmation instead of straight to a command.
-func dockerActionFor(msg tea.KeyPressMsg) (string, bool) {
+func DockerActionFor(msg tea.KeyPressMsg) (string, bool) {
 	switch {
 	case key.Matches(msg, keys.Details.Start):
 		return "start", true
@@ -32,10 +32,10 @@ func dockerActionFor(msg tea.KeyPressMsg) (string, bool) {
 	return "", false
 }
 
-// actionButton is one control in the row: the binding it stands for, and the
+// ActionButton is one control in the row: the binding it stands for, and the
 // two things the row needs to know that the binding does not carry.
-type actionButton struct {
-	binding key.Binding
+type ActionButton struct {
+	Binding key.Binding
 	// drop is this button's place in the row's degradation order, lowest first.
 	// It is separate from the slice order because the order to shed in is not
 	// the order to read in: remove goes first because it is destructive and a
@@ -59,14 +59,14 @@ type actionButton struct {
 // here at all. The row used to be a hand-written five that omitted `l logs`
 // while the footer offered it, so the panel's own actions were advertised in
 // two places that listed different things.
-func actionButtons() []actionButton {
-	return []actionButton{
-		{binding: keys.Details.Start, drop: 5},
-		{binding: keys.Details.Stop, drop: 4},
-		{binding: keys.Details.Restart, drop: 3},
-		{binding: keys.Details.Pull, drop: 1},
-		{binding: keys.Details.Remove, drop: 0, danger: true},
-		{binding: keys.Details.Logs, drop: 2},
+func Buttons() []ActionButton {
+	return []ActionButton{
+		{Binding: keys.Details.Start, drop: 5},
+		{Binding: keys.Details.Stop, drop: 4},
+		{Binding: keys.Details.Restart, drop: 3},
+		{Binding: keys.Details.Pull, drop: 1},
+		{Binding: keys.Details.Remove, drop: 0, danger: true},
+		{Binding: keys.Details.Logs, drop: 2},
 	}
 }
 
@@ -74,7 +74,7 @@ func actionButtons() []actionButton {
 // fill, so the gap is what makes them read as separate controls.
 const actionButtonGap = 1
 
-// renderActionButtons renders the action row shared by DetailsPanel and
+// ActionButtons renders the action row shared by DetailsPanel and
 // GroupDetailsPanel, right-aligned within the panel body width it is given.
 // `bg` is the panel's background tier, which the row sits on and the chips are
 // recessed into.
@@ -91,12 +91,12 @@ const actionButtonGap = 1
 // chip across two lines and push the panel's own content out of its box; every
 // shed key is still on the footer and still pressable, which a mangled row is
 // not. See the narrow-terminal entry in TODO.md.
-func renderActionButtons(width int, bg color.Color, ctx keys.Context) string {
-	shown := actionButtons()
+func ActionButtons(width int, bg color.Color, ctx keys.Context) string {
+	shown := Buttons()
 
 	row := joinActionButtons(shown, bg, ctx)
 	for len(shown) > 0 && lipgloss.Width(row) > width {
-		shown = slices.DeleteFunc(shown, func(b actionButton) bool {
+		shown = slices.DeleteFunc(shown, func(b ActionButton) bool {
 			return b.drop == lowestDrop(shown)
 		})
 		row = joinActionButtons(shown, bg, ctx)
@@ -116,7 +116,7 @@ func renderActionButtons(width int, bg color.Color, ctx keys.Context) string {
 
 // joinActionButtons renders buttons into a single row on bg, each chip's
 // enabled state resolved against ctx.
-func joinActionButtons(buttons []actionButton, bg color.Color, ctx keys.Context) string {
+func joinActionButtons(buttons []ActionButton, bg color.Color, ctx keys.Context) string {
 	if len(buttons) == 0 {
 		return ""
 	}
@@ -124,17 +124,17 @@ func joinActionButtons(buttons []actionButton, bg color.Color, ctx keys.Context)
 	gap := lipgloss.NewStyle().Background(bg).Render(strings.Repeat(" ", actionButtonGap))
 
 	parts := make([]string, 0, len(buttons)*2-1)
-	for i, button := range buttons {
+	for i, ab := range buttons {
 		if i > 0 {
 			parts = append(parts, gap)
 		}
 
-		help := button.binding.Help()
-		parts = append(parts, Button(ButtonSpec{
-			Text:     buttonLabel(help.Desc),
+		help := ab.Binding.Help()
+		parts = append(parts, button(buttonSpec{
+			Text:     ButtonLabel(help.Desc),
 			Shortcut: help.Key,
-			Enabled:  keys.Live(ctx, button.binding),
-			Danger:   button.danger,
+			Enabled:  keys.Live(ctx, ab.Binding),
+			Danger:   ab.danger,
 		}).View().Content)
 	}
 
@@ -142,19 +142,19 @@ func joinActionButtons(buttons []actionButton, bg color.Color, ctx keys.Context)
 }
 
 // lowestDrop is the drop rank of the next button to shed.
-func lowestDrop(buttons []actionButton) int {
+func lowestDrop(buttons []ActionButton) int {
 	lowest := buttons[0].drop
-	for _, button := range buttons[1:] {
-		lowest = min(lowest, button.drop)
+	for _, ab := range buttons[1:] {
+		lowest = min(lowest, ab.drop)
 	}
 
 	return lowest
 }
 
-// buttonLabel is a binding's help description as a button label: the footer
+// ButtonLabel is a binding's help description as a button label: the footer
 // prints "start" mid-sentence, a button is captioned "Start". Capitalizing the
 // footer's word is what lets both come from the one binding.
-func buttonLabel(desc string) string {
+func ButtonLabel(desc string) string {
 	if desc == "" {
 		return desc
 	}
@@ -162,17 +162,17 @@ func buttonLabel(desc string) string {
 	return strings.ToUpper(desc[:1]) + desc[1:]
 }
 
-// panelRule is the thin horizontal line both details panels separate their
+// PanelRule is the thin horizontal line both details panels separate their
 // sections with. One helper rather than five copies of the same three-line
 // style, so the panels cannot drift to different rules.
-func panelRule(width int) string {
+func PanelRule(width int) string {
 	return lipgloss.NewStyle().
 		Foreground(appstyles.Active.BorderDefault).
 		Width(width).
 		Render(strings.Repeat("─", max(width, 0)))
 }
 
-// panelBodyWithActions lays out a details panel's body: `content` at the top,
+// PanelBodyWithActions lays out a details panel's body: `content` at the top,
 // `footer` on the body's last rows, and blank rows between them. Both details
 // panels build their body through here, which is what makes the action row land
 // on the same line of both rather than wherever each panel's content happens to
@@ -182,7 +182,7 @@ func panelRule(width int) string {
 // content outgrows its box loses its last rows rather than its actions. Doing
 // it the other way round - joining first and clipping the result - takes the
 // bottom off, which is exactly the row that has to survive.
-func panelBodyWithActions(width, avail int, bg color.Color, content, footer string) string {
+func PanelBodyWithActions(width, avail int, bg color.Color, content, footer string) string {
 	contentAvail := max(0, avail-lipgloss.Height(footer))
 
 	parts := make([]string, 0, 3)
@@ -210,7 +210,7 @@ func panelBodyWithActions(width, avail int, bg color.Color, content, footer stri
 	return body
 }
 
-// modalSurface wraps a modal's content in the shared modal chrome: an accent
+// ModalSurface wraps a modal's content in the shared modal chrome: an accent
 // rounded border, padding, and a background sealed against `bg` so the modal
 // reads as one opaque surface over the page it is composited onto. Modals in
 // particular cannot afford an unpainted cell - the page shows through it.
@@ -218,7 +218,7 @@ func panelBodyWithActions(width, avail int, bg color.Color, content, footer stri
 // BorderBackground is set explicitly because lipgloss leaves border cells on
 // the default background otherwise, which outlines the modal in the terminal's
 // color.
-func modalSurface(bg color.Color, content string) string {
+func ModalSurface(bg color.Color, content string) string {
 	style := lipgloss.NewStyle().
 		Padding(1, 2).
 		BorderStyle(lipgloss.RoundedBorder()).
@@ -229,7 +229,7 @@ func modalSurface(bg color.Color, content string) string {
 	return appstyles.FillBackground(bg, style.Render(content))
 }
 
-// modalTitle renders a modal's heading. Every modal names itself, so a user
+// ModalTitle renders a modal's heading. Every modal names itself, so a user
 // who lands on one mid-flow can tell what it is about to do without having to
 // infer it from the fields. It is the shared accent chip - appstyles.NormalTitle
 // - stood off the body by its own margin, so a style or theme change to the
@@ -238,19 +238,19 @@ func modalSurface(bg color.Color, content string) string {
 // The margin replaces the blank line each caller would otherwise have to add -
 // it matches the blank row the hint line sits above: the heading and the
 // footer are the modal's chrome, and both stand off the body.
-func modalTitle(text string) string {
+func ModalTitle(text string) string {
 	return appstyles.NormalTitle().
 		MarginBottom(1).
 		Render(text)
 }
 
 // modalListChrome is the rows a list-in-a-modal spends on everything that is
-// not a list row: modalSurface's border (2) and padding (2), the modalTitle
+// not a list row: ModalSurface's border (2) and padding (2), the ModalTitle
 // and the blank row its margin leaves (2), the blank row above the hints (1),
 // and the two hint lines (2).
 const modalListChrome = 9
 
-// modalListHeight is the height to build a modal's list with so the modal
+// ModalListHeight is the height to build a modal's list with so the modal
 // fits a terminal termHeight rows tall.
 //
 // renderWithModal (src/model/View.go) centers a modal by clamping y to 0, so
@@ -262,25 +262,25 @@ const modalListChrome = 9
 //
 // The floor of 3 is deliberate: below about 12 rows there is no honest answer,
 // and a terminal that short cannot show the modal's own chrome either.
-func modalListHeight(items, termHeight int) int {
+func ModalListHeight(items, termHeight int) int {
 	return min(items, max(3, termHeight-modalListChrome))
 }
 
-// modalHints renders a modal's own help line, in the footer bar's format but
+// ModalHints renders a modal's own help line, in the footer bar's format but
 // with the lighter description color the modal surface needs. Every modal
 // carries one: the footer bar is hidden behind the modal while it is open, so
 // the keys the modal takes over are advertised here or nowhere.
-func modalHints(hints ...KeyHint) string {
-	return renderKeyHints(hints, appstyles.Active.TextMuted)
+func ModalHints(hints ...KeyHint) string {
+	return RenderKeyHints(hints, appstyles.Active.TextMuted)
 }
 
-// renderEmptyCard renders a dim, centered, rounded-border card used for the
+// EmptyCard renders a dim, centered, rounded-border card used for the
 // empty / onboarding states. `key` is shown in the accent color inside
 // brackets, `hint` is the trailing description in a dim color. `availHeight`
 // is the vertical space in which the card should be centered. `bg` is the
 // panel's background tier, which the space around the card sits on; the card
 // itself is recessed below that tier so it reads as inset into the panel.
-func renderEmptyCard(width, availHeight int, bg color.Color, title, body, key, hint string) string {
+func EmptyCard(width, availHeight int, bg color.Color, title, body, key, hint string) string {
 	cardBg := appstyles.Active.BackgroundRecessed
 
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(appstyles.Active.TextMuted).Background(cardBg)
@@ -340,7 +340,7 @@ func renderEmptyCard(width, availHeight int, bg color.Color, title, body, key, h
 		Render(card)
 }
 
-// renderPanelFrame renders the title chrome shared by DetailsPanel and
+// PanelFrame renders the title chrome shared by DetailsPanel and
 // GroupDetailsPanel, filling exactly the width x height box the panel was
 // given. The 3-tier background system handles focus: tier 3 (panel) when
 // unfocused, tier 4 (elevated) when focused.
@@ -348,21 +348,21 @@ func renderEmptyCard(width, availHeight int, bg color.Color, title, body, key, h
 // `titleRight` is an optional accessory pinned to the right end of the title
 // row - the group status pill uses it. A blank row separates the title row
 // from the body, so the panel's own label doesn't read as part of whatever
-// the body starts with; panelBodyHeight accounts for both rows.
+// the body starts with; PanelBodyHeight accounts for both rows.
 //
 // Callers embed their action buttons at the bottom of `body`, which pins the
 // action row to the bottom of the panel.
 // The chip itself is appstyles.NormalTitle; the MarginLeft(2) here is the
 // frame's own left gutter, matching the 2 columns the bubbles list TitleBar
 // adds inside the list wrappers - see appstyles.NormalTitle.
-func renderPanelFrame(title string, titleRight string, isFocused bool, width int, height int, body string) string {
-	bg := panelBg(isFocused)
+func PanelFrame(title string, titleRight string, isFocused bool, width int, height int, body string) string {
+	bg := PanelBg(isFocused)
 
-	style := fitBox(wrapperStyle.Background(bg), width, height)
+	style := FitBox(WrapperStyle.Background(bg), width, height)
 	titleRow := appstyles.NormalTitle().MarginLeft(2).Render(title)
 
 	if titleRight != "" {
-		gap := max(0, panelBodyWidth(width)-lipgloss.Width(titleRow)-lipgloss.Width(titleRight))
+		gap := max(0, PanelBodyWidth(width)-lipgloss.Width(titleRow)-lipgloss.Width(titleRight))
 
 		titleRow = lipgloss.JoinHorizontal(lipgloss.Top,
 			titleRow,
@@ -382,19 +382,19 @@ func renderPanelFrame(title string, titleRight string, isFocused bool, width int
 	return style.Render(content)
 }
 
-// panelBodyWidth and panelBodyHeight are the space a panel body gets inside a
+// PanelBodyWidth and PanelBodyHeight are the space a panel body gets inside a
 // frame of the given total size: the frame's own padding taken off, plus the
 // title row for the vertical axis. Callers size their content with these
-// rather than with hardcoded offsets, so a change to wrapperStyle's padding
+// rather than with hardcoded offsets, so a change to WrapperStyle's padding
 // doesn't silently push content out of the panel.
-func panelBodyWidth(total int) int {
-	frameW, _ := wrapperStyle.GetFrameSize()
+func PanelBodyWidth(total int) int {
+	frameW, _ := WrapperStyle.GetFrameSize()
 
 	return max(0, total-frameW)
 }
 
-func panelBodyHeight(total int) int {
-	_, frameH := wrapperStyle.GetFrameSize()
+func PanelBodyHeight(total int) int {
+	_, frameH := WrapperStyle.GetFrameSize()
 
 	return max(0, total-frameH-2) // -2 for the title row and the blank row under it
 }

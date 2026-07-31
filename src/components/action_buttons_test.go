@@ -14,6 +14,7 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
@@ -44,12 +45,12 @@ func detailsContext(page string, focused bool) keys.Context {
 func TestActionButtonsFollowFocus(t *testing.T) {
 	for _, page := range []string{"Home", "Services"} {
 		t.Run(page, func(t *testing.T) {
-			focused := renderActionButtons(80, appstyles.Active.BackgroundElevated, detailsContext(page, true))
+			focused := chrome.ActionButtons(80, appstyles.Active.BackgroundElevated, detailsContext(page, true))
 			if !strings.Contains(focused, fgSGR(appstyles.Active.Accent)) {
 				t.Error("a focused panel's action buttons are not drawn in the accent")
 			}
 
-			unfocused := renderActionButtons(80, appstyles.Active.BackgroundPanel, detailsContext(page, false))
+			unfocused := chrome.ActionButtons(80, appstyles.Active.BackgroundPanel, detailsContext(page, false))
 			if strings.Contains(unfocused, fgSGR(appstyles.Active.Accent)) {
 				t.Error("an unfocused panel's action buttons are drawn in the accent, which reads as pressable")
 			}
@@ -67,7 +68,7 @@ func TestActionButtonsDimWhileAnActionIsPending(t *testing.T) {
 	ctx := detailsContext("Home", true)
 	ctx.PendingAction = true
 
-	row := renderActionButtons(80, appstyles.Active.BackgroundElevated, ctx)
+	row := chrome.ActionButtons(80, appstyles.Active.BackgroundElevated, ctx)
 	if strings.Contains(row, fgSGR(appstyles.Active.Accent)) {
 		t.Error("action buttons stay in the accent while an action is pending")
 	}
@@ -76,8 +77,8 @@ func TestActionButtonsDimWhileAnActionIsPending(t *testing.T) {
 // Dimming, not hiding: the row keeps its five buttons and its height in both
 // states, so the panel body does not reflow every time Tab moves focus.
 func TestActionButtonsKeepTheirShapeWhenDimmed(t *testing.T) {
-	focused := renderActionButtons(80, appstyles.Active.BackgroundElevated, detailsContext("Home", true))
-	unfocused := renderActionButtons(80, appstyles.Active.BackgroundPanel, detailsContext("Home", false))
+	focused := chrome.ActionButtons(80, appstyles.Active.BackgroundElevated, detailsContext("Home", true))
+	unfocused := chrome.ActionButtons(80, appstyles.Active.BackgroundPanel, detailsContext("Home", false))
 
 	if got, want := ansi.Strip(unfocused), ansi.Strip(focused); got != want {
 		t.Errorf("dimming changed the row's layout:\n got %q\nwant %q", got, want)
@@ -99,8 +100,8 @@ func TestActionRowCoversEveryActionTheFooterOffers(t *testing.T) {
 			ctx := detailsContext(page, true)
 
 			inRow := make(map[string]bool)
-			for _, button := range actionButtons() {
-				inRow[button.binding.Help().Key] = true
+			for _, button := range chrome.Buttons() {
+				inRow[button.Binding.Help().Key] = true
 			}
 
 			for _, binding := range keys.Active(ctx) {
@@ -139,7 +140,7 @@ func isDetailsAction(binding key.Binding) bool {
 
 // The destructive verb is not the peer of "restart", and the row says so.
 func TestRemoveIsColoredAsDestructive(t *testing.T) {
-	row := renderActionButtons(80, appstyles.Active.BackgroundElevated, detailsContext("Home", true))
+	row := chrome.ActionButtons(80, appstyles.Active.BackgroundElevated, detailsContext("Home", true))
 
 	if !strings.Contains(row, fgSGR(appstyles.Active.StatusError)) {
 		t.Error("the remove button is not colored as destructive")
@@ -153,7 +154,7 @@ func TestRemoveIsColoredAsDestructive(t *testing.T) {
 func TestActionRowShedsButtonsRatherThanWrapping(t *testing.T) {
 	ctx := detailsContext("Home", true)
 
-	full := renderActionButtons(80, appstyles.Active.BackgroundElevated, ctx)
+	full := chrome.ActionButtons(80, appstyles.Active.BackgroundElevated, ctx)
 	if h := lipgloss.Height(full); h != 1 {
 		t.Fatalf("a row that fits is %d rows tall, want 1", h)
 	}
@@ -161,7 +162,7 @@ func TestActionRowShedsButtonsRatherThanWrapping(t *testing.T) {
 	// Every width from "nothing fits" up to the full row: none may wrap, none
 	// may overflow the panel, and none may render a partial button.
 	for width := 0; width <= lipgloss.Width(full); width++ {
-		row := renderActionButtons(width, appstyles.Active.BackgroundElevated, ctx)
+		row := chrome.ActionButtons(width, appstyles.Active.BackgroundElevated, ctx)
 
 		if h := lipgloss.Height(row); h != 1 {
 			t.Errorf("width %d: row is %d rows tall, want 1", width, h)
@@ -172,10 +173,10 @@ func TestActionRowShedsButtonsRatherThanWrapping(t *testing.T) {
 
 		// A surviving button is whole: its key and its word, never a fragment.
 		stripped := ansi.Strip(row)
-		for _, button := range actionButtons() {
-			help := button.binding.Help()
-			if strings.Contains(stripped, help.Key+" "+buttonLabel(help.Desc)[:1]) &&
-				!strings.Contains(stripped, help.Key+" "+buttonLabel(help.Desc)) {
+		for _, button := range chrome.Buttons() {
+			help := button.Binding.Help()
+			if strings.Contains(stripped, help.Key+" "+chrome.ButtonLabel(help.Desc)[:1]) &&
+				!strings.Contains(stripped, help.Key+" "+chrome.ButtonLabel(help.Desc)) {
 				t.Errorf("width %d: %q is rendered as a fragment: %q", width, help.Desc, stripped)
 			}
 		}
@@ -235,13 +236,13 @@ func TestActionRowShedsInPriorityOrder(t *testing.T) {
 	previous := map[string]bool{}
 	first := true
 
-	for width := lipgloss.Width(renderActionButtons(80, appstyles.Active.BackgroundElevated, ctx)); width >= 0; width-- {
-		stripped := ansi.Strip(renderActionButtons(width, appstyles.Active.BackgroundElevated, ctx))
+	for width := lipgloss.Width(chrome.ActionButtons(80, appstyles.Active.BackgroundElevated, ctx)); width >= 0; width-- {
+		stripped := ansi.Strip(chrome.ActionButtons(width, appstyles.Active.BackgroundElevated, ctx))
 
 		present := map[string]bool{}
-		for _, button := range actionButtons() {
-			help := button.binding.Help()
-			present[help.Desc] = strings.Contains(stripped, help.Key+" "+buttonLabel(help.Desc))
+		for _, button := range chrome.Buttons() {
+			help := button.Binding.Help()
+			present[help.Desc] = strings.Contains(stripped, help.Key+" "+chrome.ButtonLabel(help.Desc))
 		}
 
 		if !first {
@@ -266,11 +267,11 @@ func TestActionRowShedsInPriorityOrder(t *testing.T) {
 // The labels and shortcuts are the bindings' own help text, so a rebound key
 // moves the button with it rather than leaving it advertising the old one.
 func TestActionButtonsRenderTheBindingsOwnHelp(t *testing.T) {
-	row := ansi.Strip(renderActionButtons(80, appstyles.Active.BackgroundElevated, detailsContext("Home", true)))
+	row := ansi.Strip(chrome.ActionButtons(80, appstyles.Active.BackgroundElevated, detailsContext("Home", true)))
 
-	for _, button := range actionButtons() {
-		help := button.binding.Help()
-		want := help.Key + " " + buttonLabel(help.Desc)
+	for _, button := range chrome.Buttons() {
+		help := button.Binding.Help()
+		want := help.Key + " " + chrome.ButtonLabel(help.Desc)
 
 		if !strings.Contains(row, want) {
 			t.Errorf("action row does not render %q for binding %v", want, help)
@@ -282,7 +283,7 @@ func TestActionButtonsRenderTheBindingsOwnHelp(t *testing.T) {
 // found by the shortcut of the first button the row shows. -1 when the row is
 // not on the screen at all.
 func panelActionRowLine(screen string) int {
-	want := keys.Details.Start.Help().Key + " " + buttonLabel(keys.Details.Start.Help().Desc)
+	want := keys.Details.Start.Help().Key + " " + chrome.ButtonLabel(keys.Details.Start.Help().Desc)
 
 	for i, line := range strings.Split(screen, "\n") {
 		if strings.Contains(ansi.Strip(line), want) {

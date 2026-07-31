@@ -2,7 +2,6 @@ package components
 
 import (
 	"fmt"
-	"image/color"
 	"path/filepath"
 
 	"charm.land/bubbles/v2/key"
@@ -11,17 +10,10 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
-
-// KeyHint represents a single keybinding for display in the bottom bar.
-// Key is the literal key (e.g. "n", "space", "←/→"). Desc is a short
-// verb describing what the key does.
-type KeyHint struct {
-	Key  string
-	Desc string
-}
 
 // KeybindingBar is a single-line footer that shows the current page, the
 // focused component, and the keys available in that context. It listens for
@@ -103,7 +95,7 @@ func (m KeybindingBarModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // component. Which keys are live is keys.Active's decision, not the bar's: the
 // bar only supplies the screen state that decision needs, so the footer and the
 // handlers cannot disagree about what is pressable.
-func (m KeybindingBarModel) hintsFor() []KeyHint {
+func (m KeybindingBarModel) hintsFor() []chrome.KeyHint {
 	listEmpty := m.groupsListEmpty
 	selected := m.selectedGroup != ""
 
@@ -125,48 +117,14 @@ func (m KeybindingBarModel) hintsFor() []KeyHint {
 
 // hintsFrom turns bindings into footer hints, using the help text each binding
 // carries.
-func hintsFrom(bindings []key.Binding) []KeyHint {
-	hints := make([]KeyHint, 0, len(bindings))
+func hintsFrom(bindings []key.Binding) []chrome.KeyHint {
+	hints := make([]chrome.KeyHint, 0, len(bindings))
 
 	for _, binding := range bindings {
-		hints = append(hints, hintFor(binding))
+		hints = append(hints, chrome.HintFor(binding))
 	}
 
 	return hints
-}
-
-// hintFor is one binding as a hint. hintAs overrides the description for the
-// places where a shared key does something more specific than its general help
-// text says - Enter is "confirm" everywhere, but "create group" in the
-// checklist that creates a group.
-func hintFor(binding key.Binding) KeyHint {
-	help := binding.Help()
-
-	return KeyHint{help.Key, help.Desc}
-}
-
-func hintAs(binding key.Binding, desc string) KeyHint {
-	return KeyHint{binding.Help().Key, desc}
-}
-
-// renderKeyHints renders hints as "key desc · key desc": the key bold in the
-// primary text color, the description in descColor. Modals render their own
-// help lines through this so they read the same as the footer bar, passing a
-// lighter descColor when they sit on a lighter surface than the bar does.
-func renderKeyHints(hints []KeyHint, descColor color.Color) string {
-	descStyle := lipgloss.NewStyle().Foreground(descColor)
-	sepStyle := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim)
-	keyStyle := lipgloss.NewStyle().Foreground(appstyles.Active.TextPrimary).Bold(true)
-
-	parts := make([]string, 0, len(hints)*2)
-	for i, h := range hints {
-		if i > 0 {
-			parts = append(parts, sepStyle.Render(" · "))
-		}
-		parts = append(parts, fmt.Sprintf("%s %s", keyStyle.Render(h.Key), descStyle.Render(h.Desc)))
-	}
-
-	return lipgloss.JoinHorizontal(lipgloss.Left, parts...)
 }
 
 // composeFileSegment renders which compose file the app resolved, dimmed, to
@@ -215,14 +173,14 @@ func (m KeybindingBarModel) View() tea.View {
 	// The page keys are global, so they sit on the right with quit rather
 	// than in the context-dependent hints. The nav renders each tab's own
 	// digit; this is the reminder that the digits switch pages.
-	rightHint := renderKeyHints(hintsFrom(keys.Globals()), appstyles.Active.TextDim)
+	rightHint := chrome.RenderKeyHints(hintsFrom(keys.Globals()), appstyles.Active.TextDim)
 
 	width := m.terminalWidth
 	if width <= 0 {
 		width = 80
 	}
 
-	left := renderKeyHints(hints, appstyles.Active.TextDim)
+	left := chrome.RenderKeyHints(hints, appstyles.Active.TextDim)
 
 	// The 4 is the bar's horizontal padding; the 1 is the narrowest gap the
 	// two hint groups will accept between them. What survives that is what the

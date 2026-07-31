@@ -1,4 +1,4 @@
-package components
+package chrome
 
 import (
 	"fmt"
@@ -17,8 +17,8 @@ type PendingAction struct {
 	IsGroup bool
 }
 
-// newSpinner creates a spinner styled with the active theme's accent color.
-func newSpinner() spinner.Model {
+// NewSpinner creates a spinner styled with the active theme's accent color.
+func NewSpinner() spinner.Model {
 	s := spinner.New()
 	s.Spinner = spinner.Points
 	s.Style = lipgloss.NewStyle().Foreground(appstyles.Active.Accent)
@@ -51,14 +51,14 @@ func kindLabel(isGroup bool) string {
 	return "service"
 }
 
-// actionDescription returns a full description of the pending action.
-func actionDescription(action, target string, isGroup bool) string {
+// ActionDescription returns a full description of the pending action.
+func ActionDescription(action, target string, isGroup bool) string {
 	return fmt.Sprintf("%s %s %q...", actionLabel(action), kindLabel(isGroup), target)
 }
 
-// handleSpinnerTick updates the spinner and returns the next tick command.
+// HandleSpinnerTick updates the spinner and returns the next tick command.
 // Returns nil if no spinner is active.
-func handleSpinnerTick(spinnerModel spinner.Model, pendingAction *PendingAction, msg tea.Msg) (spinner.Model, tea.Cmd) {
+func HandleSpinnerTick(spinnerModel spinner.Model, pendingAction *PendingAction, msg tea.Msg) (spinner.Model, tea.Cmd) {
 	if pendingAction == nil {
 		return spinnerModel, nil
 	}

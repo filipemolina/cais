@@ -9,13 +9,14 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
 // joinHints renders hints the way the bar reads them out, so a failure prints
 // the whole footer rather than a struct dump.
-func joinHints(hints []KeyHint) string {
+func joinHints(hints []chrome.KeyHint) string {
 	parts := make([]string, 0, len(hints))
 	for _, hint := range hints {
 		parts = append(parts, hint.Key+" "+hint.Desc)

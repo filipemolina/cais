@@ -9,6 +9,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
@@ -44,7 +45,7 @@ func (m AboutModalModel) View() tea.View {
 	label := func(s string) string { return muted.Render(s) }
 
 	sections := []string{
-		modalTitle("About"),
+		chrome.ModalTitle("About"),
 		// The brand mark carries its own color (truecolor purple); render it
 		// as-is so the embedded SGR codes land untouched.
 		constants.LOGO,
@@ -57,14 +58,14 @@ func (m AboutModalModel) View() tea.View {
 			label("repo"), primary.Render("github.com/filipemolina/stack-stitcher")),
 	}
 
-	hint := renderKeyHints([]KeyHint{
-		hintAs(keys.Global.About, "close"),
-		hintAs(keys.Overlay.Cancel, "close"),
-		hintAs(keys.Global.Quit, "close"),
+	hint := chrome.RenderKeyHints([]chrome.KeyHint{
+		chrome.HintAs(keys.Global.About, "close"),
+		chrome.HintAs(keys.Overlay.Cancel, "close"),
+		chrome.HintAs(keys.Global.Quit, "close"),
 	}, appstyles.Active.TextMuted)
 	sections = append(sections, hint)
 
-	return tea.NewView(modalSurface(
+	return tea.NewView(chrome.ModalSurface(
 		appstyles.Active.ModalBg,
 		strings.Join(sections, "\n"),
 	))

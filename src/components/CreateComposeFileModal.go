@@ -8,6 +8,7 @@ import (
 
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/textinput"
@@ -192,36 +193,36 @@ func (m CreateComposeFileModalModel) View() tea.View {
 	switch m.step {
 	case stepFilename:
 		lines = []string{
-			modalTitle("New compose file"),
+			chrome.ModalTitle("New compose file"),
 			"Filename (in the current directory):",
 			m.filename.View(),
 		}
-		hints = modalHints(
-			hintAs(keys.Overlay.Submit, "next"),
-			hintFor(keys.Overlay.Cancel),
+		hints = chrome.ModalHints(
+			chrome.HintAs(keys.Overlay.Submit, "next"),
+			chrome.HintFor(keys.Overlay.Cancel),
 		)
 	case stepAddServicePrompt:
 		lines = []string{
-			modalTitle(fmt.Sprintf("Creating %s", filepath.Base(strings.TrimSpace(m.filename.Value())))),
+			chrome.ModalTitle(fmt.Sprintf("Creating %s", filepath.Base(strings.TrimSpace(m.filename.Value())))),
 			"Add a first service?",
 		}
-		hints = modalHints(
-			hintAs(keys.Overlay.Yes, "add a service"),
-			hintAs(keys.Overlay.No, "skip"),
-			hintFor(keys.Overlay.Cancel),
+		hints = chrome.ModalHints(
+			chrome.HintAs(keys.Overlay.Yes, "add a service"),
+			chrome.HintAs(keys.Overlay.No, "skip"),
+			chrome.HintFor(keys.Overlay.Cancel),
 		)
 	case stepServiceFields:
 		lines = []string{
-			modalTitle(fmt.Sprintf("Creating %s", filepath.Base(strings.TrimSpace(m.filename.Value())))),
+			chrome.ModalTitle(fmt.Sprintf("Creating %s", filepath.Base(strings.TrimSpace(m.filename.Value())))),
 			"Service name:",
 			m.serviceName.View(),
 			"Image:",
 			m.image.View(),
 		}
-		hints = modalHints(
-			hintFor(keys.Overlay.NextField),
-			hintAs(keys.Overlay.Submit, "create file"),
-			hintFor(keys.Overlay.Cancel),
+		hints = chrome.ModalHints(
+			chrome.HintFor(keys.Overlay.NextField),
+			chrome.HintAs(keys.Overlay.Submit, "create file"),
+			chrome.HintFor(keys.Overlay.Cancel),
 		)
 	}
 
@@ -231,7 +232,7 @@ func (m CreateComposeFileModalModel) View() tea.View {
 
 	lines = append(lines, "", hints)
 
-	return tea.NewView(modalSurface(
+	return tea.NewView(chrome.ModalSurface(
 		appstyles.Active.ModalBg,
 		lipgloss.JoinVertical(lipgloss.Left, lines...),
 	))

@@ -11,6 +11,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 )
 
@@ -72,7 +73,7 @@ func (d containersListCustomDelegate) Render(w io.Writer, m list.Model, index in
 
 	// The bar spans the row's full height, one ▌ per line, rather than a sliver
 	// at the top - the nav's single-line bar stretched to the row's height.
-	bar := barColumn(barColor, barBg, content)
+	bar := chrome.BarColumn(barColor, barBg, content)
 
 	// Print the styled string to the Bubble Tea io.Writer
 	fmt.Fprint(w, lipgloss.JoinHorizontal(lipgloss.Left, bar, content))

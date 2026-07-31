@@ -3,6 +3,7 @@ package components
 import (
 	"fmt"
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 
 	"charm.land/lipgloss/v2"
 	"github.com/compose-spec/compose-go/v2/types"
@@ -12,7 +13,7 @@ import (
 // columns (border included), so the card spans the details panel instead of
 // shrinking to the length of its longest line.
 func BasicInfo(service types.ServiceConfig, width int) string {
-	wrapper := fitBox(lipgloss.NewStyle().
+	wrapper := chrome.FitBox(lipgloss.NewStyle().
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(appstyles.Active.Accent).
 		Padding(1), width, 0)

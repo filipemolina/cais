@@ -7,6 +7,7 @@ import (
 
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/spinner"
@@ -51,7 +52,7 @@ type DetailsPanelModel struct {
 	// saveError is the last compose-level error from a failed save.
 	saveError string
 
-	pendingAction *PendingAction
+	pendingAction *chrome.PendingAction
 	spinner       spinner.Model
 
 	// containers is the latest known container list, used to derive the
@@ -76,7 +77,7 @@ func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.resizeEditor()
 
 	case cmds.SetPendingActionMsg:
-		m.pendingAction = &PendingAction{Action: msg.Action, Target: msg.Target, IsGroup: msg.IsGroup}
+		m.pendingAction = &chrome.PendingAction{Action: msg.Action, Target: msg.Target, IsGroup: msg.IsGroup}
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(m.spinner.Tick())
 		finalCmds = append(finalCmds, cmd)
@@ -189,7 +190,7 @@ func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.editor, editorCmd = m.editor.Update(msg)
 			finalCmds = append(finalCmds, editorCmd)
 			m.updateValidationError()
-		} else if action, ok := dockerActionFor(msg); ok {
+		} else if action, ok := chrome.DockerActionFor(msg); ok {
 			finalCmds = append(finalCmds, cmds.RequestDockerAction(action, m.service.Name, false))
 		} else if key.Matches(msg, keys.Details.Remove) {
 			finalCmds = append(finalCmds, cmds.OpenConfirmModal(
@@ -426,9 +427,9 @@ func (m *DetailsPanelModel) resizeEditor() {
 		return
 	}
 
-	bodyW := max(1, panelBodyWidth(m.panelWidth))
+	bodyW := max(1, chrome.PanelBodyWidth(m.panelWidth))
 	// Reserve two rows for the status line under the editor.
-	bodyH := max(1, panelBodyHeight(m.panelHeight)-2)
+	bodyH := max(1, chrome.PanelBodyHeight(m.panelHeight)-2)
 
 	m.editor.SetWidth(bodyW)
 	m.editor.SetHeight(bodyH)
@@ -495,14 +496,14 @@ func (m DetailsPanelModel) actionContext() keys.Context {
 }
 
 func (m DetailsPanelModel) View() tea.View {
-	bodyWidth := max(1, panelBodyWidth(m.panelWidth))
-	bodyAvail := max(1, panelBodyHeight(m.panelHeight))
+	bodyWidth := max(1, chrome.PanelBodyWidth(m.panelWidth))
+	bodyAvail := max(1, chrome.PanelBodyHeight(m.panelHeight))
 
 	if m.service == nil {
-		body := renderEmptyCard(bodyWidth, bodyAvail, panelBg(m.isFocused), "Select a service",
+		body := chrome.EmptyCard(bodyWidth, bodyAvail, chrome.PanelBg(m.isFocused), "Select a service",
 			"Pick a service from the list to see its details.",
 			"↑/↓", "to browse")
-		screen := renderPanelFrame("Details", "", m.isFocused, m.panelWidth, m.panelHeight, body)
+		screen := chrome.PanelFrame("Details", "", m.isFocused, m.panelWidth, m.panelHeight, body)
 		return tea.NewView(screen)
 	}
 
@@ -516,11 +517,11 @@ func (m DetailsPanelModel) View() tea.View {
 		validation := m.validationPill()
 		right := lipgloss.JoinHorizontal(lipgloss.Left, serviceName+"  ", validation)
 
-		screen := renderPanelFrame("Edit service", right, m.isFocused, m.panelWidth, m.panelHeight, body)
+		screen := chrome.PanelFrame("Edit service", right, m.isFocused, m.panelWidth, m.panelHeight, body)
 		return tea.NewView(screen)
 	}
 
-	bg := panelBg(m.isFocused)
+	bg := chrome.PanelBg(m.isFocused)
 
 	parts := []string{m.renderServiceHeader(bodyWidth)}
 	if tables := m.renderTables(bodyWidth); tables != "" {
@@ -531,13 +532,13 @@ func (m DetailsPanelModel) View() tea.View {
 	if m.pendingAction != nil {
 		footer = m.renderPendingAction(bodyWidth, bg)
 	} else {
-		footer = renderActionButtons(bodyWidth, bg, m.actionContext())
+		footer = chrome.ActionButtons(bodyWidth, bg, m.actionContext())
 	}
 
-	body := panelBodyWithActions(bodyWidth, bodyAvail, bg,
+	body := chrome.PanelBodyWithActions(bodyWidth, bodyAvail, bg,
 		lipgloss.JoinVertical(lipgloss.Left, parts...), footer)
 
-	screen := renderPanelFrame("Details", m.titlePill(), m.isFocused, m.panelWidth, m.panelHeight, body)
+	screen := chrome.PanelFrame("Details", m.titlePill(), m.isFocused, m.panelWidth, m.panelHeight, body)
 	return tea.NewView(screen)
 }
 
@@ -590,7 +591,7 @@ func (m DetailsPanelModel) renderServiceHeader(width int) string {
 		Bold(true).
 		Foreground(appstyles.Active.TextPrimary).
 		Width(width).
-		Render(truncate(name, width))
+		Render(chrome.Truncate(name, width))
 
 	// The image is set flush left in muted text, the same shape the group
 	// header's summary line has. It used to be parenthesised and indented by a
@@ -599,7 +600,7 @@ func (m DetailsPanelModel) renderServiceHeader(width int) string {
 	subtitleRow := lipgloss.NewStyle().
 		Foreground(appstyles.Active.TextMuted).
 		Width(width).
-		Render(truncate(image, width))
+		Render(chrome.Truncate(image, width))
 
 	// Status line with dot, state, health, uptime.
 	var statusParts []string
@@ -622,7 +623,7 @@ func (m DetailsPanelModel) renderServiceHeader(width int) string {
 	sep := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Render(" · ")
 
 	if hasContainer && container.HealthStatus != "" && container.HealthStatus != "-" {
-		hl := lipgloss.NewStyle().Foreground(healthColor(container.HealthStatus)).Render(container.HealthStatus)
+		hl := lipgloss.NewStyle().Foreground(chrome.HealthColor(container.HealthStatus)).Render(container.HealthStatus)
 		statusParts = append(statusParts, sep, hl)
 	}
 
@@ -637,7 +638,7 @@ func (m DetailsPanelModel) renderServiceHeader(width int) string {
 
 	// No blank row before the rule: the group's header card closes on the rule
 	// directly, and the two headers have to read as the same component.
-	return lipgloss.JoinVertical(lipgloss.Left, nameRow, subtitleRow, statusRow, panelRule(width))
+	return lipgloss.JoinVertical(lipgloss.Left, nameRow, subtitleRow, statusRow, chrome.PanelRule(width))
 }
 
 // propRow is one row of a labelled two-column table: the property name and
@@ -681,7 +682,7 @@ func renderPropTable(heading string, width int, rows []propRow) string {
 			dim.Width(propWidth).Render(heading),
 			dim.Width(valWidth).Render("VALUE"),
 		),
-		panelRule(width),
+		chrome.PanelRule(width),
 	)
 
 	for _, row := range rows {
@@ -702,7 +703,7 @@ func renderPropRow(propWidth, valWidth int, row propRow) string {
 	propStyle := lipgloss.NewStyle().
 		Foreground(appstyles.Active.TextDim).
 		Width(propWidth).
-		Render(truncate(row.label, propWidth))
+		Render(chrome.Truncate(row.label, propWidth))
 
 	if len(row.values) == 0 {
 		return lipgloss.JoinHorizontal(lipgloss.Left, propStyle, lipgloss.NewStyle().Width(valWidth).Render("—"))
@@ -711,13 +712,13 @@ func renderPropRow(propWidth, valWidth int, row propRow) string {
 	valStyle := lipgloss.NewStyle().Foreground(appstyles.Active.TextPrimary).Width(valWidth)
 
 	// First value on the same row as the property.
-	out := lipgloss.JoinHorizontal(lipgloss.Left, propStyle, valStyle.Render(truncate(row.values[0], valWidth)))
+	out := lipgloss.JoinHorizontal(lipgloss.Left, propStyle, valStyle.Render(chrome.Truncate(row.values[0], valWidth)))
 
 	// Subsequent values on continuation rows (blank property cell).
 	for _, v := range row.values[1:] {
 		cont := lipgloss.JoinHorizontal(lipgloss.Left,
 			lipgloss.NewStyle().Width(propWidth).Render(""),
-			valStyle.Render(truncate(v, valWidth)),
+			valStyle.Render(chrome.Truncate(v, valWidth)),
 		)
 		out = lipgloss.JoinVertical(lipgloss.Left, out, cont)
 	}
@@ -959,13 +960,13 @@ func (m DetailsPanelModel) renderTables(width int) string {
 	// Stacked, the two tables need the same blank-line-and-rule separation the
 	// header has from the config table, or they read as one table that changed
 	// its mind about its heading halfway down.
-	return lipgloss.JoinVertical(lipgloss.Left, config, "", panelRule(width), stats)
+	return lipgloss.JoinVertical(lipgloss.Left, config, "", chrome.PanelRule(width), stats)
 }
 
 // renderEditor renders the textarea with the editor key hints below it. The
 // live YAML validation status is shown in the panel title row instead.
 func (m DetailsPanelModel) renderEditor(bodyWidth, bodyAvail int) string {
-	bg := panelBg(m.isFocused)
+	bg := chrome.PanelBg(m.isFocused)
 	editorView := m.editor.View()
 
 	// The textarea has no explicit background; seal it to the panel tier so
@@ -975,7 +976,7 @@ func (m DetailsPanelModel) renderEditor(bodyWidth, bodyAvail int) string {
 	hints := m.renderEditorHints(bodyWidth)
 
 	content := lipgloss.JoinVertical(lipgloss.Left, editorView, hints)
-	return fitBox(lipgloss.NewStyle().Background(bg), bodyWidth, bodyAvail).Render(content)
+	return chrome.FitBox(lipgloss.NewStyle().Background(bg), bodyWidth, bodyAvail).Render(content)
 }
 
 // validationPill returns a colored pill for the editor's live YAML validation
@@ -1008,14 +1009,14 @@ func (m DetailsPanelModel) validationPill() string {
 
 // renderEditorHints renders the editor key hints below the textarea.
 func (m DetailsPanelModel) renderEditorHints(width int) string {
-	bg := panelBg(m.isFocused)
+	bg := chrome.PanelBg(m.isFocused)
 
-	hints := renderKeyHints([]KeyHint{
-		hintFor(keys.Details.Save),
-		hintFor(keys.Details.OpenEditor),
-		hintFor(keys.Editor.Indent),
-		hintFor(keys.Editor.Outdent),
-		hintAs(keys.Global.Back, "cancel"),
+	hints := chrome.RenderKeyHints([]chrome.KeyHint{
+		chrome.HintFor(keys.Details.Save),
+		chrome.HintFor(keys.Details.OpenEditor),
+		chrome.HintFor(keys.Editor.Indent),
+		chrome.HintFor(keys.Editor.Outdent),
+		chrome.HintAs(keys.Global.Back, "cancel"),
 	}, appstyles.Active.TextDim)
 
 	return lipgloss.NewStyle().
@@ -1028,7 +1029,7 @@ func (m DetailsPanelModel) renderEditorHints(width int) string {
 // renderPendingAction renders a spinner with the action description in place
 // of the action buttons while a docker action is in progress.
 func (m DetailsPanelModel) renderPendingAction(width int, bg color.Color) string {
-	desc := actionDescription(m.pendingAction.Action, m.pendingAction.Target, m.pendingAction.IsGroup)
+	desc := chrome.ActionDescription(m.pendingAction.Action, m.pendingAction.Target, m.pendingAction.IsGroup)
 
 	style := lipgloss.NewStyle().
 		Foreground(appstyles.Active.TextPrimary).
@@ -1043,6 +1044,6 @@ func DetailsPanel(service *types.ServiceConfig) tea.Model {
 	return DetailsPanelModel{
 		service:     service,
 		componentId: 2,
-		spinner:     newSpinner(),
+		spinner:     chrome.NewSpinner(),
 	}
 }

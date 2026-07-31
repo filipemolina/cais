@@ -12,6 +12,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
@@ -100,20 +101,20 @@ func (m ThemePickerModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // the first, confirm/cancel on the second.
 func themePickerHints() string {
 	return lipgloss.JoinVertical(lipgloss.Left,
-		renderKeyHints([]KeyHint{
-			hintFor(keys.List.Navigate),
+		chrome.RenderKeyHints([]chrome.KeyHint{
+			chrome.HintFor(keys.List.Navigate),
 		}, appstyles.Active.TextMuted),
-		renderKeyHints([]KeyHint{
-			hintAs(keys.Overlay.Submit, "apply"),
-			hintFor(keys.Overlay.Cancel),
+		chrome.RenderKeyHints([]chrome.KeyHint{
+			chrome.HintAs(keys.Overlay.Submit, "apply"),
+			chrome.HintFor(keys.Overlay.Cancel),
 		}, appstyles.Active.TextMuted),
 	)
 }
 
 func (m ThemePickerModalModel) View() tea.View {
-	content := lipgloss.JoinVertical(lipgloss.Left, modalTitle("Choose theme"), m.list.View(), "", themePickerHints())
+	content := lipgloss.JoinVertical(lipgloss.Left, chrome.ModalTitle("Choose theme"), m.list.View(), "", themePickerHints())
 
-	return tea.NewView(modalSurface(appstyles.Active.ModalBg, content))
+	return tea.NewView(chrome.ModalSurface(appstyles.Active.ModalBg, content))
 }
 
 // ThemePickerModal builds the theme picker overlay. It lists every
@@ -142,7 +143,7 @@ func ThemePickerModal(termHeight int) tea.Model {
 		}
 	}
 
-	visible := modalListHeight(len(items), termHeight)
+	visible := chrome.ModalListHeight(len(items), termHeight)
 
 	picker := list.New(items, themePickerDelegate{}, 40, visible)
 	picker.SetShowTitle(false)
