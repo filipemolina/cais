@@ -18,6 +18,11 @@ type GroupNameModalModel struct {
 	existingGroups []string
 	serviceNames   []string
 	errMsg         string
+	// termHeight is carried rather than used here: this modal is one text
+	// input tall, but step 2 is a list of every service and has to be sized
+	// to the screen. Update builds it directly, so the height has to arrive
+	// with the flow rather than from AppModel at that point.
+	termHeight int
 }
 
 func (m GroupNameModalModel) Init() tea.Cmd {
@@ -43,7 +48,7 @@ func (m GroupNameModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 
-			return ServiceChecklistModal(name, m.serviceNames), nil
+			return ServiceChecklistModal(name, m.serviceNames, m.termHeight), nil
 		}
 	}
 
@@ -76,7 +81,7 @@ func (m GroupNameModalModel) View() tea.View {
 // GroupNameModal is step 1 of the create-group flow: prompt for a new,
 // unique group name. Enter with a valid name advances to
 // ServiceChecklistModal; Esc cancels the whole flow.
-func GroupNameModal(existingGroups []string, serviceNames []string) tea.Model {
+func GroupNameModal(existingGroups []string, serviceNames []string, termHeight int) tea.Model {
 	input := textinput.New()
 	input.Placeholder = "e.g. core"
 	input.SetWidth(30)
@@ -86,5 +91,6 @@ func GroupNameModal(existingGroups []string, serviceNames []string) tea.Model {
 		input:          input,
 		existingGroups: existingGroups,
 		serviceNames:   serviceNames,
+		termHeight:     termHeight,
 	}
 }
