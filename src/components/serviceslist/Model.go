@@ -1,4 +1,4 @@
-package components
+package serviceslist
 
 import (
 	"fmt"
@@ -102,7 +102,7 @@ func (d servicesListCustomDelegate) Render(w io.Writer, m list.Model, index int,
  * Implementation of tea.Model
  */
 
-type ServicesListModel struct {
+type Model struct {
 	list         list.Model
 	listDelegate servicesListCustomDelegate
 	// activeService is the name of the service the cursor is on. The cursor
@@ -127,7 +127,7 @@ type ServicesListModel struct {
 // arrive as separate messages and tea.Batch makes no promise about their
 // order. Re-deriving from the name on each means the pair converges on the
 // right row whichever lands first.
-func (m *ServicesListModel) syncActiveIndex() {
+func (m *Model) syncActiveIndex() {
 	active := -1
 
 	for i, item := range m.list.Items() {
@@ -141,32 +141,32 @@ func (m *ServicesListModel) syncActiveIndex() {
 	m.list.SetDelegate(m.listDelegate)
 }
 
-func (m ServicesListModel) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return nil
 }
 
 // OwnsKeyboard reports whether the list is taking every keystroke for itself,
 // which it does while a filter is being typed. Same rule as the groups list -
-// see GroupListModel.OwnsKeyboard.
-func (m ServicesListModel) OwnsKeyboard() bool {
+// see groupslist.Model.OwnsKeyboard.
+func (m Model) OwnsKeyboard() bool {
 	return m.list.FilterState() == list.Filtering
 }
 
 // KeepsEsc reports whether the list needs esc for itself. Same rule as the
-// groups list - see GroupListModel.KeepsEsc.
-func (m ServicesListModel) KeepsEsc() bool {
+// groups list - see groupslist.Model.KeepsEsc.
+func (m Model) KeepsEsc() bool {
 	return m.isFocused && m.list.FilterState() == list.FilterApplied
 }
 
 // FilterState exposes how much of the keyboard the list has taken. Same rule
-// as the groups list - see GroupListModel.FilterState.
-func (m ServicesListModel) FilterState() list.FilterState {
+// as the groups list - see groupslist.Model.FilterState.
+func (m Model) FilterState() list.FilterState {
 	return m.list.FilterState()
 }
 
 // resizeList sizes the inner list to the space left inside the panel box
 // after the wrapper padding.
-func (m *ServicesListModel) resizeList() {
+func (m *Model) resizeList() {
 	h, v := chrome.ListWrapperStyle.GetFrameSize()
 
 	m.list.SetSize(
@@ -175,10 +175,10 @@ func (m *ServicesListModel) resizeList() {
 	)
 }
 
-func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var finalCmds []tea.Cmd
 
-	// See GroupListModel.Update: the footer's keys depend on this, so a change
+	// See groupslist.Model.Update: the footer's keys depend on this, so a change
 	// has to be broadcast.
 	filterStateBefore := m.list.FilterState()
 
@@ -268,7 +268,7 @@ func (m ServicesListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(finalCmds...)
 }
 
-func (m ServicesListModel) View() tea.View {
+func (m Model) View() tea.View {
 	// Same 3-tier treatment as the groups list: focus lifts the panel from
 	// tier 3 to tier 4 rather than adding a border, so the panel's box stays
 	// the same size whether or not it is focused.
@@ -296,7 +296,7 @@ func (m ServicesListModel) View() tea.View {
 // buildItems converts a slice of service configs into list items, picking up
 // the latest container state from the model so each row shows the correct
 // RUNNING/STOPPED pill and memory usage.
-func (m *ServicesListModel) buildItems(services []types.ServiceConfig) []list.Item {
+func (m *Model) buildItems(services []types.ServiceConfig) []list.Item {
 	items := make([]list.Item, 0, len(services))
 
 	for _, service := range services {
@@ -316,7 +316,7 @@ func (m *ServicesListModel) buildItems(services []types.ServiceConfig) []list.It
 
 // containerStatus returns "running", "stopped", or "" depending on whether a
 // live container exists for the given compose service name.
-func (m *ServicesListModel) containerStatus(serviceName string) string {
+func (m *Model) containerStatus(serviceName string) string {
 	for _, c := range m.containers {
 		if c.Service == serviceName {
 			if c.State == "running" {
@@ -333,7 +333,7 @@ func (m *ServicesListModel) containerStatus(serviceName string) string {
 // unavailable. The row formats them at render time via
 // apptypes.FormatMemUsage - see the note there on why they are not formatted
 // here.
-func (m *ServicesListModel) containerMem(serviceName string) (usage, perc string) {
+func (m *Model) containerMem(serviceName string) (usage, perc string) {
 	for _, c := range m.containers {
 		if c.Service == serviceName && c.State == "running" {
 			return c.MemUsage, c.MemPerc
@@ -348,7 +348,7 @@ func (m *ServicesListModel) containerMem(serviceName string) (usage, perc string
 // It returns a tea.Cmd so that any filter re-application triggered by
 // SetItems (required when a filter is active) gets executed by the
 // runtime, keeping the filtered view consistent.
-func (m *ServicesListModel) updateServiceStatuses() tea.Cmd {
+func (m *Model) updateServiceStatuses() tea.Cmd {
 	items := m.list.Items()
 	updated := make([]list.Item, 0, len(items))
 
@@ -367,8 +367,9 @@ func (m *ServicesListModel) updateServiceStatuses() tea.Cmd {
 	return m.list.SetItems(updated)
 }
 
-func ServicesList(services []types.ServiceConfig, width int, height int) tea.Model {
-	model := ServicesListModel{
+// New builds the services list.
+func New(services []types.ServiceConfig, width int, height int) tea.Model {
+	model := Model{
 		componentId: 1,
 	}
 
