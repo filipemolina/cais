@@ -1,4 +1,4 @@
-package components
+package keybindingbar
 
 import (
 	"fmt"
@@ -19,7 +19,7 @@ import (
 // focused component, and the keys available in that context. It listens for
 // SetFocusMsg and SetActivePageMsg to track state — no direct coupling to
 // the AppModel.
-type KeybindingBarModel struct {
+type Model struct {
 	focusedComponent  int
 	activePage        string
 	terminalWidth     int
@@ -41,9 +41,9 @@ type KeybindingBarModel struct {
 	pendingAction bool
 }
 
-func (m KeybindingBarModel) Init() tea.Cmd { return nil }
+func (m Model) Init() tea.Cmd { return nil }
 
-func (m KeybindingBarModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.terminalWidth = msg.Width
@@ -95,7 +95,7 @@ func (m KeybindingBarModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // component. Which keys are live is keys.Active's decision, not the bar's: the
 // bar only supplies the screen state that decision needs, so the footer and the
 // handlers cannot disagree about what is pressable.
-func (m KeybindingBarModel) hintsFor() []chrome.KeyHint {
+func (m Model) hintsFor() []chrome.KeyHint {
 	listEmpty := m.groupsListEmpty
 	selected := m.selectedGroup != ""
 
@@ -134,7 +134,7 @@ func hintsFrom(bindings []key.Binding) []chrome.KeyHint {
 // spare is the room left over once the hints on both sides have taken theirs.
 // The keys matter more than the file name, so the name degrades instead of
 // pushing them off the bar: full path, then basename, then dropped.
-func (m KeybindingBarModel) composeFileSegment(spare int) string {
+func (m Model) composeFileSegment(spare int) string {
 	name := m.composeFile
 	if name == "" {
 		name = "no compose file"
@@ -167,7 +167,7 @@ func (m KeybindingBarModel) composeFileSegment(spare int) string {
 	return ""
 }
 
-func (m KeybindingBarModel) View() tea.View {
+func (m Model) View() tea.View {
 	hints := m.hintsFor()
 
 	// The page keys are global, so they sit on the right with quit rather
@@ -205,8 +205,9 @@ func (m KeybindingBarModel) View() tea.View {
 	return tea.NewView(rendered)
 }
 
-func KeybindingBar() tea.Model {
-	return KeybindingBarModel{
+// New builds the footer keybinding bar.
+func New() tea.Model {
+	return Model{
 		focusedComponent:  constants.COMPONENT_BODY_LIST,
 		activePage:        "Home",
 		groupsListEmpty:   true,

@@ -11,6 +11,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/components/composefilepanel"
 	"github.com/filipemolina/stack-stitcher/src/components/groupslist"
+	"github.com/filipemolina/stack-stitcher/src/components/keybindingbar"
 	"github.com/filipemolina/stack-stitcher/src/components/mainmenu"
 	"github.com/filipemolina/stack-stitcher/src/components/serviceslist"
 	"github.com/filipemolina/stack-stitcher/src/constants"
@@ -271,7 +272,7 @@ func GetInitialModel(source utils.ComposeSource) AppModel {
 		},
 		components: Components{
 			MainMenu:      mainmenu.New(),
-			KeybindingBar: components.KeybindingBar(),
+			KeybindingBar: keybindingbar.New(),
 		},
 		pages: pages,
 		// Page activation sends this focus to the active page's components.

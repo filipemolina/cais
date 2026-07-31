@@ -1,4 +1,4 @@
-package components
+package keybindingbar
 
 import (
 	"strings"
@@ -33,79 +33,79 @@ func joinHints(hints []chrome.KeyHint) string {
 func TestFooterHints(t *testing.T) {
 	tests := []struct {
 		name  string
-		model KeybindingBarModel
+		model Model
 		want  string
 	}{
 		{
 			name:  "groups list with groups",
-			model: KeybindingBarModel{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST},
+			model: Model{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST},
 			want:  "space start · n new · e edit · d delete · R rename · / filter · ↑/↓ navigate · tab next",
 		},
 		{
 			// The list has the keyboard: every other key is a letter.
 			name:  "groups list while a filter is being typed",
-			model: KeybindingBarModel{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST, filterState: list.Filtering},
+			model: Model{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST, filterState: list.Filtering},
 			want:  "enter apply · esc cancel",
 		},
 		{
 			// The filter slot becomes the way out of the filter.
 			name:  "groups list with a filter applied",
-			model: KeybindingBarModel{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST, filterState: list.FilterApplied},
+			model: Model{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST, filterState: list.FilterApplied},
 			want:  "space start · n new · e edit · d delete · R rename · esc clear filter · ↑/↓ navigate · tab next",
 		},
 		{
 			name:  "groups list while empty",
-			model: KeybindingBarModel{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST, groupsListEmpty: true},
+			model: Model{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST, groupsListEmpty: true},
 			want:  "n new · ↑/↓ navigate · tab next",
 		},
 		{
 			name:  "group details with nothing selected",
-			model: KeybindingBarModel{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_DETAILS},
+			model: Model{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_DETAILS},
 			want:  "n new · esc back · tab next",
 		},
 		{
 			name:  "group details with a group selected",
-			model: KeybindingBarModel{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_DETAILS, selectedGroup: "core"},
+			model: Model{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_DETAILS, selectedGroup: "core"},
 			want:  "n new · s start · t stop · r restart · p pull · x remove · l logs · esc back · tab next",
 		},
 		{
 			name:  "services list with services",
-			model: KeybindingBarModel{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_LIST},
+			model: Model{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_LIST},
 			want:  "space start · / filter · ↑/↓ navigate · tab next",
 		},
 		{
 			name:  "services list while a filter is being typed",
-			model: KeybindingBarModel{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_LIST, filterState: list.Filtering},
+			model: Model{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_LIST, filterState: list.Filtering},
 			want:  "enter apply · esc cancel",
 		},
 		{
 			name:  "services list while empty",
-			model: KeybindingBarModel{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_LIST, servicesListEmpty: true},
+			model: Model{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_LIST, servicesListEmpty: true},
 			want:  "↑/↓ navigate · tab next",
 		},
 		{
 			name:  "service details with nothing selected",
-			model: KeybindingBarModel{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_DETAILS},
+			model: Model{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_DETAILS},
 			want:  "esc back · tab next",
 		},
 		{
 			name:  "service details with a service selected",
-			model: KeybindingBarModel{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_DETAILS, selectedService: true},
+			model: Model{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_DETAILS, selectedService: true},
 			want:  "s start · t stop · r restart · p pull · x remove · l logs · e edit · E file · esc back · tab next",
 		},
 		{
 			name:  "service details while inline editing",
-			model: KeybindingBarModel{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_DETAILS, selectedService: true, editing: true},
+			model: Model{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_DETAILS, selectedService: true, editing: true},
 			want:  "ctrl+s save · ctrl+o editor · tab indent · shift+tab outdent · esc back",
 		},
 		{
 			name:  "the files page offers edit, browse and scroll",
-			model: KeybindingBarModel{activePage: "Compose Files", focusedComponent: constants.COMPONENT_BODY_LIST},
+			model: Model{activePage: "Compose Files", focusedComponent: constants.COMPONENT_BODY_LIST},
 			want:  "E file · b browse · ↑/↓ scroll",
 		},
 		{
 			name:  "an unknown page still offers the focus ring",
-			model: KeybindingBarModel{activePage: "Nowhere", focusedComponent: constants.COMPONENT_BODY_LIST},
+			model: Model{activePage: "Nowhere", focusedComponent: constants.COMPONENT_BODY_LIST},
 			want:  "tab next",
 		},
 	}
@@ -181,7 +181,7 @@ func TestFooterComposeFile(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			model := KeybindingBarModel{composeFile: tc.file, composeFileOthers: tc.others}
+			model := Model{composeFile: tc.file, composeFileOthers: tc.others}
 
 			if got := ansi.Strip(model.composeFileSegment(tc.spare)); got != tc.want {
 				t.Errorf("compose file segment at spare=%d\n got: %q\nwant: %q", tc.spare, got, tc.want)
@@ -193,7 +193,7 @@ func TestFooterComposeFile(t *testing.T) {
 // The file name arrives by broadcast, the same way every other piece of state
 // the bar shows does.
 func TestFooterTakesTheComposeFileFromTheBroadcast(t *testing.T) {
-	var model tea.Model = KeybindingBar()
+	var model tea.Model = New()
 	model, _ = model.Update(cmds.SetComposeFileMsg{
 		Name:   "compose.yaml",
 		Others: []string{"compose.yml", "docker-compose.yml"},
@@ -217,7 +217,7 @@ func TestFooterComposeFileNeverCrowdsOutTheKeys(t *testing.T) {
 	renderAt := func(t *testing.T, width int, file string) string {
 		t.Helper()
 
-		var model tea.Model = KeybindingBar()
+		var model tea.Model = New()
 		if file != "" {
 			model, _ = model.Update(cmds.SetComposeFileMsg{Name: file})
 		}
