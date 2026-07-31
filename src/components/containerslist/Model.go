@@ -1,4 +1,4 @@
-package components
+package containerslist
 
 import (
 	"fmt"
@@ -83,17 +83,17 @@ func (d containersListCustomDelegate) Render(w io.Writer, m list.Model, index in
  * Implementation of tea.Model
  */
 
-type ContainersListModel struct {
+type Model struct {
 	list        list.Model
 	isFocused   bool
 	componentId int
 }
 
-func (m ContainersListModel) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m ContainersListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var finalCmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -137,7 +137,7 @@ func (m ContainersListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(finalCmds...)
 }
 
-func (m ContainersListModel) View() tea.View {
+func (m Model) View() tea.View {
 	wrapper := lipgloss.NewStyle().
 		Padding(1, 2, 2, 2)
 
@@ -163,7 +163,7 @@ func (m ContainersListModel) View() tea.View {
  * Initializer function
  */
 
-func ContainersList(containers []apptypes.ContainerListItem, width int, height int) tea.Model {
+func New(containers []apptypes.ContainerListItem, width int, height int) tea.Model {
 	var items []list.Item
 
 	for _, container := range containers {
@@ -178,7 +178,7 @@ func ContainersList(containers []apptypes.ContainerListItem, width int, height i
 	servicesList.Paginator.ActiveDot = " ● "
 	servicesList.Paginator.InactiveDot = " ○ "
 
-	return ContainersListModel{
+	return Model{
 		list:        servicesList,
 		componentId: 1,
 	}
