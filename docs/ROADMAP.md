@@ -148,13 +148,12 @@ file, keybinding overrides) that the config struct was shaped to absorb.
   (~150 columns) it fits. The logs-overlay context, which advertises more keys,
   wraps wider still. That makes it the one open bug a first-time visitor is
   guaranteed to see, since it is visible in `demo/demo.gif`. Tracked in
-  `TODO.md`; the bar needs to shed hints in priority order the way the compose
-  file name already does. The details table headers and the panels' action
-  button row had the same problem. The button row was fixed by shedding whole
-  buttons in a declared order — that fix is the worked example for this one,
-  though the row itself has since been removed (see *The panel footer* in
-  `docs/DESIGN.md`), so it is prior art in the git history rather than code to
-  read.
+  `TODO.md`. **Fixed**, along with the two other overflows the same terminals
+  showed — the group table's colliding column headers and its cells running
+  flush into each other. The bar sheds whole hints in `keys.Priority` order and
+  the table drops whole columns in `dropOrder`; see *Narrow terminals: shed
+  whole things* in `docs/DESIGN.md`, which generalises the rule the details
+  panels' action row established before it was removed.
 - **Panel keypresses through the e2e rig — fixed.** `TODO.md` has the details:
   panel keys need `Text` set on the `tea.KeyPressMsg` because `key.Matches`
   compares `msg.String()` against the binding strings. `TestRigGroupListEditKey`

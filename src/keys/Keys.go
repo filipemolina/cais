@@ -406,6 +406,67 @@ func Globals() []key.Binding {
 	return []key.Binding{Global.Page, Global.Help, Global.Quit}
 }
 
+// The footer bar's degradation order, lowest shed first. It is deliberately
+// not the order Active lists keys in: the order to read in is not the order to
+// give up. A bar too narrow for its hints drops whole hints in this order
+// rather than wrapping to a second line and eating a row of the body.
+const (
+	// Elsewhere on screen already. The page digits are printed by the nav bar
+	// across the top of every page, so the footer's `1-3 page` is the one hint
+	// that costs a reader nothing to lose.
+	priorityDuplicated = iota
+
+	// Discoverable by trying. Tab and the arrow keys are what a user presses
+	// first in any full-screen terminal program, and both are in the help
+	// overlay; they are hints in the sense of a reminder, not an instruction.
+	priorityInstinctive
+
+	// The page's own verbs - start, new, edit, delete, the actions someone
+	// opened the app to reach. Ties here break rightmost-first, so a page
+	// sheds its last-listed verb before its first, and Active's reading order
+	// doubles as its keep order.
+	priorityVerb
+
+	// The ways out of wherever the user is: esc from a panel, esc from an
+	// applied filter, enter/esc while one is being typed. A mode with no
+	// visible exit is worse than a mode with no visible verbs, so these
+	// outlast the verbs.
+	priorityExit
+
+	// Never shed. Quit is the escape hatch, and help is where everything shed
+	// above went - dropping either is what would make shedding unsafe rather
+	// than merely lossy.
+	priorityAlways
+)
+
+// Priority is where a binding stands in the footer's degradation order. The
+// footer is the only caller; it lives here because the ranking is a fact about
+// the keys, like Active is, and putting it beside them is what stops the bar
+// from forming its own opinion about which keys matter.
+func Priority(binding key.Binding) int {
+	for _, ranked := range []struct {
+		binding  key.Binding
+		priority int
+	}{
+		{Global.Page, priorityDuplicated},
+		{Global.NextPanel, priorityInstinctive},
+		{List.Navigate, priorityInstinctive},
+		{Files.Scroll, priorityInstinctive},
+		{Global.Back, priorityExit},
+		{List.ClearFilter, priorityExit},
+		{List.ApplyFilter, priorityExit},
+		{List.CancelFilter, priorityExit},
+		{Global.Help, priorityAlways},
+		{Global.Quit, priorityAlways},
+	} {
+		if sameBinding(ranked.binding, binding) {
+			return ranked.priority
+		}
+	}
+
+	return priorityVerb
+}
+
 // Scope is one group of related keys in the help overlay.
 type Scope struct {
 	Title   string
