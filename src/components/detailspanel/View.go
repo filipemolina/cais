@@ -12,7 +12,6 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/docker/go-units"
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
-	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
@@ -25,28 +24,6 @@ func (m Model) containerForService(serviceName string) (apptypes.DockerContainer
 		}
 	}
 	return apptypes.DockerContainer{}, false
-}
-
-// actionContext is what the panel knows about the screen, in the shape
-// keys.Active reads. The panel is the Services page's right pane, so the page
-// and the component id are constants here; the only question is whether this
-// pane holds focus, and when it does not, focus is on the list beside it. That
-// is deliberately not special-cased: reporting the list as focused makes
-// keys.Active return the list's keys, none of which are the action bindings, so
-// the buttons dim by the same rule that empties them out of the footer.
-func (m Model) actionContext() keys.Context {
-	focused := constants.COMPONENT_BODY_LIST
-	if m.isFocused {
-		focused = constants.COMPONENT_BODY_DETAILS
-	}
-
-	return keys.Context{
-		Page:          "Services",
-		Focused:       focused,
-		Selected:      m.service != nil,
-		Editing:       m.editing,
-		PendingAction: m.pendingAction != nil,
-	}
 }
 
 func (m Model) View() tea.View {
@@ -82,14 +59,17 @@ func (m Model) View() tea.View {
 		parts = append(parts, tables)
 	}
 
+	// The footer is the pending-action spinner or nothing at all. The panel used
+	// to pin a row of action chips here when no action was running; the keys it
+	// advertised are on the footer bar, and a chip that cannot be clicked is a
+	// control that promises more than the panel can do - see "The panel footer"
+	// in docs/DESIGN.md.
 	var footer string
 	if m.pendingAction != nil {
 		footer = m.renderPendingAction(bodyWidth, bg)
-	} else {
-		footer = chrome.ActionButtons(bodyWidth, bg, m.actionContext())
 	}
 
-	body := chrome.PanelBodyWithActions(bodyWidth, bodyAvail, bg,
+	body := chrome.PanelBodyWithFooter(bodyWidth, bodyAvail, bg,
 		lipgloss.JoinVertical(lipgloss.Left, parts...), footer)
 
 	screen := chrome.PanelFrame("Details", m.titlePill(), m.isFocused, m.panelWidth, m.panelHeight, body)

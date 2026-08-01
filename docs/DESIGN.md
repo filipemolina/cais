@@ -507,8 +507,8 @@ Home is the launchpad. Its body is a two-pane layout:
   onboarding card; when groups exist but none is selected it prompts the user
   to pick one; when a group is selected it shows a header card with a status
   pill, a running/stopped/services summary, a member-services table (status
-  dot, NAME, IMAGE, STATE, HEALTH, UPTIME, PORTS), and a pinned action row
-  (see *The action row* below).
+  dot, NAME, IMAGE, STATE, HEALTH, UPTIME, PORTS), and a pinned footer
+  (see *The panel footer* below).
 
 The large ASCII logo is no longer rendered here; it remains reserved for a
 future About modal.
@@ -556,9 +556,10 @@ body is a two-pane layout:
     (`renderPropTable`) differing only in heading and rows; the group panel
     keeps one full-width table because it *has* one table.
     
-    The action row is pinned at the bottom, matching the group panel exactly
-    (see *The action row* below). While a docker action is pending, the row is
-    replaced by a spinner with the action description.
+    While a docker action is pending, a spinner with the action description is
+    pinned at the bottom, matching the group panel exactly (see *The panel
+    footer* below). Idle, the panel has no footer and its tables run to the
+    bottom of the body.
 
   The service details panel deliberately omits the PUID/PGID row when neither
   is set (since they are optional env-var-derived fields specific to certain
@@ -568,71 +569,61 @@ body is a two-pane layout:
   is persisted, depends_on reveals startup ordering, and the resource limits
   help diagnose OOM kills — all common concerns when running a home server.
 
-### The action row
+### The panel footer
 
-Both details panels pin the same action row to the bottom of their body:
-`s Start`, `t Stop`, `r Restart`, `p Pull`, `x Remove`, `l Logs`, rendered by
-`chrome.ActionButtons` in `src/components/chrome/PanelFrame.go`. Four rules govern it.
+Both details panels reserve their body's last line for a footer, laid out by
+`chrome.PanelBodyWithFooter` in `src/components/chrome/PanelFrame.go`. Two
+things go there: the pending-action spinner, in either panel, and the group
+panel's `Press s to start.` hint when a selected group has nothing running.
+Idle, a panel with neither has no footer at all.
 
 **It is pinned by one layout, not by each panel's arithmetic.**
-`panelBodyWithActions` takes a panel's content and its footer and pads between
-them, so the row lands on the body's last line whatever the content above it
+`PanelBodyWithFooter` takes a panel's content and its footer and pads between
+them, so the footer lands on the body's last line whatever the content above it
 did. The group panel used to pin it by stretching its member table to fill the
-gap and the service panel not at all — the row simply followed its last stats
-row, which on a tall terminal left it floating mid-panel above a dozen blank
-rows. The content is clipped *before* the footer is attached, so a panel whose
-content outgrows its box loses its last rows rather than its actions: joining
-first and clipping the result takes the bottom off, which is the one row that
-has to survive. `TestDetailsPanelsPinActionRowToBottom` pins both panels to the
+gap and the service panel not at all — it simply followed the last stats row,
+which on a tall terminal left it floating mid-panel above a dozen blank rows.
+The content is clipped *before* the footer is attached, so a panel whose content
+outgrows its box loses its last rows rather than its footer: joining first and
+clipping the result takes the bottom off, which is the one row that has to
+survive. A running action with no visible spinner is the failure that matters
+here, and `TestDetailsPanelsPinPendingActionToBottom` pins both panels to the
 same line.
 
-**It says what `keys.Active` says.** The row takes a `keys.Context` — the same
-screen state the footer bar reports — and asks `keys.Live` for each binding. A
-button is drawn in the accent exactly when the footer is still offering that
-key, and dimmed otherwise. This is the same rule as *Where keybindings live*
-above, applied to a second surface: the row is not allowed to have an opinion
-about what is pressable, because a surface with its own opinion is a surface
-that can drift from the handlers. It previously had one — it painted every
-button identically forever, which promised the action keys worked when the
-panel was unfocused and they did not.
+An empty footer costs no rows. `lipgloss.Height("")` is 1, so passing `""`
+would otherwise reserve a blank line at the foot of every idle panel.
 
-Neither panel special-cases the unfocused state. It reports the *list* as the
-focused component, which is true, and `keys.Active` returns the list's keys,
-none of which are action bindings. The row dims by the same rule that empties
-those keys out of the footer, with no second code path to keep in sync.
+**There is no action button row.** Both panels used to pin one above the
+footer — `s Start`, `t Stop`, `r Restart`, `p Pull`, `x Remove`, `l Logs`, each
+a filled chip on `BackgroundRecessed`, the destructive one inked in
+`StatusError`, the row dimming as a whole whenever `keys.Active` stopped
+offering its keys. It was removed rather than kept for a reason worth recording:
+a padded, filled chip is the visual vocabulary of a *clickable* control, and
+this app does not handle mouse input. The row's own degradation order argued in
+those terms — remove was shed first because "a cramped click target is the last
+thing a destructive action should have" — which is a rationale for a feature
+that does not exist yet. Mouse support is deferred to a later version, and the
+affordance went with it.
 
-Unavailable buttons are **dimmed, not hidden**, so the row keeps its shape as
-Tab moves focus rather than reflowing the panel body underneath it. A dim
-control is also the right affordance for the planned mouse support, where a
-click on an unfocused panel's button should focus the panel and then act.
+Nothing became unreachable. Every key the row showed is on the footer bar,
+offered by the same `keys.Active` decision the row was consulting through
+`keys.Live` (now gone, as the row was its only caller). What is lost is the
+panel's own *local* statement of which verbs act on it — the footer bar is
+page-scoped. If that turns out to matter before mouse support lands, the answer
+is a plain key-hint line in the footer slot, not the chips back: the hint line
+reads as text, which is what a keyboard-only affordance should look like.
 
-**It is a chip, not a box.** Each button is a filled surface on
-`BackgroundRecessed` with `Padding(0, 1)` and no border — the shape the status
-pills and the title chip already use, on the tier the empty-state cards use for
-"inset into this panel". It was previously a rounded accent-outlined box three
-rows tall, the only element in the app built that way. The chip carries its own
-surface rather than its parent's tier, which is the reverse of what the boxed
-version did: focus is legible in the ink now, so the surface is free to stay
-put, and the recess deepens on its own when focus lifts the panel from tier 3
-to tier 4. Remove is inked in `StatusError` in both of its live states, so the
-destructive verb is not presented as the peer of `Restart`.
-
-Because a chip is one row rather than three, the row is now the same height as
-the pending-action spinner that replaces it — so starting an action no longer
-shifts the panel body by two rows.
-
-**It sheds rather than wraps.** lipgloss wraps on the cell, not on the control,
-so a row wider than its panel broke a button across lines; at the narrowest
-widths a six-button row wrapped to thirty-one. The panels clip their body with
-`MaxHeight`, so this never spilled the frame — it was absorbed by eating the
-member table instead, which is why it read as "the buttons look mangled" rather
-than "the layout is broken". The row now drops whole buttons until it fits, in
-a declared order that is deliberately *not* the display order: remove goes
-first (a cramped click target is the last thing a destructive action should
-have), then pull (the rarest), then logs; the three lifecycle verbs are what a
-very narrow panel keeps. Everything shed is still on the footer and still
-pressable, which is what makes shedding safe — the row is a convenience and a
-future mouse surface, never the only way to reach an action.
+The shedding logic went with the row and is worth remembering as prior art,
+because the footer bar still needs the same fix. lipgloss wraps on the cell,
+not on the control, so a row wider than its panel broke a button across lines;
+at the narrowest widths the six-button row wrapped to thirty-one. The panels
+clip their body with `MaxHeight`, so it never spilled the frame — it was
+absorbed by eating the member table instead, which is why it read as "the
+buttons look mangled" rather than "the layout is broken". The fix was to drop
+whole controls until the row fit, in a declared priority order rather than the
+display order. See the narrow-terminal entry in `TODO.md`;
+`TestNarrowPanelsStayInsideTheirBox` is the standing guard that whatever a
+panel renders stays inside the box AppModel gave it.
 
 ### Color lives on a Theme
 
@@ -813,7 +804,7 @@ always `New`; the exported type is always `Model`, so callers read as
 `serviceslist.New(...)` and assert on `serviceslist.Model`.
 
 `src/components/chrome` is the one shared package: rendering and layout
-that more than one model needs (`PanelFrame`, action buttons, key-hint
+that more than one model needs (`PanelFrame`, panel body layout, key-hint
 rendering, the spinner, `HealthColor`/`Truncate`). A helper earns its way
 into `chrome` by having a second caller, not by convenience — a helper used
 by exactly one model stays unexported inside that model's package. This is

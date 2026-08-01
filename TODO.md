@@ -231,11 +231,15 @@ called out as such in the roadmap: **write safety** (new, see below) and the
   `docs/plans/launch-and-outreach.md` lists it as a launch gate for that reason.
 
   The third overflow named here — the action buttons wrapping into each other —
-  is fixed. The row sheds whole buttons in a declared priority order (remove
+  was fixed by shedding whole buttons in a declared priority order (remove
   first, then pull, then logs; the three lifecycle verbs are what a very narrow
-  panel keeps) rather than letting lipgloss wrap on the cell. Worth reading
-  before doing the footer: it is the same shape of fix the footer needs, and
-  `chrome.ActionButtons` in `src/components/chrome/PanelFrame.go` is the worked example.
+  panel keeps) rather than letting lipgloss wrap on the cell. That is the same
+  shape of fix the footer bar needs, so it is worth reading before doing this
+  one — but the action row has since been removed along with its shedding logic
+  (mouse support is deferred, and an unclickable chip promised more than the app
+  does; see *The panel footer* in `docs/DESIGN.md`). The worked example now
+  lives in `git show 63ea952^:src/components/chrome/PanelFrame.go`, not in the
+  tree.
   Note that the wrap never spilled the frame — the panels clip their body with
   `MaxHeight`, so a six-button row wrapping to thirty-one rows was absorbed by
   eating the member table instead. The footer has no such clip, which is why it
@@ -296,6 +300,21 @@ called out as such in the roadmap: **write safety** (new, see below) and the
 
 - [ ] **[S] Logs overlay improvements** — search/filter (`/`), line-wrap
   toggle, toggle timestamps, jump to top (`g`) / bottom (`G`).
+
+- [ ] **[M] Mouse interaction** — deferred to a later version. Bubbletea reports
+  clicks (`tea.MouseClickMsg`) once mouse mode is enabled; the work is deciding
+  which surfaces answer them (list rows, panel focus, the modal buttons) and
+  keeping every one of them reachable from the keyboard, which is still the
+  primary interface.
+
+  This is why the details panels' action button row was removed: a padded,
+  filled chip reads as a clickable control, and clicking it did nothing. See
+  *The panel footer* in `docs/DESIGN.md` for what the row was and what it cost
+  to keep. When mouse support lands, restoring it is a reasonable first
+  consumer — `git show 63ea952^` has the whole thing, including the shed-in-
+  priority-order layout and its tests. Until then, if the panels need a local
+  statement of their own verbs, it should be a plain key-hint line rather than
+  chips: a keyboard-only affordance should look like text.
 
 - [x] **[S] Error banner lifecycle** — Esc now dismisses the banner. It is the
   next rung in esc's existing priority ladder (after a modal closes, a filter
