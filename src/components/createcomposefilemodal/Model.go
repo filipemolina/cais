@@ -6,6 +6,7 @@ import (
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
+	"github.com/filipemolina/stack-stitcher/src/components/servicefieldsstep"
 )
 
 type createStep int
@@ -22,8 +23,7 @@ type Model struct {
 	// is created where it will then be found. Empty is the current directory.
 	dir         string
 	filename    textinput.Model
-	serviceName textinput.Model
-	image       textinput.Model
+	serviceStep servicefieldsstep.Model
 	errMsg      string
 }
 
@@ -54,20 +54,9 @@ func New(dir string) tea.Model {
 	filename.CursorEnd()
 	filename.Focus()
 
-	serviceName := textinput.New()
-	serviceName.Placeholder = "e.g. web"
-	serviceName.SetWidth(30)
-	serviceName.Focus()
-
-	image := textinput.New()
-	image.Placeholder = "e.g. nginx:alpine"
-	image.SetWidth(30)
-
 	return Model{
-		step:        stepFilename,
-		dir:         dir,
-		filename:    filename,
-		serviceName: serviceName,
-		image:       image,
+		step:     stepFilename,
+		dir:      dir,
+		filename: filename,
 	}
 }

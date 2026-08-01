@@ -80,12 +80,15 @@ func (r *rig) Send(msg tea.Msg) {
 }
 
 // letterKey builds a KeyPressMsg for a printable character key, with both
-// Code and Text set. key.Matches (used by the panel handlers) compares
-// msg.String() against the binding strings, so a letter sent with only
-// Code does not match - textinput is happy with Code alone, but the panels
-// are not. Use this helper for any rig key that targets a panel binding
-// (s/t/r/p/x/l/e/n/d); keep keyPress for special keys (esc, enter, tab,
-// backspace) where Code is enough for textinput.
+// Code and Text set. Both matter for their own reason: key.Matches (used by
+// the panel handlers) compares msg.String() against the binding strings, so
+// a letter sent with only Code does not match a panel binding; textinput
+// (charm.land/bubbles/v2/textinput.Model.Update) inserts msg.Text, not
+// msg.Code, so a letter with only Code types nothing at all. Use this
+// helper for any rig key meant to reach a panel binding (s/t/r/p/x/l/e/n/d)
+// or type into a field; keep keyPress for special keys (esc, enter, tab,
+// backspace), where Code alone is what both textinput and key.Matches key
+// off of.
 func letterKey(r rune) tea.KeyPressMsg {
 	return tea.KeyPressMsg{Code: r, Text: string(r)}
 }

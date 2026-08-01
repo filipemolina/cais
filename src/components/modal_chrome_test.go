@@ -97,10 +97,15 @@ func TestCreateComposeFileModalHintsEveryStep(t *testing.T) {
 		}
 	}
 
-	// y opens the service fields, which are two inputs plus a create.
+	// y opens the service fields, which are two inputs plus a submit. The
+	// hint reads "confirm" rather than "create file" because this step is
+	// servicefieldsstep.Model, shared verbatim with addservicemodal's
+	// (docs/plans/image-search.md D2) - the shared component's contract is
+	// exactly two parameters (title, onSubmit), so it cannot phrase the hint
+	// per caller without a third.
 	m, _ = m.Update(tea.KeyPressMsg{Code: 'y', Text: "y"})
 	frame = ansi.Strip(m.View().Content)
-	for _, want := range []string{"next field", "create file", "esc"} {
+	for _, want := range []string{"next field", "confirm", "esc"} {
 		if !strings.Contains(frame, want) {
 			t.Errorf("service fields step does not advertise %q:\n%s", want, frame)
 		}
