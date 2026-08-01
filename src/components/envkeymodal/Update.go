@@ -1,6 +1,8 @@
 package envkeymodal
 
 import (
+	"fmt"
+
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
@@ -27,7 +29,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case key.Matches(msg, keys.Overlay.Submit):
 			if m.keyInput.Value() == "" {
-				m.SetError(nil)
+				m.SetError(fmt.Errorf("variable name is required"))
 				return m, nil
 			}
 
