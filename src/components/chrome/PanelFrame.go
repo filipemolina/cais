@@ -2,7 +2,6 @@ package chrome
 
 import (
 	"image/color"
-	"slices"
 	"strings"
 
 	"charm.land/bubbles/v2/key"
@@ -32,136 +31,6 @@ func DockerActionFor(msg tea.KeyPressMsg) (string, bool) {
 	return "", false
 }
 
-// ActionButton is one control in the row: the binding it stands for, and the
-// two things the row needs to know that the binding does not carry.
-type ActionButton struct {
-	Binding key.Binding
-	// drop is this button's place in the row's degradation order, lowest first.
-	// It is separate from the slice order because the order to shed in is not
-	// the order to read in: remove goes first because it is destructive and a
-	// cramped click target is the last thing a destructive action should have,
-	// then pull because it is the rarest, then logs; the three lifecycle verbs
-	// are what a two-inch-wide panel keeps.
-	drop int
-	// danger marks the destructive one. It is a field rather than a comparison
-	// against keys.Details.Remove at render time so that the row states its own
-	// policy in one table instead of hiding it in a conditional.
-	danger bool
-}
-
-// actionButtons are the bindings the row stands for, in the order it shows
-// them - the same order the footer lists them in, so the eye can move between
-// the two without re-sorting.
-//
-// The row is built from the bindings rather than from literal label/shortcut
-// pairs so that it cannot claim a key the handlers don't answer to; that is the
-// rule the footer and the help overlay already follow, and it is why logs is
-// here at all. The row used to be a hand-written five that omitted `l logs`
-// while the footer offered it, so the panel's own actions were advertised in
-// two places that listed different things.
-func Buttons() []ActionButton {
-	return []ActionButton{
-		{Binding: keys.Details.Start, drop: 5},
-		{Binding: keys.Details.Stop, drop: 4},
-		{Binding: keys.Details.Restart, drop: 3},
-		{Binding: keys.Details.Pull, drop: 1},
-		{Binding: keys.Details.Remove, drop: 0, danger: true},
-		{Binding: keys.Details.Logs, drop: 2},
-	}
-}
-
-// actionButtonGap is the column between two chips. The chips carry their own
-// fill, so the gap is what makes them read as separate controls.
-const actionButtonGap = 1
-
-// ActionButtons renders the action row shared by DetailsPanel and
-// GroupDetailsPanel, right-aligned within the panel body width it is given.
-// `bg` is the panel's background tier, which the row sits on and the chips are
-// recessed into.
-//
-// `ctx` is the same screen state the footer reports, and it decides which
-// buttons are live. Before it was threaded through, the row painted every
-// button identically whatever the screen was doing, which read as a promise
-// that s/t/r/p/x/l work at all times - they only work while the details panel
-// holds focus. Asking keys.Live is what makes the row and the footer one
-// statement rather than two that happen to agree.
-//
-// A row too wide for the panel sheds buttons rather than wrapping. lipgloss
-// wraps on the cell, not on the control, so an overflowing row used to break a
-// chip across two lines and push the panel's own content out of its box; every
-// shed key is still on the footer and still pressable, which a mangled row is
-// not. See the narrow-terminal entry in TODO.md.
-func ActionButtons(width int, bg color.Color, ctx keys.Context) string {
-	shown := Buttons()
-
-	row := joinActionButtons(shown, bg, ctx)
-	for len(shown) > 0 && lipgloss.Width(row) > width {
-		shown = slices.DeleteFunc(shown, func(b ActionButton) bool {
-			return b.drop == lowestDrop(shown)
-		})
-		row = joinActionButtons(shown, bg, ctx)
-	}
-
-	// The chips are opaque and the gaps are painted, so there is nothing left
-	// unstyled inside the row; the seal is kept for the alignment padding the
-	// Width() below adds around it.
-	row = appstyles.FillBackground(bg, row)
-
-	return lipgloss.NewStyle().
-		Width(max(0, width)).
-		AlignHorizontal(lipgloss.Right).
-		Background(bg).
-		Render(row)
-}
-
-// joinActionButtons renders buttons into a single row on bg, each chip's
-// enabled state resolved against ctx.
-func joinActionButtons(buttons []ActionButton, bg color.Color, ctx keys.Context) string {
-	if len(buttons) == 0 {
-		return ""
-	}
-
-	gap := lipgloss.NewStyle().Background(bg).Render(strings.Repeat(" ", actionButtonGap))
-
-	parts := make([]string, 0, len(buttons)*2-1)
-	for i, ab := range buttons {
-		if i > 0 {
-			parts = append(parts, gap)
-		}
-
-		help := ab.Binding.Help()
-		parts = append(parts, button(buttonSpec{
-			Text:     ButtonLabel(help.Desc),
-			Shortcut: help.Key,
-			Enabled:  keys.Live(ctx, ab.Binding),
-			Danger:   ab.danger,
-		}).View().Content)
-	}
-
-	return lipgloss.JoinHorizontal(lipgloss.Left, parts...)
-}
-
-// lowestDrop is the drop rank of the next button to shed.
-func lowestDrop(buttons []ActionButton) int {
-	lowest := buttons[0].drop
-	for _, ab := range buttons[1:] {
-		lowest = min(lowest, ab.drop)
-	}
-
-	return lowest
-}
-
-// ButtonLabel is a binding's help description as a button label: the footer
-// prints "start" mid-sentence, a button is captioned "Start". Capitalizing the
-// footer's word is what lets both come from the one binding.
-func ButtonLabel(desc string) string {
-	if desc == "" {
-		return desc
-	}
-
-	return strings.ToUpper(desc[:1]) + desc[1:]
-}
-
 // PanelRule is the thin horizontal line both details panels separate their
 // sections with. One helper rather than five copies of the same three-line
 // style, so the panels cannot drift to different rules.
@@ -172,18 +41,28 @@ func PanelRule(width int) string {
 		Render(strings.Repeat("─", max(width, 0)))
 }
 
-// PanelBodyWithActions lays out a details panel's body: `content` at the top,
+// PanelBodyWithFooter lays out a details panel's body: `content` at the top,
 // `footer` on the body's last rows, and blank rows between them. Both details
-// panels build their body through here, which is what makes the action row land
-// on the same line of both rather than wherever each panel's content happens to
-// end - see "The action row" in docs/DESIGN.md.
+// panels build their body through here, which is what makes the pending-action
+// spinner land on the same line of both rather than wherever each panel's
+// content happens to end - see "The panel footer" in docs/DESIGN.md.
 //
 // The content is clipped before the footer is attached, so a panel whose
-// content outgrows its box loses its last rows rather than its actions. Doing
+// content outgrows its box loses its last rows rather than its footer. Doing
 // it the other way round - joining first and clipping the result - takes the
 // bottom off, which is exactly the row that has to survive.
-func PanelBodyWithActions(width, avail int, bg color.Color, content, footer string) string {
-	contentAvail := max(0, avail-lipgloss.Height(footer))
+//
+// An empty footer costs no rows. lipgloss.Height("") is 1, so passing "" would
+// otherwise reserve a blank line at the foot of every panel that has nothing
+// to pin there - which is most frames, now that the panels only use the footer
+// for the spinner and the group's start hint.
+func PanelBodyWithFooter(width, avail int, bg color.Color, content, footer string) string {
+	footerHeight := 0
+	if footer != "" {
+		footerHeight = lipgloss.Height(footer)
+	}
+
+	contentAvail := max(0, avail-footerHeight)
 
 	parts := make([]string, 0, 3)
 	if contentAvail > 0 {
@@ -198,7 +77,9 @@ func PanelBodyWithActions(width, avail int, bg color.Color, content, footer stri
 				Render(""))
 		}
 	}
-	parts = append(parts, footer)
+	if footer != "" {
+		parts = append(parts, footer)
+	}
 
 	body := lipgloss.JoinVertical(lipgloss.Left, parts...)
 

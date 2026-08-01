@@ -400,15 +400,6 @@ func Active(ctx Context) []key.Binding {
 	return []key.Binding{Global.NextPanel}
 }
 
-// Live reports whether a binding is pressable in ctx. It is Active's answer for
-// a single binding, for callers that render one control per key rather than a
-// list of them - the details panels' action buttons. Going through Active is
-// the point: a button is dim exactly when the footer has stopped offering the
-// key, because both read the same decision.
-func Live(ctx Context, binding key.Binding) bool {
-	return containsBinding(Active(ctx), binding)
-}
-
 // Globals are the always-available keys the footer pins to its right-hand side,
 // away from the context-dependent ones.
 func Globals() []key.Binding {
