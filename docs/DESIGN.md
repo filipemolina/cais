@@ -517,12 +517,18 @@ Home is the launchpad. Its body is a two-pane layout:
 - **Groups list** — the selectable list of derived groups (Compose profiles)
   with a status header. The empty state is rendered as normal panel text, not
   an inverted box.
-- **Group Details** — the right panel. When no groups exist it shows an
-  onboarding card; when groups exist but none is selected it prompts the user
-  to pick one; when a group is selected it shows a header card with a status
-  pill, a running/stopped/services summary, a member-services table (status
-  dot, NAME, IMAGE, STATE, HEALTH, UPTIME, PORTS), and a pinned footer
-  (see *The panel footer* below).
+- **Group Details** — the right panel. When no groups exist *and the compose
+  file has services*, it shows a service overview: a count header and the
+  same member-services table a selected group uses, over every loaded
+  service, so a user with an ungrouped file can see what they have before
+  creating the first group rather than only an explanation of what a group
+  is (`docs/plans/service-aware-empty-state.md`). When the compose file has
+  no services at all, it falls back to the original onboarding card. When
+  groups exist but none is selected it prompts the user to pick one; when a
+  group is selected it shows a header card with a status pill, a
+  running/stopped/services summary, the member-services table (status dot,
+  NAME, IMAGE, STATE, HEALTH, UPTIME, PORTS), and a pinned footer (see *The
+  panel footer* below).
 
 The large ASCII logo is no longer rendered here; it remains reserved for a
 future About modal.
