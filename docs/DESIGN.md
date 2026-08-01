@@ -390,7 +390,21 @@ through `utils.ApplyServiceFragment`, `ctrl+o` opens the same fragment in
 confirming first if the buffer has changed. The editor owns the keyboard
 while it is open, so the docker action keys (`s`, `t`, `r`, `p`, `x`, `l`)
 are plain text then. `E` still opens the whole compose file in `$EDITOR`,
-which is the only way to add a service or touch top-level keys.
+which is the only way to touch top-level keys (`name:`, `volumes:`, …).
+
+**Adding a service stays true to the same argument, one step earlier.** `n`
+on the Services page collects only what a service cannot exist without — a
+name and an image, through `servicefieldsstep`, shared verbatim with the
+bootstrap flow's optional first service so a later feature (Docker Hub
+search, a tag picker — `docs/plans/image-search.md` Phases 2–3) reaches both
+at once — then writes a minimal two-line fragment via
+`utils.AddServiceFragment` and opens straight into the inline editor above.
+No wizard with a field for ports, volumes, environment: two fields, then the
+same YAML a hand-written service would have. `AddServiceFragment` mirrors
+`ApplyServiceFragment` (same fragment shape, same validation, same atomic
+write) but refuses a name that already exists rather than one that is
+missing, and inserts at the end of the `services:` mapping — the position a
+reader expects a new entry in.
 
 Nothing is written unless the fragment parses, keeps its name, and the whole
 resulting document still loads as compose — validated by writing a candidate
