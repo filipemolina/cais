@@ -560,8 +560,8 @@ func (m Model) renderEditorHints(width int) string {
 		Render(hints)
 }
 
-// renderPendingAction renders a spinner with the action description in place
-// of the action buttons while a docker action is in progress.
+// renderPendingAction renders a spinner with the action description in the
+// panel's footer while a docker action is in progress.
 func (m Model) renderPendingAction(width int, bg color.Color) string {
 	desc := chrome.ActionDescription(m.pendingAction.Action, m.pendingAction.Target, m.pendingAction.IsGroup)
 
