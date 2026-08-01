@@ -33,11 +33,13 @@ the `ports` entry of the `cell` map). Captured from a real homelab on
 | qbittorrent | `0.0.0.0:6881->6881/tcp, [::]:6881->6881/tcp, 0.0.0.0:8080->8080/tcp, 0.0.0.0:6881->6881/udp, [::]:8080->8080/tcp, [::]:6881->6881/udp` |
 
 `computeCols` gives PORTS 16 columns at its base width, and cells truncate to
-one less than the column, so what the user actually sees is:
+one less than the column, so what the user actually sees — measured through
+`runewidth.Truncate(s, 15, "…")`, which is the call the cell makes — is:
 
 ```
-0.0.0.0:4533->…
-0.0.0.0:6881->…
+0.0.0.0:4533->…      (navidrome)
+0.0.0.0:6881->…      (qbittorrent)
+0.0.0.0:9696->…      (prowlarr)
 ```
 
 Every row starts with the same nine characters. The column is 15 columns of
@@ -48,12 +50,12 @@ and IPv6 bindings separately and counts protocols separately.
 
 **IMAGE.** The cell is the image reference, also untouched, also 16 columns:
 
-| Image in the file | What the cell shows |
+| Image in the file | What the cell shows (measured, at 15) |
 | --- | --- |
-| `lscr.io/linuxserver/kavita:latest` | `lscr.io/linuxse…` |
-| `lscr.io/linuxserver/radarr:latest` | `lscr.io/linuxse…` |
-| `ghcr.io/hotio/sonarr:latest` | `ghcr.io/hotio/s…` |
-| `ghcr.io/advplyr/audiobookshelf:latest` | `ghcr.io/advplyr…` |
+| `lscr.io/linuxserver/kavita:latest` | `lscr.io/linuxs…` |
+| `lscr.io/linuxserver/radarr:latest` | `lscr.io/linuxs…` |
+| `ghcr.io/hotio/sonarr:latest` | `ghcr.io/hotio/…` |
+| `ghcr.io/advplyr/audiobookshelf:latest` | `ghcr.io/advply…` |
 
 Three of those four are the registry and nothing else. Two are byte-identical.
 The one piece of the reference a reader wants — *which application is this* —
