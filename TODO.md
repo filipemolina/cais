@@ -34,17 +34,19 @@ called out as such in the roadmap: **write safety** (new, see below) and the
   error and leaves the file untouched. **Remaining:** the deferred draft
   mechanism (resume a rejected edit from `$XDG_CACHE_HOME/stack-stitcher/drafts/`).
 
-- [x] **[P] Add a new service** (`docs/plans/image-search.md` Phase 1) — `n`
+- [x] **[P] Add a new service** (`docs/plans/image-search.md` Phase 1 + 2A) — `n`
   on the Services page (same binding as "new group" on the Groups page, gate
-  widened rather than a second key) collects a name and image through
-  `servicefieldsstep`, shared with the bootstrap flow's optional first
-  service, then writes a minimal two-line fragment via
-  `utils.AddServiceFragment` and opens straight into the inline editor `e`
-  already had — two fields, then the same YAML a hand-written service would
-  have, per `docs/DESIGN.md` §Editing services' argument against a form. A
-  colliding name is refused client-side (`cmds.OpenErrorModal`) before the
-  write ever runs. **Remaining:** Phases 2–3 (Docker Hub search, a tag
-  picker) — the image field stays free text until then.
+  widened rather than a second key) opens a two-stage modal: a live,
+  debounced Docker Hub search (official images marked, star counts shown,
+  the typed text as a free-text escape hatch when nothing is highlighted),
+  then a confirm stage pre-filling a service name derived from the image
+  and flagging a collision on render, before writing a minimal two-line
+  fragment via `utils.AddServiceFragment` and opening straight into the
+  inline editor `e` already had — two fields, then the same YAML a
+  hand-written service would have, per `docs/DESIGN.md` §Editing services'
+  argument against a form. A colliding name is refused client-side before
+  the write ever runs. **Remaining:** Phase 2B (a silent best-tag upgrade
+  on the confirm stage) and Phase 3 (a tag picker).
 
 - [x] **[S] Service-aware empty state**
   (`docs/plans/service-aware-empty-state.md`) — when a compose file has
