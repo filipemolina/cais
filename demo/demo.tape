@@ -15,9 +15,17 @@
 #     -lavfi "$FILT[x];[x][1:v]paletteuse=dither=none" \
 #     -fps_mode vfr /tmp/demo.gif && mv /tmp/demo.gif demo/demo.gif
 #
-# Recording larger and scaling down beats recording at 900px directly: the
-# keybinding bar wraps below roughly 130 columns (a known open item), and at
-# 900px of terminal it wraps in every frame.
+# Recording larger and scaling down beats recording at 900px directly: at 900px
+# of terminal the text is what suffers, and this is the file a visitor judges
+# the app by.
+#
+# 1200px is ~117 columns, which is short of the ~135 the busiest context (a
+# focused details panel, ten hints) needs for a complete footer, so the bar
+# sheds `1-3 page` and `tab next` in those frames. That is the bar working as
+# designed rather than the wrap this tape used to record - see "Narrow
+# terminals: shed whole things" in docs/DESIGN.md. Recording at 1440 would show
+# the full bar, at the cost of scaling 1440 -> 900 instead of 1200 -> 900 and
+# the legibility that buys. Legibility won.
 #
 # This starts real containers from demo/fixtures/compose.yaml, so Docker has to
 # be running. The tape stops them again before it quits; anything it misses is
