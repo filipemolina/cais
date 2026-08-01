@@ -315,12 +315,15 @@ up in full in `docs/plans/`; `docs/ROADMAP.md` has the order and the reasons.
   the group table now shares. `demo/screenshot-groups.png` and the other five
   demo screenshots are re-recorded.
 
-- [ ] **[S] Docker preflight** (`docs/plans/docker-preflight.md`) — five states
-  (no binary, no compose plugin, daemon down, socket permissions, a
+- [x] **[S] Docker preflight** (`docs/plans/docker-preflight.md`) — done. Five
+  states (no binary, no compose plugin, daemon down, socket permissions, a
   `DOCKER_HOST` pointing elsewhere), told apart by which probe failed rather
-  than by parsing error text, each with the exact command that fixes it on this
-  distro. **Decided: the app never installs, starts or configures anything** —
-  the reasoning is in the plan so it does not get re-argued.
+  than by parsing error text (`utils.DockerPreflight`/`classify`), each with
+  the exact command that fixes it on this distro (`utils.RemedyFor`). The
+  probe runs at startup and re-runs on every docker error, so a diagnosable
+  failure replaces the raw `exec.ExitError` instead of leaving it as the last
+  word. **The app never installs, starts or configures anything** — the
+  reasoning is in the plan so it does not get re-argued.
 
 - [ ] **[S] Service URLs** (`docs/plans/service-urls.md`) — a `Web` row in the
   service details panel carrying a real OSC 8 hyperlink (verified zero-width to
