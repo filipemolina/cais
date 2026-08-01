@@ -186,6 +186,68 @@ func TestRigRenameGroup(t *testing.T) {
 	}
 }
 
+// TestRigAddService drives the whole Phase 1 flow end to end
+// (docs/plans/image-search.md): n on the Services page, typing a name and
+// image, Enter - the service lands in the compose file and the inline
+// editor opens on it, which is the race the plan flagged as worth checking
+// before Phase 1 (does the panel's selection land before the editor-ready
+// message does). AddServiceMsg's handler batches a reload, a focus change
+// and the inline-edit request together; Bubble Tea's Batch makes no
+// ordering promises between them, so this exercises the real timing rather
+// than asserting it in isolation.
+func TestRigAddService(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "compose.yaml"), []byte(panelKeyFixture), 0o644); err != nil {
+		t.Fatalf("writing fixture: %v", err)
+	}
+	t.Chdir(dir)
+
+	r := newRig(t)
+	if !r.WaitFor("web", 3*time.Second) {
+		t.Fatalf("groups never rendered. Output:\n%s", r.Output())
+	}
+
+	r.Send(keyPress('2')) // Services page
+	if !r.WaitFor("Services", 3*time.Second) {
+		t.Fatalf("did not switch to the Services page. Output:\n%s", r.Output())
+	}
+
+	r.Send(letterKey('n'))
+	if !r.WaitFor("New service", 3*time.Second) {
+		t.Fatalf("add-service modal did not open. Output:\n%s", r.Output())
+	}
+
+	for _, ch := range "proxy" {
+		r.Send(letterKey(ch))
+	}
+	r.Send(keyPress(tea.KeyTab))
+	for _, ch := range "traefik:v3" {
+		r.Send(letterKey(ch))
+	}
+	r.Send(keyPress(tea.KeyEnter))
+
+	if !r.WaitForNot("New service", 3*time.Second) {
+		t.Fatalf("add-service modal did not close. Output:\n%s", r.Output())
+	}
+
+	// The inline editor opens on the new service with its minimal fragment -
+	// this is the assertion that the selection/focus/edit-request race
+	// resolved correctly.
+	if !r.WaitFor("image: traefik:v3", 3*time.Second) {
+		t.Fatalf("inline editor did not open on the new service. Output:\n%s", r.Output())
+	}
+
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		contents, err := os.ReadFile(filepath.Join(dir, "compose.yaml"))
+		if err == nil && strings.Contains(string(contents), "proxy:") && strings.Contains(string(contents), "traefik:v3") {
+			return // success
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatalf("compose.yaml was not written with the new service to %s", dir)
+}
+
 // setupProjectDir drops a minimal compose project in a temp dir and moves
 // the test there. Extracted here so other rig panel-key tests can reuse it.
 func setupProjectDir(t *testing.T) {
