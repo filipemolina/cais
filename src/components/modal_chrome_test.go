@@ -21,8 +21,17 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/components/logsmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/servicechecklistmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/serviceslist"
+	"github.com/filipemolina/stack-stitcher/src/components/themepickermodal"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
+
+// specialKey builds a KeyPressMsg for a special key (esc, enter) where
+// Code alone resolves to the right string for key.Matches. Its own copy:
+// ThemePickerModal_test.go's version was shared for free while both lived
+// in the flat components package, and no longer is.
+func specialKey(code rune) tea.KeyPressMsg {
+	return tea.KeyPressMsg{Code: code}
+}
 
 // Every modal takes over the keyboard and hides the footer bar behind it, so
 // each one has to say what it is (a title) and how to get out (a hint line).
@@ -50,7 +59,7 @@ func TestEveryModalHasATitleAndAnExitHint(t *testing.T) {
 		{"edit group members", servicechecklistmodal.NewForEdit("core", []string{"web"}, []string{"web"}, 40), "Edit members", "esc"},
 		{"create compose file", createcomposefilemodal.New("."), "New compose file", "esc"},
 		{"compose file picker", composefilepickermodal.New(".", []string{"compose.yaml"}, "compose.yaml", 40), "Switch compose file", "esc"},
-		{"theme picker", ThemePickerModal(40), "Choose theme", "esc"},
+		{"theme picker", themepickermodal.New(40), "Choose theme", "esc"},
 		{"logs", logs, "logs: web", "esc"},
 	}
 
@@ -120,7 +129,7 @@ func TestListModalsFitAShortTerminal(t *testing.T) {
 		{"compose file picker", composefilepickermodal.New(".", many, many[0], termHeight)},
 		{"service checklist", servicechecklistmodal.New("core", many, termHeight)},
 		{"edit group members", servicechecklistmodal.NewForEdit("core", many, many[:2], termHeight)},
-		{"theme picker", ThemePickerModal(termHeight)},
+		{"theme picker", themepickermodal.New(termHeight)},
 	}
 
 	for _, tc := range cases {
