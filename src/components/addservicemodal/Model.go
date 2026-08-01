@@ -5,11 +5,15 @@
 package addservicemodal
 
 import (
+	"strings"
+
+	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
@@ -84,10 +88,77 @@ func New(fileName string, existingServiceNames []string) tea.Model {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
-	m.query, cmd = m.query.Update(msg)
-	return m, cmd
+	if keyMsg, ok := msg.(tea.KeyPressMsg); ok && m.step == stepSearch {
+		switch {
+		case keyMsg.Code == tea.KeyUp:
+			m.results.CursorUp()
+			return m, nil
+		case keyMsg.Code == tea.KeyDown:
+			m.results.CursorDown()
+			return m, nil
+		case key.Matches(keyMsg, keys.Overlay.Cancel):
+			return m, cmds.CloseModal(nil)
+		case key.Matches(keyMsg, keys.Overlay.Submit):
+			return m.advanceToConfirm()
+		}
+
+		// Every other key, including every letter list.DefaultKeyMap would
+		// otherwise claim, goes to the query input (D3 - stricter than
+		// healthcheckpickermodal's port field, because this input is never
+		// not focused).
+		var cmd tea.Cmd
+		m.query, cmd = m.query.Update(keyMsg)
+		m.generation++
+		gen := m.generation
+		m.results.SetItems(nil) // clear stale results immediately, don't wait for the debounce
+		m.searchErr = ""
+		if len(strings.TrimSpace(m.query.Value())) < 2 {
+			return m, cmd // too short to search - stay in the empty state, no timer armed
+		}
+		return m, tea.Batch(cmd, cmds.SearchDebounce(gen))
+	}
+
+	switch msg := msg.(type) {
+	case cmds.SearchDebounceMsg:
+		if msg.Generation != m.generation {
+			return m, nil // superseded by a later keystroke - do nothing
+		}
+		m.searching = true
+		return m, cmds.SearchImages(strings.TrimSpace(m.query.Value()), 20, m.generation)
+
+	case cmds.SearchImagesMsg:
+		if msg.Generation != m.generation {
+			return m, nil // a stale result from an earlier keystroke - discard (D3)
+		}
+		m.searching = false
+		if msg.Err != nil {
+			m.searchErr = "image search unavailable — type the full image reference and press enter"
+			return m, nil
+		}
+		items := make([]list.Item, len(msg.Results))
+		for i, r := range msg.Results {
+			items[i] = searchResultItem{result: r}
+		}
+		m.results.SetItems(items)
+		if len(items) == 0 {
+			m.searchErr = "no images matched"
+		}
+		return m, nil
+	}
+
+	// Non-key messages (cursor blink ticks, window size) still need to
+	// reach both sub-components.
+	var listCmd, inputCmd tea.Cmd
+	m.results, listCmd = m.results.Update(msg)
+	m.query, inputCmd = m.query.Update(msg)
+	return m, tea.Batch(listCmd, inputCmd)
 }
+
+// advanceToConfirm moves the modal from the search stage to the confirm
+// stage, picking the highlighted result or, with nothing highlighted, the
+// typed text (D3). Filled in by step 7 of docs/plans/image-search.md Phase
+// 2A.
+func (m Model) advanceToConfirm() (Model, tea.Cmd) { return m, nil }
 
 func (m Model) View() tea.View {
 	sections := []string{
