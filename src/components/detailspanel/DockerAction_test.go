@@ -42,7 +42,7 @@ func requestedAction(t *testing.T, cmd tea.Cmd) cmds.RunDockerActionMsg {
 // against whatever file docker resolved on its own, which is the desync the
 // --file threading exists to prevent.
 func TestServiceDetailsPanelRequestsTheActionRatherThanRunningIt(t *testing.T) {
-	panel := New(&types.ServiceConfig{Name: "web"})
+	panel := New(&types.ServiceConfig{Name: "web"}, "10.0.0.5")
 	panel, _ = panel.Update(cmds.SetFocusMsg(constants.COMPONENT_BODY_DETAILS))
 
 	_, cmd := panel.Update(keyPress('s'))
