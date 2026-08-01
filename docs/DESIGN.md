@@ -227,7 +227,7 @@ The tiers:
 | --- | --- | --- |
 | Global | digits, `[` / `]`, `?`, `a` (about), `esc` (back), `tab` / `shift+tab`, `q` | Same meaning everywhere, never contextual — but they yield to whatever owns the keyboard (see the esc ladder under *Navigation and focus*) |
 | Force quit | `ctrl+c` | Yields to nothing, checked before the modal handoff |
-| Panel | lowercase letters (`s t r p x l e n d`) | Act on the focused panel's selection; one verb, one key, on every panel |
+| Panel | lowercase letters (`s t r p x l e n d h`) | Act on the focused panel's selection; one verb, one key, on every panel |
 | Destructive | `x`, `d` | Always through `ConfirmModal`; never dispatched straight from a panel |
 | Overlay | `esc` cancel, `enter` confirm, `y` / `n`, plus overlay-local letters | The overlay owns the keyboard while it is open |
 | List | cursor keys, `g` / `G`, `/` | The list's own, and the only keys `list.KeyMap` is allowed to claim |
@@ -616,6 +616,52 @@ an `ansi.StringWidth` fast path so a string that already fits its column -
 which a properly pre-sized hyperlink always does - returns unchanged rather
 than being re-truncated by the generic row renderer, which stays exactly as
 ignorant of hyperlinks as every other row it draws.
+
+### A healthcheck template is a correctness claim, so the catalog stays small
+
+`h` on the Services details panel opens `HealthcheckPickerModal`, listing
+`utils.TemplatesFor(image)` — templates whose `Matches` substrings hit the
+service's image first, the generic HTTP fallback always last and never
+filtered out. Each row is table data (`utils.HealthcheckCatalog`), not
+inferred: Postgres, MariaDB, Redis and nginx each name a probe tool the
+official image ships, so the catalog never guesses at a container's contents.
+The catalog is deliberately not a community directory — a wrong row produces
+a container stuck `unhealthy` forever, so small stays safer than complete
+(`docs/plans/healthcheck-insertion.md`, "The catalog stays at the 4+1 rows
+above").
+
+**One modal, and the port field's visibility is derived, not a focus state.**
+The generic template is the only row with a parameter — the container-internal
+port, prefilled from the service's first published port's target (else `80`)
+— and its input row appears under the list only while that row is
+highlighted. No tab, no second modal, no explicit focus toggle: the same rule
+covers every key, because "is the field visible" already answers "should this
+keystroke type into it." Cursor movement calls `list.CursorUp`/`CursorDown`
+directly rather than forwarding keys to `list.Update`, specifically so
+bubbles' default list keymap (`h`/`l`/`b`/`u`/`f`/…) never intercepts a
+keystroke the port field needs as ordinary typing — the picker's own `h` for
+"healthcheck" would otherwise collide with the list's paging binding of the
+same letter.
+
+`utils.ApplyHealthcheck` inserts or replaces the `healthcheck:` mapping
+directly under the service's value node — the same read-modify-write shape
+`SetGroupMembers` uses, not a whole-service fragment, since a healthcheck is
+one mapping under the service, not the service itself. It replaces an
+existing check rather than producing a duplicate key (two `healthcheck:` keys
+in one service is a YAML error), and every template omits `start_interval`:
+this app's compose-go parser accepts it, but a user's own `docker compose` CLI
+older than 2.20.2 does not, which would make the app's own validation lie
+about a file the user's tooling then rejects.
+
+**The apply gap gets a hint, not an action.** `restart` reuses a container's
+existing config; only `up -d` re-reads compose. `detailspanel` already knows
+whether its service is running (no round trip through `AppModel` needed), so
+when `AddHealthcheckMsg` succeeds against a running service it sets the same
+footer slot the group panel's `Press s to start.` hint uses: `running: press s
+to apply - restart won't re-read the compose file`. Auto-running `up -d` on
+save was rejected — the editor this hint sits beside edits *any* config field,
+and recreating a running container unprompted is destructive; a hint is
+reversible, an action is not.
 
 ### The panel footer
 
