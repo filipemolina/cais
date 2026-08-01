@@ -5,6 +5,8 @@
 package addservicemodal
 
 import (
+	"fmt"
+	"slices"
 	"strings"
 
 	"charm.land/bubbles/v2/key"
@@ -155,10 +157,58 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // advanceToConfirm moves the modal from the search stage to the confirm
-// stage, picking the highlighted result or, with nothing highlighted, the
-// typed text (D3). Filled in by step 7 of docs/plans/image-search.md Phase
-// 2A.
-func (m Model) advanceToConfirm() (Model, tea.Cmd) { return m, nil }
+// stage. Enter's rule, precisely (D3): a highlighted row's image wins; with
+// nothing highlighted - short query, no matches, or a search error - the
+// literal text in the input is used as the image, verbatim, no validation
+// beyond "not empty." Either way the free-text escape hatch for non-Hub
+// registries stays open: an empty results table means the same thing
+// whether its cause is a non-Hub path, zero matches, or a search failure.
+func (m Model) advanceToConfirm() (Model, tea.Cmd) {
+	image := ""
+	if item, ok := m.results.SelectedItem().(searchResultItem); ok {
+		image = item.result.Name
+	} else {
+		image = strings.TrimSpace(m.query.Value())
+	}
+	if image == "" {
+		return m, nil // nothing highlighted and nothing typed - do nothing
+	}
+
+	m.step = stepConfirm
+	m.serviceName = textinput.New()
+	m.serviceName.SetValue(deriveServiceName(image))
+	m.serviceName.SetWidth(30)
+	m.image = textinput.New()
+	m.image.SetValue(image)
+	m.image.SetWidth(30)
+	cmd := m.serviceName.Focus()
+
+	// The collision check runs the moment the confirm stage renders, not
+	// only on submit (D7) - a genuine improvement this redesign gets for
+	// free because the confirm stage is now a distinct moment.
+	if slices.Contains(m.existingServiceNames, m.serviceName.Value()) {
+		m.confirmErr = fmt.Sprintf("Service %q already exists", m.serviceName.Value())
+	}
+
+	return m, cmd
+}
+
+// deriveServiceName assumes the image's own name as the service name (the
+// refinement request's literal ask): strip a :tag or @digest suffix, then
+// take the substring after the last "/". "nginx" stays "nginx";
+// "linuxserver/sonarr" becomes "sonarr". Never auto-sanitized if the
+// result fails utils.IsValidServiceName - the confirm stage's existing
+// validation explains the problem and the user fixes it (D7).
+func deriveServiceName(image string) string {
+	name := image
+	if i := strings.IndexAny(name, "@:"); i != -1 {
+		name = name[:i]
+	}
+	if i := strings.LastIndex(name, "/"); i != -1 {
+		name = name[i+1:]
+	}
+	return name
+}
 
 func (m Model) View() tea.View {
 	sections := []string{
