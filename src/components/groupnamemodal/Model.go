@@ -1,18 +1,8 @@
 package groupnamemodal
 
 import (
-	"fmt"
-	"slices"
-
-	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
-	"github.com/filipemolina/stack-stitcher/src/appstyles"
-	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/components/chrome"
-	"github.com/filipemolina/stack-stitcher/src/components/servicechecklistmodal"
-	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
 type Model struct {
@@ -39,79 +29,9 @@ func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
-		switch {
-		case key.Matches(keyMsg, keys.Overlay.Cancel):
-			return m, cmds.CloseModal(nil)
-
-		case key.Matches(keyMsg, keys.Overlay.Submit):
-			name := m.input.Value()
-
-			switch {
-			case name == "":
-				m.errMsg = "Group name can't be empty"
-				return m, nil
-
-			case m.isRename && name == m.currentName:
-				// The same name would still rewrite the whole file (closing
-				// blank lines - see README's YAML caveat), so refuse it as a
-				// no-op rather than doing the write.
-				m.errMsg = fmt.Sprintf("Group is already named %q", name)
-				return m, nil
-
-			case slices.Contains(m.existingGroups, name):
-				// For a rename, the group being renamed is itself in
-				// existingGroups; the currentName guard above already
-				// rejected it, so this only fires for a genuine collision.
-				m.errMsg = fmt.Sprintf("Group %q already exists", name)
-				return m, nil
-
-			case m.isRename:
-				return m, cmds.CloseModal(cmds.RequestRenameGroup(m.currentName, name))
-			}
-
-			return servicechecklistmodal.New(name, m.serviceNames, m.termHeight), nil
-		}
-	}
-
-	var cmd tea.Cmd
-	m.input, cmd = m.input.Update(msg)
-
-	return m, cmd
-}
-
-func (m Model) View() tea.View {
-	title := "New group"
-	submitDesc := "next"
-	if m.isRename {
-		title = "Rename group"
-		submitDesc = "rename"
-	}
-
-	lines := []string{chrome.ModalTitle(title), "Group name:", m.input.View()}
-	if m.errMsg != "" {
-		errStyle := lipgloss.NewStyle().Foreground(appstyles.Active.Danger)
-		lines = append(lines, errStyle.Render(m.errMsg))
-	}
-
-	// Enter is "next" on the create flow (step 1 of two, handing off to
-	// the service checklist rather than writing anything) and "rename" on
-	// the rename flow (the only step, which writes).
-	lines = append(lines, "", chrome.ModalHints(
-		chrome.HintAs(keys.Overlay.Submit, submitDesc),
-		chrome.HintFor(keys.Overlay.Cancel),
-	))
-
-	return tea.NewView(chrome.ModalSurface(
-		appstyles.Active.ModalBg,
-		lipgloss.JoinVertical(lipgloss.Left, lines...),
-	))
-}
-
-// New is step 1 of the create-group flow: prompt for a new,
-// unique group name. Enter with a valid name advances to
-// servicechecklistmodal.New; Esc cancels the whole flow.
+// New is step 1 of the create-group flow: prompt for a new, unique group
+// name. Enter with a valid name advances to servicechecklistmodal.New; Esc
+// cancels the whole flow.
 func New(existingGroups []string, serviceNames []string, termHeight int) tea.Model {
 	input := textinput.New()
 	input.Placeholder = "e.g. core"
@@ -126,8 +46,8 @@ func New(existingGroups []string, serviceNames []string, termHeight int) tea.Mod
 	}
 }
 
-// NewForRename is the rename flow: prompt for the group's new
-// name, pre-filled with the current one (cursor at end; ctrl+u clears it
+// NewForRename is the rename flow: prompt for the group's new name,
+// pre-filled with the current one (cursor at end; ctrl+u clears it
 // wholesale). Enter writes the rename via RequestRenameGroup; Esc cancels.
 // Uniqueness excludes the current name, so renaming core to core gets its
 // own message rather than "already exists". No termHeight: unlike the

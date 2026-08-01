@@ -1,0 +1,54 @@
+package groupnamemodal
+
+import (
+	"fmt"
+	"slices"
+
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
+	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/components/servicechecklistmodal"
+	"github.com/filipemolina/stack-stitcher/src/keys"
+)
+
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
+		switch {
+		case key.Matches(keyMsg, keys.Overlay.Cancel):
+			return m, cmds.CloseModal(nil)
+
+		case key.Matches(keyMsg, keys.Overlay.Submit):
+			name := m.input.Value()
+
+			switch {
+			case name == "":
+				m.errMsg = "Group name can't be empty"
+				return m, nil
+
+			case m.isRename && name == m.currentName:
+				// The same name would still rewrite the whole file (closing
+				// blank lines - see README's YAML caveat), so refuse it as a
+				// no-op rather than doing the write.
+				m.errMsg = fmt.Sprintf("Group is already named %q", name)
+				return m, nil
+
+			case slices.Contains(m.existingGroups, name):
+				// For a rename, the group being renamed is itself in
+				// existingGroups; the currentName guard above already
+				// rejected it, so this only fires for a genuine collision.
+				m.errMsg = fmt.Sprintf("Group %q already exists", name)
+				return m, nil
+
+			case m.isRename:
+				return m, cmds.CloseModal(cmds.RequestRenameGroup(m.currentName, name))
+			}
+
+			return servicechecklistmodal.New(name, m.serviceNames, m.termHeight), nil
+		}
+	}
+
+	var cmd tea.Cmd
+	m.input, cmd = m.input.Update(msg)
+
+	return m, cmd
+}
