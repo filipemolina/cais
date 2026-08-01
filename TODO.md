@@ -283,7 +283,70 @@ called out as such in the roadmap: **write safety** (new, see below) and the
   anywhere the user will see it. Minimum: write a `.bak` beside the file on
   the first write of a session, or notice the file is not in a git repo and
   say so once. Nobody lets an unfamiliar tool rewrite the file their homelab
-  runs on without one of those.
+  runs on without one of those. It now gates a second thing:
+  `docs/plans/resources-page.md` Phase 2 adds a write surface and waits behind
+  this.
+
+- [ ] **[H] `ReadConfigFile` invents the project name** — it passes
+  `cli.WithName("stack-stitcher")`, which sits at the top of compose's name
+  resolution ladder and therefore *overrides the file's own `name:` key*.
+  Measured against `demo/fixtures/compose.yaml` (which declares
+  `name: homelab`): the app resolves `stack-stitcher` and computes
+  `stack-stitcher_navidrome-data`, while the `docker compose` calls the app
+  itself makes resolve `homelab` and create `homelab_navidrome-data`. Removing
+  the option yields `homelab` for that file and `mocks` (the directory
+  basename) for one with no `name:` — exactly docker's own rules.
+
+  Harmless today, because nothing reads `project.Name`. A silent wrong answer
+  the moment anything correlates the file against the daemon, which is
+  `docs/plans/resources-page.md`'s whole job — so it is that plan's Phase 0.
+  Check one thing before deleting the line: a directory whose basename is not
+  a legal project name (spaces, uppercase) may be why it was there.
+
+The six plans below came out of the 2026-08-01 feature round. Each is written
+up in full in `docs/plans/`; `docs/ROADMAP.md` has the order and the reasons.
+
+- [ ] **[S] Group table legibility** (`docs/plans/group-table-legibility.md`) —
+  PORTS renders `0.0.0.0:6881->…` for every row and IMAGE renders
+  `lscr.io/linuxse…` for three different services. Both columns get a
+  formatter: published host ports from the file, and an image reference that
+  sheds registry → namespace → tag instead of truncating the name off the end.
+  A day, pure functions, and both defects are in `demo/screenshot-groups.png`.
+
+- [ ] **[S] Docker preflight** (`docs/plans/docker-preflight.md`) — five states
+  (no binary, no compose plugin, daemon down, socket permissions, a
+  `DOCKER_HOST` pointing elsewhere), told apart by which probe failed rather
+  than by parsing error text, each with the exact command that fixes it on this
+  distro. **Decided: the app never installs, starts or configures anything** —
+  the reasoning is in the plan so it does not get re-argued.
+
+- [ ] **[S] Service URLs** (`docs/plans/service-urls.md`) — a `Web` row in the
+  service details panel carrying a real OSC 8 hyperlink (verified zero-width to
+  lipgloss, so it costs no layout), with the host taken from `SSH_CONNECTION`'s
+  server field — the address the client demonstrably just used — and `y` to
+  copy via OSC 52, which works over SSH. The app never spawns a browser.
+
+- [ ] **[S] Usage overlay** (`docs/plans/docker-disk-usage.md`) — `u` opens
+  disk and memory as horizontal bars. Not a page, so the *no statistics page*
+  decision stands; fetched on open with a spinner because `docker system df` is
+  2.3 s. On the author's machine it reports 42 GB of reclaimable images that no
+  tool in the stack currently mentions.
+
+- [ ] **[S] Resources page** (`docs/plans/resources-page.md`) — networks and
+  volumes as a fourth tab, read-only. The feature is the four states a resource
+  can be in; **created-but-undefined is a data-loss detector** (rename a volume
+  in the file and `up` gives you a fresh empty one while the old keeps the
+  data). Phase 2 (create/attach) waits for write safety; deletion needs a typed
+  confirmation, not `y`/`n`, and is not planned.
+
+- [ ] **[S] Adopt unmanaged containers**
+  (`docs/plans/adopt-unmanaged-containers.md`) — three categories with three
+  offers: this project's orphans, another project's containers (whose
+  `config_files` label makes "switch to that file" free), and `docker run`
+  leftovers. Adoption generates a service block by diffing `docker inspect`
+  against the *image's* config — 4 real environment variables out of 10 — and
+  opens it in the inline editor. Never a silent write; the container is never
+  touched. Phase 2 needs `image-search.md`'s insert primitive.
 
 - [ ] **[H] `TestRigRenameGroup` is flaky** — fails roughly one run in three,
   on `main`, independent of any current branch (four `-count=1` runs on
