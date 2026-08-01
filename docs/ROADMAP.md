@@ -99,15 +99,14 @@ that measures whether the rest are done.
 
 | # | Plan | Why it sits here |
 | --- | --- | --- |
-| 1 | `service-aware-empty-state.md` | Small, and it belongs directly after `image-search.md` Phase 1 (done - see below) rather than before it: now that `n` can add a service, the first-run empty state can say something useful to a user with an empty file instead of explaining a concept they could not yet act on. Doing it earlier would have meant writing that copy twice. |
-| 2 | `service-urls.md` — **Phase 1** | Two days, and the best demo material in this list: the panel showing `http://192.168.1.10:14533` as a hyperlink the terminal will open explains the whole premise in one frame. `chrome.PortLabel` already exists (landed with `group-table-legibility.md`). Phase 2 (reverse-proxy labels) can trail behind indefinitely. |
-| 3 | `healthcheck-insertion.md` | ~2 days, and it completes a lifecycle stage the ask names explicitly. It depends on nothing from step 1 in code, but it reads as a natural pair with it: adding a service and giving it a working probe are the same sitting for the user. |
-| 4 | `docker-disk-usage.md` | A day and a half for an overlay that answers a question nothing else in the stack does — 70% of this machine's 60 GB of images is reclaimable and no tool says so. Not a page, so the *no statistics page* decision above stands. |
-| 5 | `env-secrets.md` | The largest of the feature plans and the last lifecycle gap. Placed after the smaller ones so the pattern for "a new page with its own modals" is already established twice over — and so a long branch is not the thing blocking everything else. Has open owner decisions listed in its *Who decides* section; settle those before starting, not during. |
-| 6 | `resources-page.md` — **Phases 0–1** | The read-only networks/volumes inspector. Last of the feature work because it is the least urgent and because its Phase 2 (writes) must wait for the write-safety story below. **Its Phase 0 is a one-line correctness fix and can be pulled forward at any time** — see the note under this table. |
-| 7 | `cross-platform-testing.md` | Before the release work, not after: it costs $0 on GitHub's runners and it answers *what actually works on macOS and Windows*. Publishing binaries first and finding out afterwards is the wrong order. |
-| 8 | `release-distribution.md` | Now the tool is worth installing, make it installable by people without a Go toolchain — which today is most of the audience. |
-| 9 | `launch-and-outreach.md` | The announcement, and the gate: it opens with the lifecycle checklist that steps 1–5 close. |
+| 1 | `service-urls.md` — **Phase 1** | Two days, and the best demo material in this list: the panel showing `http://192.168.1.10:14533` as a hyperlink the terminal will open explains the whole premise in one frame. `chrome.PortLabel` already exists (landed with `group-table-legibility.md`). Phase 2 (reverse-proxy labels) can trail behind indefinitely. |
+| 2 | `healthcheck-insertion.md` | ~2 days, and it completes a lifecycle stage the ask names explicitly. It reads as a natural pair with `image-search.md` Phase 1 and `service-aware-empty-state.md` (both done - see below): adding a service and giving it a working probe are the same sitting for the user. |
+| 3 | `docker-disk-usage.md` | A day and a half for an overlay that answers a question nothing else in the stack does — 70% of this machine's 60 GB of images is reclaimable and no tool says so. Not a page, so the *no statistics page* decision above stands. |
+| 4 | `env-secrets.md` | The largest of the feature plans and the last lifecycle gap. Placed after the smaller ones so the pattern for "a new page with its own modals" is already established twice over — and so a long branch is not the thing blocking everything else. Has open owner decisions listed in its *Who decides* section; settle those before starting, not during. |
+| 5 | `resources-page.md` — **Phases 0–1** | The read-only networks/volumes inspector. Last of the feature work because it is the least urgent and because its Phase 2 (writes) must wait for the write-safety story below. **Its Phase 0 is a one-line correctness fix and can be pulled forward at any time** — see the note under this table. |
+| 6 | `cross-platform-testing.md` | Before the release work, not after: it costs $0 on GitHub's runners and it answers *what actually works on macOS and Windows*. Publishing binaries first and finding out afterwards is the wrong order. |
+| 7 | `release-distribution.md` | Now the tool is worth installing, make it installable by people without a Go toolchain — which today is most of the audience. |
+| 8 | `launch-and-outreach.md` | The announcement, and the gate: it opens with the lifecycle checklist that steps 1–4 close. |
 | — | `adopt-unmanaged-containers.md` | **After the launch.** Phase 2 is blocked on nothing at the code level any more (`utils.AddServiceFragment` landed with `image-search.md` Phase 1) but stays post-launch anyway: the feature finds nothing at all on a tidy machine, and its audience - the homelab that grew by accretion - is a good post-launch story rather than a gate. Phase 1 (see them, switch to their file, remove them) is standalone and can be pulled forward if it is wanted sooner. |
 | — | `resources-page.md` — **Phase 2** (writes) | **After the write-safety story.** Attaching a volume is a two-place edit to the user's file, and adding a new write surface before there is a backup or an undo is the wrong order. |
 | — | `ai-service-authoring.md` | **Deliberately out of the sequence.** It is the only plan that adds a dependency on something outside the repo, and its own Phase 1 (an offline catalog) delivers most of the value with none of that. It needed `image-search.md`'s insert path to exist first, which is now done. Pick it up after the launch, or take its Phase 1 alone at any point. |
@@ -117,21 +116,21 @@ that measures whether the rest are done.
 and were put **before** the launch deliberately, with the owner: two of them
 are defects in the first screenshot, one is what a stranger sees when their
 docker is broken, and one is the announcement's best screenshot. They add
-roughly six days to the road to step 9, and that trade was made knowingly.
+roughly six days to the road to step 8, and that trade was made knowingly.
 `group-table-legibility.md` and `docker-preflight.md` are the first two of
 the four to land — see *Done, and kept for the record* below, which is also
-where `image-search.md` Phase 1 landed (it predates this round, but shares
-the same table).
+where `image-search.md` Phase 1 and `service-aware-empty-state.md` landed
+(both predate this round, but share the same table).
 
 Three items in that sequence are not plans and would otherwise fall through the
 cracks:
 
-- **Cut a `v0.1.0` tag early — before step 1, not at step 8.** Done, on
+- **Cut a `v0.1.0` tag early — before step 1, not at step 7.** Done, on
   2026-08-01, straight after this six-plan round was sequenced and before
   `group-table-legibility.md` landed. The pipeline drafts a release on a `v*`
   tag, so the clock several launch directories require (a first release older
   than four months, `launch-and-outreach.md` §Directories) has already started.
-- **A write-safety story, before step 9.** The app rewrites the user's compose
+- **A write-safety story, before step 8.** The app rewrites the user's compose
   file and there is no backup, no undo, and no prominent statement of what a
   write does not preserve. This is the risk that does not survive contact with
   a stranger's forty-service homelab. Sized in `launch-and-outreach.md`. It also
@@ -176,7 +175,15 @@ counterpart, and is the primitive `adopt-unmanaged-containers.md` Phase 2
 and `ai-service-authoring.md` were both waiting on. Phases 2-4 are not
 scheduled in the table above; Phase 1 alone was step 1's scope.
 
-See *Docker's absence is a diagnosis, not an error* in
+`service-aware-empty-state.md` is done too: when a compose file has services
+but no groups reference any of them, the Home details panel shows a live
+overview (count header + the same member table a selected group uses)
+instead of the static "Getting started" card. `knownGroups() == 0` already
+means every loaded service is the ungrouped set, so no new filtering was
+needed - `renderServiceOverview` reuses `renderMemberTable` verbatim. Falls
+back to onboarding only when the file has no services at all.
+
+See *Docker's absence is a diagnosis, not an error* and *Home layout* in
 `docs/DESIGN.md`.
 
 Also done and not carrying a plan file: the **UX improvements** (auto-select on
