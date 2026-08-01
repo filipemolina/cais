@@ -1,4 +1,4 @@
-package components
+package detailspanel
 
 import (
 	"strings"
@@ -10,10 +10,10 @@ import (
 
 // panelWithContainer builds a details panel showing one service backed by the
 // given container, ready for renderRuntimeStats.
-func panelWithContainer(container apptypes.DockerContainer) DetailsPanelModel {
+func panelWithContainer(container apptypes.DockerContainer) Model {
 	service := types.ServiceConfig{Name: container.Service}
 
-	return DetailsPanelModel{
+	return Model{
 		service:    &service,
 		containers: []apptypes.DockerContainer{container},
 	}

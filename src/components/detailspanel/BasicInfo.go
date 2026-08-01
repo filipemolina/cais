@@ -1,4 +1,4 @@
-package components
+package detailspanel
 
 import (
 	"fmt"
@@ -9,10 +9,10 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 )
 
-// BasicInfo renders the selected service's summary card at exactly `width`
+// basicInfo renders the selected service's summary card at exactly `width`
 // columns (border included), so the card spans the details panel instead of
 // shrinking to the length of its longest line.
-func BasicInfo(service types.ServiceConfig, width int) string {
+func basicInfo(service types.ServiceConfig, width int) string {
 	wrapper := chrome.FitBox(lipgloss.NewStyle().
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(appstyles.Active.Accent).
