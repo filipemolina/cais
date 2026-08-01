@@ -13,6 +13,10 @@ import (
 )
 
 func (m Model) View() tea.View {
+	if m.step == stepServiceFields {
+		return tea.NewView(chrome.ModalSurface(appstyles.Active.ModalBg, m.serviceStep.View()))
+	}
+
 	errStyle := lipgloss.NewStyle().Foreground(appstyles.Active.Danger)
 	var lines []string
 	var hints string
@@ -40,19 +44,6 @@ func (m Model) View() tea.View {
 		hints = chrome.ModalHints(
 			chrome.HintAs(keys.Overlay.Yes, "add a service"),
 			chrome.HintAs(keys.Overlay.No, "skip"),
-			chrome.HintFor(keys.Overlay.Cancel),
-		)
-	case stepServiceFields:
-		lines = []string{
-			chrome.ModalTitle(fmt.Sprintf("Creating %s", filepath.Base(strings.TrimSpace(m.filename.Value())))),
-			"Service name:",
-			m.serviceName.View(),
-			"Image:",
-			m.image.View(),
-		}
-		hints = chrome.ModalHints(
-			chrome.HintFor(keys.Overlay.NextField),
-			chrome.HintAs(keys.Overlay.Submit, "create file"),
 			chrome.HintFor(keys.Overlay.Cancel),
 		)
 	}

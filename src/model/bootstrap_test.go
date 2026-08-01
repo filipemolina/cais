@@ -158,6 +158,55 @@ func TestBootstrapModal_SkipServiceWritesEmptyFile(t *testing.T) {
 	t.Fatalf("compose.yaml was not written to %s after dismissing the modal with 'n'. Output:\n%s", dir, r.Output())
 }
 
+// TestBootstrapModal_YesAdvancesToServiceFieldsAndWrites covers the "y" path
+// on step 2: the extracted servicefieldsstep.Model takes over as step 3,
+// typing a name and image and pressing Enter creates the file with that
+// service seeded in it. This is the shared component's other caller
+// (docs/plans/image-search.md D2) - addservicemodal exercises the same code
+// from the Services page.
+func TestBootstrapModal_YesAdvancesToServiceFieldsAndWrites(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	r := newRig(t)
+	r.Send(getConfigErrNoFileMsg())
+
+	if !r.WaitFor("New compose file", 2*time.Second) {
+		t.Fatalf("modal did not open. Output:\n%s", r.Output())
+	}
+	r.Send(keyPress(teaKeyEnter()))
+	if !r.WaitFor("Add a first service", 2*time.Second) {
+		t.Fatalf("modal did not advance. Output:\n%s", r.Output())
+	}
+
+	r.Send(keyPress(rune('y')))
+	if !r.WaitFor("Service name:", 2*time.Second) {
+		t.Fatalf("modal did not advance to the service fields step. Output:\n%s", r.Output())
+	}
+
+	for _, ch := range "web" {
+		r.Send(letterKey(ch))
+	}
+	r.Send(tea.KeyPressMsg(tea.Key{Code: tea.KeyTab}))
+	for _, ch := range "nginx:alpine" {
+		r.Send(letterKey(ch))
+	}
+	r.Send(keyPress(teaKeyEnter()))
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		contents, err := os.ReadFile(filepath.Join(dir, "compose.yaml"))
+		if err == nil {
+			if strings.Contains(string(contents), "web:") && strings.Contains(string(contents), "nginx:alpine") {
+				return // success
+			}
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	t.Fatalf("compose.yaml was not written with the typed service to %s. Output:\n%s", dir, r.Output())
+}
+
 // A second failed load must leave the modal alone. Init's own GetConfig and
 // any reload after it can both report ErrNoComposeFile while the modal is
 // already up, and reopening it there would silently swap a fresh modal in
