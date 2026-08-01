@@ -117,7 +117,11 @@ install` or a clone is the way in for now.
 
 **Requirements:** Docker with the Compose plugin on your `PATH`, a terminal, and
 Go 1.26+ to build. No Windows build — the app shells out to `docker compose` and
-hands the terminal to your `$EDITOR`, and neither has been tried there.
+hands the terminal to your `$EDITOR`, and neither has been tried there. If
+something's missing or the daemon isn't running, the app says which of the five
+it is and gives you the exact command to fix it — no more guessing what a bare
+`exit status 1` means (a real problem when `docker.io` ships without the
+Compose plugin, which is the second most common way this shows up).
 
 ## Use
 
