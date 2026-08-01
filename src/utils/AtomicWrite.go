@@ -18,13 +18,41 @@ import (
 //
 // Permissions of an existing file are carried over to the replacement.
 func ReplaceFileAtomically(fileName string, contents []byte) error {
+	return ReplaceFileAtomicallyWithMode(fileName, contents, 0o644)
+}
+
+// ReplaceFileAtomicallyWithMode is like ReplaceFileAtomically but accepts an
+// explicit mode for new files. The mode is applied before the write, not after
+// the rename, so a mode like 0600 is never briefly world-readable.
+//
+// If the file exists, its mode is preserved (resolving symlinks first).
+// If the file is a symlink, it is resolved and the target is written through.
+// If the symlink is dangling, an error is returned without creating a file.
+func ReplaceFileAtomicallyWithMode(fileName string, contents []byte, newFileMode os.FileMode) error {
+	// Resolve symlinks before writing. The temp file is created next to the
+	// resolved target (D5.1), so resolving moves the write into the target's
+	// directory. A read-only secrets directory now fails at CreateTemp with the
+	// resolved path in the error, so the user can tell which file could not be
+	// written.
+	resolvedPath := fileName
+	if fileInfo, err := os.Lstat(fileName); err == nil && (fileInfo.Mode()&os.ModeSymlink) != 0 {
+		var symlinkErr error
+		resolvedPath, symlinkErr = filepath.EvalSymlinks(fileName)
+		if symlinkErr != nil {
+			// Dangling symlink: report the error and don't create a regular
+			// file at the symlink's path, which would silently detach the
+			// user's dotfiles setup.
+			return fmt.Errorf("symlink %s is dangling or broken: %w", fileName, symlinkErr)
+		}
+	}
+
 	// The temporary file has to share a filesystem with its target for the
 	// rename to be atomic, so it goes in the target's directory rather than
 	// somewhere like /tmp, which is often a separate mount. The leading dot
 	// keeps it out of the way if it ever does survive.
-	temp, err := os.CreateTemp(filepath.Dir(fileName), "."+filepath.Base(fileName)+".tmp-*")
+	temp, err := os.CreateTemp(filepath.Dir(resolvedPath), "."+filepath.Base(resolvedPath)+".tmp-*")
 	if err != nil {
-		return fmt.Errorf("failed creating a temporary file next to %s: %w", fileName, err)
+		return fmt.Errorf("failed creating a temporary file next to %s: %w", resolvedPath, err)
 	}
 	tempName := temp.Name()
 
@@ -36,11 +64,13 @@ func ReplaceFileAtomically(fileName string, contents []byte) error {
 		os.Remove(tempName)
 	}()
 
-	// CreateTemp opens at 0600. Match the file being replaced so an edit
-	// doesn't silently tighten permissions the user chose; fall back to the
-	// usual default when creating a new file.
-	mode := os.FileMode(0o644)
-	if info, statErr := os.Stat(fileName); statErr == nil {
+	// Determine the mode: preserve existing file's mode, or use the provided
+	// mode for new files. CreateTemp opens at 0600, so we need to chmod.
+	// The mode must be set BEFORE the write, not after the rename, so a mode
+	// like 0600 is never briefly world-readable (D5.3).
+	mode := newFileMode
+	if info, statErr := os.Stat(resolvedPath); statErr == nil {
+		// File exists (possibly after symlink resolution); preserve its mode.
 		mode = info.Mode().Perm()
 	}
 	if err := temp.Chmod(mode); err != nil {
@@ -48,20 +78,20 @@ func ReplaceFileAtomically(fileName string, contents []byte) error {
 	}
 
 	if _, err := temp.Write(contents); err != nil {
-		return fmt.Errorf("failed writing %s: %w", fileName, err)
+		return fmt.Errorf("failed writing %s: %w", resolvedPath, err)
 	}
 
 	// Flush before renaming: the rename can otherwise reach the disk ahead of
-	// the contents, leaving the compose file empty after a crash.
+	// the contents, leaving the file empty after a crash.
 	if err := temp.Sync(); err != nil {
-		return fmt.Errorf("failed flushing %s: %w", fileName, err)
+		return fmt.Errorf("failed flushing %s: %w", resolvedPath, err)
 	}
 	if err := temp.Close(); err != nil {
-		return fmt.Errorf("failed writing %s: %w", fileName, err)
+		return fmt.Errorf("failed writing %s: %w", resolvedPath, err)
 	}
 
-	if err := os.Rename(tempName, fileName); err != nil {
-		return fmt.Errorf("failed replacing %s: %w", fileName, err)
+	if err := os.Rename(tempName, resolvedPath); err != nil {
+		return fmt.Errorf("failed replacing %s: %w", resolvedPath, err)
 	}
 
 	return nil
