@@ -1,4 +1,4 @@
-package components
+package groupnamemodal
 
 import (
 	"strings"
@@ -8,6 +8,14 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 )
+
+// specialKey builds a KeyPressMsg for a special key (esc, enter) where
+// Code alone resolves to the right string for key.Matches. Its own copy:
+// ThemePickerModal_test.go's version was shared for free while both lived
+// in the flat components package, and no longer is.
+func specialKey(code rune) tea.KeyPressMsg {
+	return tea.KeyPressMsg{Code: code}
+}
 
 // renameModalFrame renders the rename modal as plain text, for assertions on
 // its title, prefill and inline errors.
@@ -40,7 +48,7 @@ func followRequest(t *testing.T, cmd tea.Cmd) *cmds.RenameGroupRequestMsg {
 // The rename modal opens pre-filled with the current name and says what it
 // is, so the user knows they are renaming rather than creating.
 func TestRenameModalPrefillsTheCurrentName(t *testing.T) {
-	m := GroupNameModalForRename("core", nil)
+	m := NewForRename("core", nil)
 
 	frame := renameModalFrame(m)
 	if !strings.Contains(frame, "Rename group") {
@@ -54,10 +62,10 @@ func TestRenameModalPrefillsTheCurrentName(t *testing.T) {
 // Enter with the unchanged name is refused with its own message: it would
 // otherwise rewrite the whole file for nothing.
 func TestRenameModalRejectsTheUnchangedName(t *testing.T) {
-	m := GroupNameModalForRename("core", []string{"core", "extra"}).(GroupNameModalModel)
+	m := NewForRename("core", []string{"core", "extra"}).(Model)
 
 	updated, cmd := m.Update(specialKey(tea.KeyEnter))
-	m = updated.(GroupNameModalModel)
+	m = updated.(Model)
 
 	frame := renameModalFrame(m)
 	if !strings.Contains(frame, "already named") {
@@ -70,11 +78,11 @@ func TestRenameModalRejectsTheUnchangedName(t *testing.T) {
 
 // A new name that is another group's name is a collision, not a rename.
 func TestRenameModalRejectsACollision(t *testing.T) {
-	m := GroupNameModalForRename("core", []string{"core", "edge"}).(GroupNameModalModel)
+	m := NewForRename("core", []string{"core", "edge"}).(Model)
 	m.input.SetValue("edge")
 
 	updated, cmd := m.Update(specialKey(tea.KeyEnter))
-	m = updated.(GroupNameModalModel)
+	m = updated.(Model)
 
 	frame := renameModalFrame(m)
 	if !strings.Contains(frame, "already exists") {
@@ -87,7 +95,7 @@ func TestRenameModalRejectsACollision(t *testing.T) {
 
 // A valid rename closes the modal with a rename request carrying both names.
 func TestRenameModalEmitsARenameRequest(t *testing.T) {
-	m := GroupNameModalForRename("core", []string{"core", "extra"}).(GroupNameModalModel)
+	m := NewForRename("core", []string{"core", "extra"}).(Model)
 	m.input.SetValue("core2")
 
 	_, cmd := m.Update(specialKey(tea.KeyEnter))
@@ -103,7 +111,7 @@ func TestRenameModalEmitsARenameRequest(t *testing.T) {
 
 // Esc cancels the rename without emitting anything.
 func TestRenameModalEscClosesWithoutRequest(t *testing.T) {
-	m := GroupNameModalForRename("core", nil)
+	m := NewForRename("core", nil)
 
 	_, cmd := m.Update(specialKey(tea.KeyEsc))
 

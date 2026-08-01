@@ -13,6 +13,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/components/aboutmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/confirmmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/errormodal"
+	"github.com/filipemolina/stack-stitcher/src/components/groupnamemodal"
 	"github.com/filipemolina/stack-stitcher/src/components/groupslist"
 	"github.com/filipemolina/stack-stitcher/src/components/helpoverlay"
 	"github.com/filipemolina/stack-stitcher/src/components/logsmodal"
@@ -41,8 +42,8 @@ func TestEveryModalHasATitleAndAnExitHint(t *testing.T) {
 		{"help", helpoverlay.New(keys.Context{Page: "Home"}, nil, 100), "Keyboard shortcuts", "esc"},
 		{"confirm", confirmmodal.New("Delete group \"core\"?", nil), "Confirm", "esc"},
 		{"error", errormodal.New("boom", 100), "Error", "esc"},
-		{"group name", GroupNameModal(nil, []string{"web"}, 40), "New group", "esc"},
-		{"rename group", GroupNameModalForRename("core", nil), "Rename group", "esc"},
+		{"group name", groupnamemodal.New(nil, []string{"web"}, 40), "New group", "esc"},
+		{"rename group", groupnamemodal.NewForRename("core", nil), "Rename group", "esc"},
 		{"service checklist", servicechecklistmodal.New("core", []string{"web"}, 40), "Select services", "esc"},
 		{"edit group members", servicechecklistmodal.NewForEdit("core", []string{"web"}, []string{"web"}, 40), "Edit members", "esc"},
 		{"create compose file", CreateComposeFileModal("."), "New compose file", "esc"},

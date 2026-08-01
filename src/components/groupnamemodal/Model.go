@@ -1,4 +1,4 @@
-package components
+package groupnamemodal
 
 import (
 	"fmt"
@@ -15,7 +15,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
-type GroupNameModalModel struct {
+type Model struct {
 	input          textinput.Model
 	existingGroups []string
 	serviceNames   []string
@@ -35,11 +35,11 @@ type GroupNameModalModel struct {
 	termHeight int
 }
 
-func (m GroupNameModalModel) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m GroupNameModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
 		switch {
 		case key.Matches(keyMsg, keys.Overlay.Cancel):
@@ -81,7 +81,7 @@ func (m GroupNameModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m GroupNameModalModel) View() tea.View {
+func (m Model) View() tea.View {
 	title := "New group"
 	submitDesc := "next"
 	if m.isRename {
@@ -109,16 +109,16 @@ func (m GroupNameModalModel) View() tea.View {
 	))
 }
 
-// GroupNameModal is step 1 of the create-group flow: prompt for a new,
+// New is step 1 of the create-group flow: prompt for a new,
 // unique group name. Enter with a valid name advances to
 // servicechecklistmodal.New; Esc cancels the whole flow.
-func GroupNameModal(existingGroups []string, serviceNames []string, termHeight int) tea.Model {
+func New(existingGroups []string, serviceNames []string, termHeight int) tea.Model {
 	input := textinput.New()
 	input.Placeholder = "e.g. core"
 	input.SetWidth(30)
 	input.Focus()
 
-	return GroupNameModalModel{
+	return Model{
 		input:          input,
 		existingGroups: existingGroups,
 		serviceNames:   serviceNames,
@@ -126,20 +126,20 @@ func GroupNameModal(existingGroups []string, serviceNames []string, termHeight i
 	}
 }
 
-// GroupNameModalForRename is the rename flow: prompt for the group's new
+// NewForRename is the rename flow: prompt for the group's new
 // name, pre-filled with the current one (cursor at end; ctrl+u clears it
 // wholesale). Enter writes the rename via RequestRenameGroup; Esc cancels.
 // Uniqueness excludes the current name, so renaming core to core gets its
 // own message rather than "already exists". No termHeight: unlike the
 // create flow there is no step-2 checklist to size to the screen.
-func GroupNameModalForRename(currentName string, existingGroups []string) tea.Model {
+func NewForRename(currentName string, existingGroups []string) tea.Model {
 	input := textinput.New()
 	input.Placeholder = "e.g. core"
 	input.SetWidth(30)
 	input.SetValue(currentName)
 	input.Focus()
 
-	return GroupNameModalModel{
+	return Model{
 		input:          input,
 		existingGroups: existingGroups,
 		isRename:       true,
