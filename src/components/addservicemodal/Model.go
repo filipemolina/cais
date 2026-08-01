@@ -184,6 +184,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case cmds.TagLookupMsg:
+		if msg.Err != nil {
+			return m, nil // silent - the confirm stage already shows the bare repo name (D4, D6a)
+		}
+		// The race guard (D4): only apply if the field still holds exactly
+		// what it was pre-filled with. If the user has typed anything since,
+		// this result is stale relative to their edit and must be dropped.
+		if m.image.Value() == msg.Repo {
+			m.image.SetValue(msg.Repo + ":" + msg.BestTag)
+		}
+		return m, nil
+
 	case spinner.TickMsg:
 		if !m.searching {
 			return m, nil // search resolved - let the tick chain die
@@ -275,7 +287,20 @@ func (m Model) advanceToConfirm() (Model, tea.Cmd) {
 		m.confirmErr = fmt.Sprintf("Service %q already exists", m.serviceName.Value())
 	}
 
-	return m, cmd
+	// Phase 2B (D4): fire a silent background lookup for the best tag of
+	// the image the field was pre-filled with. The race guard lives in the
+	// TagLookupMsg handler - the result only applies if the user has not
+	// typed over the field by the time it arrives.
+	prefillImage := m.image.Value()
+	tagCmd := func() tea.Msg {
+		tags, err := utils.ListTags(prefillImage, 50)
+		if err != nil {
+			return cmds.TagLookupMsg{Err: err}
+		}
+		return cmds.TagLookupMsg{Repo: prefillImage, BestTag: utils.BestDefaultTag(tags)}
+	}
+
+	return m, tea.Batch(cmd, tagCmd)
 }
 
 // deriveServiceName assumes the image's own name as the service name (the
