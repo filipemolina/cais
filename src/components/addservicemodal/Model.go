@@ -18,6 +18,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/keys"
+	"github.com/filipemolina/stack-stitcher/src/utils"
 )
 
 type addStep int
@@ -90,34 +91,62 @@ func New(fileName string, existingServiceNames []string) tea.Model {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if keyMsg, ok := msg.(tea.KeyPressMsg); ok && m.step == stepSearch {
-		switch {
-		case keyMsg.Code == tea.KeyUp:
-			m.results.CursorUp()
-			return m, nil
-		case keyMsg.Code == tea.KeyDown:
-			m.results.CursorDown()
-			return m, nil
-		case key.Matches(keyMsg, keys.Overlay.Cancel):
-			return m, cmds.CloseModal(nil)
-		case key.Matches(keyMsg, keys.Overlay.Submit):
-			return m.advanceToConfirm()
+	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
+		if m.step == stepSearch {
+			switch {
+			case keyMsg.Code == tea.KeyUp:
+				m.results.CursorUp()
+				return m, nil
+			case keyMsg.Code == tea.KeyDown:
+				m.results.CursorDown()
+				return m, nil
+			case key.Matches(keyMsg, keys.Overlay.Cancel):
+				return m, cmds.CloseModal(nil)
+			case key.Matches(keyMsg, keys.Overlay.Submit):
+				return m.advanceToConfirm()
+			}
+
+			// Every other key, including every letter list.DefaultKeyMap would
+			// otherwise claim, goes to the query input (D3 - stricter than
+			// healthcheckpickermodal's port field, because this input is never
+			// not focused).
+			var cmd tea.Cmd
+			m.query, cmd = m.query.Update(keyMsg)
+			m.generation++
+			gen := m.generation
+			m.results.SetItems(nil) // clear stale results immediately, don't wait for the debounce
+			m.searchErr = ""
+			if len(strings.TrimSpace(m.query.Value())) < 2 {
+				return m, cmd // too short to search - stay in the empty state, no timer armed
+			}
+			return m, tea.Batch(cmd, cmds.SearchDebounce(gen))
 		}
 
-		// Every other key, including every letter list.DefaultKeyMap would
-		// otherwise claim, goes to the query input (D3 - stricter than
-		// healthcheckpickermodal's port field, because this input is never
-		// not focused).
-		var cmd tea.Cmd
-		m.query, cmd = m.query.Update(keyMsg)
-		m.generation++
-		gen := m.generation
-		m.results.SetItems(nil) // clear stale results immediately, don't wait for the debounce
-		m.searchErr = ""
-		if len(strings.TrimSpace(m.query.Value())) < 2 {
-			return m, cmd // too short to search - stay in the empty state, no timer armed
+		// stepConfirm: the same two-field interaction servicefieldsstep has,
+		// deliberately not the same type (D7). Esc closes the whole modal -
+		// no "go back to search", the only modal in this app that would.
+		switch {
+		case key.Matches(keyMsg, keys.Overlay.Cancel):
+			return m, cmds.CloseModal(nil)
+		case key.Matches(keyMsg, keys.Overlay.NextField):
+			if m.serviceName.Focused() {
+				m.serviceName.Blur()
+				return m, m.image.Focus()
+			}
+			m.image.Blur()
+			return m, m.serviceName.Focus()
+		case key.Matches(keyMsg, keys.Overlay.Submit):
+			return m.submit()
 		}
-		return m, tea.Batch(cmd, cmds.SearchDebounce(gen))
+
+		if m.serviceName.Focused() {
+			var cmd tea.Cmd
+			m.serviceName, cmd = m.serviceName.Update(keyMsg)
+			return m, cmd
+		}
+		var cmd tea.Cmd
+		m.image, cmd = m.image.Update(keyMsg)
+		return m, cmd
 	}
 
 	switch msg := msg.(type) {
@@ -149,11 +178,51 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// Non-key messages (cursor blink ticks, window size) still need to
-	// reach both sub-components.
-	var listCmd, inputCmd tea.Cmd
-	m.results, listCmd = m.results.Update(msg)
-	m.query, inputCmd = m.query.Update(msg)
-	return m, tea.Batch(listCmd, inputCmd)
+	// reach the sub-components live for the current stage.
+	if m.step == stepSearch {
+		var listCmd, inputCmd tea.Cmd
+		m.results, listCmd = m.results.Update(msg)
+		m.query, inputCmd = m.query.Update(msg)
+		return m, tea.Batch(listCmd, inputCmd)
+	}
+
+	if m.serviceName.Focused() {
+		var cmd tea.Cmd
+		m.serviceName, cmd = m.serviceName.Update(msg)
+		return m, cmd
+	}
+	var cmd tea.Cmd
+	m.image, cmd = m.image.Update(msg)
+	return m, cmd
+}
+
+// submit validates the confirm stage's two fields and hands off to the
+// unchanged write path: cmds.AddService -> the inline editor. The same
+// validation servicefieldsstep applies, plus the collision check re-run
+// here because the user may have edited the name field since the stage
+// rendered (D7).
+func (m Model) submit() (Model, tea.Cmd) {
+	name := strings.TrimSpace(m.serviceName.Value())
+	image := strings.TrimSpace(m.image.Value())
+
+	if name == "" {
+		m.confirmErr = "Service name can't be empty"
+		return m, nil
+	}
+	if image == "" {
+		m.confirmErr = "Image can't be empty (e.g. nginx:alpine)"
+		return m, nil
+	}
+	if !utils.IsValidServiceName(name) {
+		m.confirmErr = fmt.Sprintf("%q is not a valid service name", name)
+		return m, nil
+	}
+	if slices.Contains(m.existingServiceNames, name) {
+		m.confirmErr = fmt.Sprintf("Service %q already exists", name)
+		return m, nil
+	}
+
+	return m, cmds.CloseModal(cmds.AddService(m.fileName, name, image))
 }
 
 // advanceToConfirm moves the modal from the search stage to the confirm
@@ -211,6 +280,31 @@ func deriveServiceName(image string) string {
 }
 
 func (m Model) View() tea.View {
+	if m.step == stepConfirm {
+		lines := []string{
+			chrome.ModalTitle("New service"),
+			"Service name:",
+			m.serviceName.View(),
+			"Image:",
+			m.image.View(),
+		}
+
+		if m.confirmErr != "" {
+			lines = append(lines, lipgloss.NewStyle().Foreground(appstyles.Active.Danger).Render(m.confirmErr))
+		}
+
+		lines = append(lines, "", chrome.ModalHints(
+			chrome.HintFor(keys.Overlay.NextField),
+			chrome.HintFor(keys.Overlay.Submit),
+			chrome.HintFor(keys.Overlay.Cancel),
+		))
+
+		return tea.NewView(chrome.ModalSurface(
+			appstyles.Active.ModalBg,
+			lipgloss.JoinVertical(lipgloss.Left, lines...),
+		))
+	}
+
 	sections := []string{
 		chrome.ModalTitle("Search Docker Hub"),
 		m.query.View(),
