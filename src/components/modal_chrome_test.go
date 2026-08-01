@@ -13,6 +13,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/components/aboutmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/composefilepickermodal"
 	"github.com/filipemolina/stack-stitcher/src/components/confirmmodal"
+	"github.com/filipemolina/stack-stitcher/src/components/createcomposefilemodal"
 	"github.com/filipemolina/stack-stitcher/src/components/errormodal"
 	"github.com/filipemolina/stack-stitcher/src/components/groupnamemodal"
 	"github.com/filipemolina/stack-stitcher/src/components/groupslist"
@@ -47,7 +48,7 @@ func TestEveryModalHasATitleAndAnExitHint(t *testing.T) {
 		{"rename group", groupnamemodal.NewForRename("core", nil), "Rename group", "esc"},
 		{"service checklist", servicechecklistmodal.New("core", []string{"web"}, 40), "Select services", "esc"},
 		{"edit group members", servicechecklistmodal.NewForEdit("core", []string{"web"}, []string{"web"}, 40), "Edit members", "esc"},
-		{"create compose file", CreateComposeFileModal("."), "New compose file", "esc"},
+		{"create compose file", createcomposefilemodal.New("."), "New compose file", "esc"},
 		{"compose file picker", composefilepickermodal.New(".", []string{"compose.yaml"}, "compose.yaml", 40), "Switch compose file", "esc"},
 		{"theme picker", ThemePickerModal(40), "Choose theme", "esc"},
 		{"logs", logs, "logs: web", "esc"},
@@ -70,7 +71,7 @@ func TestEveryModalHasATitleAndAnExitHint(t *testing.T) {
 // TestCreateComposeFileModalHintsEveryStep covers the one modal with more
 // than one screen: each step advertises the keys that step actually answers.
 func TestCreateComposeFileModalHintsEveryStep(t *testing.T) {
-	m := CreateComposeFileModal(".")
+	m := createcomposefilemodal.New(".")
 
 	// Step 1: filename. Enter advances rather than creating anything.
 	frame := ansi.Strip(m.View().Content)

@@ -20,6 +20,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/components/composefilepickermodal"
 	"github.com/filipemolina/stack-stitcher/src/components/confirmmodal"
+	"github.com/filipemolina/stack-stitcher/src/components/createcomposefilemodal"
 	"github.com/filipemolina/stack-stitcher/src/components/errormodal"
 	"github.com/filipemolina/stack-stitcher/src/components/groupnamemodal"
 	"github.com/filipemolina/stack-stitcher/src/components/helpoverlay"
@@ -592,7 +593,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// modal the user opened deliberately is not something a
 			// background reload gets to close.
 			if errors.Is(msg.Err, utils.ErrNoComposeFile) && m.activeModal == nil {
-				m.activeModal = components.CreateComposeFileModal(m.config.source.Dir)
+				m.activeModal = createcomposefilemodal.New(m.config.source.Dir)
 			}
 			if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
 				finalCmds = append(finalCmds, bodyCmd)
