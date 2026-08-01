@@ -13,6 +13,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/filipemolina/stack-stitcher/src/keys"
+	"github.com/filipemolina/stack-stitcher/src/utils"
 	"gopkg.in/yaml.v3"
 )
 
@@ -61,6 +62,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			updated, cmd := m.exitEditMode()
 			m = updated
 			finalCmds = append(finalCmds, cmd)
+		}
+		if m.service == nil || m.service.Name != service.Name {
+			m.urlMessage = ""
 		}
 		m.service = &service
 
@@ -154,6 +158,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			))
 		} else if key.Matches(msg, keys.Details.Logs) {
 			finalCmds = append(finalCmds, cmds.OpenLogsModal(m.service.Name, false))
+		} else if key.Matches(msg, keys.Details.CopyURL) {
+			if u, ok := utils.ResolveURL(*m.service, m.host); ok {
+				m.urlMessage = "copied " + u.URL
+				finalCmds = append(finalCmds, tea.SetClipboard(u.URL))
+			}
 		} else if key.Matches(msg, keys.Details.EditService) {
 			finalCmds = append(finalCmds, cmds.RequestInlineEdit(m.service.Name))
 		} else if key.Matches(msg, keys.Details.EditFile) {

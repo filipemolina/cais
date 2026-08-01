@@ -349,11 +349,17 @@ up in full in `docs/plans/`; `docs/ROADMAP.md` has the order and the reasons.
   word. **The app never installs, starts or configures anything** — the
   reasoning is in the plan so it does not get re-argued.
 
-- [ ] **[S] Service URLs** (`docs/plans/service-urls.md`) — a `Web` row in the
-  service details panel carrying a real OSC 8 hyperlink (verified zero-width to
-  lipgloss, so it costs no layout), with the host taken from `SSH_CONNECTION`'s
-  server field — the address the client demonstrably just used — and `y` to
-  copy via OSC 52, which works over SSH. The app never spawns a browser.
+- [x] **[S] Service URLs** (`docs/plans/service-urls.md`) — done, Phase 1.
+  `utils.ResolveURL` picks a service's URL (`stitcher.url` label >
+  `app_protocol` > the fixed https-port set > plain http, ties among several
+  published ports broken by a short known-web-port table, then file order);
+  `utils.URLHost` resolves the host once at startup from `config.URLHost` >
+  `SSH_CONNECTION`'s server field — the address the client demonstrably just
+  used — > `localhost`. A `Web` row in the service details panel carries a
+  real OSC 8 hyperlink (`chrome.Hyperlink`, verified zero-width to lipgloss),
+  and `y` copies it via `tea.SetClipboard` (OSC 52, which works over SSH).
+  The app never spawns a browser. **Remaining:** Phase 2 (reverse-proxy
+  labels — traefik, gethomepage, tsdproxy).
 
 - [ ] **[S] Usage overlay** (`docs/plans/docker-disk-usage.md`) — `u` opens
   disk and memory as horizontal bars. Not a page, so the *no statistics page*

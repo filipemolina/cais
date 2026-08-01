@@ -559,11 +559,12 @@ body is a two-pane layout:
     text, values in primary text, truncated to their column as the member
     table's cells are. Multi-value properties (e.g. ports) indent continuation
     rows below the first value. The table rows shown depend on what the service
-    defines, and include: ports, container name, restart policy, connected
-    networks, volumes summary (count by bind/volume type), healthcheck command
-    (trimmed for brevity), depends_on, pull policy, PUID/PGID (common in
-    self-hosted *arr stacks), memory limits (in human-readable form via
-    `docker/go-units`), and label count.
+    defines, and include: ports, **web** (a real hyperlink to the service's
+    resolved URL, directly under ports - see below), container name, restart
+    policy, connected networks, volumes summary (count by bind/volume type),
+    healthcheck command (trimmed for brevity), depends_on, pull policy,
+    PUID/PGID (common in self-hosted *arr stacks), memory limits (in
+    human-readable form via `docker/go-units`), and label count.
     
     When the service has a running container with stats data, a live runtime
     stats table (METRIC | VALUE) joins it, showing memory usage + percentage,
@@ -589,13 +590,43 @@ body is a two-pane layout:
   is persisted, depends_on reveals startup ordering, and the resource limits
   help diagnose OOM kills — all common concerns when running a home server.
 
+### A service's URL is a guess, shown with its reasoning
+
+`utils.ResolveURL` is one pure function: a `stitcher.url` label (used
+verbatim, and the only way to say "no, there isn't one" via an empty value)
+beats a published port's `app_protocol` beats the tiny fixed set of ports
+that conventionally mean https ({443, 8443, 9443}) beats plain http. Among
+several published TCP ports, the tie-break promotes a recognised web port
+(Jellyfin's 8096, Sonarr's 8989, and so on - a short, deliberately
+non-growing table, not a service catalog) over an unrecognised one, in file
+order; equally recognised or unrecognised candidates fall back to file
+order alone, because the user's own ordering is more meaningful than the
+port number. `network_mode: host` ignores `ports:`'s host-side mapping
+entirely and is reachable on the container's own port instead. The host
+part is resolved once at startup - `config.URLHost` first, then
+`SSH_CONNECTION`'s server field (the address this SSH client *measurably*
+used, not a guess), then `localhost` - since it cannot change during a run.
+
+**The one sharp edge is rendering it.** `chrome.Hyperlink` wraps
+already-truncated-and-padded text in an OSC 8 escape sequence; building the
+sequence before truncating would hand `chrome.Truncate`
+(`runewidth.Truncate`, not ANSI-aware) a string it could cut through the
+middle of, corrupting the rest of the screen. `chrome.Truncate` also grew
+an `ansi.StringWidth` fast path so a string that already fits its column -
+which a properly pre-sized hyperlink always does - returns unchanged rather
+than being re-truncated by the generic row renderer, which stays exactly as
+ignorant of hyperlinks as every other row it draws.
+
 ### The panel footer
 
 Both details panels reserve their body's last line for a footer, laid out by
-`chrome.PanelBodyWithFooter` in `src/components/chrome/PanelFrame.go`. Two
-things go there: the pending-action spinner, in either panel, and the group
-panel's `Press s to start.` hint when a selected group has nothing running.
-Idle, a panel with neither has no footer at all.
+`chrome.PanelBodyWithFooter` in `src/components/chrome/PanelFrame.go`. Things
+that go there: the pending-action spinner, in either panel; the group panel's
+`Press s to start.` hint when a selected group has nothing running; and the
+service panel's `copied http://…` confirmation after `y` (`docs/plans/service-urls.md`
+D6) - the pending-action spinner still wins when both would apply, since a
+running action is the more urgent thing to be looking at. Idle with nothing
+to report, a panel has no footer at all.
 
 **It is pinned by one layout, not by each panel's arithmetic.**
 `PanelBodyWithFooter` takes a panel's content and its footer and pads between
