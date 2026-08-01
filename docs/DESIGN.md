@@ -613,17 +613,58 @@ page-scoped. If that turns out to matter before mouse support lands, the answer
 is a plain key-hint line in the footer slot, not the chips back: the hint line
 reads as text, which is what a keyboard-only affordance should look like.
 
-The shedding logic went with the row and is worth remembering as prior art,
-because the footer bar still needs the same fix. lipgloss wraps on the cell,
-not on the control, so a row wider than its panel broke a button across lines;
-at the narrowest widths the six-button row wrapped to thirty-one. The panels
-clip their body with `MaxHeight`, so it never spilled the frame — it was
-absorbed by eating the member table instead, which is why it read as "the
-buttons look mangled" rather than "the layout is broken". The fix was to drop
-whole controls until the row fit, in a declared priority order rather than the
-display order. See the narrow-terminal entry in `TODO.md`;
-`TestNarrowPanelsStayInsideTheirBox` is the standing guard that whatever a
-panel renders stays inside the box AppModel gave it.
+The row's *shedding* logic outlived it, and is now the rule three surfaces
+follow — see below.
+
+### Narrow terminals: shed whole things
+
+`lipgloss` pads to `Width` but does not truncate. A fixed set of controls
+squeezed into a panel narrower than their own labels therefore wraps on the
+cell rather than giving anything up, and the result is never "a bit tight" —
+it is a heading printed over the next heading, or a row of hints spilling onto
+a second line and eating the body underneath. Three surfaces hit this, and all
+three now answer it the same way: **drop whole units, in a declared priority
+order, until what is left fits.**
+
+| Surface | Order lives in | Never dropped |
+| --- | --- | --- |
+| Footer bar hints | `keys.Priority` (`src/keys/Keys.go`) | `? help`, `q quit` |
+| Group member table columns | `dropOrder` (`groupdetailspanel/View.go`) | the status dot, `NAME` |
+| *(removed)* action row buttons | the row's own `drop` field | — |
+
+Four rules generalise out of them.
+
+**The drop order is not the display order.** The order to read in is not the
+order to give up: the footer shows `1-3 page` beside `q quit` and sheds it
+first, because the nav bar prints the digits already; the table shows `IMAGE`
+second and drops it fifth-from-last, because a row is identified by its name,
+not its tag. Writing the two orders separately is what lets each be argued on
+its own terms, which is why both are tables with reasons attached rather than
+a sort at render time.
+
+**Something has to survive that leads back to what was shed.** This is what
+makes shedding safe rather than merely lossy. On the footer that is `? help`,
+which opens the overlay listing every binding — so a shed hint is hidden, not
+lost. In the table it is `NAME`, because a state with nothing to attach it to
+says nothing at all. A surface with no such anchor should not shed; it should
+scroll or paginate.
+
+**A unit is whole or absent, never a fragment.** `NAMEIMAGSTATHEALT…` and a
+hint cut mid-word are the same defect as the wrap they replaced. Cells
+truncate one column short of their width so two values keep a gap between
+them, and every one of these surfaces has a test that walks descending widths
+asserting nothing renders as a fragment and nothing shed ever comes back.
+
+**`MaxHeight` is the backstop, not the fix.** Every one of these surfaces
+clips to its own height as a last resort, for the widths below which even the
+never-dropped units do not fit. Clipping keeps the layout intact but says
+nothing about what was lost, so it is what happens *after* the priority order
+has run out — reaching for it first is what let the action row wrap to
+thirty-one rows inside a panel that looked fine from the outside, absorbed by
+eating the member table.
+
+`TestNarrowPanelsStayInsideTheirBox`, `TestFooterNeverWraps` and
+`TestMemberTableHeadingsNeverCollide` are the standing guards.
 
 ### Color lives on a Theme
 

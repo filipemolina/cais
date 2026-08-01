@@ -213,37 +213,36 @@ called out as such in the roadmap: **write safety** (new, see below) and the
   `g`/`G`, `shift+tab`, `ctrl+c`, and the losing compose-file candidates the
   footer can only count. The footer's global group gained `? help`.
 
-- [ ] **[S] The footer wraps on a narrow terminal** — predates the compose
-  file segment (which drops itself rather than contributing to this). The
-  context hints plus the global keys exceed the width and the bar wraps to two
-  or three lines, eating body rows. The bar needs to shed hints in priority
-  order the way the file name already does. Same terminals show one other
-  overflow worth fixing together: the group details table collides its column
-  headers (`NAMEIMAGSTATHEALT…`).
+- [x] **[S] The footer wraps on a narrow terminal** — fixed, along with the two
+  other overflows the same terminals showed. All three were one mistake:
+  lipgloss pads to `Width` but does not truncate, so a fixed set of controls
+  squeezed past its own labels wraps on the cell rather than giving anything up.
 
   **"Below roughly 60 columns" was wrong — it is closer to 130.** Measured
   while recording the README screenshots (2026-07-31): at 1280px / 16pt
-  (~133 columns) the Groups footer pushes `q quit` onto a second line; at
-  1440px (~150 columns) it fits. The logs overlay advertises more keys and so
-  wraps wider still. This moves the item's priority: it is not an edge case for
-  people on narrow terminals, it is what a normal terminal looks like — and it
-  is visible in `demo/demo.gif`, which makes it the first bug a visitor sees.
-  `docs/plans/launch-and-outreach.md` lists it as a launch gate for that reason.
+  (~133 columns) the Groups footer pushed `q quit` onto a second line; at
+  1440px (~150 columns) it fit. The worst context is the Services details panel
+  behind the logs overlay, which advertises ten hints. It was visible in
+  `demo/demo.gif`, which made it the first bug a visitor saw, and
+  `docs/plans/launch-and-outreach.md` listed it as a launch gate for that
+  reason.
 
-  The third overflow named here — the action buttons wrapping into each other —
-  was fixed by shedding whole buttons in a declared priority order (remove
-  first, then pull, then logs; the three lifecycle verbs are what a very narrow
-  panel keeps) rather than letting lipgloss wrap on the cell. That is the same
-  shape of fix the footer bar needs, so it is worth reading before doing this
-  one — but the action row has since been removed along with its shedding logic
-  (mouse support is deferred, and an unclickable chip promised more than the app
-  does; see *The panel footer* in `docs/DESIGN.md`). The worked example now
-  lives in `git show 63ea952^:src/components/chrome/PanelFrame.go`, not in the
-  tree.
-  Note that the wrap never spilled the frame — the panels clip their body with
-  `MaxHeight`, so a six-button row wrapping to thirty-one rows was absorbed by
-  eating the member table instead. The footer has no such clip, which is why it
-  is the more visible of the two.
+  The bar now sheds whole hints in the order `keys.Priority` declares, and the
+  group table drops whole columns in the order `dropOrder` declares. Both
+  orders are deliberately not their display orders, and both keep the thing
+  that makes shedding safe rather than merely lossy: `? help` on the bar (it
+  opens the overlay everything shed went to), the name column in the table (a
+  row with no identity says nothing). Fixed with them: table cells truncated to
+  the full column ran flush into the next value, and the group's summary line
+  wrapped and cost the table a row.
+
+  The pattern started with the details panels' action row, which shed whole
+  buttons before it was removed for being an unclickable chip (see *The panel
+  footer* in `docs/DESIGN.md`); `git show 63ea952^:src/components/chrome/PanelFrame.go`
+  is where that worked example now lives. Three surfaces have wanted the same
+  fix, so it is worth reaching for the fourth time before reaching for
+  `MaxHeight` alone: clipping keeps the layout intact but says nothing about
+  what was lost.
 
 - [x] **[S] Centralize color into a `Theme`** — `appstyles.Theme`
   (`src/appstyles/Theme.go`) is one field per semantic token, built by a
