@@ -12,6 +12,7 @@ func (m AppModel) Init() tea.Cmd {
 		cmds.SetActivePage(apptypes.PageTitles[0]),
 		cmds.GetConfig(m.config.source),
 		cmds.RefreshContainersTick(),
+		cmds.CheckDocker(),
 	}
 
 	return tea.Batch(initialCommands...)

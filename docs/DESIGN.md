@@ -839,6 +839,50 @@ The nav bar renders it dimmed, left of the wordmark, and drops it when the row
 gets tight — the same bargain the footer makes with the compose file name, and
 for the same reason: the tabs are what the nav is for.
 
+### Docker's absence is a diagnosis, not an error
+
+Every docker call in the app is `exec.Command("docker", …)` followed by
+`CombinedOutput()`, which used to mean five distinct, differently-fixed
+problems — docker missing, the Compose plugin missing, the daemon stopped,
+the socket unreadable, or a healthy machine — all arrived as one line of
+`exec.ExitError` noise. `utils.DockerPreflight` classifies which of the five
+it is; `dockerstatusmodal` says so and prints the exact command that fixes
+it, copyable, never run.
+
+Classification comes from *which probe failed*, not from parsing what it
+printed. Docker rewords its errors between majors — the daemon-down message
+changed completely between 28 and 29 — so a classifier built on matching the
+whole string would degrade silently the next time docker changes its
+wording. Exit codes and probe order do not reword; the one exception is the
+split between "daemon down" and "permission denied", which needs a single
+`strings.Contains(out, "permission denied")` with a documented fallback to
+"daemon down" when nothing recognisable is found.
+
+The app never installs, starts, or configures anything on the user's
+machine, even behind a confirmation prompt. There is no single correct
+install across apt/dnf/pacman/Docker Desktop/colima/rootless, the one-liner
+installers are not what their own vendors recommend for anything but a
+throwaway box, and a TUI that asks for root to fix a problem it just
+diagnosed looks exactly like the thing a user should never type their
+password into. The diagnosis plus an exact command is most of the value at
+none of the blast radius, and the decision to change the machine stays with
+the user.
+
+The probe runs once at startup and again on every docker error: `docker
+compose ps` failing is re-probed before it is reported, and a docker action's
+own failure kicks off the same re-probe alongside the raw error it puts up —
+if the re-probe comes back with a diagnosable state, it replaces that raw
+error with the diagnosis rather than leaving `exit status 1` as the last
+word. A healthy re-probe (the daemon is up but wedged) leaves the raw
+message standing, because the app has no diagnosis to offer for a state it
+cannot reproduce. This is what makes the feature the app's permanent answer
+to "docker broke" rather than a first-run nicety: daemons stop, sockets get
+replaced by an upgrade, laptops sleep, and the diagnosis is available every
+time, not just once at boot.
+
+See `docs/plans/docker-preflight.md` for the full research (exact strings,
+exit codes, timings) and the platform remediation table.
+
 ## 6. Package layout
 
 `src/model` is the app: `AppModel`, its `Init`/`Update`/`View`, and the
