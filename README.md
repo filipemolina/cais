@@ -151,7 +151,7 @@ one.
 | `l` | Stream logs — for the service, or for every service in the group |
 | `e` | Edit: a service's YAML inline, or a group's membership |
 | `E` | Open the whole compose file in `$EDITOR` |
-| `n` `R` `d` | New group · Rename group · Delete group |
+| `n` `R` `d` | New (a group on the Groups page, a service on the Services page) · Rename group · Delete group |
 | `/` | Filter the list by name |
 | `T` `?` `a` `q` | Themes · Help · About · Quit |
 
@@ -169,11 +169,12 @@ what does not, in the order it is being closed — the sequence and the reasonin
 live in [docs/ROADMAP.md](docs/ROADMAP.md), and each item has a full plan of its
 own in [docs/plans/](docs/plans/):
 
-- **Adding a service** needs `E` and your `$EDITOR` — the TUI can bootstrap a
-  new compose file and edit existing services, but not insert a new one yet.
+- **`n` on the Services page adds a service** — a name and an image, then
+  straight into the same inline YAML editor `e` opens, for ports, volumes and
+  everything else. **No image search yet**, so "what is the tag for this" is
+  still a browser tab; you type the image reference by hand.
 - **No `.env` surface.** Values are interpolated correctly; the file that holds
   them is not visible or editable in the app, and secrets are not masked.
-- **No image search**, so "what is the tag for this" is still a browser tab.
 - **Blank lines between services are not preserved** across a write. Comments,
   quoting and key order are. This is accepted rather than fixed: carrying blank
   lines through as marker comments was built and then removed, because a blank
