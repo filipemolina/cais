@@ -393,14 +393,20 @@ are plain text then. `E` still opens the whole compose file in `$EDITOR`,
 which is the only way to touch top-level keys (`name:`, `volumes:`, …).
 
 **Adding a service stays true to the same argument, one step earlier.** `n`
-on the Services page collects only what a service cannot exist without — a
-name and an image, through `servicefieldsstep`, shared verbatim with the
-bootstrap flow's optional first service so a later feature (Docker Hub
-search, a tag picker — `docs/plans/image-search.md` Phases 2–3) reaches both
-at once — then writes a minimal two-line fragment via
-`utils.AddServiceFragment` and opens straight into the inline editor above.
-No wizard with a field for ports, volumes, environment: two fields, then the
-same YAML a hand-written service would have. `AddServiceFragment` mirrors
+on the Services page is a two-stage modal (Phase 2A of
+`docs/plans/image-search.md`): first a live, debounced search of Docker Hub
+— official images marked, star counts shown, powered by `docker search`
+through `utils.SearchImages` — then a confirm stage that collects only what
+a service cannot exist without: a name and an image, in the same two-field
+shape `servicefieldsstep` always had. Enter on the search stage takes the
+highlighted row, or the typed text verbatim when nothing is highlighted
+(which is how a `ghcr.io/...` reference, or any search failure, stays
+free text — the table is a shortcut, never a gate); the confirm stage
+pre-fills a service name derived from the image and flags a collision
+with an existing name the moment it renders, and writes a minimal two-line
+fragment via `utils.AddServiceFragment` and opens straight into the inline
+editor above. No wizard with a field for ports, volumes, environment: two
+fields, then the same YAML a hand-written service would have. `AddServiceFragment` mirrors
 `ApplyServiceFragment` (same fragment shape, same validation, same atomic
 write) but refuses a name that already exists rather than one that is
 missing, and inserts at the end of the `services:` mapping — the position a

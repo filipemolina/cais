@@ -68,6 +68,13 @@ already running, the panel says `press s to apply` — restart alone won't
 re-read compose, and that gap is the most common reason a hand-written
 healthcheck looks broken when it isn't.
 
+**New services without leaving the terminal.** `n` on the Services page
+searches Docker Hub live as you type — official images are marked and star
+counts shown — and confirms a name and image before writing a minimal
+fragment straight into the compose file and opening the inline editor on
+it. Type a full reference (a `ghcr.io/...` path, say) and it is used
+verbatim; the search table is a shortcut, never a gate.
+
 **Edit the compose file in place, as YAML.** `e` opens the service's own
 fragment in an inline editor: real YAML, not a form, so every Compose field is
 reachable. It validates as you type, auto-indents on Enter, indents with
@@ -172,7 +179,7 @@ one.
 | `h` | Add a healthcheck from the template picker (Services page) |
 | `e` | Edit: a service's YAML inline, or a group's membership |
 | `E` | Open the whole compose file in `$EDITOR` |
-| `n` `R` `d` | New (a group on the Groups page, a service on the Services page) · Rename group · Delete group |
+| `n` `R` `d` | New (a group on the Groups page, a service on the Services page — search Docker Hub live, then confirm) · Rename group · Delete group |
 | `/` | Filter the list by name |
 | `T` `?` `a` `q` | Themes · Help · About · Quit |
 
