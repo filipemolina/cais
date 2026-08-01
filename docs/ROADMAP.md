@@ -175,6 +175,18 @@ counterpart, and is the primitive `adopt-unmanaged-containers.md` Phase 2
 and `ai-service-authoring.md` were both waiting on. Phases 2-4 are not
 scheduled in the table above; Phase 1 alone was step 1's scope.
 
+**Phases 2A and 2B are done too** (merged 2026-08-01): the two-field step is
+replaced by a search-first modal — `n` opens a live, debounced `docker
+search` results table (official images marked, star counts shown, the typed
+text as a free-text escape hatch when nothing is highlighted), Enter moves
+to a confirm stage that pre-fills a service name derived from the image,
+flags a collision on render, and fires a silent background best-tag lookup
+from hub.docker.com's tags API whose result only applies if the user has
+not typed over the field by the time it arrives. The write path is
+unchanged (`cmds.AddService` → `utils.AddServiceFragment` → the inline
+editor). Phase 3 (the tag picker) and the bootstrap flow adopting search
+stay deferred.
+
 `service-aware-empty-state.md` is done too: when a compose file has services
 but no groups reference any of them, the Home details panel shows a live
 overview (count header + the same member table a selected group uses)
