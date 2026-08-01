@@ -21,7 +21,7 @@ import (
 // directly, which this file can no longer do now that detailspanel is a
 // separate package.
 func focusedDetailsPanel(service types.ServiceConfig, width, height int, extra ...tea.Msg) tea.Model {
-	m := detailspanel.New(&service)
+	m := detailspanel.New(&service, "10.0.0.5")
 	msgs := append([]tea.Msg{
 		cmds.SetBodyLayoutMsg{LeftWidth: 40, RightWidth: width, Height: height},
 		cmds.SetFocusMsg(constants.COMPONENT_BODY_DETAILS),

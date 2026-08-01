@@ -11,7 +11,7 @@ import (
 )
 
 func focusedDetails(service types.ServiceConfig) Model {
-	m := New(&service).(Model)
+	m := New(&service, "10.0.0.5").(Model)
 	m = m.applySize().(Model)
 	m.isFocused = true
 	return m

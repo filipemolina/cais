@@ -35,6 +35,15 @@ type Model struct {
 	// containers is the latest known container list, used to derive the
 	// RUNNING/STOPPED status pill in the panel title row.
 	containers []apptypes.DockerContainer
+
+	// host is the address utils.ResolveURL builds every service URL
+	// against - resolved once, at startup, since it cannot change during a
+	// run (see utils.URLHost).
+	host string
+	// urlMessage is a status-line confirmation ("copied http://…") set by
+	// the y key, cleared on the next keypress or selection change the same
+	// way saveError/validationError are.
+	urlMessage string
 }
 
 func (m Model) Init() tea.Cmd {
@@ -64,9 +73,10 @@ func (m Model) OwnsKeyboard() bool {
 	return m.editing
 }
 
-func New(service *types.ServiceConfig) tea.Model {
+func New(service *types.ServiceConfig, host string) tea.Model {
 	return Model{
 		service:     service,
+		host:        host,
 		componentId: 2,
 		spinner:     chrome.NewSpinner(),
 	}

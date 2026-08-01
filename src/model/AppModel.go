@@ -1,6 +1,7 @@
 package model
 
 import (
+	"os"
 	"slices"
 
 	"charm.land/bubbles/v2/list"
@@ -15,6 +16,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/components/keybindingbar"
 	"github.com/filipemolina/stack-stitcher/src/components/mainmenu"
 	"github.com/filipemolina/stack-stitcher/src/components/serviceslist"
+	"github.com/filipemolina/stack-stitcher/src/config"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/utils"
 )
@@ -249,6 +251,12 @@ func (m AppModel) shouldForwardToComponents(msg tea.Msg) bool {
 func GetInitialModel(source utils.ComposeSource) AppModel {
 	pages := make(map[string][]tea.Model)
 
+	// Resolved once, here, rather than read from the environment inside
+	// utils.ResolveURL - the host cannot change during a run, and every
+	// service URL is built against it (docs/plans/service-urls.md D4).
+	cfg, _ := config.LoadConfig()
+	urlHost := utils.URLHost(cfg, os.Getenv)
+
 	pages["Home"] = []tea.Model{
 		groupslist.New([]string{}, 0, 0),
 		groupdetailspanel.New(),
@@ -256,7 +264,7 @@ func GetInitialModel(source utils.ComposeSource) AppModel {
 
 	pages["Services"] = []tea.Model{
 		serviceslist.New([]types.ServiceConfig{}, 0, 0),
-		detailspanel.New(nil),
+		detailspanel.New(nil, urlHost),
 	}
 
 	// Every page in apptypes.PageTitles needs an entry here. A page missing
