@@ -1,4 +1,4 @@
-package components
+package themepickermodal
 
 import (
 	"fmt"
@@ -40,10 +40,10 @@ func (d themePickerDelegate) Render(w io.Writer, m list.Model, index int, listIt
 	fmt.Fprint(w, style.Render(item.Title()))
 }
 
-// ThemePickerModalModel is the theme picker: a list of registered themes
+// Model is the theme picker: a list of registered themes
 // with live preview on cursor movement. Enter applies and persists; Esc
 // restores the theme that was active when the modal opened.
-type ThemePickerModalModel struct {
+type Model struct {
 	// originalTheme is the theme name to restore on cancel. Captured once
 	// at construction time so Esc always goes back to what the user started
 	// with, even after several preview cursor movements.
@@ -51,11 +51,11 @@ type ThemePickerModalModel struct {
 	list          list.Model
 }
 
-func (m ThemePickerModalModel) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m ThemePickerModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var finalCmds []tea.Cmd
 
 	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
@@ -111,20 +111,20 @@ func themePickerHints() string {
 	)
 }
 
-func (m ThemePickerModalModel) View() tea.View {
+func (m Model) View() tea.View {
 	content := lipgloss.JoinVertical(lipgloss.Left, chrome.ModalTitle("Choose theme"), m.list.View(), "", themePickerHints())
 
 	return tea.NewView(chrome.ModalSurface(appstyles.Active.ModalBg, content))
 }
 
-// ThemePickerModal builds the theme picker overlay. It lists every
+// New builds the theme picker overlay. It lists every
 // registered theme, marks the one currently active, and starts the cursor
 // on it. Moving the cursor previews that theme live; Enter applies and
 // persists; Esc restores the original.
 //
 // termHeight is the terminal height in rows — used to size the list so it
 // never overflows the modal chrome (borders, title, hints).
-func ThemePickerModal(termHeight int) tea.Model {
+func New(termHeight int) tea.Model {
 	currentTheme := appstyles.Active.Name
 
 	// Collect and sort theme names for a stable order.
@@ -153,7 +153,7 @@ func ThemePickerModal(termHeight int) tea.Model {
 	picker.SetShowFilter(false)
 	picker.Select(activeIndex)
 
-	return ThemePickerModalModel{
+	return Model{
 		originalTheme: currentTheme,
 		list:          picker,
 	}

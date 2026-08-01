@@ -1,4 +1,4 @@
-package components
+package themepickermodal
 
 import (
 	"testing"
@@ -22,10 +22,10 @@ func TestThemePickerStartsOnActiveTheme(t *testing.T) {
 	appstyles.SetTheme("stitcher-dark")
 	defer appstyles.SetTheme("stitcher-dark")
 
-	m := ThemePickerModal(40)
-	tpm, ok := m.(ThemePickerModalModel)
+	m := New(40)
+	tpm, ok := m.(Model)
 	if !ok {
-		t.Fatal("ThemePickerModal returned unexpected type")
+		t.Fatal("New returned unexpected type")
 	}
 
 	// The list cursor should be on the active theme.
@@ -42,7 +42,7 @@ func TestThemePickerEscRestoresOriginalTheme(t *testing.T) {
 	appstyles.SetTheme("stitcher-dark")
 	defer appstyles.SetTheme("stitcher-dark")
 
-	m := ThemePickerModal(40)
+	m := New(40)
 
 	// Move down to preview a different theme.
 	for i := 0; i < 2; i++ {
@@ -79,13 +79,13 @@ func TestThemePickerEnterApplies(t *testing.T) {
 	appstyles.SetTheme("stitcher-dark")
 	defer appstyles.SetTheme("stitcher-dark")
 
-	m := ThemePickerModal(40)
+	m := New(40)
 
 	// Move to a different theme.
 	m, _ = m.Update(specialKey(tea.KeyDown))
 
 	// The theme under the cursor is now being previewed.
-	tpm, _ := m.(ThemePickerModalModel)
+	tpm, _ := m.(Model)
 	item, _ := tpm.list.SelectedItem().(apptypes.ThemeItem)
 	chosen := item.Name
 
@@ -125,7 +125,7 @@ func TestThemePickerLivePreview(t *testing.T) {
 	appstyles.SetTheme("stitcher-dark")
 	defer appstyles.SetTheme("stitcher-dark")
 
-	m := ThemePickerModal(40)
+	m := New(40)
 
 	// Move down once — the theme should change live.
 	m, _ = m.Update(specialKey(tea.KeyDown))
@@ -139,8 +139,8 @@ func TestThemePickerRendersAllThemes(t *testing.T) {
 	appstyles.SetTheme("stitcher-dark")
 	defer appstyles.SetTheme("stitcher-dark")
 
-	m := ThemePickerModal(40)
-	tpm, _ := m.(ThemePickerModalModel)
+	m := New(40)
+	tpm, _ := m.(Model)
 
 	if tpm.list.Items() == nil || len(tpm.list.Items()) == 0 {
 		t.Fatal("theme picker has no items")
@@ -156,10 +156,10 @@ func TestThemePickerFitsShortTerminal(t *testing.T) {
 	appstyles.SetTheme("stitcher-dark")
 	defer appstyles.SetTheme("stitcher-dark")
 
-	m := ThemePickerModal(20)
-	tpm, ok := m.(ThemePickerModalModel)
+	m := New(20)
+	tpm, ok := m.(Model)
 	if !ok {
-		t.Fatal("ThemePickerModal returned unexpected type")
+		t.Fatal("New returned unexpected type")
 	}
 
 	h := lipgloss.Height(tpm.View().Content)

@@ -15,7 +15,6 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/components"
 	"github.com/filipemolina/stack-stitcher/src/components/aboutmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/components/composefilepickermodal"
@@ -26,6 +25,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/components/helpoverlay"
 	"github.com/filipemolina/stack-stitcher/src/components/logsmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/servicechecklistmodal"
+	"github.com/filipemolina/stack-stitcher/src/components/themepickermodal"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 	"github.com/filipemolina/stack-stitcher/src/utils"
@@ -798,7 +798,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		finalCmds = append(finalCmds, m.reportForegroundError(msg.Message))
 
 	case cmds.OpenThemePickerMsg:
-		m.activeModal = components.ThemePickerModal(m.config.terminalHeight)
+		m.activeModal = themepickermodal.New(m.config.terminalHeight)
 
 	case cmds.ThemeAppliedMsg:
 		// CloseModal already cleared activeModal. Report a persist
