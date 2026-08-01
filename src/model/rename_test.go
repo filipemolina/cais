@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/components"
+	"github.com/filipemolina/stack-stitcher/src/components/groupnamemodal"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -25,8 +25,8 @@ func TestPressingROpensTheRenameModal(t *testing.T) {
 		t.Fatal("R did not open a modal")
 	}
 
-	if _, ok := m.activeModal.(components.GroupNameModalModel); !ok {
-		t.Fatalf("R opened %T, want a GroupNameModalModel", m.activeModal)
+	if _, ok := m.activeModal.(groupnamemodal.Model); !ok {
+		t.Fatalf("R opened %T, want a groupnamemodal.Model", m.activeModal)
 	}
 
 	frame := ansi.Strip(m.activeModal.View().Content)

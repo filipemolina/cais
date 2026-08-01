@@ -20,6 +20,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/components/confirmmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/errormodal"
+	"github.com/filipemolina/stack-stitcher/src/components/groupnamemodal"
 	"github.com/filipemolina/stack-stitcher/src/components/helpoverlay"
 	"github.com/filipemolina/stack-stitcher/src/components/logsmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/servicechecklistmodal"
@@ -628,7 +629,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case cmds.OpenCreateGroupModalMsg:
 		if m.config.configProject != nil {
-			m.activeModal = components.GroupNameModal(
+			m.activeModal = groupnamemodal.New(
 				m.allGroupNames(), m.config.configProject.ServiceNames(),
 				m.config.terminalHeight,
 			)
@@ -660,7 +661,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case cmds.OpenRenameGroupModalMsg:
 		if m.config.configProject != nil {
-			m.activeModal = components.GroupNameModalForRename(
+			m.activeModal = groupnamemodal.NewForRename(
 				msg.GroupName, m.allGroupNames(),
 			)
 		}
