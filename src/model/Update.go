@@ -24,6 +24,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/components/dockerstatusmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/errormodal"
 	"github.com/filipemolina/stack-stitcher/src/components/groupnamemodal"
+	"github.com/filipemolina/stack-stitcher/src/components/healthcheckpickermodal"
 	"github.com/filipemolina/stack-stitcher/src/components/helpoverlay"
 	"github.com/filipemolina/stack-stitcher/src/components/logsmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/servicechecklistmodal"
@@ -718,6 +719,31 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			},
 		)
+
+	case cmds.OpenHealthcheckPickerMsg:
+		if m.config.configProject != nil {
+			if svc, ok := m.config.configProject.Services[msg.ServiceName]; ok {
+				m.activeModal = healthcheckpickermodal.New(msg.ServiceName, svc, m.config.terminalHeight)
+			}
+		}
+
+	case cmds.AddHealthcheckRequestMsg:
+		finalCmds = append(finalCmds, cmds.AddHealthcheck(m.config.configFileName, msg.ServiceName, msg.Template, msg.Port))
+
+	case cmds.AddHealthcheckMsg:
+		m.lastErrorFromPoll = false
+		if msg.Err != nil {
+			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
+		} else {
+			m.lastError = ""
+			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
+		}
+		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
+			finalCmds = append(finalCmds, cfCmd)
+		}
+		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
+			finalCmds = append(finalCmds, bodyCmd)
+		}
 
 	case cmds.OpenLogsModalMsg:
 		var startCmd tea.Cmd

@@ -44,6 +44,13 @@ type Model struct {
 	// the y key, cleared on the next keypress or selection change the same
 	// way saveError/validationError are.
 	urlMessage string
+	// applyHint tells the user a just-saved healthcheck needs a restart to
+	// take effect - restart (r) reuses the container's existing config,
+	// only start (s) re-reads compose (docs/plans/healthcheck-insertion.md,
+	// "The apply gap"). Set when AddHealthcheckMsg succeeds for the
+	// selected, running service; cleared on the next docker action request
+	// or selection change.
+	applyHint string
 }
 
 func (m Model) Init() tea.Cmd {

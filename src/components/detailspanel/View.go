@@ -60,15 +60,25 @@ func (m Model) View() tea.View {
 		parts = append(parts, tables)
 	}
 
-	// The footer is the pending-action spinner, the y confirmation, or
-	// nothing at all. The panel used to pin a row of action chips here when
-	// no action was running; the keys it advertised are on the footer bar,
-	// and a chip that cannot be clicked is a control that promises more
-	// than the panel can do - see "The panel footer" in docs/DESIGN.md.
+	// The footer is the pending-action spinner, the apply hint, the y
+	// confirmation, or nothing at all. The panel used to pin a row of
+	// action chips here when no action was running; the keys it advertised
+	// are on the footer bar, and a chip that cannot be clicked is a control
+	// that promises more than the panel can do - see "The panel footer" in
+	// docs/DESIGN.md. Apply outranks the URL confirmation because it is
+	// the newer, more actionable fact - both are rare enough that a real
+	// collision is unlikely, but a hint the user still needs to act on
+	// should not be silently replaced by one they already have.
 	var footer string
 	switch {
 	case m.pendingAction != nil:
 		footer = m.renderPendingAction(bodyWidth, bg)
+	case m.applyHint != "":
+		footer = lipgloss.NewStyle().
+			Foreground(appstyles.Active.StatusStarting).
+			Background(bg).
+			Width(bodyWidth).
+			Render(m.applyHint)
 	case m.urlMessage != "":
 		footer = lipgloss.NewStyle().
 			Foreground(appstyles.Active.TextDim).
