@@ -7,10 +7,10 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/components"
 	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/components/composefilepanel"
 	"github.com/filipemolina/stack-stitcher/src/components/detailspanel"
+	"github.com/filipemolina/stack-stitcher/src/components/groupdetailspanel"
 	"github.com/filipemolina/stack-stitcher/src/components/groupslist"
 	"github.com/filipemolina/stack-stitcher/src/components/keybindingbar"
 	"github.com/filipemolina/stack-stitcher/src/components/mainmenu"
@@ -247,7 +247,7 @@ func GetInitialModel(source utils.ComposeSource) AppModel {
 
 	pages["Home"] = []tea.Model{
 		groupslist.New([]string{}, 0, 0),
-		components.GroupDetailsPanel(),
+		groupdetailspanel.New(),
 	}
 
 	pages["Services"] = []tea.Model{

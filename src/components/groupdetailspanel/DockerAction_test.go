@@ -1,4 +1,4 @@
-package components
+package groupdetailspanel
 
 import (
 	"testing"
@@ -10,6 +10,9 @@ import (
 )
 
 // keyPress builds the KeyPressMsg for a single rune, the way a panel sees it.
+// Its own copy: DockerAction_test.go's version was shared for free with
+// DetailsPanel's half of this test while both lived in the flat components
+// package, and no longer is.
 func keyPress(r rune) tea.KeyPressMsg {
 	return tea.KeyPressMsg{Code: r, Text: string(r)}
 }
@@ -38,7 +41,7 @@ func requestedAction(t *testing.T, cmd tea.Cmd) cmds.RunDockerActionMsg {
 // against whatever file docker resolved on its own, which is the desync the
 // --file threading exists to prevent.
 func TestGroupDetailsPanelRequestsTheActionRatherThanRunningIt(t *testing.T) {
-	panel := GroupDetailsPanel()
+	panel := New()
 	panel, _ = panel.Update(cmds.SetFocusMsg(constants.COMPONENT_BODY_DETAILS))
 	panel, _ = panel.Update(cmds.SetSelectedGroupMsg("backend"))
 

@@ -16,6 +16,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/components/detailspanel"
+	"github.com/filipemolina/stack-stitcher/src/components/groupdetailspanel"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
@@ -48,6 +49,24 @@ func focusedDetailsPanel(service types.ServiceConfig, width, height int) tea.Mod
 	m := detailspanel.New(&service)
 	m, _ = m.Update(cmds.SetBodyLayoutMsg{LeftWidth: 40, RightWidth: width, Height: height})
 	m, _ = m.Update(cmds.SetFocusMsg(constants.COMPONENT_BODY_DETAILS))
+	return m
+}
+
+// focusedGroupDetailsPanel builds a groupdetailspanel.Model selected, sized
+// and focused through its exported Update, the same messages AppModel sends
+// it. Its own copy of the same idea as focusedDetailsPanel: groupdetailspanel
+// is a separate package now, so this file can no longer poke its unexported
+// fields directly.
+func focusedGroupDetailsPanel(services []types.ServiceConfig, selectedGroup string, width, height int) tea.Model {
+	m := groupdetailspanel.New()
+	for _, msg := range []tea.Msg{
+		cmds.SetServicesListMsg(services),
+		cmds.SetSelectedGroupMsg(selectedGroup),
+		cmds.SetBodyLayoutMsg{LeftWidth: 40, RightWidth: width, Height: height},
+		cmds.SetFocusMsg(constants.COMPONENT_BODY_DETAILS),
+	} {
+		m, _ = m.Update(msg)
+	}
 	return m
 }
 
@@ -215,12 +234,7 @@ func TestNarrowPanelsStayInsideTheirBox(t *testing.T) {
 	for _, width := range []int{100, 80, 60, 50, 40, 30, 24, 16, 10} {
 		const height = 20
 
-		group := GroupDetailsPanel().(GroupDetailsPanelModel)
-		group.services = services
-		group.selectedGroup = "arr"
-		group.panelWidth, group.panelHeight = width, height
-		group.isFocused = true
-
+		group := focusedGroupDetailsPanel(services, "arr", width, height)
 		service := focusedDetailsPanel(services[0], width, height)
 
 		panels := map[string]tea.Model{"group": group, "service": service}
@@ -316,16 +330,10 @@ func TestDetailsPanelsPinActionRowToBottom(t *testing.T) {
 
 	service := focusedDetailsPanel(types.ServiceConfig{Name: "web", Image: "nginx:latest"}, 90, height)
 
-	group := GroupDetailsPanel().(GroupDetailsPanelModel)
-	for _, msg := range []tea.Msg{
-		cmds.SetBodyLayoutMsg{LeftWidth: 40, RightWidth: 90, Height: height},
-		cmds.SetServicesListMsg([]types.ServiceConfig{{Name: "web", Profiles: []string{"stack"}}}),
-		cmds.SetSelectedGroupMsg("stack"),
-	} {
-		updated, _ := group.Update(msg)
-		group = updated.(GroupDetailsPanelModel)
-	}
-	group.isFocused = true
+	group := focusedGroupDetailsPanel(
+		[]types.ServiceConfig{{Name: "web", Profiles: []string{"stack"}}},
+		"stack", 90, height,
+	)
 
 	// The frame pads by one row at the bottom, so the last body row is the
 	// second-to-last line of the panel.

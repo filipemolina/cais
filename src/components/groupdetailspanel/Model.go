@@ -1,4 +1,4 @@
-package components
+package groupdetailspanel
 
 import (
 	"fmt"
@@ -19,7 +19,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
-type GroupDetailsPanelModel struct {
+type Model struct {
 	selectedGroup string
 	services      []types.ServiceConfig
 	containers    []apptypes.DockerContainer
@@ -31,11 +31,11 @@ type GroupDetailsPanelModel struct {
 	spinner       spinner.Model
 }
 
-func (m GroupDetailsPanelModel) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m GroupDetailsPanelModel) memberServices() []types.ServiceConfig {
+func (m Model) memberServices() []types.ServiceConfig {
 	var members []types.ServiceConfig
 
 	for _, service := range m.services {
@@ -50,7 +50,7 @@ func (m GroupDetailsPanelModel) memberServices() []types.ServiceConfig {
 // knownGroups returns every distinct Compose profile referenced by the
 // loaded services. It distinguishes the "no groups exist yet" onboarding
 // state from "groups exist but nothing is selected".
-func (m GroupDetailsPanelModel) knownGroups() []string {
+func (m Model) knownGroups() []string {
 	seen := make(map[string]bool)
 	var groups []string
 
@@ -66,7 +66,7 @@ func (m GroupDetailsPanelModel) knownGroups() []string {
 	return groups
 }
 
-func (m GroupDetailsPanelModel) isServiceRunning(serviceName string) bool {
+func (m Model) isServiceRunning(serviceName string) bool {
 	for _, container := range m.containers {
 		if container.Service == serviceName {
 			return container.State == "running"
@@ -79,7 +79,7 @@ func (m GroupDetailsPanelModel) isServiceRunning(serviceName string) bool {
 // containerForService finds the live container whose Service label matches
 // the given compose service name. Returns false when the service has no
 // created/running container yet, so the row renders as stopped.
-func (m GroupDetailsPanelModel) containerForService(serviceName string) (apptypes.DockerContainer, bool) {
+func (m Model) containerForService(serviceName string) (apptypes.DockerContainer, bool) {
 	for _, container := range m.containers {
 		if container.Service == serviceName {
 			return container, true
@@ -89,7 +89,7 @@ func (m GroupDetailsPanelModel) containerForService(serviceName string) (apptype
 	return apptypes.DockerContainer{}, false
 }
 
-func (m GroupDetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var finalCmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -174,7 +174,7 @@ func (m GroupDetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // is always non-empty (empty states draw their own cards). The action
 // buttons are the last block of the body, which pins them to the bottom of
 // the panel.
-func (m GroupDetailsPanelModel) View() tea.View {
+func (m Model) View() tea.View {
 	body := m.renderBody()
 	screen := chrome.PanelFrame("Details", m.titlePill(), m.isFocused, m.panelWidth, m.panelHeight, body)
 
@@ -184,7 +184,7 @@ func (m GroupDetailsPanelModel) View() tea.View {
 // titlePill is the selected group's status pill, which rides on the panel's
 // title row. Empty while the panel is showing an empty state: there is no
 // group whose status it could report.
-func (m GroupDetailsPanelModel) titlePill() string {
+func (m Model) titlePill() string {
 	if m.selectedGroup == "" || len(m.knownGroups()) == 0 {
 		return ""
 	}
@@ -194,7 +194,7 @@ func (m GroupDetailsPanelModel) titlePill() string {
 	return statusPill(m.runningCount(members), len(members))
 }
 
-func (m GroupDetailsPanelModel) runningCount(members []types.ServiceConfig) int {
+func (m Model) runningCount(members []types.ServiceConfig) int {
 	running := 0
 
 	for _, svc := range members {
@@ -209,7 +209,7 @@ func (m GroupDetailsPanelModel) runningCount(members []types.ServiceConfig) int 
 // actionContext is this panel's screen state in the shape keys.Active reads -
 // the Home page twin of DetailsPanelModel.actionContext, and the same reasoning
 // about reporting the list as focused when this pane is not.
-func (m GroupDetailsPanelModel) actionContext() keys.Context {
+func (m Model) actionContext() keys.Context {
 	focused := constants.COMPONENT_BODY_LIST
 	if m.isFocused {
 		focused = constants.COMPONENT_BODY_DETAILS
@@ -225,7 +225,7 @@ func (m GroupDetailsPanelModel) actionContext() keys.Context {
 
 // renderBody builds the panel body for the current state: onboarding,
 // nothing-selected, or a selected group's header + member table + actions.
-func (m GroupDetailsPanelModel) renderBody() string {
+func (m Model) renderBody() string {
 	bodyWidth := max(1, chrome.PanelBodyWidth(m.panelWidth))
 	bodyAvail := max(1, chrome.PanelBodyHeight(m.panelHeight))
 	bg := chrome.PanelBg(m.isFocused)
@@ -276,7 +276,7 @@ func (m GroupDetailsPanelModel) renderBody() string {
 // groupHeaderCard renders the selected group's name and a
 // running/stopped/total summary, separated from the table by a thin rule.
 // The status pill sits on the panel's title row - see titlePill.
-func (m GroupDetailsPanelModel) groupHeaderCard(name string, running, stopped, total int, width int) string {
+func (m Model) groupHeaderCard(name string, running, stopped, total int, width int) string {
 	nameRow := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(appstyles.Active.TextPrimary).
@@ -327,7 +327,7 @@ func statusPill(running, total int) string {
 // member service, at its natural height. The blank rows between it and the
 // action row are panelBodyWithActions's job, so the table does not have to
 // know how much of the panel is left below it.
-func (m GroupDetailsPanelModel) renderMemberTable(members []types.ServiceConfig, width int) string {
+func (m Model) renderMemberTable(members []types.ServiceConfig, width int) string {
 	cols := computeCols(width)
 
 	parts := []string{renderTableHeader(cols, width), chrome.PanelRule(width)}
@@ -349,7 +349,7 @@ func (m GroupDetailsPanelModel) renderMemberTable(members []types.ServiceConfig,
 		Render(lipgloss.JoinVertical(lipgloss.Left, parts...))
 }
 
-func (m GroupDetailsPanelModel) renderMemberRow(cols tableCols, width int, svc types.ServiceConfig) string {
+func (m Model) renderMemberRow(cols tableCols, width int, svc types.ServiceConfig) string {
 	container, has := m.containerForService(svc.Name)
 
 	state := "stopped"
@@ -504,7 +504,7 @@ func widestColumn(c tableCols) string {
 
 // renderPendingAction renders a spinner with the action description in place
 // of the action buttons while a docker action is in progress.
-func (m GroupDetailsPanelModel) renderPendingAction(width int, bg color.Color) string {
+func (m Model) renderPendingAction(width int, bg color.Color) string {
 	desc := chrome.ActionDescription(m.pendingAction.Action, m.pendingAction.Target, m.pendingAction.IsGroup)
 
 	style := lipgloss.NewStyle().
@@ -516,8 +516,8 @@ func (m GroupDetailsPanelModel) renderPendingAction(width int, bg color.Color) s
 	return style.Render(m.spinner.View() + " " + desc)
 }
 
-func GroupDetailsPanel() tea.Model {
-	return GroupDetailsPanelModel{
+func New() tea.Model {
+	return Model{
 		componentId: 2,
 		spinner:     chrome.NewSpinner(),
 	}
