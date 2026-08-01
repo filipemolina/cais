@@ -49,6 +49,16 @@ memory, CPU, network and disk I/O for the running container.
 
 ![The Services page — one service's configuration and live runtime stats](./demo/screenshot-service.png)
 
+**A working link to the thing you just started.** Jellyfin, Navidrome, your
+`*arr` stack — the config table's `Web` row is a real hyperlink, built from
+the port the service actually publishes and the address your terminal is
+sitting behind (its SSH connection's server address when you're SSH'd in,
+`localhost` when you're not). Ctrl-click it, or `y` to copy it — the app
+never opens a browser itself, since it might not be the one on your screen.
+Wrong guess? `stitcher.url` on the service (or `url_host:` in
+`~/.config/stack-stitcher/config.yaml`, for the address alone) overrides it;
+an empty `stitcher.url: ""` suppresses the row entirely.
+
 **Edit the compose file in place, as YAML.** `e` opens the service's own
 fragment in an inline editor: real YAML, not a form, so every Compose field is
 reachable. It validates as you type, auto-indents on Enter, indents with
@@ -149,6 +159,7 @@ one.
 | `Tab` | Move focus between the list and the details panel |
 | `s` `t` `r` `p` `x` | Start · Stop · Restart · Pull · Remove (`x` confirms first) |
 | `l` | Stream logs — for the service, or for every service in the group |
+| `y` | Copy a service's URL (Services page, when it publishes one) |
 | `e` | Edit: a service's YAML inline, or a group's membership |
 | `E` | Open the whole compose file in `$EDITOR` |
 | `n` `R` `d` | New (a group on the Groups page, a service on the Services page) · Rename group · Delete group |
