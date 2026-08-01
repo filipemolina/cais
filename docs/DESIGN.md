@@ -171,7 +171,7 @@ the nav but missing from the map renders an empty body; `View` guards that case
 by always setting `AltScreen`, because returning the zero `tea.View` drops the
 terminal out of the alternate screen and the app looks like it crashed while
 still running. Pages that aren't implemented yet get a
-`components.PlaceholderPanel`.
+`placeholderpanel.New`.
 
 ### Where keybindings live
 
@@ -572,7 +572,7 @@ body is a two-pane layout:
 
 Both details panels pin the same action row to the bottom of their body:
 `s Start`, `t Stop`, `r Restart`, `p Pull`, `x Remove`, `l Logs`, rendered by
-`renderActionButtons` in `src/components/PanelFrame.go`. Four rules govern it.
+`chrome.ActionButtons` in `src/components/chrome/PanelFrame.go`. Four rules govern it.
 
 **It is pinned by one layout, not by each panel's arithmetic.**
 `panelBodyWithActions` takes a panel's content and its footer and pads between
@@ -672,7 +672,7 @@ Two fields are the one deliberate exception to "derived from base colors":
 status pill's own fill (`StatusRunning` green, `StatusStarting` amber,
 `StatusError` red) does not vary with the app's theme either - the text that
 reads legibly on a green pill has to stay dark whichever theme is active, not
-follow `TextPrimary`, which flips. `GroupDetailsPanel.go`'s `statusPill` used
+follow `TextPrimary`, which flips. `groupdetailspanel/View.go`'s `statusPill` used
 to reach for `PanelBg`/`TextPrimary` as stand-ins for "a dark color" and "a
 light color"; that only ever worked because the one theme that existed was
 dark, and the first light theme is exactly what exposed it.
@@ -801,7 +801,34 @@ The nav bar renders it dimmed, left of the wordmark, and drops it when the row
 gets tight — the same bargain the footer makes with the compose file name, and
 for the same reason: the tabs are what the nav is for.
 
-## 6. Decision checklist for new features
+## 6. Package layout
+
+`src/model` is the app: `AppModel`, its `Init`/`Update`/`View`, and the
+message-routing that owns every screen. `src/components` is the leaf
+models it composes — one folder per model (`serviceslist`, `detailspanel`,
+`groupnamemodal`, …), each holding `Model.go`, `Update.go` and `View.go`
+split out once the model earns it (roughly 150 lines, or `View` growing its
+own render helpers — a 60-line model stays one file). The constructor is
+always `New`; the exported type is always `Model`, so callers read as
+`serviceslist.New(...)` and assert on `serviceslist.Model`.
+
+`src/components/chrome` is the one shared package: rendering and layout
+that more than one model needs (`PanelFrame`, action buttons, key-hint
+rendering, the spinner, `HealthColor`/`Truncate`). A helper earns its way
+into `chrome` by having a second caller, not by convenience — a helper used
+by exactly one model stays unexported inside that model's package. This is
+enforced by the compiler, not by convention: an unexported helper simply
+cannot be reached from outside its package, so a second caller forces the
+decision explicitly rather than letting it drift.
+
+No model package imports another's internals; the only inter-model
+reference in the tree is `groupnamemodal` constructing
+`servicechecklistmodal.New` at the handoff point in the create-group flow,
+both through exported API. Only `src/model` imports the leaf packages —
+nothing downstream imports `src/components`, so `chrome` cannot become part
+of an import cycle no matter who ends up depending on it.
+
+## 7. Decision checklist for new features
 
 Before adding a feature, answer these:
 
@@ -818,7 +845,7 @@ Before adding a feature, answer these:
    duplicate Services-page functionality, prefer to extend that page unless
    there's a clear group-level reason.
 
-## 7. Related documents
+## 8. Related documents
 
 - [Roadmap](ROADMAP.md) — the ordered plan, the decisions already taken with
   the owner, and the post-alpha list. Live.
