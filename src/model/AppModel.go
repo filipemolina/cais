@@ -93,6 +93,10 @@ type AppModel struct {
 	// When set, GetRunningContainersMsg is not forwarded to components to
 	// avoid a flicker where stats disappear for one render cycle.
 	waitingForStats bool
+	// dockerStatus is the last docker preflight result: the startup probe, or
+	// a re-probe triggered by a docker call's own error. See
+	// docs/plans/docker-preflight.md D4.
+	dockerStatus utils.DockerStatus
 }
 
 // ChangeFocus moves focus through constants.FocusableComponents and returns the
