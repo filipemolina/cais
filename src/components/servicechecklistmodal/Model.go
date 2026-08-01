@@ -1,4 +1,4 @@
-package components
+package servicechecklistmodal
 
 import (
 	"fmt"
@@ -35,7 +35,7 @@ func (d serviceChecklistDelegate) Render(w io.Writer, m list.Model, index int, l
 	fmt.Fprint(w, style.Render(item.Title()))
 }
 
-type ServiceChecklistModalModel struct {
+type Model struct {
 	groupName string
 	list      list.Model
 	// isEdit selects which request the modal emits on Enter: a create for
@@ -43,14 +43,14 @@ type ServiceChecklistModalModel struct {
 	isEdit bool
 }
 
-func (m ServiceChecklistModalModel) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return nil
 }
 
 // CheckedNames returns the names of the currently checked services, in
 // list order. Exported so the model tests can assert the pre-checked state
 // an edit modal opened with.
-func (m ServiceChecklistModalModel) CheckedNames() []string {
+func (m Model) CheckedNames() []string {
 	var names []string
 
 	for _, listItem := range m.list.Items() {
@@ -62,7 +62,7 @@ func (m ServiceChecklistModalModel) CheckedNames() []string {
 	return names
 }
 
-func (m ServiceChecklistModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var finalCmds []tea.Cmd
 
 	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
@@ -123,7 +123,7 @@ func checklistHints(submitDesc string) string {
 	)
 }
 
-func (m ServiceChecklistModalModel) View() tea.View {
+func (m Model) View() tea.View {
 	submitDesc := "create group"
 	if m.isEdit {
 		submitDesc = "save changes"
@@ -168,24 +168,24 @@ func checklist(serviceNames []string, preselected map[string]bool, termHeight in
 	return cl
 }
 
-// ServiceChecklistModal is step 2 of the create-group flow: pick which
+// New is step 2 of the create-group flow: pick which
 // services get tagged with groupName. Space toggles the highlighted
 // service, Enter confirms (requires at least one checked), Esc cancels the
 // whole create flow.
-func ServiceChecklistModal(groupName string, serviceNames []string, termHeight int) tea.Model {
+func New(groupName string, serviceNames []string, termHeight int) tea.Model {
 	cl := checklist(serviceNames, nil, termHeight)
 
-	return ServiceChecklistModalModel{
+	return Model{
 		groupName: groupName,
 		list:      cl,
 	}
 }
 
-// ServiceChecklistModalForEdit reopens the service checklist to edit an
+// NewForEdit reopens the service checklist to edit an
 // existing group's membership. Services that already belong to the group
 // are pre-checked; Enter saves the diff (including empty, which removes
 // the group entirely). Esc cancels without writing.
-func ServiceChecklistModalForEdit(groupName string, serviceNames []string, currentMembers []string, termHeight int) tea.Model {
+func NewForEdit(groupName string, serviceNames []string, currentMembers []string, termHeight int) tea.Model {
 	preselected := make(map[string]bool, len(currentMembers))
 	for _, name := range currentMembers {
 		preselected[name] = true
@@ -204,7 +204,7 @@ func ServiceChecklistModalForEdit(groupName string, serviceNames []string, curre
 		}
 	}
 
-	return ServiceChecklistModalModel{
+	return Model{
 		groupName: groupName,
 		list:      cl,
 		isEdit:    true,

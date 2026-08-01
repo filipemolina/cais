@@ -16,6 +16,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/components/groupslist"
 	"github.com/filipemolina/stack-stitcher/src/components/helpoverlay"
 	"github.com/filipemolina/stack-stitcher/src/components/logsmodal"
+	"github.com/filipemolina/stack-stitcher/src/components/servicechecklistmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/serviceslist"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
@@ -42,8 +43,8 @@ func TestEveryModalHasATitleAndAnExitHint(t *testing.T) {
 		{"error", errormodal.New("boom", 100), "Error", "esc"},
 		{"group name", GroupNameModal(nil, []string{"web"}, 40), "New group", "esc"},
 		{"rename group", GroupNameModalForRename("core", nil), "Rename group", "esc"},
-		{"service checklist", ServiceChecklistModal("core", []string{"web"}, 40), "Select services", "esc"},
-		{"edit group members", ServiceChecklistModalForEdit("core", []string{"web"}, []string{"web"}, 40), "Edit members", "esc"},
+		{"service checklist", servicechecklistmodal.New("core", []string{"web"}, 40), "Select services", "esc"},
+		{"edit group members", servicechecklistmodal.NewForEdit("core", []string{"web"}, []string{"web"}, 40), "Edit members", "esc"},
 		{"create compose file", CreateComposeFileModal("."), "New compose file", "esc"},
 		{"compose file picker", ComposeFilePickerModal(".", []string{"compose.yaml"}, "compose.yaml", 40), "Switch compose file", "esc"},
 		{"theme picker", ThemePickerModal(40), "Choose theme", "esc"},
@@ -114,8 +115,8 @@ func TestListModalsFitAShortTerminal(t *testing.T) {
 		modal tea.Model
 	}{
 		{"compose file picker", ComposeFilePickerModal(".", many, many[0], termHeight)},
-		{"service checklist", ServiceChecklistModal("core", many, termHeight)},
-		{"edit group members", ServiceChecklistModalForEdit("core", many, many[:2], termHeight)},
+		{"service checklist", servicechecklistmodal.New("core", many, termHeight)},
+		{"edit group members", servicechecklistmodal.NewForEdit("core", many, many[:2], termHeight)},
 		{"theme picker", ThemePickerModal(termHeight)},
 	}
 

@@ -11,6 +11,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/components/chrome"
+	"github.com/filipemolina/stack-stitcher/src/components/servicechecklistmodal"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
@@ -70,7 +71,7 @@ func (m GroupNameModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, cmds.CloseModal(cmds.RequestRenameGroup(m.currentName, name))
 			}
 
-			return ServiceChecklistModal(name, m.serviceNames, m.termHeight), nil
+			return servicechecklistmodal.New(name, m.serviceNames, m.termHeight), nil
 		}
 	}
 
@@ -110,7 +111,7 @@ func (m GroupNameModalModel) View() tea.View {
 
 // GroupNameModal is step 1 of the create-group flow: prompt for a new,
 // unique group name. Enter with a valid name advances to
-// ServiceChecklistModal; Esc cancels the whole flow.
+// servicechecklistmodal.New; Esc cancels the whole flow.
 func GroupNameModal(existingGroups []string, serviceNames []string, termHeight int) tea.Model {
 	input := textinput.New()
 	input.Placeholder = "e.g. core"
