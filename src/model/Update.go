@@ -16,6 +16,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/components/aboutmodal"
+	"github.com/filipemolina/stack-stitcher/src/components/addservicemodal"
 	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/components/composefilepickermodal"
 	"github.com/filipemolina/stack-stitcher/src/components/confirmmodal"
@@ -460,11 +461,17 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				finalCmds = append(finalCmds, m.ChangeFocus(&leftPanel))
 			}
 
-		// n creates a group from either panel on Home. Handled here rather
-		// than in GroupsList so it works regardless of which panel is focused.
+		// n creates a group from either panel on Home, and adds a service from
+		// either panel on Services - same binding, same "make a new one"
+		// meaning, widened rather than given a second key (D1 in
+		// docs/plans/image-search.md). Handled here rather than in the lists so
+		// it works regardless of which panel is focused.
 		case key.Matches(msg, keys.List.New):
-			if m.activePage == "Home" {
+			switch m.activePage {
+			case "Home":
 				finalCmds = append(finalCmds, cmds.OpenCreateGroupModal())
+			case "Services":
+				finalCmds = append(finalCmds, cmds.OpenAddServiceModal())
 			}
 		}
 
@@ -669,6 +676,48 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.config.terminalHeight,
 			)
 		}
+
+	case cmds.OpenAddServiceModalMsg:
+		// Same gate OpenCreateGroupModalMsg uses: nothing to add a service to
+		// without a loaded file, and every page is already gated on one.
+		if m.config.configProject != nil {
+			m.activeModal = addservicemodal.New(m.config.configFileName, m.config.configProject.ServiceNames())
+		}
+
+	case cmds.AddServiceMsg:
+		if msg.Err != nil {
+			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
+			break
+		}
+		// Select the new service, move focus to the details panel, and open
+		// the inline editor on it - the whole point of Phase 1 (D2 in
+		// docs/plans/image-search.md) is landing the user in the same YAML
+		// editor they would have hand-written the service into, with just
+		// image: filled in.
+		//
+		// cmds.GetConfig is fired for the reload every write gets, but the
+		// edit-open path does not wait on it: tea.Batch makes no ordering
+		// promises between sibling commands, so a SetSelectedServiceMsg from
+		// that reload's own configSyncCmds could easily arrive after the
+		// InlineEditReadyMsg below, and the panel would silently ignore a
+		// fragment for a service it does not think is selected yet.
+		// InlineEditReadyMsg.Select carries the selection in the same
+		// message as the fragment instead, so the panel adopts both
+		// atomically - see cmds.EditService.go.
+		m.selection.serviceName = msg.ServiceName
+		detailsPanel := constants.COMPONENT_BODY_DETAILS
+		newService := types.ServiceConfig{Name: msg.ServiceName, Image: msg.Image}
+		finalCmds = append(finalCmds,
+			cmds.GetConfig(m.config.source),
+			m.ChangeFocus(&detailsPanel),
+			func() tea.Msg {
+				return cmds.InlineEditReadyMsg{
+					ServiceName: msg.ServiceName,
+					Fragment:    msg.Fragment,
+					Select:      &newService,
+				}
+			},
+		)
 
 	case cmds.OpenLogsModalMsg:
 		var startCmd tea.Cmd
