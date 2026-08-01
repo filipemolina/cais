@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/components"
+	"github.com/filipemolina/stack-stitcher/src/components/servicechecklistmodal"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/compose-spec/compose-go/v2/types"
@@ -52,8 +52,8 @@ func TestPressingEOpensTheMembershipEditor(t *testing.T) {
 		t.Fatal("e did not open a modal")
 	}
 
-	if _, ok := m.activeModal.(components.ServiceChecklistModalModel); !ok {
-		t.Fatalf("e opened %T, want a ServiceChecklistModalModel", m.activeModal)
+	if _, ok := m.activeModal.(servicechecklistmodal.Model); !ok {
+		t.Fatalf("e opened %T, want a servicechecklistmodal.Model", m.activeModal)
 	}
 }
 
@@ -64,9 +64,9 @@ func TestMembershipEditorIsPreChecked(t *testing.T) {
 	updated, cmd := m.Update(tea.KeyPressMsg{Code: 'e', Text: "e"})
 	m = drive(updated, collect(cmd)...)
 
-	modal, ok := m.activeModal.(components.ServiceChecklistModalModel)
+	modal, ok := m.activeModal.(servicechecklistmodal.Model)
 	if !ok {
-		t.Fatalf("expected a ServiceChecklistModalModel, got %T", m.activeModal)
+		t.Fatalf("expected a servicechecklistmodal.Model, got %T", m.activeModal)
 	}
 
 	checked := modal.CheckedNames()

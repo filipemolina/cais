@@ -22,6 +22,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/components/errormodal"
 	"github.com/filipemolina/stack-stitcher/src/components/helpoverlay"
 	"github.com/filipemolina/stack-stitcher/src/components/logsmodal"
+	"github.com/filipemolina/stack-stitcher/src/components/servicechecklistmodal"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 	"github.com/filipemolina/stack-stitcher/src/utils"
@@ -651,7 +652,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cmds.OpenEditGroupModalMsg:
 		if m.config.configProject != nil {
 			members := m.groupMembers(msg.GroupName)
-			m.activeModal = components.ServiceChecklistModalForEdit(
+			m.activeModal = servicechecklistmodal.NewForEdit(
 				msg.GroupName, m.config.configProject.ServiceNames(), members,
 				m.config.terminalHeight,
 			)
