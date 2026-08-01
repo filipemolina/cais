@@ -22,6 +22,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/components/confirmmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/createcomposefilemodal"
 	"github.com/filipemolina/stack-stitcher/src/components/dockerstatusmodal"
+	"github.com/filipemolina/stack-stitcher/src/components/envkeymodal"
 	"github.com/filipemolina/stack-stitcher/src/components/errormodal"
 	"github.com/filipemolina/stack-stitcher/src/components/groupnamemodal"
 	"github.com/filipemolina/stack-stitcher/src/components/healthcheckpickermodal"
@@ -513,6 +514,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
 			finalCmds = append(finalCmds, cfCmd)
 		}
+		if envCmd := m.getEnvFileCmdIfActive(); envCmd != nil {
+			finalCmds = append(finalCmds, envCmd)
+		}
 		finalCmds = append(finalCmds, m.broadcastBodyLayout())
 
 	case cmds.RefreshContainersTickMsg:
@@ -655,6 +659,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.config.configFiles = msg.Files
 		if len(m.config.configFiles) == 0 && msg.FileName != "" {
 			m.config.configFiles = []string{msg.FileName}
+		}
+		// Update envPath: always in the same directory as the compose file
+		if msg.FileName != "" {
+			m.config.envPath = filepath.Join(filepath.Dir(msg.FileName), ".env")
 		}
 		finalCmds = append(finalCmds, cmds.GetRunningContainers(m.config.configFileName))
 		// The footer starts out saying no file is loaded, so only a successful
@@ -1076,6 +1084,37 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// from the resolved file, so they follow without further work.
 		m.config.source = utils.ComposeSource{File: msg.Path}
 		finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
+
+	case cmds.OpenEnvKeyModalMsg:
+		if m.config.configProject != nil {
+			m.activeModal = envkeymodal.New()
+		}
+
+	case cmds.OpenEnvEditModalMsg:
+		if m.config.configProject != nil {
+			m.activeModal = envkeymodal.NewForEdit(msg.Key, msg.Value)
+		}
+
+	case cmds.OpenEnvDeleteConfirmMsg:
+		m.activeModal = confirmmodal.New(
+			fmt.Sprintf("Delete variable %q?", msg.Key),
+			cmds.RequestDeleteEnvVariable(msg.Key),
+		)
+
+	case cmds.AddEnvVariableRequestMsg:
+		finalCmds = append(finalCmds, cmds.SaveEnvFile(m.config.envPath, []utils.EnvEditOp{
+			{Type: "set", Key: msg.Key, Value: msg.Value},
+		}))
+
+	case cmds.EditEnvVariableRequestMsg:
+		finalCmds = append(finalCmds, cmds.SaveEnvFile(m.config.envPath, []utils.EnvEditOp{
+			{Type: "set", Key: msg.Key, Value: msg.Value},
+		}))
+
+	case cmds.DeleteEnvVariableRequestMsg:
+		finalCmds = append(finalCmds, cmds.SaveEnvFile(m.config.envPath, []utils.EnvEditOp{
+			{Type: "delete", Key: msg.Key},
+		}))
 
 	case cmds.SaveEnvFileMsg:
 		m.lastErrorFromPoll = false

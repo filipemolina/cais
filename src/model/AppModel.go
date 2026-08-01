@@ -39,6 +39,7 @@ type configModel struct {
 	// consumers only care about the winner.
 	configFiles    []string
 	configProject  *types.Project
+	envPath        string // The .env file path (always alongside the compose file)
 	terminalWidth  int
 	terminalHeight int
 	// bodyLayout is the box the body panels render into. AppModel owns it
@@ -196,6 +197,15 @@ func (m AppModel) recomposeFilesCmdIfActive() tea.Cmd {
 		return nil
 	}
 	return cmds.GetComposeFileContents(m.config.configFileName)
+}
+
+// getEnvFileCmdIfActive returns a command that reads the .env file for the
+// Env page, or nil when the Env page is not active.
+func (m AppModel) getEnvFileCmdIfActive() tea.Cmd {
+	if m.activePage != "Env" || m.config.envPath == "" {
+		return nil
+	}
+	return cmds.GetEnvFileContents(m.config.envPath)
 }
 
 // homeStats returns the counts shown in the home page status header:
