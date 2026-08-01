@@ -22,6 +22,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/keys"
+	"github.com/filipemolina/stack-stitcher/src/utils"
 )
 
 // Model is not a tea.Model in its own right - it has no Init and its
@@ -104,7 +105,7 @@ func (m Model) submit() (Model, tea.Cmd) {
 		m.errMsg = "Image can't be empty (e.g. nginx:alpine)"
 		return m, nil
 	}
-	if !isValidServiceName(name) {
+	if !utils.IsValidServiceName(name) {
 		m.errMsg = fmt.Sprintf("%q is not a valid service name", name)
 		return m, nil
 	}
@@ -138,19 +139,3 @@ func (m Model) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left, lines...)
 }
 
-func isValidServiceName(s string) bool {
-	if s == "" {
-		return false
-	}
-	for _, r := range s {
-		switch {
-		case r >= 'a' && r <= 'z':
-		case r >= 'A' && r <= 'Z':
-		case r >= '0' && r <= '9':
-		case r == '-' || r == '_':
-		default:
-			return false
-		}
-	}
-	return true
-}
