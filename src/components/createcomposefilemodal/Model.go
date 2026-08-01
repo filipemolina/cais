@@ -1,4 +1,4 @@
-package components
+package createcomposefilemodal
 
 import (
 	"fmt"
@@ -25,7 +25,7 @@ const (
 	stepServiceFields
 )
 
-type CreateComposeFileModalModel struct {
+type Model struct {
 	step createStep
 	// dir is the directory the app was told to look in (--dir), so the file
 	// is created where it will then be found. Empty is the current directory.
@@ -38,15 +38,15 @@ type CreateComposeFileModalModel struct {
 
 // path is the file this modal would create: the typed name, in the directory
 // the app is working in.
-func (m CreateComposeFileModalModel) path() string {
+func (m Model) path() string {
 	return filepath.Join(m.dir, strings.TrimSpace(m.filename.Value()))
 }
 
-func (m CreateComposeFileModalModel) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m CreateComposeFileModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
 		switch m.step {
 		case stepFilename:
@@ -79,7 +79,7 @@ func (m CreateComposeFileModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m CreateComposeFileModalModel) updateFilename(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+func (m Model) updateFilename(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, keys.Overlay.Cancel):
 		return m, cmds.CloseModal(nil)
@@ -110,7 +110,7 @@ func (m CreateComposeFileModalModel) updateFilename(msg tea.KeyPressMsg) (tea.Mo
 	return m, cmd
 }
 
-func (m CreateComposeFileModalModel) updateAddServicePrompt(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+func (m Model) updateAddServicePrompt(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, keys.Overlay.Cancel):
 		return m, cmds.CloseModal(nil)
@@ -125,7 +125,7 @@ func (m CreateComposeFileModalModel) updateAddServicePrompt(msg tea.KeyPressMsg)
 	return m, nil
 }
 
-func (m CreateComposeFileModalModel) updateServiceFields(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+func (m Model) updateServiceFields(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, keys.Overlay.Cancel):
 		return m, cmds.CloseModal(nil)
@@ -181,7 +181,7 @@ func isValidServiceName(s string) bool {
 	return true
 }
 
-func (m CreateComposeFileModalModel) View() tea.View {
+func (m Model) View() tea.View {
 	errStyle := lipgloss.NewStyle().Foreground(appstyles.Active.Danger)
 	var lines []string
 	var hints string
@@ -238,15 +238,15 @@ func (m CreateComposeFileModalModel) View() tea.View {
 	))
 }
 
-// CreateComposeFileModal walks the user through creating a brand-new compose
+// New walks the user through creating a brand-new compose
 // file in the current directory: a filename (with a sane default and basic
 // validation) and an optional one-service seed. Esc cancels the whole flow
 // at any point - the file is never half-created.
-// CreateComposeFileModal is the bootstrap flow for a directory with no
+// New is the bootstrap flow for a directory with no
 // compose file in it. dir is the directory to create it in - the same one the
 // app resolved in and found nothing, so the file it writes is the file the
 // reload afterwards picks up.
-func CreateComposeFileModal(dir string) tea.Model {
+func New(dir string) tea.Model {
 	filename := textinput.New()
 	filename.Placeholder = "compose.yaml"
 	filename.SetWidth(40)
@@ -263,7 +263,7 @@ func CreateComposeFileModal(dir string) tea.Model {
 	image.Placeholder = "e.g. nginx:alpine"
 	image.SetWidth(30)
 
-	return CreateComposeFileModalModel{
+	return Model{
 		step:        stepFilename,
 		dir:         dir,
 		filename:    filename,
