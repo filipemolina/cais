@@ -175,9 +175,12 @@ own in [docs/plans/](docs/plans/):
   lines through as marker comments was built and then removed, because a blank
   line inside a block scalar (`command: |`) is part of the string, and silently
   rewriting your data is a worse failure than losing your spacing.
-- **The keybinding bar wraps** on terminals under roughly 130 columns, eating a
-  row or two of the panel below it. Cosmetic, visible in the demo above, and
-  first in the queue of small fixes.
+- **A narrow terminal shows less, not worse.** Under roughly 135 columns the
+  keybinding bar starts dropping hints, and a narrow details panel drops
+  columns from the member table — widest and least important first, and never
+  `q quit`, `? help` or the service's own name. Everything dropped is still
+  pressable and still in the `?` overlay. Below about 20 columns the app clips
+  rather than reflows.
 
 Issues and ideas are genuinely welcome, and at this stage they still change the
 direction.
