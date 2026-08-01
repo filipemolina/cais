@@ -12,8 +12,6 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/compose-spec/compose-go/v2/types"
-	"github.com/filipemolina/stack-stitcher/src/constants"
-	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
 func (m Model) memberServices() []types.ServiceConfig {
@@ -106,25 +104,8 @@ func (m Model) runningCount(members []types.ServiceConfig) int {
 	return running
 }
 
-// actionContext is this panel's screen state in the shape keys.Active reads -
-// the Home page twin of detailspanel.Model.actionContext, and the same reasoning
-// about reporting the list as focused when this pane is not.
-func (m Model) actionContext() keys.Context {
-	focused := constants.COMPONENT_BODY_LIST
-	if m.isFocused {
-		focused = constants.COMPONENT_BODY_DETAILS
-	}
-
-	return keys.Context{
-		Page:          "Home",
-		Focused:       focused,
-		Selected:      m.selectedGroup != "",
-		PendingAction: m.pendingAction != nil,
-	}
-}
-
 // renderBody builds the panel body for the current state: onboarding,
-// nothing-selected, or a selected group's header + member table + actions.
+// nothing-selected, or a selected group's header + member table.
 func (m Model) renderBody() string {
 	bodyWidth := max(1, chrome.PanelBodyWidth(m.panelWidth))
 	bodyAvail := max(1, chrome.PanelBodyHeight(m.panelHeight))
@@ -154,22 +135,24 @@ func (m Model) renderBody() string {
 		m.renderMemberTable(members, bodyWidth),
 	)
 
-	// The footnote rides with the action row rather than with the table: it is
-	// about the actions, so it belongs against them at the foot of the panel.
+	// The footnote is about the actions, so it belongs at the foot of the panel
+	// rather than against the table. It used to ride above the action chip row;
+	// with the chips gone it is the panel's only standing hint that a stopped
+	// group is one keypress from running - see "The panel footer" in
+	// docs/DESIGN.md.
 	var footerParts []string
 	if running == 0 && len(members) > 0 {
-		footerParts = append(footerParts, "",
+		footerParts = append(footerParts,
 			lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Render("Press s to start."))
 	}
 
-	// Show a spinner in the buttons area while an action is pending.
+	// The spinner replaces the hint while an action is pending: the hint is
+	// about a key that is disabled for as long as the spinner is up.
 	if m.pendingAction != nil {
-		footerParts = append(footerParts, m.renderPendingAction(bodyWidth, bg))
-	} else {
-		footerParts = append(footerParts, chrome.ActionButtons(bodyWidth, bg, m.actionContext()))
+		footerParts = []string{m.renderPendingAction(bodyWidth, bg)}
 	}
 
-	return chrome.PanelBodyWithActions(bodyWidth, bodyAvail, bg,
+	return chrome.PanelBodyWithFooter(bodyWidth, bodyAvail, bg,
 		content, lipgloss.JoinVertical(lipgloss.Left, footerParts...))
 }
 
