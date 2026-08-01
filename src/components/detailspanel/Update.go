@@ -65,6 +65,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.service = &service
 
 	case cmds.InlineEditReadyMsg:
+		if msg.Select != nil {
+			m.service = msg.Select
+		}
 		if m.service == nil || m.service.Name != msg.ServiceName || msg.Err != nil {
 			break
 		}

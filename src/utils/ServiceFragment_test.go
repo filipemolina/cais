@@ -227,6 +227,99 @@ func TestValidateComposeCandidateLeavesNoTempFiles(t *testing.T) {
 	}
 }
 
+func TestAddServiceFragmentInsertsIntoAnExistingFile(t *testing.T) {
+	path := writeFixture(t, fragmentFixture)
+
+	err := AddServiceFragment(path, "proxy", []byte("proxy:\n  image: traefik:v3\n"))
+	if err != nil {
+		t.Fatalf("AddServiceFragment: %v", err)
+	}
+
+	after := readFile(t, path)
+	if !strings.Contains(after, "proxy:") || !strings.Contains(after, "traefik:v3") {
+		t.Errorf("the new service was not written, got:\n%s", after)
+	}
+
+	// Everything already in the file has to survive, comments included.
+	for _, untouched := range []string{
+		"# core services", "postgres:alpine # the database", "redis:alpine",
+	} {
+		if !strings.Contains(after, untouched) {
+			t.Errorf("adding a service lost %q, got:\n%s", untouched, after)
+		}
+	}
+
+	// Insertion is at the end of the mapping, so a reader looking for a new
+	// entry finds it there rather than shuffled in among the existing ones.
+	if strings.Index(after, "proxy:") < strings.Index(after, "cache:") {
+		t.Errorf("the new service was not appended at the end, got:\n%s", after)
+	}
+}
+
+func TestAddServiceFragmentIntoAFileWithNoServicesKey(t *testing.T) {
+	path := writeFixture(t, "name: homelab\nvolumes:\n  data: {}\n")
+
+	err := AddServiceFragment(path, "web", []byte("web:\n  image: nginx:alpine\n"))
+	if err != nil {
+		t.Fatalf("AddServiceFragment: %v", err)
+	}
+
+	after := readFile(t, path)
+	for _, want := range []string{"name: homelab", "volumes:", "services:", "web:", "nginx:alpine"} {
+		if !strings.Contains(after, want) {
+			t.Errorf("missing %q, got:\n%s", want, after)
+		}
+	}
+}
+
+func TestAddServiceFragmentIntoAFileWithANullServicesKey(t *testing.T) {
+	path := writeFixture(t, "name: homelab\nservices:\n")
+
+	err := AddServiceFragment(path, "web", []byte("web:\n  image: nginx:alpine\n"))
+	if err != nil {
+		t.Fatalf("AddServiceFragment: %v", err)
+	}
+
+	after := readFile(t, path)
+	if !strings.Contains(after, "web:") || !strings.Contains(after, "nginx:alpine") {
+		t.Errorf("the service was not written into the null services: key, got:\n%s", after)
+	}
+}
+
+func TestAddServiceFragmentRefusesADuplicateName(t *testing.T) {
+	path := writeFixture(t, fragmentFixture)
+	before := readFile(t, path)
+
+	err := AddServiceFragment(path, "app", []byte("app:\n  image: nginx:latest\n"))
+	if err == nil {
+		t.Fatal("expected a duplicate service name to be refused")
+	}
+	if !strings.Contains(err.Error(), "already exists") {
+		t.Errorf("error %q does not say the service already exists", err)
+	}
+
+	if after := readFile(t, path); after != before {
+		t.Errorf("a rejected add changed the file:\n%s", after)
+	}
+}
+
+// A candidate that parses but fails compose validation (an invalid ports
+// entry) must leave the file untouched, the same guarantee
+// ApplyServiceFragment gives.
+func TestAddServiceFragmentLeavesTheFileUntouchedOnValidationFailure(t *testing.T) {
+	path := writeFixture(t, fragmentFixture)
+	before := readFile(t, path)
+
+	fragment := []byte("proxy:\n  image: traefik:v3\n  ports:\n    - target: not-a-number\n")
+	if err := AddServiceFragment(path, "proxy", fragment); err == nil {
+		t.Fatal("expected the add to be rejected")
+	}
+
+	if after := readFile(t, path); after != before {
+		t.Errorf("a rejected add changed the file:\n%s", after)
+	}
+}
+
 func readFile(t *testing.T, path string) string {
 	t.Helper()
 

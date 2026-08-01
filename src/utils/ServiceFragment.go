@@ -104,6 +104,85 @@ func ApplyServiceFragment(fileName string, serviceName string, fragment []byte) 
 	return ReplaceFileAtomically(fileName, candidate)
 }
 
+// AddServiceFragment inserts a new service into the compose file at
+// fileName.
+//
+// It is ApplyServiceFragment's opposite number: same fragment shape, same
+// validation, same atomic write, but it refuses when the name is already
+// taken instead of when it is absent. Insertion is at the end of the
+// services: mapping, which is where a reader expects a new entry and the
+// only position that never reorders the user's file.
+func AddServiceFragment(fileName string, serviceName string, fragment []byte) error {
+	newValue, err := parseServiceFragment(serviceName, fragment)
+	if err != nil {
+		return err
+	}
+
+	doc, err := readComposeNode(fileName)
+	if err != nil {
+		return err
+	}
+
+	servicesNode, err := addServicesMappingNode(doc)
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i+1 < len(servicesNode.Content); i += 2 {
+		if servicesNode.Content[i].Value == serviceName {
+			return fmt.Errorf("service %q already exists in compose file", serviceName)
+		}
+	}
+
+	keyNode := &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: serviceName}
+	servicesNode.Content = append(servicesNode.Content, keyNode, newValue)
+
+	candidate, err := encodeNode(doc)
+	if err != nil {
+		return err
+	}
+
+	if err := ValidateComposeCandidate(filepath.Dir(fileName), candidate); err != nil {
+		return err
+	}
+
+	return ReplaceFileAtomically(fileName, candidate)
+}
+
+// addServicesMappingNode is servicesMappingNode's insertion counterpart: it
+// returns doc's services: mapping node, creating it (as an empty mapping)
+// when the key is absent, and replacing it in place when present but null -
+// a compose file with only name:/volumes: and no services: yet is legal,
+// and AddServiceFragment is the one writer in this package that has to
+// succeed on it. Every other writer only ever edits an existing service, so
+// they keep using the stricter servicesMappingNode.
+func addServicesMappingNode(doc *yaml.Node) (*yaml.Node, error) {
+	if len(doc.Content) == 0 {
+		return nil, fmt.Errorf("compose file is empty")
+	}
+	root := doc.Content[0]
+
+	for i := 0; i+1 < len(root.Content); i += 2 {
+		if root.Content[i].Value != "services" {
+			continue
+		}
+
+		value := root.Content[i+1]
+		if value.Kind != yaml.MappingNode {
+			// services: present but null (or some other bare scalar) -
+			// replace it with an empty mapping in place, keeping the key
+			// node (and any comment attached to it) untouched.
+			*value = yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+		}
+		return value, nil
+	}
+
+	keyNode := &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "services"}
+	valueNode := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+	root.Content = append(root.Content, keyNode, valueNode)
+	return valueNode, nil
+}
+
 // parseServiceFragment validates the shape of an edited fragment and
 // returns the service's value node.
 func parseServiceFragment(serviceName string, fragment []byte) (*yaml.Node, error) {
