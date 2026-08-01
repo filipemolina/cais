@@ -1076,6 +1076,17 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// from the resolved file, so they follow without further work.
 		m.config.source = utils.ComposeSource{File: msg.Path}
 		finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
+
+	case cmds.SaveEnvFileMsg:
+		m.lastErrorFromPoll = false
+		if msg.Err != nil {
+			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
+		} else {
+			m.lastError = ""
+			// After a successful write, reload the project to re-interpolate
+			// any .env changes into the compose file.
+			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
+		}
 	}
 
 	if m.activeModal != nil {
