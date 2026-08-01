@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 	"slices"
+	"strings"
 
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/apptypes"
@@ -241,7 +242,6 @@ func (m Model) renderMemberRow(cols tableCols, width int, svc types.ServiceConfi
 	image := svc.Image
 	health := "-"
 	uptime := "-"
-	ports := "-"
 	dotColor := appstyles.Active.StatusStopped
 
 	if has {
@@ -255,9 +255,11 @@ func (m Model) renderMemberRow(cols tableCols, width int, svc types.ServiceConfi
 		if container.RunningFor != "" {
 			uptime = container.RunningFor
 		}
-		if container.Ports != "" {
-			ports = container.Ports
-		}
+	}
+
+	ports := "—"
+	if published := chrome.PublishedPorts(svc.Ports); len(published) > 0 {
+		ports = strings.Join(published, ", ")
 	}
 
 	if state == "running" {
@@ -273,7 +275,7 @@ func (m Model) renderMemberRow(cols tableCols, width int, svc types.ServiceConfi
 	}{
 		"dot":    {"●", dotColor},
 		"name":   {svc.Name, appstyles.Active.TextPrimary},
-		"image":  {image, appstyles.Active.TextMuted},
+		"image":  {chrome.ShortImage(image, max(1, cols.image-1)), appstyles.Active.TextMuted},
 		"state":  {state, stateColor(state)},
 		"health": {health, chrome.HealthColor(health)},
 		"uptime": {uptime, appstyles.Active.TextDim},

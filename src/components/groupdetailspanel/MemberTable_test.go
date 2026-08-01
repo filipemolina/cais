@@ -8,6 +8,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/compose-spec/compose-go/v2/types"
+	"github.com/filipemolina/stack-stitcher/src/apptypes"
 )
 
 // headingsAt is the column headings the table shows at a given width, read back
@@ -157,5 +158,37 @@ func TestMemberRowCellsDoNotTouch(t *testing.T) {
 					width, name, string(boundary), at-1, string(row))
 			}
 		}
+	}
+}
+
+// Pins D1: the PORTS column reads the compose file, not docker compose ps.
+// A container's runtime Ports string disagrees with the file the moment the
+// service is edited and not recreated, and the file is the app's source of
+// truth - see docs/plans/group-table-legibility.md.
+func TestMemberRowPortsComeFromTheFile(t *testing.T) {
+	m := Model{
+		services: []types.ServiceConfig{
+			{
+				Name:     "navidrome",
+				Profiles: []string{"media"},
+				Ports: []types.ServicePortConfig{
+					{Published: "4533", Target: 4533, Protocol: "tcp"},
+				},
+			},
+		},
+		containers: []apptypes.DockerContainer{
+			{Service: "navidrome", State: "running", Ports: "0.0.0.0:9999->9999/tcp"},
+		},
+		selectedGroup: "media",
+	}
+
+	width := 120
+	row := ansi.Strip(m.renderMemberRow(computeCols(width), width, m.services[0]))
+
+	if strings.Contains(row, "9999") {
+		t.Errorf("row reads the runtime Ports string, not the file: %q", row)
+	}
+	if !strings.Contains(row, "4533") {
+		t.Errorf("row does not show the file's published port: %q", row)
 	}
 }
