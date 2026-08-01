@@ -202,7 +202,7 @@ called out as such in the roadmap: **write safety** (new, see below) and the
   `docs/DESIGN.md`. The `?` overlay picked up the `alt` aliases and the
   brackets, which the footer had no room for.
 
-- [x] **[S] `?` help overlay** — `?` opens `components.HelpOverlay` through
+- [x] **[S] `?` help overlay** — `?` opens `helpoverlay.New` through
   `cmds.OpenHelpModal`, rendered from `keys.Catalog(ctx)`: every binding
   grouped by scope, with rows that do nothing on the screen it opened from
   dimmed. Availability comes from a snapshot (`AppModel.helpContext`: page,
@@ -235,7 +235,7 @@ called out as such in the roadmap: **write safety** (new, see below) and the
   first, then pull, then logs; the three lifecycle verbs are what a very narrow
   panel keeps) rather than letting lipgloss wrap on the cell. Worth reading
   before doing the footer: it is the same shape of fix the footer needs, and
-  `renderActionButtons` in `src/components/PanelFrame.go` is the worked example.
+  `chrome.ActionButtons` in `src/components/chrome/PanelFrame.go` is the worked example.
   Note that the wrap never spilled the frame — the panels clip their body with
   `MaxHeight`, so a six-button row wrapping to thirty-one rows was absorbed by
   eating the member table instead. The footer has no such clip, which is why it

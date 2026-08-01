@@ -62,10 +62,10 @@ is a commit nobody can bisect through.
 Most behaviour is testable without a terminal:
 
 - **Components** take messages and hand back a model — drive one directly and
-  assert on the result (`src/components/ServicesList_test.go`).
+  assert on the result (`src/components/serviceslist/Model_test.go`).
 - **Rendering** is a string. `ansi.Strip(m.View().Content)` gives you the plain
   text of a component, which is enough to catch layout and styling mistakes
-  (`src/components/MainMenu_test.go`).
+  (`src/components/mainmenu/Model_test.go`).
 - **Whole flows** go through the e2e rig in `src/model/rig_test.go`, which runs
   a real `tea.Program` against an in-memory buffer.
 
