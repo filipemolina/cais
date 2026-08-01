@@ -213,14 +213,27 @@ func TestRigAddService(t *testing.T) {
 	}
 
 	r.Send(letterKey('n'))
-	if !r.WaitFor("New service", 3*time.Second) {
+	if !r.WaitFor("Search Docker Hub", 3*time.Second) {
 		t.Fatalf("add-service modal did not open. Output:\n%s", r.Output())
 	}
 
+	// Search stage: type the query, Enter advances to confirm with the typed
+	// text as the image - no result row is highlighted because the search
+	// debounce (350ms) has not fired by the time Enter lands.
 	for _, ch := range "proxy" {
 		r.Send(letterKey(ch))
 	}
+	r.Send(keyPress(tea.KeyEnter))
+
+	if !r.WaitFor("New service", 3*time.Second) {
+		t.Fatalf("confirm stage did not open. Output:\n%s", r.Output())
+	}
+
+	// Confirm stage: Tab to the image field (prefilled with the typed text),
+	// clear it with ctrl+u (textinput's delete-before-cursor), type the real
+	// reference, Enter submits.
 	r.Send(keyPress(tea.KeyTab))
+	r.Send(tea.KeyPressMsg{Code: 'u', Mod: tea.ModCtrl})
 	for _, ch := range "traefik:v3" {
 		r.Send(letterKey(ch))
 	}

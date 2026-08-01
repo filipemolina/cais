@@ -11,6 +11,7 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
+	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -47,6 +48,7 @@ type Model struct {
 	// separate "image" input at this stage.
 	query      textinput.Model
 	results    list.Model
+	spinner    spinner.Model
 	generation int    // bumped on every keystroke and every fired search (D3)
 	searching  bool   // true between a fired search and its result/staleness
 	searchErr  string // set on a search failure; cleared on the next successful one
@@ -87,6 +89,7 @@ func New(fileName string, existingServiceNames []string) tea.Model {
 		step:                 stepSearch,
 		query:                query,
 		results:              cl,
+		spinner:              chrome.NewSpinner(),
 	}
 }
 
@@ -155,7 +158,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil // superseded by a later keystroke - do nothing
 		}
 		m.searching = true
-		return m, cmds.SearchImages(strings.TrimSpace(m.query.Value()), 20, m.generation)
+		// Arm the spinner the way detailspanel does when a pending action
+		// starts: Update with its own TickMsg returns the next tick command,
+		// which this case returns alongside the search itself.
+		var spCmd tea.Cmd
+		m.spinner, spCmd = m.spinner.Update(m.spinner.Tick())
+		return m, tea.Batch(cmds.SearchImages(strings.TrimSpace(m.query.Value()), 20, m.generation), spCmd)
 
 	case cmds.SearchImagesMsg:
 		if msg.Generation != m.generation {
@@ -175,6 +183,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.searchErr = "no images matched"
 		}
 		return m, nil
+
+	case spinner.TickMsg:
+		if !m.searching {
+			return m, nil // search resolved - let the tick chain die
+		}
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
 	}
 
 	// Non-key messages (cursor blink ticks, window size) still need to
@@ -308,6 +324,24 @@ func (m Model) View() tea.View {
 	sections := []string{
 		chrome.ModalTitle("Search Docker Hub"),
 		m.query.View(),
+	}
+
+	// Four body states below the input, first match wins (the plan's
+	// Step 9 order): in-flight search, quiet error, not-yet-searched hint,
+	// then the results table. The spinner is armed in Update on
+	// SearchDebounceMsg and ticks only while m.searching.
+	switch {
+	case m.searching:
+		spinnerLine := m.spinner.View() + " searching…"
+		sections = append(sections, lipgloss.NewStyle().Foreground(appstyles.Active.TextMuted).Render(spinnerLine))
+	case m.searchErr != "":
+		// TextMuted, deliberately not Danger: this is a quiet degradation
+		// (D6a) - the user can still type a full reference and continue.
+		sections = append(sections, lipgloss.NewStyle().Foreground(appstyles.Active.TextMuted).Render(m.searchErr))
+	case len(strings.TrimSpace(m.query.Value())) < 2:
+		sections = append(sections, lipgloss.NewStyle().Foreground(appstyles.Active.TextMuted).Render("Type to search Docker Hub"))
+	default:
+		sections = append(sections, m.results.View())
 	}
 
 	sections = append(sections, "", chrome.ModalHints(
