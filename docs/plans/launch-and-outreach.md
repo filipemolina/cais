@@ -70,7 +70,10 @@ Everything else on the pre-flight list is cheap:
   matrix. Tagging also starts a clock that matters — see *Directories*, below.
 - **An issue template and a "what this is not" line,** so the first three
   issues are not "add Kubernetes support".
-- **A screenshot-accurate README.** Done (2026-07-31).
+- **A screenshot-accurate README.** Done (2026-08-01). Re-recorded after the
+  action row was removed and the keybinding bar stopped wrapping — worth
+  knowing that this item reopens every time the chrome changes, so it belongs
+  after the UI work rather than beside it.
 
 ## The angle
 
