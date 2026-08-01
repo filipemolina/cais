@@ -6,7 +6,7 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/components"
+	"github.com/filipemolina/stack-stitcher/src/components/composefilepickermodal"
 	"github.com/filipemolina/stack-stitcher/src/utils"
 
 	tea "charm.land/bubbletea/v2"
@@ -70,8 +70,8 @@ func TestTheScanOpensThePicker(t *testing.T) {
 	if m.activeModal == nil {
 		t.Fatal("the scan did not open a modal")
 	}
-	if _, ok := m.activeModal.(components.ComposeFilePickerModalModel); !ok {
-		t.Fatalf("opened %T, want a ComposeFilePickerModalModel", m.activeModal)
+	if _, ok := m.activeModal.(composefilepickermodal.Model); !ok {
+		t.Fatalf("opened %T, want a composefilepickermodal.Model", m.activeModal)
 	}
 }
 

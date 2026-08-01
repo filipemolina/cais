@@ -11,6 +11,7 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/components/aboutmodal"
+	"github.com/filipemolina/stack-stitcher/src/components/composefilepickermodal"
 	"github.com/filipemolina/stack-stitcher/src/components/confirmmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/errormodal"
 	"github.com/filipemolina/stack-stitcher/src/components/groupnamemodal"
@@ -47,7 +48,7 @@ func TestEveryModalHasATitleAndAnExitHint(t *testing.T) {
 		{"service checklist", servicechecklistmodal.New("core", []string{"web"}, 40), "Select services", "esc"},
 		{"edit group members", servicechecklistmodal.NewForEdit("core", []string{"web"}, []string{"web"}, 40), "Edit members", "esc"},
 		{"create compose file", CreateComposeFileModal("."), "New compose file", "esc"},
-		{"compose file picker", ComposeFilePickerModal(".", []string{"compose.yaml"}, "compose.yaml", 40), "Switch compose file", "esc"},
+		{"compose file picker", composefilepickermodal.New(".", []string{"compose.yaml"}, "compose.yaml", 40), "Switch compose file", "esc"},
 		{"theme picker", ThemePickerModal(40), "Choose theme", "esc"},
 		{"logs", logs, "logs: web", "esc"},
 	}
@@ -115,7 +116,7 @@ func TestListModalsFitAShortTerminal(t *testing.T) {
 		name  string
 		modal tea.Model
 	}{
-		{"compose file picker", ComposeFilePickerModal(".", many, many[0], termHeight)},
+		{"compose file picker", composefilepickermodal.New(".", many, many[0], termHeight)},
 		{"service checklist", servicechecklistmodal.New("core", many, termHeight)},
 		{"edit group members", servicechecklistmodal.NewForEdit("core", many, many[:2], termHeight)},
 		{"theme picker", ThemePickerModal(termHeight)},
