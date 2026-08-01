@@ -13,6 +13,7 @@ import (
 	"github.com/docker/go-units"
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/keys"
+	"github.com/filipemolina/stack-stitcher/src/utils"
 )
 
 // containerForService returns the first container matching the given compose
@@ -59,14 +60,21 @@ func (m Model) View() tea.View {
 		parts = append(parts, tables)
 	}
 
-	// The footer is the pending-action spinner or nothing at all. The panel used
-	// to pin a row of action chips here when no action was running; the keys it
-	// advertised are on the footer bar, and a chip that cannot be clicked is a
-	// control that promises more than the panel can do - see "The panel footer"
-	// in docs/DESIGN.md.
+	// The footer is the pending-action spinner, the y confirmation, or
+	// nothing at all. The panel used to pin a row of action chips here when
+	// no action was running; the keys it advertised are on the footer bar,
+	// and a chip that cannot be clicked is a control that promises more
+	// than the panel can do - see "The panel footer" in docs/DESIGN.md.
 	var footer string
-	if m.pendingAction != nil {
+	switch {
+	case m.pendingAction != nil:
 		footer = m.renderPendingAction(bodyWidth, bg)
+	case m.urlMessage != "":
+		footer = lipgloss.NewStyle().
+			Foreground(appstyles.Active.TextDim).
+			Background(bg).
+			Width(bodyWidth).
+			Render(m.urlMessage)
 	}
 
 	body := chrome.PanelBodyWithFooter(bodyWidth, bodyAvail, bg,
@@ -262,8 +270,13 @@ func renderPropRow(propWidth, valWidth int, row propRow) string {
 
 // configRows collects the compose configuration the panel reports, in display
 // order. Every entry is conditional: a service states only what it defines, so
-// the table has no rows reading "Healthcheck —".
-func (m Model) configRows() []propRow {
+// the table has no rows reading "Healthcheck —". valWidth is the value
+// column's width, needed only for the Web row: chrome.Hyperlink's OSC 8
+// sequence must wrap text that is already truncated and padded to its
+// column, or chrome.Truncate (runewidth, not ANSI-aware) will cut through
+// the middle of the escape sequence later and corrupt the rest of the
+// screen - see docs/plans/service-urls.md D5.
+func (m Model) configRows(valWidth int) []propRow {
 	var rows []propRow
 
 	svc := *m.service
@@ -275,6 +288,13 @@ func (m Model) configRows() []propRow {
 			portLines = append(portLines, chrome.PortLabel(port))
 		}
 		rows = append(rows, propRow{"Ports", portLines})
+	}
+
+	// Web - the same fact as Ports, one altitude up: an address rather than
+	// a mapping. Directly under Ports for that reason.
+	if u, ok := utils.ResolveURL(svc, m.host); ok {
+		text := chrome.Truncate(u.URL, valWidth)
+		rows = append(rows, propRow{"Web", []string{chrome.Hyperlink(text, u.URL)}})
 	}
 
 	// Container name
@@ -430,7 +450,8 @@ func (m Model) runtimeRows() []propRow {
 // renderConfigTable and renderRuntimeStats are the two tables the panel shows,
 // at the width they are given.
 func (m Model) renderConfigTable(width int) string {
-	return renderPropTable("PROPERTY", width, m.configRows())
+	_, valWidth := propTableCols(width)
+	return renderPropTable("PROPERTY", width, m.configRows(valWidth))
 }
 
 func (m Model) renderRuntimeStats(width int) string {

@@ -91,7 +91,7 @@ func TestFooterHints(t *testing.T) {
 		{
 			name:  "service details with a service selected",
 			model: Model{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_DETAILS, selectedService: true},
-			want:  "s start · t stop · r restart · p pull · x remove · l logs · e edit · E file · esc back · tab next",
+			want:  "s start · t stop · r restart · p pull · x remove · l logs · y copy url · e edit · E file · esc back · tab next",
 		},
 		{
 			name:  "service details while inline editing",
