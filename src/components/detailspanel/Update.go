@@ -65,8 +65,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.service == nil || m.service.Name != service.Name {
 			m.urlMessage = ""
+			m.applyHint = ""
 		}
 		m.service = &service
+
+	case cmds.AddHealthcheckMsg:
+		if msg.Err == nil && m.service != nil && m.service.Name == msg.ServiceName && m.isServiceRunning(msg.ServiceName) {
+			m.applyHint = "running: press s to apply - restart won't re-read the compose file"
+		}
 
 	case cmds.InlineEditReadyMsg:
 		if msg.Select != nil {
@@ -150,6 +156,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			finalCmds = append(finalCmds, editorCmd)
 			m.updateValidationError()
 		} else if action, ok := chrome.DockerActionFor(msg); ok {
+			m.applyHint = ""
 			finalCmds = append(finalCmds, cmds.RequestDockerAction(action, m.service.Name, false))
 		} else if key.Matches(msg, keys.Details.Remove) {
 			finalCmds = append(finalCmds, cmds.OpenConfirmModal(
@@ -163,6 +170,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.urlMessage = "copied " + u.URL
 				finalCmds = append(finalCmds, tea.SetClipboard(u.URL))
 			}
+		} else if key.Matches(msg, keys.Details.Healthcheck) {
+			finalCmds = append(finalCmds, cmds.OpenHealthcheckPicker(m.service.Name))
 		} else if key.Matches(msg, keys.Details.EditService) {
 			finalCmds = append(finalCmds, cmds.RequestInlineEdit(m.service.Name))
 		} else if key.Matches(msg, keys.Details.EditFile) {

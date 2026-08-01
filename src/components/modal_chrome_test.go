@@ -18,6 +18,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/components/errormodal"
 	"github.com/filipemolina/stack-stitcher/src/components/groupnamemodal"
 	"github.com/filipemolina/stack-stitcher/src/components/groupslist"
+	"github.com/filipemolina/stack-stitcher/src/components/healthcheckpickermodal"
 	"github.com/filipemolina/stack-stitcher/src/components/helpoverlay"
 	"github.com/filipemolina/stack-stitcher/src/components/logsmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/servicechecklistmodal"
@@ -60,6 +61,7 @@ func TestEveryModalHasATitleAndAnExitHint(t *testing.T) {
 		{"edit group members", servicechecklistmodal.NewForEdit("core", []string{"web"}, []string{"web"}, 40), "Edit members", "esc"},
 		{"create compose file", createcomposefilemodal.New("."), "New compose file", "esc"},
 		{"add service", addservicemodal.New("compose.yaml", []string{"web"}), "New service", "esc"},
+		{"healthcheck picker", healthcheckpickermodal.New("web", types.ServiceConfig{Image: "nginx:alpine"}, 40), "Add healthcheck", "esc"},
 		{"compose file picker", composefilepickermodal.New(".", []string{"compose.yaml"}, "compose.yaml", 40), "Switch compose file", "esc"},
 		{"theme picker", themepickermodal.New(40), "Choose theme", "esc"},
 		{"logs", logs, "logs: web", "esc"},

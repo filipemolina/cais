@@ -91,10 +91,10 @@ type ListKeys struct {
 
 // DetailsKeys act on whatever the body's right panel is showing. The first six
 // are shared verbatim between the group panel and the service panel: same key,
-// same meaning, one scope wider or narrower. EditService, EditFile and CopyURL
-// exist only on the service panel, which is the only place a single service is
-// the subject. Save and OpenEditor are only live while the inline editor is
-// open.
+// same meaning, one scope wider or narrower. EditService, EditFile, CopyURL
+// and Healthcheck exist only on the service panel, which is the only place a
+// single service is the subject. Save and OpenEditor are only live while the
+// inline editor is open.
 type DetailsKeys struct {
 	Start       key.Binding
 	Stop        key.Binding
@@ -109,6 +109,8 @@ type DetailsKeys struct {
 	// CopyURL exists only on the service panel, alongside EditService and
 	// EditFile - the group panel has no single URL to copy.
 	CopyURL key.Binding
+	// Healthcheck opens the template picker (docs/plans/healthcheck-insertion.md).
+	Healthcheck key.Binding
 }
 
 // EditorKeys act inside the inline YAML editor, and only there. The editor
@@ -208,6 +210,11 @@ var Details = DetailsKeys{
 	// exclusively while it is open, the same double life n already lives
 	// (List.New / Overlay.No).
 	CopyURL: key.NewBinding(key.WithKeys("y"), key.WithHelp("y", "copy url")),
+	// Unbound everywhere else - verified by grep, the only prior occurrence
+	// in the codebase was a test asserting the bubbles list's own paging
+	// keys (l h f b u) are not bound. l (logs) and h (health) sit
+	// naturally together in this scope.
+	Healthcheck: key.NewBinding(key.WithKeys("h"), key.WithHelp("h", "healthcheck")),
 }
 
 var Editor = EditorKeys{
@@ -394,7 +401,7 @@ func Active(ctx Context) []key.Binding {
 			return []key.Binding{
 				Details.Start, Details.Stop, Details.Restart,
 				Details.Pull, Details.Remove, Details.Logs,
-				Details.CopyURL,
+				Details.CopyURL, Details.Healthcheck,
 				Details.EditService, Details.EditFile,
 				Global.Back, Global.NextPanel,
 			}
@@ -530,7 +537,7 @@ func Catalog(ctx Context) []Scope {
 			Entries: entries(
 				Details.Start, Details.Stop, Details.Restart,
 				Details.Pull, Details.Remove, Details.Logs,
-				Details.CopyURL,
+				Details.CopyURL, Details.Healthcheck,
 				Details.EditService, Details.EditFile,
 				Details.Save, Details.OpenEditor,
 			),
