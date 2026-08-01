@@ -272,15 +272,7 @@ func (m Model) configRows() []propRow {
 	if len(svc.Ports) > 0 {
 		var portLines []string
 		for _, port := range svc.Ports {
-			protocol := port.Protocol
-			if protocol == "" {
-				protocol = "tcp"
-			}
-			portStr := fmt.Sprintf("%d/%s", port.Target, protocol)
-			if port.Published != "" {
-				portStr = port.Published + "->" + portStr
-			}
-			portLines = append(portLines, portStr)
+			portLines = append(portLines, chrome.PortLabel(port))
 		}
 		rows = append(rows, propRow{"Ports", portLines})
 	}

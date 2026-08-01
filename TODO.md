@@ -306,12 +306,14 @@ called out as such in the roadmap: **write safety** (new, see below) and the
 The six plans below came out of the 2026-08-01 feature round. Each is written
 up in full in `docs/plans/`; `docs/ROADMAP.md` has the order and the reasons.
 
-- [ ] **[S] Group table legibility** (`docs/plans/group-table-legibility.md`) —
-  PORTS renders `0.0.0.0:6881->…` for every row and IMAGE renders
-  `lscr.io/linuxse…` for three different services. Both columns get a
-  formatter: published host ports from the file, and an image reference that
-  sheds registry → namespace → tag instead of truncating the name off the end.
-  A day, pure functions, and both defects are in `demo/screenshot-groups.png`.
+- [x] **[S] Group table legibility** (`docs/plans/group-table-legibility.md`) —
+  done. PORTS now reads published host ports from the compose file
+  (`chrome.PublishedPorts`) instead of the runtime `docker compose ps`
+  string, and IMAGE sheds registry → namespace → tag in order
+  (`chrome.ShortImage`) instead of truncating the name off the end. The
+  service details panel's Ports rows go through the same `chrome.PortLabel`
+  the group table now shares. `demo/screenshot-groups.png` and the other five
+  demo screenshots are re-recorded.
 
 - [ ] **[S] Docker preflight** (`docs/plans/docker-preflight.md`) — five states
   (no binary, no compose plugin, daemon down, socket permissions, a

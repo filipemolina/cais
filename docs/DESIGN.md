@@ -630,9 +630,15 @@ order, until what is left fits.**
 | --- | --- | --- |
 | Footer bar hints | `keys.Priority` (`src/keys/Keys.go`) | `? help`, `q quit` |
 | Group member table columns | `dropOrder` (`groupdetailspanel/View.go`) | the status dot, `NAME` |
+| Image reference parts | `ShortImage`'s ladder (`chrome/Image.go`) | the image name |
 | *(removed)* action row buttons | the row's own `drop` field | — |
 
-Four rules generalise out of them.
+Four rules generalise out of them. `ShortImage` is the first surface where
+the shedding happens *inside* a unit rather than between units — the unit is
+the image reference, the parts are registry, namespace and tag. The rule
+survives the move down a level: a part is whole or absent, never a fragment
+(`lscr.io/linuxse…` was the defect), which is why a plain `Truncate` is
+rung 4, the last resort, and not the mechanism.
 
 **The drop order is not the display order.** The order to read in is not the
 order to give up: the footer shows `1-3 page` beside `q quit` and sheds it
