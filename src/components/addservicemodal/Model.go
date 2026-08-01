@@ -1,7 +1,7 @@
 // Package addservicemodal is the n entry point on the Services page: a
 // search-first modal (Spotlight/Telescope-style live results table) that
-// hands off to a confirm stage, then to the existing, unchanged write path
-// (cmds.AddService -> inline editor). See docs/plans/image-search.md D2/D3.
+// hands off to a confirm stage, then to a configurable write path.
+// See docs/plans/image-search.md D2/D3.
 package addservicemodal
 
 import (
@@ -37,9 +37,24 @@ const (
 // app's chrome meaningfully renders in.
 const searchListHeight = 10
 
+// Option configures a Model.
+type Option func(*Model)
+
+// WithOnSubmit sets the function called when the user confirms a service.
+// It receives the service name and image and must return a tea.Cmd to be
+// executed after the modal closes. If not set, the default is to add the
+// service to the given compose file via cmds.AddService.
+func WithOnSubmit(fn func(name, image string) tea.Cmd) Option {
+	return func(m *Model) {
+		m.onSubmit = fn
+	}
+}
+
 type Model struct {
 	fileName             string
 	existingServiceNames []string
+
+	onSubmit func(name, image string) tea.Cmd
 
 	step addStep
 
@@ -65,7 +80,7 @@ func (m Model) Init() tea.Cmd { return nil }
 // New builds the search-first modal. fileName is the compose file the new
 // service is written into; existingServiceNames is what is already there,
 // used by the confirm stage's inline collision check (D7).
-func New(fileName string, existingServiceNames []string) tea.Model {
+func New(fileName string, existingServiceNames []string, opts ...Option) tea.Model {
 	query := textinput.New()
 	query.Placeholder = "search Docker Hub"
 	query.SetWidth(40)
@@ -83,14 +98,26 @@ func New(fileName string, existingServiceNames []string) tea.Model {
 	cl.SetShowStatusBar(false)
 	cl.SetShowPagination(searchListHeight < len(cl.Items()))
 
-	return Model{
+	// Set up default options.
+	m := Model{
 		fileName:             fileName,
 		existingServiceNames: existingServiceNames,
-		step:                 stepSearch,
-		query:                query,
-		results:              cl,
-		spinner:              chrome.NewSpinner(),
+		onSubmit: func(name, image string) tea.Cmd {
+			// Default behavior: add service to the given compose file.
+			return cmds.AddService(fileName, name, image)
+		},
+		step:     stepSearch,
+		query:    query,
+		results:  cl,
+		spinner:  chrome.NewSpinner(),
 	}
+
+	// Apply options.
+	for _, opt := range opts {
+		opt(&m)
+	}
+
+	return m
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -225,10 +252,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // submit validates the confirm stage's two fields and hands off to the
-// unchanged write path: cmds.AddService -> the inline editor. The same
-// validation servicefieldsstep applies, plus the collision check re-run
-// here because the user may have edited the name field since the stage
-// rendered (D7).
+// configured write path. The same validation servicefieldsstep applies,
+// plus the collision check re-run here because the user may have edited
+// the name field since the stage rendered (D7).
 func (m Model) submit() (Model, tea.Cmd) {
 	name := strings.TrimSpace(m.serviceName.Value())
 	image := strings.TrimSpace(m.image.Value())
@@ -250,7 +276,7 @@ func (m Model) submit() (Model, tea.Cmd) {
 		return m, nil
 	}
 
-	return m, cmds.CloseModal(cmds.AddService(m.fileName, name, image))
+	return m, cmds.CloseModal(m.onSubmit(name, image))
 }
 
 // advanceToConfirm moves the modal from the search stage to the confirm
