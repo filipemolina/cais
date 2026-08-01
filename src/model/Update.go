@@ -18,6 +18,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/components"
 	"github.com/filipemolina/stack-stitcher/src/components/aboutmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/chrome"
+	"github.com/filipemolina/stack-stitcher/src/components/composefilepickermodal"
 	"github.com/filipemolina/stack-stitcher/src/components/confirmmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/errormodal"
 	"github.com/filipemolina/stack-stitcher/src/components/groupnamemodal"
@@ -943,7 +944,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if len(msg.Files) == 0 {
 			break
 		}
-		m.activeModal = components.ComposeFilePickerModal(
+		m.activeModal = composefilepickermodal.New(
 			msg.Dir, msg.Files, filepath.Base(m.config.configFileName),
 			m.config.terminalHeight,
 		)

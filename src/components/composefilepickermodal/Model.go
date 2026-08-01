@@ -1,4 +1,4 @@
-package components
+package composefilepickermodal
 
 import (
 	"fmt"
@@ -40,16 +40,16 @@ func (d composeFilePickerDelegate) Render(w io.Writer, m list.Model, index int, 
 	fmt.Fprint(w, style.Render(item.Title()))
 }
 
-type ComposeFilePickerModalModel struct {
+type Model struct {
 	dir  string
 	list list.Model
 }
 
-func (m ComposeFilePickerModalModel) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m ComposeFilePickerModalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var finalCmds []tea.Cmd
 
 	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
@@ -86,13 +86,13 @@ func pickerHints() string {
 	)
 }
 
-func (m ComposeFilePickerModalModel) View() tea.View {
+func (m Model) View() tea.View {
 	content := lipgloss.JoinVertical(lipgloss.Left, chrome.ModalTitle("Switch compose file"), m.list.View(), "", pickerHints())
 
 	return tea.NewView(chrome.ModalSurface(appstyles.Active.ModalBg, content))
 }
 
-// ComposeFilePickerModal lists the YAML files in dir for switching the
+// New lists the YAML files in dir for switching the
 // active compose file. activeName (the base name of the loaded file) is
 // marked, and the cursor starts on it. Enter switches to the highlighted
 // file, Esc cancels.
@@ -100,7 +100,7 @@ func (m ComposeFilePickerModalModel) View() tea.View {
 // termHeight is the terminal height in rows - a directory can hold more
 // compose files than the screen has room for, so the list is sized to fit
 // rather than to len(items). See chrome.ModalListHeight.
-func ComposeFilePickerModal(dir string, fileNames []string, activeName string, termHeight int) tea.Model {
+func New(dir string, fileNames []string, activeName string, termHeight int) tea.Model {
 	items := make([]list.Item, 0, len(fileNames))
 	activeIndex := 0
 	for i, name := range fileNames {
@@ -124,7 +124,7 @@ func ComposeFilePickerModal(dir string, fileNames []string, activeName string, t
 	picker.SetShowFilter(false)
 	picker.Select(activeIndex)
 
-	return ComposeFilePickerModalModel{
+	return Model{
 		dir:  dir,
 		list: picker,
 	}
