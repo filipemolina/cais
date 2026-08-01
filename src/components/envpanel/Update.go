@@ -25,7 +25,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleKey(msg tea.KeyMsg) (Model, tea.Cmd) {
-	if m.loading || len(m.entries) == 0 {
+	if m.loading {
+		return m, nil
+	}
+
+	if len(m.entries) == 0 {
+		// Empty state: only allow 'n' to add first variable
+		switch {
+		case key.Matches(msg, key.NewBinding(key.WithKeys("n"))):
+			return m, func() tea.Msg { return cmds.OpenEnvKeyModalMsg{} }
+		}
 		return m, nil
 	}
 
@@ -33,14 +42,14 @@ func (m Model) handleKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	case key.Matches(msg, key.NewBinding(key.WithKeys("up", "k"))):
 		if m.selectedIdx > 0 {
 			m.selectedIdx--
-			m.revealedIdx = -1 // Re-mask on navigation
+			m.revealedIdx = -1
 		}
 		return m, nil
 
 	case key.Matches(msg, key.NewBinding(key.WithKeys("down", "j"))):
 		if m.selectedIdx < len(m.entries)-1 {
 			m.selectedIdx++
-			m.revealedIdx = -1 // Re-mask on navigation
+			m.revealedIdx = -1
 		}
 		return m, nil
 
@@ -55,10 +64,52 @@ func (m Model) handleKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, key.NewBinding(key.WithKeys("v", "enter"))):
-		// Reveal the selected value
-		m.Reveal(m.selectedIdx)
+		if entry := m.getSelectedVar(); entry != nil {
+			m.Reveal(m.selectedIdx)
+		}
 		return m, nil
+
+	case key.Matches(msg, key.NewBinding(key.WithKeys("c"))):
+		if entry := m.getSelectedVar(); entry != nil {
+			return m, tea.SetClipboard(entry.Value)
+		}
+		return m, nil
+
+	case key.Matches(msg, key.NewBinding(key.WithKeys("n"))):
+		return m, func() tea.Msg { return cmds.OpenEnvKeyModalMsg{} }
+
+	case key.Matches(msg, key.NewBinding(key.WithKeys("e"))):
+		if entry := m.getSelectedVar(); entry != nil {
+			return m, func() tea.Msg {
+				return cmds.OpenEnvEditModalMsg{Key: entry.Key, Value: entry.Value}
+			}
+		}
+		return m, nil
+
+	case key.Matches(msg, key.NewBinding(key.WithKeys("d"))):
+		if entry := m.getSelectedVar(); entry != nil {
+			return m, func() tea.Msg { return cmds.OpenEnvDeleteConfirmMsg{Key: entry.Key} }
+		}
+		return m, nil
+
+	case key.Matches(msg, key.NewBinding(key.WithKeys("o"))):
+		return m, func() tea.Msg { return cmds.OpenEnvRawEditMsg{} }
+
+	case key.Matches(msg, key.NewBinding(key.WithKeys("E"))):
+		// Open the .env file in $EDITOR
+		return m, func() tea.Msg { return cmds.OpenEditorMsg{} }
 	}
 
 	return m, nil
+}
+
+func (m *Model) getSelectedVar() *cmds.EnvEntry {
+	if m.selectedIdx < 0 || m.selectedIdx >= len(m.entries) {
+		return nil
+	}
+	entry := &m.entries[m.selectedIdx]
+	if entry.Source != "var" {
+		return nil
+	}
+	return entry
 }
