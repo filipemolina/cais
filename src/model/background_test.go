@@ -45,6 +45,18 @@ func project() *types.Project {
 	}
 }
 
+// ungroupedProject has services but none carrying a profiles: tag, so
+// knownGroups() is empty and the Home details panel shows the service
+// overview card rather than the populated group view.
+func ungroupedProject() *types.Project {
+	return &types.Project{
+		Services: types.Services{
+			"radarr": types.ServiceConfig{Name: "radarr", Image: "linuxserver/radarr:latest"},
+			"sonarr": types.ServiceConfig{Name: "sonarr", Image: "linuxserver/sonarr:latest"},
+		},
+	}
+}
+
 // forEachTheme runs fn once per registered theme, with appstyles.Active set
 // to that theme for the duration, in sorted order for stable test output.
 // This is the "free property" the roadmap asks for: a theme that leaves a
@@ -84,6 +96,19 @@ func TestNoBackgroundBleedAcrossPages(t *testing.T) {
 				msgs: []tea.Msg{
 					cmds.GetConfigMsg{FileName: "compose.yaml", Project: project()},
 					cmds.SetSelectedGroupMsg("frontend"),
+				},
+				width: 120,
+			},
+			{
+				// Services exist but none carry a profiles: tag - the service
+				// overview card (docs/plans/service-aware-empty-state.md) rather
+				// than the plain onboarding card. Its member table reuses the
+				// same row rendering as "home with a group selected" above, but
+				// the header line and hint above it are new surfaces of their
+				// own.
+				name: "home service overview, no groups",
+				msgs: []tea.Msg{
+					cmds.GetConfigMsg{FileName: "compose.yaml", Project: ungroupedProject()},
 				},
 				width: 120,
 			},
