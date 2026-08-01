@@ -255,3 +255,127 @@ func TestFooterGlobalHints(t *testing.T) {
 		t.Errorf("global hints\n got: %s\nwant: %s", got, want)
 	}
 }
+
+// barAt renders the footer for a populated Home page at the given width, which
+// is the context that overflows first: it advertises the most keys.
+func barAt(t *testing.T, width int) string {
+	t.Helper()
+
+	var model tea.Model = New()
+	for _, msg := range []tea.Msg{
+		cmds.SetComposeFileMsg{Name: "/srv/homelab/compose.yaml"},
+		cmds.SetGroupsListMsg([]string{"media", "infra", "downloads"}),
+		tea.WindowSizeMsg{Width: width, Height: 24},
+	} {
+		model, _ = model.Update(msg)
+	}
+
+	return model.View().Content
+}
+
+// The bar is one line. It was not: the context hints plus the globals exceeded
+// a normal terminal's width - measured at ~133 columns, not the "below 60" the
+// TODO originally guessed - and lipgloss wrapped them onto a second and third
+// line, each one eating a row of the body above. This is the guard that no
+// width wraps it, including widths too narrow for the keys it refuses to shed.
+// The floor is 20 rather than 0 because the bar's own 4 columns of padding are
+// a lipgloss floor, not a shedding decision: below about 6 columns Width()
+// cannot render narrower than the padding it was given, and no terminal is that
+// size.
+func TestFooterNeverWraps(t *testing.T) {
+	for width := 200; width >= 20; width-- {
+		bar := barAt(t, width)
+
+		if got := lipgloss.Height(bar); got != 1 {
+			t.Errorf("at width %d the bar is %d lines tall:\n%s", width, got, ansi.Strip(bar))
+		}
+		if got := lipgloss.Width(bar); got != width {
+			t.Errorf("at width %d the bar rendered %d columns wide", width, got)
+		}
+	}
+}
+
+// Shedding is only safe because the way to everything shed survives it: `?
+// help` opens the overlay that lists every binding, and `q quit` is the escape
+// hatch. Both are ranked never-shed, so they are the last things on the bar.
+func TestFooterKeepsHelpAndQuitAtEveryWidth(t *testing.T) {
+	// 24 columns fits "? help · q quit" plus the bar's own padding; below that
+	// the MaxHeight clip takes over and there is no honest answer.
+	for width := 200; width >= 24; width-- {
+		bar := ansi.Strip(barAt(t, width))
+
+		for _, want := range []string{"? help", "q quit"} {
+			if !strings.Contains(bar, want) {
+				t.Errorf("at width %d the bar dropped %q: %q", width, want, bar)
+			}
+		}
+	}
+}
+
+// The order is declared in keys.Priority and is deliberately not the display
+// order. `1-3 page` goes first because the nav bar prints the digits already;
+// tab and the arrows next because they are what a user tries unprompted; the
+// page's own verbs last, rightmost first.
+func TestFooterShedsInPriorityOrder(t *testing.T) {
+	// Widths descend, so each step may only ever lose hints.
+	previous := map[string]bool{}
+	first := true
+
+	for width := 200; width >= 24; width-- {
+		bar := ansi.Strip(barAt(t, width))
+
+		present := map[string]bool{}
+		for _, hint := range []string{
+			"1-3 page", "tab next", "↑/↓ navigate",
+			"/ filter", "R rename", "d delete", "e edit", "n new", "space start",
+		} {
+			present[hint] = strings.Contains(bar, hint)
+		}
+
+		if !first {
+			for hint, was := range previous {
+				if !was && present[hint] {
+					t.Fatalf("at width %d %q came back after being shed:\n%s", width, hint, bar)
+				}
+			}
+		}
+
+		// Each pair is (shed earlier, shed later): the left one must never
+		// outlive the right one.
+		for _, pair := range [][2]string{
+			{"1-3 page", "tab next"},
+			{"tab next", "↑/↓ navigate"},
+			{"↑/↓ navigate", "/ filter"},
+			{"/ filter", "R rename"},
+			{"R rename", "d delete"},
+			{"d delete", "e edit"},
+			{"e edit", "n new"},
+			{"n new", "space start"},
+		} {
+			if present[pair[0]] && !present[pair[1]] {
+				t.Errorf("at width %d %q survived while %q was shed, which inverts the drop order:\n%s",
+					width, pair[0], pair[1], bar)
+			}
+		}
+
+		previous, first = present, false
+	}
+}
+
+// A hint is whole or absent, never a fragment: the bar sheds controls, not
+// columns, which is the whole difference between this and letting lipgloss wrap
+// or truncate.
+func TestFooterShedsWholeHints(t *testing.T) {
+	for width := 200; width >= 24; width-- {
+		bar := ansi.Strip(barAt(t, width))
+
+		for _, hint := range []string{"space start", "n new", "e edit", "d delete", "R rename", "↑/↓ navigate", "tab next"} {
+			key, desc, _ := strings.Cut(hint, " ")
+
+			// The key without its word means the word was cut off mid-hint.
+			if strings.Contains(bar, key+" "+desc[:1]) && !strings.Contains(bar, hint) {
+				t.Errorf("at width %d %q is rendered as a fragment: %q", width, hint, bar)
+			}
+		}
+	}
+}
