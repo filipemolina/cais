@@ -12,6 +12,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/components/composefilepanel"
 	"github.com/filipemolina/stack-stitcher/src/components/detailspanel"
+	"github.com/filipemolina/stack-stitcher/src/components/envpanel"
 	"github.com/filipemolina/stack-stitcher/src/components/groupdetailspanel"
 	"github.com/filipemolina/stack-stitcher/src/components/groupslist"
 	"github.com/filipemolina/stack-stitcher/src/components/keybindingbar"
@@ -276,6 +277,10 @@ func GetInitialModel(source utils.ComposeSource) AppModel {
 	// the alternate screen and look like a crash.
 	pages["Compose Files"] = []tea.Model{
 		composefilepanel.New(),
+	}
+
+	pages["Env"] = []tea.Model{
+		envpanel.New(),
 	}
 
 	return AppModel{

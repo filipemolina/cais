@@ -206,7 +206,7 @@ func TestBracketsStepThroughPages(t *testing.T) {
 		return page
 	}
 
-	for _, want := range []string{"Services", "Compose Files"} {
+	for _, want := range []string{"Services", "Compose Files", "Env"} {
 		if got := step("]"); got != want {
 			t.Errorf("] stepped to %q, want %q", got, want)
 		}
@@ -214,11 +214,11 @@ func TestBracketsStepThroughPages(t *testing.T) {
 	if got := step("]"); got != "Home" {
 		t.Errorf("] past the last tab stepped to %q, want it to wrap to Home", got)
 	}
-	if got := step("["); got != "Compose Files" {
-		t.Errorf("[ from Home stepped to %q, want it to wrap to Compose Files", got)
+	if got := step("["); got != "Env" {
+		t.Errorf("[ from Home stepped to %q, want it to wrap to Env", got)
 	}
-	if got := step("["); got != "Services" {
-		t.Errorf("[ stepped to %q, want Services", got)
+	if got := step("["); got != "Compose Files" {
+		t.Errorf("[ stepped to %q, want Compose Files", got)
 	}
 }
 
