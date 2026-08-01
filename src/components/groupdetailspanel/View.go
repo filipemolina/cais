@@ -69,9 +69,8 @@ func (m Model) containerForService(serviceName string) (apptypes.DockerContainer
 }
 
 // View renders the panel body and hands it to renderPanelFrame. The body
-// is always non-empty (empty states draw their own cards). The action
-// buttons are the last block of the body, which pins them to the bottom of
-// the panel.
+// is always non-empty (empty states draw their own cards). The footer is the
+// last block of the body, which pins it to the bottom of the panel.
 func (m Model) View() tea.View {
 	body := m.renderBody()
 	screen := chrome.PanelFrame("Details", m.titlePill(), m.isFocused, m.panelWidth, m.panelHeight, body)
@@ -125,7 +124,7 @@ func (m Model) renderBody() string {
 			"↑/↓", "to browse")
 	}
 
-	// A group is selected: header card + member table + actions.
+	// A group is selected: header card + member table.
 	members := m.memberServices()
 	running := m.runningCount(members)
 	stopped := len(members) - running
@@ -166,11 +165,14 @@ func (m Model) groupHeaderCard(name string, running, stopped, total int, width i
 		Width(width).
 		Render(chrome.Truncate(name, width))
 
+	// Truncated for the same reason the name above it is: Width() pads but does
+	// not clip, so on a narrow panel the summary wrapped onto a second line and
+	// cost the member table a row.
 	summary := fmt.Sprintf("%d running · %d stopped · %d services", running, stopped, total)
 	summaryRow := lipgloss.NewStyle().
 		Foreground(appstyles.Active.TextMuted).
 		Width(width).
-		Render(summary)
+		Render(chrome.Truncate(summary, width))
 
 	return lipgloss.JoinVertical(lipgloss.Left, nameRow, summaryRow, chrome.PanelRule(width))
 }
@@ -208,8 +210,8 @@ func statusPill(running, total int) string {
 
 // renderMemberTable renders the column headers, a separator, and one row per
 // member service, at its natural height. The blank rows between it and the
-// action row are panelBodyWithActions's job, so the table does not have to
-// know how much of the panel is left below it.
+// panel footer are chrome.PanelBodyWithFooter's job, so the table does not have
+// to know how much of the panel is left below it.
 func (m Model) renderMemberTable(members []types.ServiceConfig, width int) string {
 	cols := computeCols(width)
 
@@ -262,35 +264,66 @@ func (m Model) renderMemberRow(cols tableCols, width int, svc types.ServiceConfi
 		dotColor = appstyles.Active.StatusRunning
 	}
 
-	dot := lipgloss.NewStyle().Foreground(dotColor).Width(cols.dot).Render("●")
-	name := lipgloss.NewStyle().Foreground(appstyles.Active.TextPrimary).Width(cols.name).Render(chrome.Truncate(svc.Name, cols.name))
-	img := lipgloss.NewStyle().Foreground(appstyles.Active.TextMuted).Width(cols.image).Render(chrome.Truncate(image, cols.image))
-	st := lipgloss.NewStyle().Foreground(stateColor(state)).Width(cols.state).Render(chrome.Truncate(state, cols.state))
-	hl := lipgloss.NewStyle().Foreground(chrome.HealthColor(health)).Width(cols.health).Render(chrome.Truncate(health, cols.health))
-	up := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Width(cols.uptime).Render(chrome.Truncate(uptime, cols.uptime))
-	pt := lipgloss.NewStyle().Foreground(appstyles.Active.TextMuted).Width(cols.ports).Render(chrome.Truncate(ports, cols.ports))
+	// The cell's text and ink per column, walked in columnOrder so the row
+	// cannot drift from the header above it. A dropped column has width 0 and
+	// is skipped, the same as in renderTableHeader.
+	cell := map[string]struct {
+		text string
+		fg   color.Color
+	}{
+		"dot":    {"●", dotColor},
+		"name":   {svc.Name, appstyles.Active.TextPrimary},
+		"image":  {image, appstyles.Active.TextMuted},
+		"state":  {state, stateColor(state)},
+		"health": {health, chrome.HealthColor(health)},
+		"uptime": {uptime, appstyles.Active.TextDim},
+		"ports":  {ports, appstyles.Active.TextMuted},
+	}
 
-	row := lipgloss.JoinHorizontal(lipgloss.Left, dot, name, img, st, hl, up, pt)
+	var cells []string
+	for _, name := range columnOrder {
+		w := cols.get(name)
+		if w == 0 {
+			continue
+		}
 
-	return lipgloss.NewStyle().Width(width).Render(row)
+		// Truncated to one less than the column so there is always a column of
+		// gap after it. Truncating to the full width let a long name run flush
+		// into the next cell - `navidromedeluan/n…` - which reads as one value
+		// rather than two, the same collision the headings had.
+		text := cell[name].text
+		if name != "dot" {
+			text = chrome.Truncate(text, max(1, w-1))
+		}
+
+		cells = append(cells, lipgloss.NewStyle().Foreground(cell[name].fg).Width(w).Render(text))
+	}
+
+	row := lipgloss.JoinHorizontal(lipgloss.Left, cells...)
+
+	// Clipped for the same reason the header above it is.
+	return lipgloss.NewStyle().Width(width).MaxHeight(1).Render(row)
 }
 
 func renderTableHeader(cols tableCols, width int) string {
 	dim := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Bold(true)
 
-	cells := []string{
-		dim.Width(cols.dot).Render(""),
-		dim.Width(cols.name).Render("NAME"),
-		dim.Width(cols.image).Render("IMAGE"),
-		dim.Width(cols.state).Render("STATE"),
-		dim.Width(cols.health).Render("HEALTH"),
-		dim.Width(cols.uptime).Render("UPTIME"),
-		dim.Width(cols.ports).Render("PORTS"),
+	// A dropped column has width 0 and is skipped rather than rendered empty:
+	// Width(0) does not truncate, so it would print its heading in full over
+	// whatever comes next.
+	var cells []string
+	for _, name := range columnOrder {
+		if w := cols.get(name); w > 0 {
+			cells = append(cells, dim.Width(w).Render(heading[name]))
+		}
 	}
 
 	row := lipgloss.JoinHorizontal(lipgloss.Left, cells...)
 
-	return lipgloss.NewStyle().Width(width).Render(row)
+	// MaxHeight is the backstop under the column dropping: below about seven
+	// columns not even the name fits beside the dot, and a wrapped heading row
+	// would push the table's own rows down the panel.
+	return lipgloss.NewStyle().Width(width).MaxHeight(1).Render(row)
 }
 
 func stateColor(state string) color.Color {
@@ -301,18 +334,121 @@ func stateColor(state string) color.Color {
 	return appstyles.Active.StatusStopped
 }
 
-// tableCols holds the per-column widths for the member table.
+// tableCols holds the per-column widths for the member table. A width of 0
+// means the column was dropped for want of room - see computeCols - and both
+// the header and the rows skip it rather than rendering an empty cell.
 type tableCols struct {
 	dot, name, image, state, health, uptime, ports int
 }
 
-func (c tableCols) total() int {
-	return c.dot + c.name + c.image + c.state + c.health + c.uptime + c.ports
+// columnOrder is the left-to-right order of the table's columns. The header,
+// the rows and the width arithmetic all walk it, so a column cannot be added
+// to one of them and forgotten in another.
+var columnOrder = []string{"dot", "name", "image", "state", "health", "uptime", "ports"}
+
+// heading is a column's label, and "" for the status dot, which is its own
+// legend. minWidth is derived from it: a column narrower than its own heading
+// is what produced NAMEIMAGSTATHEALT... - lipgloss pads to Width but does not
+// truncate, so an over-long heading runs into the next column, and at the
+// narrowest widths wraps the header onto a second and third line.
+var heading = map[string]string{
+	"dot": "", "name": "NAME", "image": "IMAGE", "state": "STATE",
+	"health": "HEALTH", "uptime": "UPTIME", "ports": "PORTS",
 }
 
-// computeCols distributes the available width across the seven columns.
-// Wide terminals expand the flexible columns (name, image, ports); narrow
-// terminals shrink the widest column until the row fits on a single line.
+// dropOrder is the order columns are given up in when the panel cannot hold
+// them all, lowest first. It is deliberately not the display order, the same
+// distinction the footer bar's keys.Priority makes:
+//
+// Ports goes first - it is the widest column and the service details panel
+// prints the same information with room to spare. Image next: the row is
+// identified by its name, not its tag. Health and uptime are the detail a
+// glance does not need. State is the last to go because "is it running?" is
+// what the table is for - and even then the status dot answers it in two
+// columns, which is why dot and name are absent here: they are the row's
+// identity and are never dropped.
+var dropOrder = []string{"ports", "image", "health", "uptime", "state"}
+
+func (c tableCols) get(name string) int {
+	switch name {
+	case "dot":
+		return c.dot
+	case "name":
+		return c.name
+	case "image":
+		return c.image
+	case "state":
+		return c.state
+	case "health":
+		return c.health
+	case "uptime":
+		return c.uptime
+	case "ports":
+		return c.ports
+	}
+
+	return 0
+}
+
+func (c *tableCols) set(name string, width int) {
+	switch name {
+	case "dot":
+		c.dot = width
+	case "name":
+		c.name = width
+	case "image":
+		c.image = width
+	case "state":
+		c.state = width
+	case "health":
+		c.health = width
+	case "uptime":
+		c.uptime = width
+	case "ports":
+		c.ports = width
+	}
+}
+
+func (c tableCols) total() int {
+	sum := 0
+	for _, name := range columnOrder {
+		sum += c.get(name)
+	}
+
+	return sum
+}
+
+// minWidth is the narrowest a column can be and still print its own heading
+// with a column of gap after it, so two headings never touch.
+func minWidth(name string) int {
+	if name == "dot" {
+		return 2
+	}
+
+	return len(heading[name]) + 1
+}
+
+// minTotal is what the surviving columns need between them.
+func (c tableCols) minTotal() int {
+	sum := 0
+	for _, name := range columnOrder {
+		if c.get(name) > 0 {
+			sum += minWidth(name)
+		}
+	}
+
+	return sum
+}
+
+// computeCols distributes the available width across the columns. Wide
+// terminals expand the flexible columns (name, image, ports); narrow terminals
+// drop whole columns in dropOrder and then shrink what is left, never below the
+// width of its own heading.
+//
+// Dropping rather than shrinking-to-nothing is the same fix the footer bar and
+// the details panels' action row got: a fixed set of controls squeezed past
+// legibility mangles, where a smaller set of whole ones still reads. Everything
+// dropped here is still in the service details panel.
 func computeCols(width int) tableCols {
 	if width < 1 {
 		width = 1
@@ -322,71 +458,63 @@ func computeCols(width int) tableCols {
 		dot: 2, name: 18, image: 16, state: 9, health: 8, uptime: 11, ports: 16,
 	}
 
-	// Shrink the widest column until the row fits.
-	for c.total() > width {
-		before := c.total()
-		switch widestColumn(c) {
-		case "ports":
-			c.ports--
-		case "image":
-			c.image--
-		case "name":
-			c.name--
-		case "uptime":
-			c.uptime--
-		case "health":
-			c.health--
-		case "state":
-			c.state--
-		case "dot":
-			c.dot--
-		}
-		if c.total() == before {
+	for _, name := range dropOrder {
+		if c.minTotal() <= width {
 			break
 		}
+		c.set(name, 0)
 	}
 
-	// Expand the flexible columns to fill wide terminals.
+	// Shrink the widest column that still has room to give, until the row fits.
+	for c.total() > width {
+		widest := widestShrinkable(c)
+		if widest == "" {
+			break
+		}
+		c.set(widest, c.get(widest)-1)
+	}
+
+	// Expand the flexible columns to fill wide terminals, skipping any that
+	// were dropped - a panel with no ports column gives that share to the name.
 	if extra := width - c.total(); extra > 0 {
-		addPorts := extra * 40 / 100
-		addName := extra * 30 / 100
-		addImage := extra - addPorts - addName
-		c.ports += addPorts
-		c.name += addName
-		c.image += addImage
+		var flexible []string
+		for _, name := range []string{"ports", "name", "image"} {
+			if c.get(name) > 0 {
+				flexible = append(flexible, name)
+			}
+		}
+
+		for i, name := range flexible {
+			share := extra / len(flexible)
+			if i == len(flexible)-1 {
+				// The last one absorbs the rounding, so the row fills the width
+				// exactly rather than leaving a column or two unpainted.
+				share = extra - share*(len(flexible)-1)
+			}
+			c.set(name, c.get(name)+share)
+		}
 	}
 
 	return c
 }
 
-func widestColumn(c tableCols) string {
-	widest := "dot"
-	max := c.dot
+// widestShrinkable is the column with the most to give: the widest one still
+// above its own minimum, or "" when every surviving column is at its floor.
+func widestShrinkable(c tableCols) string {
+	widest, most := "", 0
 
-	if c.name > max {
-		widest, max = "name", c.name
-	}
-	if c.image > max {
-		widest, max = "image", c.image
-	}
-	if c.state > max {
-		widest, max = "state", c.state
-	}
-	if c.health > max {
-		widest, max = "health", c.health
-	}
-	if c.uptime > max {
-		widest, max = "uptime", c.uptime
-	}
-	if c.ports > max {
-		widest, max = "ports", c.ports
+	for _, name := range columnOrder {
+		width := c.get(name)
+		if width > minWidth(name) && width > most {
+			widest, most = name, width
+		}
 	}
 
 	return widest
 }
 
-// renderPendingAction renders a spinner with the action description in place
-// of the action buttons while a docker action is in progress.
+// renderPendingAction renders a spinner with the action description in the
+// panel's footer while a docker action is in progress.
 func (m Model) renderPendingAction(width int, bg color.Color) string {
 	desc := chrome.ActionDescription(m.pendingAction.Action, m.pendingAction.Target, m.pendingAction.IsGroup)
 
