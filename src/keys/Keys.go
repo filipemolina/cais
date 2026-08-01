@@ -53,6 +53,8 @@ type GlobalKeys struct {
 	// preview on cursor movement and persist-on-confirm. T (shift+t) so it
 	// does not collide with the details panel's lowercase t (stop).
 	Theme key.Binding
+	// Usage opens the usage overlay: disk and memory usage bars.
+	Usage key.Binding
 	// Page is advertised but not matched: the digits are recognised by their
 	// key code and the alt+<letter> alias by its modifier, so that 1 as filter
 	// text and alt+shift+g are both left alone. See model.pageForNavKey. The
@@ -166,6 +168,7 @@ var Global = GlobalKeys{
 	Help:     key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "help")),
 	About:    key.NewBinding(key.WithKeys("a"), key.WithHelp("a", "about")),
 	Theme:    key.NewBinding(key.WithKeys("T"), key.WithHelp("T", "theme")),
+	Usage:    key.NewBinding(key.WithKeys("u"), key.WithHelp("u", "usage")),
 }
 
 var List = ListKeys{
@@ -572,7 +575,7 @@ func Catalog(ctx Context) []Scope {
 			Entries: entries(
 				Global.NextPanel, Global.PrevPanel, Global.Back,
 				Global.Quit, Global.ForceQuit, Global.Help, Global.About,
-				Global.Theme,
+				Global.Theme, Global.Usage,
 			),
 		},
 	}
@@ -583,7 +586,7 @@ func Catalog(ctx Context) []Scope {
 // whether or not the footer has room to advertise them.
 func pressableNow(ctx Context) []key.Binding {
 	live := append(Active(ctx), Globals()...)
-	live = append(live, Global.ForceQuit, Global.PrevPage, Global.NextPage, Global.About, Global.Theme)
+	live = append(live, Global.ForceQuit, Global.PrevPage, Global.NextPage, Global.About, Global.Theme, Global.Usage)
 
 	// shift+tab is tab's twin: live wherever tab is, with no footer slot of
 	// its own.

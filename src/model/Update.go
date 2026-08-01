@@ -29,6 +29,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/components/logsmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/servicechecklistmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/themepickermodal"
+	"github.com/filipemolina/stack-stitcher/src/components/usageoverlay"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 	"github.com/filipemolina/stack-stitcher/src/utils"
@@ -432,6 +433,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Global.Theme):
 			finalCmds = append(finalCmds, cmds.OpenThemePicker())
 
+		case key.Matches(msg, keys.Global.Usage):
+			finalCmds = append(finalCmds, cmds.OpenUsageOverlay())
+
 		case key.Matches(msg, keys.Global.NextPanel):
 			tabCmd := m.ChangeFocus(nil)
 			finalCmds = append(finalCmds, tabCmd)
@@ -529,6 +533,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// the banner they put up.
 			finalCmds = append(finalCmds, cmds.CheckDocker())
 		} else {
+			// Cache the containers for the usage overlay and other components.
+			m.currentDockerContainers = msg.Containers
 			// A background success clears the banner only if the poll itself
 			// put it up; a foreground success (page switch, finished action)
 			// always clears it.
@@ -907,6 +913,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case cmds.OpenThemePickerMsg:
 		m.activeModal = themepickermodal.New(m.config.terminalHeight)
+
+	case cmds.OpenUsageOverlayMsg:
+		model, cmd := usageoverlay.New(m.currentDockerContainers)
+		m.activeModal = model
+		finalCmds = append(finalCmds, cmd)
 
 	case cmds.ThemeAppliedMsg:
 		// CloseModal already cleared activeModal. Report a persist

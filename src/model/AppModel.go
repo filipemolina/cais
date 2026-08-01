@@ -7,6 +7,7 @@ import (
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"github.com/compose-spec/compose-go/v2/types"
+	"github.com/filipemolina/stack-stitcher/src/apptypes"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/components/composefilepanel"
@@ -78,7 +79,10 @@ type AppModel struct {
 	// the background container poll, so the next successful poll can clear
 	// it without touching errors from other sources (e.g. a failed action).
 	lastErrorFromPoll bool
-	activeModal       tea.Model
+	// currentDockerContainers caches the current containers for the usage
+	// overlay and other components that need the full DockerContainer objects.
+	currentDockerContainers []apptypes.DockerContainer
+	activeModal             tea.Model
 	// externalEditorOpen is set while an editor has been handed the
 	// terminal. The app is suspended for that whole time, so background work
 	// would only pile up messages to process on resume.
