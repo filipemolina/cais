@@ -46,6 +46,18 @@ called out as such in the roadmap: **write safety** (new, see below) and the
   write ever runs. **Remaining:** Phases 2–3 (Docker Hub search, a tag
   picker) — the image field stays free text until then.
 
+- [x] **[S] Service-aware empty state**
+  (`docs/plans/service-aware-empty-state.md`) — when a compose file has
+  services but no groups reference any of them, the Home details panel
+  shows a live overview (count header + the same member table a selected
+  group uses) instead of the static "Getting started" card explaining what
+  a group is. `knownGroups()` derives every group name from services'
+  `Profiles`, so `knownGroups() == 0` already means every loaded service is
+  the ungrouped set — no separate filter needed. Falls back to the original
+  onboarding card when the file has no services at all. `n` (create the
+  first group) and `2` (browse services) are the two things it points at;
+  neither the keymap nor the create-group flow changed.
+
 - [x] **[S] Blank lines are not preserved across writes** — accepted, not
   fixed. `yaml.v3` round-trips comments but not blank lines, so every write
   (group tags included, long before edit-services) closes up the spacing
