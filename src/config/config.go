@@ -26,6 +26,11 @@ type Config struct {
 	// Theme is the registered theme name to activate on startup.
 	// Empty means "use appstyles.DefaultTheme".
 	Theme string `yaml:"theme,omitempty"`
+
+	// URLHost overrides the host part of every service URL the app builds
+	// (utils.URLHost). Empty means "detect it" - SSH_CONNECTION's server
+	// address when running over SSH, "localhost" otherwise.
+	URLHost string `yaml:"url_host,omitempty"`
 }
 
 // configDir returns the directory the config file lives in:
