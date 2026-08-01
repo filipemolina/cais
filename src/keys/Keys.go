@@ -235,6 +235,27 @@ var Files = FilesKeys{
 	Browse: key.NewBinding(key.WithKeys("b"), key.WithHelp("b", "browse")),
 }
 
+// EnvKeys act on the Env page's key/value table. Reveal, Copy, RawEdit and Chmod
+// are new to this page; New, Edit, Delete and EditFile are reused from existing
+// bindings to keep "one verb is one binding".
+type EnvKeys struct {
+	// Navigate is help-only, like Files.Scroll: the table owns navigation.
+	Navigate  key.Binding
+	Reveal    key.Binding
+	Copy      key.Binding
+	RawEdit   key.Binding
+	Chmod     key.Binding
+	// List.New, List.Edit, List.Delete and Details.EditFile are reused here.
+}
+
+var Env = EnvKeys{
+	Navigate: key.NewBinding(key.WithHelp("↑/↓", "navigate")),
+	Reveal:   key.NewBinding(key.WithKeys("v", "enter"), key.WithHelp("v", "reveal")),
+	Copy:     key.NewBinding(key.WithKeys("c"), key.WithHelp("c", "copy")),
+	RawEdit:  key.NewBinding(key.WithKeys("o"), key.WithHelp("o", "raw edit")),
+	Chmod:    key.NewBinding(key.WithKeys("m"), key.WithHelp("m", "chmod 600")),
+}
+
 var Overlay = OverlayKeys{
 	Submit:    key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "confirm")),
 	Cancel:    key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "cancel")),
@@ -414,6 +435,15 @@ func Active(ctx Context) []key.Binding {
 	// regardless of which component id Tab last touched.
 	case "Compose Files":
 		return []key.Binding{Details.EditFile, Files.Browse, Files.Scroll}
+
+	// The Env page has one always-focused table, so the same keys apply regardless.
+	case "Env":
+		return []key.Binding{
+			Env.Reveal, Env.Copy,
+			List.New, List.Edit, List.Delete,
+			Env.RawEdit, Details.EditFile, Env.Chmod,
+			Env.Navigate,
+		}
 	}
 
 	return []key.Binding{Global.NextPanel}
@@ -559,6 +589,15 @@ func Catalog(ctx Context) []Scope {
 			Title: "Files",
 			Entries: entries(
 				Details.EditFile, Files.Browse, Files.Scroll,
+			),
+		},
+		{
+			Title: "Env",
+			Entries: entries(
+				Env.Reveal, Env.Copy,
+				List.New, List.Edit, List.Delete,
+				Env.RawEdit, Details.EditFile, Env.Chmod,
+				Env.Navigate,
 			),
 		},
 		{

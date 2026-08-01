@@ -41,14 +41,12 @@ sections.
 
 Do not re-open these without asking:
 
-- **Tabs for the alpha are Groups, Services, Files.** No dead placeholder tabs.
-  *Scoped to the alpha, which has shipped.* Two plans add one each —
-  `docs/plans/env-secrets.md` ("Env") and `docs/plans/resources-page.md`
-  ("Resources") — and whichever lands second must rewrite this line rather than
-  leave the repo arguing with itself. The rule that outlives the count is the
-  second sentence: no tab ships empty. Check the `alt`+letter shortcuts when a
-  tab is added; `e` and `r` are both free of `g`/`s`/`f` today.
-- **Pages switch with digits `1`–`3` and `[`/`]`,** keeping `alt`+letter as an alias.
+- **Tabs are Groups, Services, Files, Env.** No dead placeholder tabs.
+  *Groups/Services/Files scoped to the alpha; Env added in post-alpha.* Another
+  plan (`docs/plans/resources-page.md`, "Resources") will add one more, and will
+  rewrite this line. The rule: no tab ships empty. The digit range and `alt`+letter
+  shortcuts (`1`–`4`, `g`/`s`/`f`/`e`) derive from `apptypes.PageTitles`.
+- **Pages switch with digits and `[`/`]`,** keeping `alt`+letter as an alias.
   The digit range derives from `apptypes.PageTitles`, so a new tab extends it
   without an edit.
 - **No statistics page.** Resource numbers belong as columns in the tables that
