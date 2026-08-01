@@ -9,6 +9,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/utils"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/compose-spec/compose-go/v2/types"
 )
 
 // OpenServiceEditorMsg asks AppModel to open one service for editing in the
@@ -28,10 +29,21 @@ type RequestInlineEditMsg struct {
 // InlineEditReadyMsg carries the YAML fragment the panel should put into the
 // inline editor. Err means the fragment could not be extracted; the panel
 // is not yet in edit mode and should not enter it.
+//
+// Select, when set, is the service the panel should adopt as m.service
+// before entering edit mode. nil for the ordinary path ('e' on an
+// already-selected service, where the panel's current selection is already
+// right); set when the caller cannot assume a prior SetSelectedServiceMsg
+// has already reached the panel - a service AddServiceModal just created,
+// before the reload it also kicks off can be guaranteed to have landed:
+// tea.Batch makes no ordering promises between sibling commands, so
+// selection and edit-readiness have to travel in the same message to be
+// atomic.
 type InlineEditReadyMsg struct {
 	ServiceName string
 	Fragment    []byte
 	Err         error
+	Select      *types.ServiceConfig
 }
 
 // RequestSaveServiceMsg asks AppModel to save an edited service fragment

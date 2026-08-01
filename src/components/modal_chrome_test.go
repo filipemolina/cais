@@ -11,6 +11,7 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/components/aboutmodal"
+	"github.com/filipemolina/stack-stitcher/src/components/addservicemodal"
 	"github.com/filipemolina/stack-stitcher/src/components/composefilepickermodal"
 	"github.com/filipemolina/stack-stitcher/src/components/confirmmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/createcomposefilemodal"
@@ -58,6 +59,7 @@ func TestEveryModalHasATitleAndAnExitHint(t *testing.T) {
 		{"service checklist", servicechecklistmodal.New("core", []string{"web"}, 40), "Select services", "esc"},
 		{"edit group members", servicechecklistmodal.NewForEdit("core", []string{"web"}, []string{"web"}, 40), "Edit members", "esc"},
 		{"create compose file", createcomposefilemodal.New("."), "New compose file", "esc"},
+		{"add service", addservicemodal.New("compose.yaml", []string{"web"}), "New service", "esc"},
 		{"compose file picker", composefilepickermodal.New(".", []string{"compose.yaml"}, "compose.yaml", 40), "Switch compose file", "esc"},
 		{"theme picker", themepickermodal.New(40), "Choose theme", "esc"},
 		{"logs", logs, "logs: web", "esc"},
@@ -97,10 +99,15 @@ func TestCreateComposeFileModalHintsEveryStep(t *testing.T) {
 		}
 	}
 
-	// y opens the service fields, which are two inputs plus a create.
+	// y opens the service fields, which are two inputs plus a submit. The
+	// hint reads "confirm" rather than "create file" because this step is
+	// servicefieldsstep.Model, shared verbatim with addservicemodal's
+	// (docs/plans/image-search.md D2) - the shared component's contract is
+	// exactly two parameters (title, onSubmit), so it cannot phrase the hint
+	// per caller without a third.
 	m, _ = m.Update(tea.KeyPressMsg{Code: 'y', Text: "y"})
 	frame = ansi.Strip(m.View().Content)
-	for _, want := range []string{"next field", "create file", "esc"} {
+	for _, want := range []string{"next field", "confirm", "esc"} {
 		if !strings.Contains(frame, want) {
 			t.Errorf("service fields step does not advertise %q:\n%s", want, frame)
 		}

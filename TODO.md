@@ -34,6 +34,18 @@ called out as such in the roadmap: **write safety** (new, see below) and the
   error and leaves the file untouched. **Remaining:** the deferred draft
   mechanism (resume a rejected edit from `$XDG_CACHE_HOME/stack-stitcher/drafts/`).
 
+- [x] **[P] Add a new service** (`docs/plans/image-search.md` Phase 1) — `n`
+  on the Services page (same binding as "new group" on the Groups page, gate
+  widened rather than a second key) collects a name and image through
+  `servicefieldsstep`, shared with the bootstrap flow's optional first
+  service, then writes a minimal two-line fragment via
+  `utils.AddServiceFragment` and opens straight into the inline editor `e`
+  already had — two fields, then the same YAML a hand-written service would
+  have, per `docs/DESIGN.md` §Editing services' argument against a form. A
+  colliding name is refused client-side (`cmds.OpenErrorModal`) before the
+  write ever runs. **Remaining:** Phases 2–3 (Docker Hub search, a tag
+  picker) — the image field stays free text until then.
+
 - [x] **[S] Blank lines are not preserved across writes** — accepted, not
   fixed. `yaml.v3` round-trips comments but not blank lines, so every write
   (group tags included, long before edit-services) closes up the spacing
@@ -359,6 +371,13 @@ up in full in `docs/plans/`; `docs/ROADMAP.md` has the order and the reasons.
   flakiness that turned out to be a real app bug rather than a rig timing
   problem, so start by asking what else the app is doing to itself during a
   rename before adding a wait.
+
+- [ ] **[H] `TestAnEditorThatCannotStartDoesNotWedgeTheApp` is flaky too** —
+  confirmed independently of any current branch (three `-count=1` runs on
+  `main` on 2026-08-01: two failures, one pass), same "app bug more likely
+  than rig timing" prior as the entry above. Not investigated further; noted
+  here so it is not mistaken for a regression by whichever branch trips over
+  it next.
 
 - [ ] **[S] Expand test coverage via the e2e rig** — `src/model/rig_test.go`
   already drives the app in-process (used for the bootstrap flow). Extend
