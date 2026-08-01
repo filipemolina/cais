@@ -10,6 +10,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/components"
 	"github.com/filipemolina/stack-stitcher/src/components/chrome"
 	"github.com/filipemolina/stack-stitcher/src/components/composefilepanel"
+	"github.com/filipemolina/stack-stitcher/src/components/detailspanel"
 	"github.com/filipemolina/stack-stitcher/src/components/groupslist"
 	"github.com/filipemolina/stack-stitcher/src/components/keybindingbar"
 	"github.com/filipemolina/stack-stitcher/src/components/mainmenu"
@@ -251,7 +252,7 @@ func GetInitialModel(source utils.ComposeSource) AppModel {
 
 	pages["Services"] = []tea.Model{
 		serviceslist.New([]types.ServiceConfig{}, 0, 0),
-		components.DetailsPanel(nil),
+		detailspanel.New(nil),
 	}
 
 	// Every page in apptypes.PageTitles needs an entry here. A page missing

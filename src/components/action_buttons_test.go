@@ -15,6 +15,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/appstyles"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
 	"github.com/filipemolina/stack-stitcher/src/components/chrome"
+	"github.com/filipemolina/stack-stitcher/src/components/detailspanel"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
@@ -36,6 +37,18 @@ func detailsContext(page string, focused bool) keys.Context {
 	}
 
 	return keys.Context{Page: page, Focused: component, Selected: true}
+}
+
+// focusedDetailsPanel builds a detailspanel.Model sized and focused through
+// its exported Update, the same messages AppModel sends it. Its own copy:
+// detailspanel/Model_test.go's focusedDetails pokes the unexported fields
+// directly, which this file can no longer do now that detailspanel is a
+// separate package.
+func focusedDetailsPanel(service types.ServiceConfig, width, height int) tea.Model {
+	m := detailspanel.New(&service)
+	m, _ = m.Update(cmds.SetBodyLayoutMsg{LeftWidth: 40, RightWidth: width, Height: height})
+	m, _ = m.Update(cmds.SetFocusMsg(constants.COMPONENT_BODY_DETAILS))
+	return m
 }
 
 // The row used to paint all five buttons in the accent whatever the screen was
@@ -208,9 +221,7 @@ func TestNarrowPanelsStayInsideTheirBox(t *testing.T) {
 		group.panelWidth, group.panelHeight = width, height
 		group.isFocused = true
 
-		service := DetailsPanel(&services[0]).(DetailsPanelModel)
-		service.panelWidth, service.panelHeight = width, height
-		service.isFocused = true
+		service := focusedDetailsPanel(services[0], width, height)
 
 		panels := map[string]tea.Model{"group": group, "service": service}
 		for name, panel := range panels {
@@ -303,9 +314,7 @@ func panelActionRowLine(screen string) int {
 func TestDetailsPanelsPinActionRowToBottom(t *testing.T) {
 	const height = 40
 
-	service := focusedDetails(types.ServiceConfig{Name: "web", Image: "nginx:latest"})
-	sized, _ := service.Update(cmds.SetBodyLayoutMsg{LeftWidth: 40, RightWidth: 90, Height: height})
-	service = sized.(DetailsPanelModel)
+	service := focusedDetailsPanel(types.ServiceConfig{Name: "web", Image: "nginx:latest"}, 90, height)
 
 	group := GroupDetailsPanel().(GroupDetailsPanelModel)
 	for _, msg := range []tea.Msg{
@@ -337,9 +346,7 @@ func TestDetailsPanelsPinActionRowToBottom(t *testing.T) {
 // is the panel's floor, and a body that pushed it off the bottom would take
 // the only visible affordance for start/stop with it.
 func TestServiceDetailsKeepsActionRowWhenContentOverflows(t *testing.T) {
-	m := focusedDetails(types.ServiceConfig{Name: "web", Image: "nginx:latest"})
-	sized, _ := m.Update(cmds.SetBodyLayoutMsg{LeftWidth: 40, RightWidth: 90, Height: 12})
-	m = sized.(DetailsPanelModel)
+	m := focusedDetailsPanel(types.ServiceConfig{Name: "web", Image: "nginx:latest"}, 90, 12)
 
 	screen := m.View().Content
 

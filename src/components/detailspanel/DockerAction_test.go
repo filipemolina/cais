@@ -1,4 +1,4 @@
-package components
+package detailspanel
 
 import (
 	"testing"
@@ -7,9 +7,13 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/constants"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/compose-spec/compose-go/v2/types"
 )
 
 // keyPress builds the KeyPressMsg for a single rune, the way a panel sees it.
+// Its own copy: DockerAction_test.go's version was shared for free with
+// GroupDetailsPanel's half of this test while both lived in the flat
+// components package, and no longer is.
 func keyPress(r rune) tea.KeyPressMsg {
 	return tea.KeyPressMsg{Code: r, Text: string(r)}
 }
@@ -37,15 +41,14 @@ func requestedAction(t *testing.T, cmd tea.Cmd) cmds.RunDockerActionMsg {
 // this ever goes back to returning a DockerActionMsg, the action has run
 // against whatever file docker resolved on its own, which is the desync the
 // --file threading exists to prevent.
-func TestGroupDetailsPanelRequestsTheActionRatherThanRunningIt(t *testing.T) {
-	panel := GroupDetailsPanel()
+func TestServiceDetailsPanelRequestsTheActionRatherThanRunningIt(t *testing.T) {
+	panel := New(&types.ServiceConfig{Name: "web"})
 	panel, _ = panel.Update(cmds.SetFocusMsg(constants.COMPONENT_BODY_DETAILS))
-	panel, _ = panel.Update(cmds.SetSelectedGroupMsg("backend"))
 
-	_, cmd := panel.Update(keyPress('t'))
+	_, cmd := panel.Update(keyPress('s'))
 
 	request := requestedAction(t, cmd)
-	if request.Action != "stop" || request.Target != "backend" || !request.IsGroup {
-		t.Errorf("request: got %+v, want stop/backend/group", request)
+	if request.Action != "start" || request.Target != "web" || request.IsGroup {
+		t.Errorf("request: got %+v, want start/web/service", request)
 	}
 }

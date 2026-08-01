@@ -1,4 +1,4 @@
-package components
+package detailspanel
 
 import (
 	"strings"
@@ -10,14 +10,14 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/keys"
 )
 
-func focusedDetails(service types.ServiceConfig) DetailsPanelModel {
-	m := DetailsPanel(&service).(DetailsPanelModel)
-	m = m.applySize().(DetailsPanelModel)
+func focusedDetails(service types.ServiceConfig) Model {
+	m := New(&service).(Model)
+	m = m.applySize().(Model)
 	m.isFocused = true
 	return m
 }
 
-func (m DetailsPanelModel) applySize() tea.Model {
+func (m Model) applySize() tea.Model {
 	updated, _ := m.Update(cmds.SetBodyLayoutMsg{LeftWidth: 40, RightWidth: 60, Height: 24})
 	return updated
 }
@@ -68,7 +68,7 @@ func TestDetailsPanelEEntersEditMode(t *testing.T) {
 	m := focusedDetails(types.ServiceConfig{Name: "web"})
 
 	updated, cmd := m.Update(tea.KeyPressMsg{Code: 'e', Text: "e"})
-	m = updated.(DetailsPanelModel)
+	m = updated.(Model)
 
 	if !hasMessageOfType[cmds.RequestInlineEditMsg](t, cmd) {
 		t.Fatalf("expected RequestInlineEditMsg, got %T", collectMessages(t, cmd))
@@ -79,7 +79,7 @@ func TestDetailsPanelEEntersEditMode(t *testing.T) {
 	}
 
 	updated, cmd = m.Update(cmds.InlineEditReadyMsg{ServiceName: "web", Fragment: []byte("web:\n  image: nginx\n")})
-	m = updated.(DetailsPanelModel)
+	m = updated.(Model)
 
 	if !m.editing {
 		t.Fatal("panel should be in edit mode after receiving the fragment")
@@ -101,7 +101,7 @@ func TestDetailsPanelEditModeSwallowsActionKeys(t *testing.T) {
 
 	for _, letter := range []rune{'s', 't', 'r', 'p', 'x', 'l'} {
 		updated, _ := m.Update(tea.KeyPressMsg{Code: letter, Text: string(letter)})
-		m = updated.(DetailsPanelModel)
+		m = updated.(Model)
 
 		if !strings.Contains(m.editor.Value(), string(letter)) {
 			t.Errorf("%c in edit mode did not reach the textarea; value = %q", letter, m.editor.Value())
@@ -119,7 +119,7 @@ func TestDetailsPanelCtrlSSaves(t *testing.T) {
 	m.isFocused = true
 
 	updated, cmd := m.Update(tea.KeyPressMsg{Code: 's', Text: "ctrl+s", Mod: tea.ModCtrl})
-	m = updated.(DetailsPanelModel)
+	m = updated.(Model)
 
 	if !hasMessageOfType[cmds.RequestSaveServiceMsg](t, cmd) {
 		t.Fatalf("expected RequestSaveServiceMsg, got %T", collectMessages(t, cmd))
@@ -136,7 +136,7 @@ func TestDetailsPanelEscCancelsWithoutChanges(t *testing.T) {
 	m.isFocused = true
 
 	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc, Text: "esc"})
-	m = updated.(DetailsPanelModel)
+	m = updated.(Model)
 
 	if m.editing {
 		t.Fatal("esc should exit edit mode when there are no changes")
@@ -156,7 +156,7 @@ func TestDetailsPanelEscWithChangesOpensConfirm(t *testing.T) {
 	m.editor.SetValue(m.editor.Value() + " ")
 
 	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc, Text: "esc"})
-	m = updated.(DetailsPanelModel)
+	m = updated.(Model)
 
 	if !m.editing {
 		t.Fatal("esc should not immediately exit edit mode when there are changes")
@@ -173,7 +173,7 @@ func TestDetailsPanelCtrlOOpensExternalEditor(t *testing.T) {
 	m.isFocused = true
 
 	updated, cmd := m.Update(tea.KeyPressMsg{Code: 'o', Text: "ctrl+o", Mod: tea.ModCtrl})
-	m = updated.(DetailsPanelModel)
+	m = updated.(Model)
 
 	if !hasMessageOfType[cmds.OpenServiceEditorMsg](t, cmd) {
 		t.Fatalf("expected OpenServiceEditorMsg, got %T", collectMessages(t, cmd))
@@ -189,7 +189,7 @@ func TestDetailsPanelServiceSavedSuccessExitsEditMode(t *testing.T) {
 	m, _ = m.enterEditMode([]byte("web:\n  image: nginx\n"))
 
 	updated, cmd := m.Update(cmds.ServiceSavedMsg{ServiceName: "web"})
-	m = updated.(DetailsPanelModel)
+	m = updated.(Model)
 
 	if m.editing {
 		t.Fatal("successful save should exit edit mode")
@@ -205,7 +205,7 @@ func TestDetailsPanelServiceSavedFailureShowsInlineError(t *testing.T) {
 	m, _ = m.enterEditMode([]byte("web:\n  image: nginx\n"))
 
 	updated, _ := m.Update(cmds.ServiceSavedMsg{ServiceName: "web", Err: errBoom{}})
-	m = updated.(DetailsPanelModel)
+	m = updated.(Model)
 
 	if !m.editing {
 		t.Fatal("failed save should keep the editor open")
@@ -222,7 +222,7 @@ func TestDetailsPanelLiveValidationReportsBadYAML(t *testing.T) {
 
 	m.editor.SetValue("web: : : bad")
 	updated, _ := m.Update(tea.KeyPressMsg{Code: 'a', Text: "a"})
-	m = updated.(DetailsPanelModel)
+	m = updated.(Model)
 
 	if !strings.Contains(m.editor.Value(), "bad") {
 		t.Fatalf("editor value not set: %q", m.editor.Value())

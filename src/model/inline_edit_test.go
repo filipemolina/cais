@@ -10,7 +10,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/components"
+	"github.com/filipemolina/stack-stitcher/src/components/detailspanel"
 	"github.com/filipemolina/stack-stitcher/src/constants"
 	"gopkg.in/yaml.v3"
 )
@@ -200,18 +200,18 @@ func editingWeb(t *testing.T, fragment string) AppModel {
 	return m
 }
 
-// detailsPanel finds the Services page's DetailsPanelModel component.
-func detailsPanel(t *testing.T, m AppModel) components.DetailsPanelModel {
+// detailsPanel finds the Services page's detailspanel.Model component.
+func detailsPanel(t *testing.T, m AppModel) detailspanel.Model {
 	t.Helper()
 
 	for _, component := range m.pages["Services"] {
-		if panel, ok := component.(components.DetailsPanelModel); ok {
+		if panel, ok := component.(detailspanel.Model); ok {
 			return panel
 		}
 	}
 
-	t.Fatal("no DetailsPanelModel found on the Services page")
-	return components.DetailsPanelModel{}
+	t.Fatal("no detailspanel.Model found on the Services page")
+	return detailspanel.Model{}
 }
 
 // toEndOfPreviousLine moves the cursor up one row and to the end of it. The

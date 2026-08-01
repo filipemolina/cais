@@ -1,4 +1,4 @@
-package components
+package detailspanel
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ import (
 
 // containerForService returns the first container matching the given compose
 // service name, or a zero-value DockerContainer and false if none exists.
-func (m DetailsPanelModel) containerForService(serviceName string) (apptypes.DockerContainer, bool) {
+func (m Model) containerForService(serviceName string) (apptypes.DockerContainer, bool) {
 	for _, c := range m.containers {
 		if c.Service == serviceName {
 			return c, true
@@ -33,7 +33,7 @@ func (m DetailsPanelModel) containerForService(serviceName string) (apptypes.Doc
 	return apptypes.DockerContainer{}, false
 }
 
-type DetailsPanelModel struct {
+type Model struct {
 	service     *types.ServiceConfig
 	panelWidth  int
 	panelHeight int
@@ -60,11 +60,11 @@ type DetailsPanelModel struct {
 	containers []apptypes.DockerContainer
 }
 
-func (m DetailsPanelModel) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var finalCmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -221,7 +221,7 @@ func (m DetailsPanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // forwardToEditor passes a message to the open editor and re-validates. It
 // is the path for everything the editor answers that is not a key press.
-func (m DetailsPanelModel) forwardToEditor(msg tea.Msg) (DetailsPanelModel, tea.Cmd) {
+func (m Model) forwardToEditor(msg tea.Msg) (Model, tea.Cmd) {
 	if !m.editing {
 		return m, nil
 	}
@@ -241,7 +241,7 @@ func (m DetailsPanelModel) forwardToEditor(msg tea.Msg) (DetailsPanelModel, tea.
 //
 // handled is a separate return rather than "cmd != nil" because Enter is
 // handled and produces no command - the buffer edit happens here, in place.
-func (m DetailsPanelModel) handleEditKey(msg tea.KeyPressMsg) (DetailsPanelModel, tea.Cmd, bool) {
+func (m Model) handleEditKey(msg tea.KeyPressMsg) (Model, tea.Cmd, bool) {
 	switch {
 	case key.Matches(msg, keys.Details.Save):
 		return m, cmds.RequestSaveService(m.service.Name, []byte(m.editor.Value())), true
@@ -289,7 +289,7 @@ func (m DetailsPanelModel) handleEditKey(msg tea.KeyPressMsg) (DetailsPanelModel
 
 // currentLine is the logical line the cursor is on. The textarea soft-wraps,
 // so this is the row in the value, not the row on screen.
-func (m DetailsPanelModel) currentLine() string {
+func (m Model) currentLine() string {
 	lines := strings.Split(m.editor.Value(), "\n")
 	row := m.editor.Line()
 	if row < 0 || row >= len(lines) {
@@ -302,7 +302,7 @@ func (m DetailsPanelModel) currentLine() string {
 // from the current line. Up to, not exactly: a line indented less than a
 // full level (or not at all) outdents to zero rather than going negative,
 // and at column 0 with no leading whitespace it is a no-op.
-func (m *DetailsPanelModel) outdentCurrentLine() {
+func (m *Model) outdentCurrentLine() {
 	row := m.editor.Line()
 	col := m.editor.Column()
 	runes := []rune(m.currentLine())
@@ -329,7 +329,7 @@ func (m *DetailsPanelModel) outdentCurrentLine() {
 // reports whether it applied; when it has not, the caller falls through to
 // the textarea's ordinary backspace (deleting one character, or at column 0,
 // merging with the line above).
-func (m DetailsPanelModel) outdentOnBackspace() (DetailsPanelModel, bool) {
+func (m Model) outdentOnBackspace() (Model, bool) {
 	row := m.editor.Line()
 	col := m.editor.Column()
 	runes := []rune(m.currentLine())
@@ -356,7 +356,7 @@ func (m DetailsPanelModel) outdentOnBackspace() (DetailsPanelModel, bool) {
 // walked back by hand afterward. This looks redundant and is not: without
 // it, editing a line in the middle of a fragment throws the cursor to the
 // bottom of it.
-func (m *DetailsPanelModel) replaceLine(row int, text string, col int) {
+func (m *Model) replaceLine(row int, text string, col int) {
 	lines := strings.Split(m.editor.Value(), "\n")
 	if row < 0 || row >= len(lines) {
 		return
@@ -374,13 +374,13 @@ func (m *DetailsPanelModel) replaceLine(row int, text string, col int) {
 
 // hasChanges reports whether the editor's contents differ from the fragment
 // it started with.
-func (m DetailsPanelModel) hasChanges() bool {
+func (m Model) hasChanges() bool {
 	return string(m.originalFragment) != m.editor.Value()
 }
 
 // enterEditMode sets up the textarea with the given fragment and broadcasts
 // that the editor now owns the keyboard.
-func (m DetailsPanelModel) enterEditMode(fragment []byte) (DetailsPanelModel, tea.Cmd) {
+func (m Model) enterEditMode(fragment []byte) (Model, tea.Cmd) {
 	m.editing = true
 	m.originalFragment = fragment
 	m.saveError = ""
@@ -398,7 +398,7 @@ func (m DetailsPanelModel) enterEditMode(fragment []byte) (DetailsPanelModel, te
 }
 
 // exitEditMode tears down the editor and tells the app the keyboard is free.
-func (m DetailsPanelModel) exitEditMode() (DetailsPanelModel, tea.Cmd) {
+func (m Model) exitEditMode() (Model, tea.Cmd) {
 	m.editing = false
 	m.originalFragment = nil
 	m.saveError = ""
@@ -408,7 +408,7 @@ func (m DetailsPanelModel) exitEditMode() (DetailsPanelModel, tea.Cmd) {
 }
 
 // syncEditorFocus keeps the textarea focus in sync with the panel focus.
-func (m *DetailsPanelModel) syncEditorFocus() {
+func (m *Model) syncEditorFocus() {
 	if !m.editing {
 		return
 	}
@@ -422,7 +422,7 @@ func (m *DetailsPanelModel) syncEditorFocus() {
 
 // resizeEditor constrains the textarea to the panel body. It is called on
 // layout changes and on entering edit mode.
-func (m *DetailsPanelModel) resizeEditor() {
+func (m *Model) resizeEditor() {
 	if !m.editing {
 		return
 	}
@@ -437,7 +437,7 @@ func (m *DetailsPanelModel) resizeEditor() {
 
 // updateValidationError parses the editor contents as YAML and records the
 // error. Full compose validation is deliberately deferred to save.
-func (m *DetailsPanelModel) updateValidationError() {
+func (m *Model) updateValidationError() {
 	if !m.editing {
 		return
 	}
@@ -453,7 +453,7 @@ func (m *DetailsPanelModel) updateValidationError() {
 // EditorValue returns the editor's current contents. Exported for the model
 // tests, which drive paste and indentation through the whole message path and
 // need to see what landed in the buffer.
-func (m DetailsPanelModel) EditorValue() string {
+func (m Model) EditorValue() string {
 	return m.editor.Value()
 }
 
@@ -461,7 +461,7 @@ func (m DetailsPanelModel) EditorValue() string {
 // model tests covering tab/outdent/backspace, which pin cursor position, not
 // just buffer text - that is where the SetValue-resets-the-cursor bug would
 // show up.
-func (m DetailsPanelModel) EditorCursor() (int, int) {
+func (m Model) EditorCursor() (int, int) {
 	return m.editor.Line(), m.editor.Column()
 }
 
@@ -469,7 +469,7 @@ func (m DetailsPanelModel) EditorCursor() (int, int) {
 // is the same contract the filtered lists use: while true, AppModel stands
 // down from its own keys so letters are letters, not commands. The editor
 // is always focused when it is open, so it does not need to check focus.
-func (m DetailsPanelModel) OwnsKeyboard() bool {
+func (m Model) OwnsKeyboard() bool {
 	return m.editing
 }
 
@@ -480,7 +480,7 @@ func (m DetailsPanelModel) OwnsKeyboard() bool {
 // is deliberately not special-cased: reporting the list as focused makes
 // keys.Active return the list's keys, none of which are the action bindings, so
 // the buttons dim by the same rule that empties them out of the footer.
-func (m DetailsPanelModel) actionContext() keys.Context {
+func (m Model) actionContext() keys.Context {
 	focused := constants.COMPONENT_BODY_LIST
 	if m.isFocused {
 		focused = constants.COMPONENT_BODY_DETAILS
@@ -495,7 +495,7 @@ func (m DetailsPanelModel) actionContext() keys.Context {
 	}
 }
 
-func (m DetailsPanelModel) View() tea.View {
+func (m Model) View() tea.View {
 	bodyWidth := max(1, chrome.PanelBodyWidth(m.panelWidth))
 	bodyAvail := max(1, chrome.PanelBodyHeight(m.panelHeight))
 
@@ -545,7 +545,7 @@ func (m DetailsPanelModel) View() tea.View {
 // titlePill returns a status pill for the selected service, or "" when no
 // service is selected. The pill is rendered in the panel's title row,
 // right-aligned — same visual language as GroupDetailsPanelModel.titlePill.
-func (m DetailsPanelModel) titlePill() string {
+func (m Model) titlePill() string {
 	if m.service == nil {
 		return ""
 	}
@@ -570,7 +570,7 @@ func (m DetailsPanelModel) titlePill() string {
 
 // isServiceRunning checks whether a live container exists for the given
 // compose service name and is in the "running" state.
-func (m DetailsPanelModel) isServiceRunning(serviceName string) bool {
+func (m Model) isServiceRunning(serviceName string) bool {
 	for _, container := range m.containers {
 		if container.Service == serviceName && container.State == "running" {
 			return true
@@ -583,7 +583,7 @@ func (m DetailsPanelModel) isServiceRunning(serviceName string) bool {
 // renderServiceHeader renders the service name, image, and a status line
 // (status dot · state · health · uptime). It mirrors the visual weight of
 // GroupDetailsPanelModel.groupHeaderCard.
-func (m DetailsPanelModel) renderServiceHeader(width int) string {
+func (m Model) renderServiceHeader(width int) string {
 	name := m.service.Name
 	image := m.service.Image
 
@@ -729,7 +729,7 @@ func renderPropRow(propWidth, valWidth int, row propRow) string {
 // configRows collects the compose configuration the panel reports, in display
 // order. Every entry is conditional: a service states only what it defines, so
 // the table has no rows reading "Healthcheck —".
-func (m DetailsPanelModel) configRows() []propRow {
+func (m Model) configRows() []propRow {
 	var rows []propRow
 
 	svc := *m.service
@@ -862,7 +862,7 @@ func (m DetailsPanelModel) configRows() []propRow {
 // gathers, so a container reporting only PIDs or only an uptime got nothing.
 // Every entry below is already conditional, so the caller's "no rows, no
 // table" rule is derived from what there actually is to show.
-func (m DetailsPanelModel) runtimeRows() []propRow {
+func (m Model) runtimeRows() []propRow {
 	if m.service == nil {
 		return nil
 	}
@@ -903,11 +903,11 @@ func (m DetailsPanelModel) runtimeRows() []propRow {
 
 // renderConfigTable and renderRuntimeStats are the two tables the panel shows,
 // at the width they are given.
-func (m DetailsPanelModel) renderConfigTable(width int) string {
+func (m Model) renderConfigTable(width int) string {
 	return renderPropTable("PROPERTY", width, m.configRows())
 }
 
-func (m DetailsPanelModel) renderRuntimeStats(width int) string {
+func (m Model) renderRuntimeStats(width int) string {
 	return renderPropTable("METRIC", width, m.runtimeRows())
 }
 
@@ -928,7 +928,7 @@ const tablesGutter = 3
 // beside a table that had run off the bottom of what the eye takes in at once.
 // The group panel keeps one full-width table because it has one table; this is
 // the same table style spent on two.
-func (m DetailsPanelModel) renderTables(width int) string {
+func (m Model) renderTables(width int) string {
 	if width >= tablesMinSideBySide {
 		colWidth := (width - tablesGutter) / 2
 
@@ -965,7 +965,7 @@ func (m DetailsPanelModel) renderTables(width int) string {
 
 // renderEditor renders the textarea with the editor key hints below it. The
 // live YAML validation status is shown in the panel title row instead.
-func (m DetailsPanelModel) renderEditor(bodyWidth, bodyAvail int) string {
+func (m Model) renderEditor(bodyWidth, bodyAvail int) string {
 	bg := chrome.PanelBg(m.isFocused)
 	editorView := m.editor.View()
 
@@ -982,7 +982,7 @@ func (m DetailsPanelModel) renderEditor(bodyWidth, bodyAvail int) string {
 // validationPill returns a colored pill for the editor's live YAML validation
 // status, suitable for the panel title row right-aligned area. Empty when the
 // editor is not open (caller should check m.editing first).
-func (m DetailsPanelModel) validationPill() string {
+func (m Model) validationPill() string {
 	var label string
 	var bg color.Color
 
@@ -1008,7 +1008,7 @@ func (m DetailsPanelModel) validationPill() string {
 }
 
 // renderEditorHints renders the editor key hints below the textarea.
-func (m DetailsPanelModel) renderEditorHints(width int) string {
+func (m Model) renderEditorHints(width int) string {
 	bg := chrome.PanelBg(m.isFocused)
 
 	hints := chrome.RenderKeyHints([]chrome.KeyHint{
@@ -1028,7 +1028,7 @@ func (m DetailsPanelModel) renderEditorHints(width int) string {
 
 // renderPendingAction renders a spinner with the action description in place
 // of the action buttons while a docker action is in progress.
-func (m DetailsPanelModel) renderPendingAction(width int, bg color.Color) string {
+func (m Model) renderPendingAction(width int, bg color.Color) string {
 	desc := chrome.ActionDescription(m.pendingAction.Action, m.pendingAction.Target, m.pendingAction.IsGroup)
 
 	style := lipgloss.NewStyle().
@@ -1040,8 +1040,8 @@ func (m DetailsPanelModel) renderPendingAction(width int, bg color.Color) string
 	return style.Render(m.spinner.View() + " " + desc)
 }
 
-func DetailsPanel(service *types.ServiceConfig) tea.Model {
-	return DetailsPanelModel{
+func New(service *types.ServiceConfig) tea.Model {
+	return Model{
 		service:     service,
 		componentId: 2,
 		spinner:     chrome.NewSpinner(),
