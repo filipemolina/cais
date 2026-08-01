@@ -1,4 +1,4 @@
-package components
+package groupdetailspanel
 
 import (
 	"testing"
@@ -9,11 +9,11 @@ import (
 
 // On Home, a background poll's GetRunningContainersMsg is withheld from the
 // panels while stats are in flight; the enriched GetContainerStatsMsg is what
-// arrives instead. GroupDetailsPanel renders per-service running state, so it
+// arrives instead. New renders per-service running state, so it
 // has to accept that message too or its rows go stale between foreground
 // refreshes.
 func TestGroupDetailsPanelAcceptsContainerStats(t *testing.T) {
-	panel := GroupDetailsPanel()
+	panel := New()
 
 	updated, _ := panel.Update(cmds.GetContainerStatsMsg{
 		Containers: []apptypes.DockerContainer{
@@ -22,9 +22,9 @@ func TestGroupDetailsPanelAcceptsContainerStats(t *testing.T) {
 		Background: true,
 	})
 
-	model, ok := updated.(GroupDetailsPanelModel)
+	model, ok := updated.(Model)
 	if !ok {
-		t.Fatalf("Update returned %T, want GroupDetailsPanelModel", updated)
+		t.Fatalf("Update returned %T, want Model", updated)
 	}
 
 	if len(model.containers) != 1 {

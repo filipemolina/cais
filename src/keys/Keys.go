@@ -108,7 +108,7 @@ type DetailsKeys struct {
 }
 
 // EditorKeys act inside the inline YAML editor, and only there. The editor
-// owns the whole keyboard while it is open (see DetailsPanelModel.OwnsKeyboard),
+// owns the whole keyboard while it is open (see detailspanel.Model.OwnsKeyboard),
 // which is what makes tab and shift+tab available here at all - they are the
 // panel-switching keys everywhere else, and the app stands down from them
 // while the editor holds the keyboard.
