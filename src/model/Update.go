@@ -20,6 +20,7 @@ import (
 	"github.com/filipemolina/stack-stitcher/src/components/composefilepickermodal"
 	"github.com/filipemolina/stack-stitcher/src/components/confirmmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/createcomposefilemodal"
+	"github.com/filipemolina/stack-stitcher/src/components/dockerstatusmodal"
 	"github.com/filipemolina/stack-stitcher/src/components/errormodal"
 	"github.com/filipemolina/stack-stitcher/src/components/groupnamemodal"
 	"github.com/filipemolina/stack-stitcher/src/components/helpoverlay"
@@ -130,6 +131,19 @@ func (m *AppModel) reportForegroundError(message string) tea.Cmd {
 	m.lastError = message
 	m.lastErrorFromPoll = false
 	return m.rebroadcastBodyLayoutIfChanged()
+}
+
+// reportDockerError is reportForegroundError for an error that came from a
+// docker call: it reports message exactly as reportForegroundError would,
+// and alongside it kicks off a re-probe. See D4 in
+// docs/plans/docker-preflight.md: when that probe (cmds.DockerStatusMsg,
+// handled below) finds a diagnosable state, it replaces the raw-error modal
+// it is racing against with the diagnosis - a raw exec.ExitError should
+// never be the last word when a diagnosis is available. A healthy re-probe
+// (the daemon is up but wedged) leaves message standing, because the app has
+// no diagnosis to offer for a state it cannot reproduce.
+func (m *AppModel) reportDockerError(message string) tea.Cmd {
+	return tea.Batch(m.reportForegroundError(message), cmds.CheckDocker())
 }
 
 // configSyncCmds re-derives the ordered services/groups lists from the
@@ -502,6 +516,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Err != nil {
 			m.lastError = msg.Err.Error()
 			m.lastErrorFromPoll = msg.Background
+			// The banner path beside reportDockerError (D4): `docker compose
+			// ps` is a docker call too, so its failures re-probe alongside
+			// the banner they put up.
+			finalCmds = append(finalCmds, cmds.CheckDocker())
 		} else {
 			// A background success clears the banner only if the poll itself
 			// put it up; a foreground success (page switch, finished action)
@@ -568,7 +586,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Docker action errors are foreground: show a modal instead of the banner.
 		if msg.Err != nil {
-			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
+			finalCmds = append(finalCmds, m.reportDockerError(msg.Err.Error()))
 		} else {
 			// Success: clear the banner and check for running containers.
 			m.lastError = ""
@@ -577,6 +595,21 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
 			finalCmds = append(finalCmds, bodyCmd)
+		}
+
+	case cmds.DockerStatusMsg:
+		m.dockerStatus = msg.Status
+		if msg.Status.State != utils.DockerOK {
+			_, screenHeldByRawError := m.activeModal.(errormodal.Model)
+			if m.activeModal == nil || screenHeldByRawError {
+				// A healthy machine sees no new UI at all (D3). A raw-error
+				// modal that reportDockerError put up moments ago for this
+				// same failure is not a modal the user opened deliberately -
+				// it is the diagnosis this probe now supersedes. Any other
+				// modal is the user's own and is left alone, same guard the
+				// bootstrap modal learned the hard way (TODO.md).
+				m.activeModal = dockerstatusmodal.New(msg.Status, m.config.terminalWidth)
+			}
 		}
 
 	case cmds.GetConfigMsg:
