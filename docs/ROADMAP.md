@@ -142,6 +142,31 @@ cracks:
   correctness bug the moment anything correlates the file against the daemon.
   One line, one test.
 
+### Versioning
+
+Plain SemVer, read through the 0.x lens: while the major is `0`, the app is
+pre-1.0 and the compatibility promise is deliberately weak.
+
+- **`0.MINOR.0`** — a release that adds user-facing surface *or* breaks
+  something. 0.x lets a minor bump break compatibility, which is the honest
+  state of things while the write-safety story (above) is unfinished.
+- **`0.MINOR.PATCH`** — a fixes-only release: no new surface, nothing removed.
+- **`1.0.0`** — reserved for the public launch (step 7). It is a statement that
+  the compose-write path is safe and the shape is stable, not just the next
+  number after `0.9`.
+
+The version is never hardcoded: `constants.Version()` prefers the build-time
+`-ldflags -X …version=` stamp the release pipeline sets, and otherwise reports
+the commit. So the number only becomes real at a tag — a dev build honestly
+says which commit it is.
+
+- **`v0.1.0`** was cut administratively (see above): a clock-starter, not a
+  feature line. Read no milestone into it.
+- **`v0.2.0`** (2026-08-07) is the first content-driven release — the Env tab
+  (`env-secrets` A + B), the docker disk/memory usage overlay, and mouse
+  divider-drag resize, minus the removed image-search feature. A minor bump
+  because it adds surface; a *minor* one, not a patch, for the same reason.
+
 ### Done, and kept for the record
 
 The plans in `docs/plans/` that have already landed:
