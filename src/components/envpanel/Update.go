@@ -4,10 +4,18 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/stack-stitcher/src/constants"
 )
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	// Sizing comes from AppModel like every other panel; deriving it from
+	// WindowSizeMsg here would leave the panel at width 0 whenever Env wasn't
+	// the active page at resize time. As the sole component on its page, it
+	// takes the whole body row: both panel widths plus the gutter.
+	case cmds.SetBodyLayoutMsg:
+		m.SetSize(msg.LeftWidth+constants.BODY_GUTTER_WIDTH+msg.RightWidth, msg.Height)
+		return m, nil
 	case tea.KeyMsg:
 		return m.handleKey(msg)
 	case cmds.EnvFileContentsMsg:
