@@ -489,6 +489,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.config.bodyLayout = m.calculateBodyLayout()
 		finalCmds = append(finalCmds, m.broadcastBodyLayout())
 
+	case tea.MouseClickMsg, tea.MouseReleaseMsg, tea.MouseMotionMsg:
+		m.handleMouseResize(msg, &finalCmds)
+
 	// Commands from the cmds folder
 	case cmds.SetActivePageMsg:
 		m.activePage = string(msg)
@@ -1148,4 +1151,39 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	finalCmds = append(finalCmds, mainMenuCmd, keybindingBarCmd, innerComponentsCmd)
 
 	return m, tea.Batch(finalCmds...)
+}
+
+func (m *AppModel) handleMouseResize(msg tea.Msg, finalCmds *[]tea.Cmd) {
+	available := m.config.terminalWidth - constants.BODY_GUTTER_WIDTH
+	if available < 0 {
+		available = 0
+	}
+	left := m.config.bodyLayout.LeftWidth
+
+	switch msg := msg.(type) {
+	case tea.MouseMotionMsg:
+		motionData := msg.Mouse()
+		if m.mouseDragging {
+			newLeft := motionData.X
+			newLeft = max(newLeft, constants.MIN_PANEL_WIDTH)
+			newLeft = min(newLeft, available-constants.MIN_PANEL_WIDTH)
+			m.config.bodyLayout.LeftWidth = newLeft
+			m.config.bodyLayout.RightWidth = available - newLeft
+			*finalCmds = append(*finalCmds, m.broadcastBodyLayout())
+		}
+	case tea.MouseClickMsg:
+		clickData := msg.Mouse()
+		if msg.Button == tea.MouseLeft {
+			if clickData.X >= left-2 && clickData.X <= left+constants.BODY_GUTTER_WIDTH+2 {
+				m.mouseDragging = true
+				m.mouseDragX = clickData.X
+			} else {
+				m.mouseDragging = false
+				m.mouseDragX = 0
+			}
+		}
+	case tea.MouseReleaseMsg:
+		m.mouseDragging = false
+		m.mouseDragX = 0
+	}
 }

@@ -67,6 +67,14 @@ func (m AppModel) View() tea.View {
 	v := tea.NewView(rendered)
 	v.AltScreen = true
 
+	// Ask the terminal to report mouse events. Without this the View defaults
+	// to MouseModeNone and Bubble Tea never emits the enable sequence, so no
+	// click/motion/release ever reaches Update - which is what silently broke
+	// divider dragging. CellMotion (not AllMotion) gives clicks, releases, and
+	// motion while a button is held (a drag), without a message on every idle
+	// hover.
+	v.MouseMode = tea.MouseModeCellMotion
+
 	return v
 }
 
