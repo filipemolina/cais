@@ -104,7 +104,10 @@ type AppModel struct {
 	// dockerStatus is the last docker preflight result: the startup probe, or
 	// a re-probe triggered by a docker call's own error. See
 	// docs/plans/docker-preflight.md D4.
-	dockerStatus utils.DockerStatus
+	dockerStatus     utils.DockerStatus
+	// mouseResize tracks a drag on the divider between the two body panels.
+	mouseDragging bool
+	mouseDragX    int
 }
 
 // ChangeFocus moves focus through constants.FocusableComponents and returns the
