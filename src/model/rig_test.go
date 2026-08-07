@@ -186,15 +186,13 @@ func TestRigRenameGroup(t *testing.T) {
 	}
 }
 
-// TestRigAddService drives the whole Phase 1 flow end to end
-// (docs/plans/image-search.md): n on the Services page, typing a name and
-// image, Enter - the service lands in the compose file and the inline
-// editor opens on it, which is the race the plan flagged as worth checking
-// before Phase 1 (does the panel's selection land before the editor-ready
-// message does). AddServiceMsg's handler batches a reload, a focus change
-// and the inline-edit request together; Bubble Tea's Batch makes no
-// ordering promises between them, so this exercises the real timing rather
-// than asserting it in isolation.
+// TestRigAddService drives the add-service flow end to end: n on the
+// Services page opens the two-field modal, typing a name and image and
+// pressing Enter lands the service in the compose file and opens the inline
+// editor on it. That last step is the race worth checking - AddServiceMsg's
+// handler batches a reload, a focus change and the inline-edit request
+// together, and Bubble Tea's Batch makes no ordering promises between them,
+// so this exercises the real timing rather than asserting it in isolation.
 func TestRigAddService(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "compose.yaml"), []byte(panelKeyFixture), 0o644); err != nil {
@@ -213,27 +211,16 @@ func TestRigAddService(t *testing.T) {
 	}
 
 	r.Send(letterKey('n'))
-	if !r.WaitFor("Search Docker Hub", 3*time.Second) {
+	if !r.WaitFor("New service", 3*time.Second) {
 		t.Fatalf("add-service modal did not open. Output:\n%s", r.Output())
 	}
 
-	// Search stage: type the query, Enter advances to confirm with the typed
-	// text as the image - no result row is highlighted because the search
-	// debounce (350ms) has not fired by the time Enter lands.
+	// Name field is focused first: type the service name, Tab to the image
+	// field, type the reference, Enter submits.
 	for _, ch := range "proxy" {
 		r.Send(letterKey(ch))
 	}
-	r.Send(keyPress(tea.KeyEnter))
-
-	if !r.WaitFor("New service", 3*time.Second) {
-		t.Fatalf("confirm stage did not open. Output:\n%s", r.Output())
-	}
-
-	// Confirm stage: Tab to the image field (prefilled with the typed text),
-	// clear it with ctrl+u (textinput's delete-before-cursor), type the real
-	// reference, Enter submits.
 	r.Send(keyPress(tea.KeyTab))
-	r.Send(tea.KeyPressMsg{Code: 'u', Mod: tea.ModCtrl})
 	for _, ch := range "traefik:v3" {
 		r.Send(letterKey(ch))
 	}

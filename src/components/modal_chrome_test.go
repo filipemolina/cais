@@ -60,7 +60,7 @@ func TestEveryModalHasATitleAndAnExitHint(t *testing.T) {
 		{"service checklist", servicechecklistmodal.New("core", []string{"web"}, 40), "Select services", "esc"},
 		{"edit group members", servicechecklistmodal.NewForEdit("core", []string{"web"}, []string{"web"}, 40), "Edit members", "esc"},
 		{"create compose file", createcomposefilemodal.New("."), "New compose file", "esc"},
-		{"add service", addservicemodal.New("compose.yaml", []string{"web"}), "Search Docker Hub", "esc"},
+		{"add service", addservicemodal.New("compose.yaml", []string{"web"}), "New service", "esc"},
 		{"healthcheck picker", healthcheckpickermodal.New("web", types.ServiceConfig{Image: "nginx:alpine"}, 40), "Add healthcheck", "esc"},
 		{"compose file picker", composefilepickermodal.New(".", []string{"compose.yaml"}, "compose.yaml", 40), "Switch compose file", "esc"},
 		{"theme picker", themepickermodal.New(40), "Choose theme", "esc"},

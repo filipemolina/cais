@@ -1899,3 +1899,7 @@ These are not stylistic suggestions; treat them as hard constraints.
     different border weight, or an invented icon are all things `go build`
     and `go test` will happily pass while the app looks visibly stitched
     together from two different tools.
+
+---
+
+**SUPERSEDED / OUTDATED** (added after removal of the feature): After live testing with a real-world workload, the image-search feature described in this plan revealed itself to not be useful. The implementation has been removed from the codebase (src/utils/DockerSearch.*, src/cmds/SearchImages.*, src/cmds/DebounceSearch.*, src/cmds/TagLookup.*, and the redesigned addservicemodal components deleted; the modal reverted to the simple two-field servicefieldsstep form). This document is kept for historical reference only.
