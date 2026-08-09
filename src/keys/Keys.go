@@ -235,7 +235,7 @@ var Files = FilesKeys{
 	Browse: key.NewBinding(key.WithKeys("b"), key.WithHelp("b", "browse")),
 }
 
-// EnvKeys act on the Env page's key/value table. Reveal, Copy, RawEdit and Chmod
+// EnvKeys act on the Env page's key/value table. Reveal, Copy and RawEdit
 // are new to this page; New, Edit, Delete and EditFile are reused from existing
 // bindings to keep "one verb is one binding".
 type EnvKeys struct {
@@ -244,7 +244,6 @@ type EnvKeys struct {
 	Reveal   key.Binding
 	Copy     key.Binding
 	RawEdit  key.Binding
-	Chmod    key.Binding
 	// List.New, List.Edit, List.Delete and Details.EditFile are reused here.
 }
 
@@ -253,7 +252,6 @@ var Env = EnvKeys{
 	Reveal:   key.NewBinding(key.WithKeys("v", "enter"), key.WithHelp("v", "reveal")),
 	Copy:     key.NewBinding(key.WithKeys("c"), key.WithHelp("c", "copy")),
 	RawEdit:  key.NewBinding(key.WithKeys("o"), key.WithHelp("o", "raw edit")),
-	Chmod:    key.NewBinding(key.WithKeys("m"), key.WithHelp("m", "chmod 600")),
 }
 
 var Overlay = OverlayKeys{
@@ -441,7 +439,7 @@ func Active(ctx Context) []key.Binding {
 		return []key.Binding{
 			Env.Reveal, Env.Copy,
 			List.New, List.Edit, List.Delete,
-			Env.RawEdit, Details.EditFile, Env.Chmod,
+			Env.RawEdit, Details.EditFile,
 			Env.Navigate,
 		}
 	}
@@ -596,7 +594,7 @@ func Catalog(ctx Context) []Scope {
 			Entries: entries(
 				Env.Reveal, Env.Copy,
 				List.New, List.Edit, List.Delete,
-				Env.RawEdit, Details.EditFile, Env.Chmod,
+				Env.RawEdit, Details.EditFile,
 				Env.Navigate,
 			),
 		},
