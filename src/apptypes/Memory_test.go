@@ -6,10 +6,10 @@ import (
 
 func TestSumContainerMemory(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    []DockerContainer
-		wantSum  int64
-		wantCnt  int
+		name    string
+		input   []DockerContainer
+		wantSum int64
+		wantCnt int
 	}{
 		{
 			name: "single container",
@@ -46,8 +46,8 @@ func TestSumContainerMemory(t *testing.T) {
 			wantCnt: 1,
 		},
 		{
-			name: "no containers",
-			input: []DockerContainer{},
+			name:    "no containers",
+			input:   []DockerContainer{},
 			wantSum: 0,
 			wantCnt: 0,
 		},

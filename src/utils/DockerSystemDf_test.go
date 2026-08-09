@@ -39,9 +39,9 @@ func TestParseSystemDf(t *testing.T) {
 			},
 		},
 		{
-			name: "reclaimable without percentage",
+			name:  "reclaimable without percentage",
 			input: `{"Type":"Build Cache","TotalCount":"10","Active":"0","Size":"1.311GB","Reclaimable":"1.311GB"}`,
-			want: 1,
+			want:  1,
 			checks: func(t *testing.T, du []DiskUsage) {
 				if du[0].Reclaimable < 1_300_000_000 || du[0].Reclaimable > 1_320_000_000 {
 					t.Errorf("got Reclaimable %d, want ~1.311GB", du[0].Reclaimable)
@@ -49,9 +49,9 @@ func TestParseSystemDf(t *testing.T) {
 			},
 		},
 		{
-			name: "zero size",
+			name:  "zero size",
 			input: `{"Type":"Images","TotalCount":"0","Active":"0","Size":"0B","Reclaimable":"0B"}`,
-			want: 1,
+			want:  1,
 			checks: func(t *testing.T, du []DiskUsage) {
 				if du[0].Size != 0 {
 					t.Errorf("got Size %d, want 0", du[0].Size)
@@ -65,9 +65,9 @@ func TestParseSystemDf(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "json array instead of ndjson",
+			name:  "json array instead of ndjson",
 			input: `[{"Type":"Images","TotalCount":"76","Active":"22","Size":"60.11GB","Reclaimable":"42.28GB (70%)"}]`,
-			want: 1,
+			want:  1,
 			checks: func(t *testing.T, du []DiskUsage) {
 				if du[0].Type != "Images" {
 					t.Errorf("got Type %q, want Images", du[0].Type)

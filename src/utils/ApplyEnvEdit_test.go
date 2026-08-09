@@ -131,9 +131,9 @@ func TestApplyEnvEditCreateNewFile(t *testing.T) {
 
 func TestFormatEnvLineQuoting(t *testing.T) {
 	tests := []struct {
-		key    string
-		value  string
-		want   string
+		key   string
+		value string
+		want  string
 	}{
 		{"KEY", "simple", "KEY=simple"},
 		{"KEY", "has space", "KEY=\"has space\""},

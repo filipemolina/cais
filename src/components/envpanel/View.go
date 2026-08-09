@@ -97,7 +97,7 @@ func (m Model) renderHeader(bodyWidth int) string {
 
 	return lipgloss.JoinHorizontal(lipgloss.Left,
 		lipgloss.NewStyle().Width(1).Render(""),
-		dim.Width(keyWidth + 1).Render("KEY"),
+		dim.Width(keyWidth+1).Render("KEY"),
 		dim.Width(valWidth).Render("VALUE"),
 	)
 }

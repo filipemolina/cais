@@ -240,11 +240,11 @@ var Files = FilesKeys{
 // bindings to keep "one verb is one binding".
 type EnvKeys struct {
 	// Navigate is help-only, like Files.Scroll: the table owns navigation.
-	Navigate  key.Binding
-	Reveal    key.Binding
-	Copy      key.Binding
-	RawEdit   key.Binding
-	Chmod     key.Binding
+	Navigate key.Binding
+	Reveal   key.Binding
+	Copy     key.Binding
+	RawEdit  key.Binding
+	Chmod    key.Binding
 	// List.New, List.Edit, List.Delete and Details.EditFile are reused here.
 }
 

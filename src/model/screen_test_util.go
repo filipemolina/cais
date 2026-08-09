@@ -32,8 +32,8 @@ import (
 type screen struct {
 	mu      sync.Mutex
 	rows    [][]rune
-	curR    int // 0-based
-	curC    int // 0-based
+	curR    int    // 0-based
+	curC    int    // 0-based
 	pending string // buffered bytes of a split escape sequence
 }
 
