@@ -14,9 +14,8 @@
 ![Stack Stitcher: starting a group, tailing its logs, editing a service](./demo/demo.gif)
 
 Stack Stitcher is a keyboard-driven terminal UI for a self-hosted stack running on
-Docker Compose. It reads your `compose.yml`, groups services the way you think about
-them, and gives you one key each for start, stop, restart, pull, logs and edit.
-Nothing extra to host, nothing listening on a port, and no state of its own.
+Docker Compose. It reads your `compose.yml` and groups services the way you think about
+them. Nothing extra to host and nothing listening on a port.
 
 Your compose file stays the source of truth. Every change Stack Stitcher makes is
 written back into that file, comments and key order intact, so `docker compose`
@@ -30,26 +29,32 @@ and see at a glance which are running, which are healthy, and on what ports.
 
 ![The Groups page: a group selected, its member services and their state](./demo/screenshot-groups.png)
 
-**Everything you need to check, on one screen.** Ports, restart policy,
+**Everything you need to check your services.** Ports, restart policy,
 networks, volumes, `depends_on`, healthcheck, image reference and resource
 limits, beside live memory, CPU, network and disk I/O for the running container.
 
 ![The Services page: one service's configuration and live runtime stats](./demo/screenshot-service.png)
 
 **A working link to the thing you just started.** The config details view shows
-a real hyperlink built from the port the service actually publishes and the
-address your terminal is sitting behind. Ctrl-click it, or copy it with `y`.
+a link to the live service. Ctrl-click it, or copy it with `y`.
 The app never opens a browser itself.
 
 **A healthcheck in one keypress.** `h` on a selected service opens a picker of
-templates: Postgres, MariaDB, Redis, nginx, and others, each using a probe tool
-that ships in the real image, plus a generic HTTP fallback. Enter writes a
+templates: Postgres, MariaDB, Redis and nginx, each using a probe tool that
+ships in the image it targets, plus a generic HTTP fallback. Enter writes a
 validated `healthcheck:` block straight into the compose file.
 
-**New services without leaving the terminal.** `n` on the Services page
-searches Docker Hub live as you type. Official images are marked and star
-counts shown. It confirms a name and image before writing a minimal
-fragment straight into the compose file and opening the inline editor on it.
+**New services without leaving the terminal.** `n` on the Services page asks
+for a name and an image reference, then writes a minimal `image:` fragment
+straight into the compose file and opens the inline editor on it. Ports,
+volumes and everything else get added in the same YAML you would have
+hand-written, with live validation the whole way.
+
+**The `.env` beside your compose file gets a page of its own.** The Env tab
+lists every variable with values masked by default. `v` reveals a value, `c`
+copies it, add/edit/delete go through small modals with a confirm on delete,
+and `o` opens the whole file in an inline editor. Writes are line-preserving,
+so comments and the variables you did not touch survive.
 
 **Edit the compose file in place, as YAML.** `e` opens the service's own
 fragment in an inline editor: real YAML, not a form, so every Compose field is
@@ -73,10 +78,11 @@ switches which one the app is driving.
 
 ![The Files page: the loaded compose file with syntax highlighting](./demo/screenshot-files.png)
 
-**Fourteen themes,** previewed live as you move the cursor: a light and dark
-pair of built-in themes plus Catppuccin Mocha, Gruvbox Dark, Tokyo Night,
-Nord, Dracula, Solarized Dark, One Dark, Everforest Dark, Rosé Pine and
-Kanagawa Wave. `Enter` persists your choice.
+**Fourteen themes,** previewed live as you move the cursor: four built-ins
+(stitcher-dark, stitcher-ember, stitcher-slate, stitcher-day) plus Catppuccin
+Mocha, Gruvbox Dark, Tokyo Night, Nord, Dracula, Solarized Dark, One Dark,
+Everforest Dark, Rosé Pine and Kanagawa Wave. `Enter` applies and persists
+your choice; `Esc` restores the one you started with.
 
 ![The theme picker, previewing a theme live over the Files page](./demo/screenshot-themes.png)
 
@@ -101,13 +107,14 @@ cd stack-stitcher
 make build     # installs to $(go env GOPATH)/bin, usually ~/go/bin
 ```
 
-There are no downloadable binaries yet. The release pipeline is built (a `v*`
-tag builds Linux and macOS, amd64 and arm64) but nothing is tagged, so `go
-install` or a clone is the way in for now.
+There are no downloadable binaries yet. A `v*` tag builds them (Linux and
+macOS, amd64 and arm64), but the releases stay in draft until the launch
+work in the roadmap, so `go install` or a clone is the way in for now.
 
 **Requirements:** Docker with the Compose plugin on your `PATH`, a terminal, and
 Go 1.26+ to build. If something is missing or the daemon is not running, the
-app says which of the five it is and gives you the exact command to fix it.
+app says which one failed (missing Docker, missing Compose plugin, unreachable
+daemon, or permissions) and gives you the exact command to fix it.
 
 ## Use
 
@@ -130,7 +137,7 @@ one.
 
 | Key | Action |
 | --- | --- |
-| `1` `2` `3` | Groups / Services / Files (`[` and `]` step through them) |
+| `1` `2` `3` `4` | Groups / Services / Files / Env (`[` and `]` step through them) |
 | `↑` `↓` `k` `j` | Move the cursor; the details panel follows it |
 | `Tab` | Move focus between the list and the details panel |
 | `s` `t` `r` `p` `x` | Start · Stop · Restart · Pull · Remove (`x` confirms first) |
@@ -138,9 +145,11 @@ one.
 | `y` | Copy a service's URL (when it publishes one) |
 | `h` | Add a healthcheck from the template picker |
 | `e` | Edit: a service's YAML inline, or a group's membership |
-| `E` | Open the whole compose file in `$EDITOR` |
-| `n` `R` `d` | New (a group on the Groups page, a service on the Services page: search Docker Hub live, then confirm) · Rename group · Delete group |
+| `E` | Open the whole compose file in `$EDITOR` (the `.env` file on the Env page) |
+| `n` | New: a group on the Groups page, a service on the Services page (name and image, then the inline editor opens on it), a variable on the Env page |
+| `R` `d` | Rename group · Delete group (`d` confirms first) |
 | `/` | Filter the list by name |
+| `u` | Docker disk and memory usage overlay |
 | `T` `?` `a` `q` | Themes · Help · About · Quit |
 
 Start/Stop/Restart/Pull/Remove run `docker compose` underneath, scoped to every
@@ -152,13 +161,15 @@ Early, and honest about it. Everything shown above works today; what follows is
 what does not, in the order it is being closed. The sequence and the reasoning
 live in [docs/ROADMAP.md](docs/ROADMAP.md):
 
-- **No `.env` surface.** Values are interpolated correctly; the file that holds
-  them is not visible or editable in the app, and secrets are not masked.
+- **No write safety yet.** The app rewrites your compose file in place, and
+  the only guard is that a write that would not parse is refused. There is no
+  backup and no undo yet; that is the next launch gate in the roadmap. Until
+  it lands, keep the file somewhere a bad write can recover from, like git.
 - **Blank lines between services are not preserved** across a write. Comments,
   quoting and key order are. This is accepted rather than fixed: a blank line
   inside a block scalar (`command: |`) is part of the string, and silently
   rewriting your data is a worse failure than losing your spacing.
-- **A narrow terminal shows less, not worse.** Under roughly 135 columns the
+- **A narrow terminal shows less, not worse.** Under roughly 130 columns the
   keybinding bar starts dropping hints, and a narrow details panel drops
   columns from the member table, widest and least important first, and never
   `q quit`, `? help` or the service's own name.
