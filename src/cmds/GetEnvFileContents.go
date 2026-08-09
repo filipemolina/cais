@@ -20,8 +20,8 @@ type EnvEntry struct {
 }
 
 type EnvFileContentsMsg struct {
-	Path    string       // Resolved .env path
-	Entries []EnvEntry   // Parsed entries in file order
+	Path    string     // Resolved .env path
+	Entries []EnvEntry // Parsed entries in file order
 	Err     error
 }
 

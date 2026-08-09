@@ -14,14 +14,14 @@ func TestBar(t *testing.T) {
 		width int
 		want  int // number of filled cells
 	}{
-		{50, 100, 10, 5},           // 50% = 5 filled
-		{1, 1000, 10, 1},           // 1 byte = 1 filled (non-zero rule)
-		{0, 1000, 10, 0},           // 0 = 0 filled
-		{100, 100, 10, 10},         // 100% = 10 filled
-		{50, 0, 10, 0},             // total=0 renders all shaded
-		{150, 100, 10, 10},         // overflow is clamped to width
-		{333, 1000, 10, 3},         // 33.3% rounds to 3 filled
-		{667, 1000, 10, 7},         // 66.7% rounds to 7 filled
+		{50, 100, 10, 5},   // 50% = 5 filled
+		{1, 1000, 10, 1},   // 1 byte = 1 filled (non-zero rule)
+		{0, 1000, 10, 0},   // 0 = 0 filled
+		{100, 100, 10, 10}, // 100% = 10 filled
+		{50, 0, 10, 0},     // total=0 renders all shaded
+		{150, 100, 10, 10}, // overflow is clamped to width
+		{333, 1000, 10, 3}, // 33.3% rounds to 3 filled
+		{667, 1000, 10, 7}, // 66.7% rounds to 7 filled
 	}
 
 	for _, tt := range tests {
