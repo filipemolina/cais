@@ -26,6 +26,7 @@ import (
 type rig struct {
 	p      *tea.Program
 	out    *safeBuffer
+	scr    *screen
 	cursor int
 	done   chan struct{}
 }
@@ -51,15 +52,18 @@ func newRig(t *testing.T) *rig {
 	t.Helper()
 
 	out := &safeBuffer{}
+	scr := newScreen(120, 40)
+	// tee feeds the raw stream to the screen decoder as well as the buffer.
+	tee := &teeWriter{out: out, scr: scr}
 	p := tea.NewProgram(
 		GetInitialModel(utils.ComposeSource{}),
 		tea.WithInput(nil),
-		tea.WithOutput(out),
+		tea.WithOutput(tee),
 		tea.WithoutSignals(),
 		tea.WithWindowSize(120, 40),
 	)
 
-	r := &rig{p: p, out: out, done: make(chan struct{})}
+	r := &rig{p: p, out: out, scr: scr, done: make(chan struct{})}
 	go func() {
 		defer close(r.done)
 		_, _ = p.Run()
@@ -71,6 +75,18 @@ func newRig(t *testing.T) *rig {
 	})
 
 	return r
+}
+
+// teeWriter fans each write out to both the raw buffer and the screen
+// decoder, so the two views of the render stream stay in lockstep.
+type teeWriter struct {
+	out *safeBuffer
+	scr *screen
+}
+
+func (w *teeWriter) Write(p []byte) (int, error) {
+	w.scr.feed(string(p))
+	return w.out.Write(p)
 }
 
 // Send injects a message into the program loop, the same way the
@@ -103,12 +119,16 @@ func (r *rig) Latest() string {
 	return delta
 }
 
-// WaitFor polls Latest() for substr until it appears or timeout elapses.
-// Returns true if the substring was found.
+// WaitFor polls the decoded current screen until substr is visible or the
+// timeout elapses. Returns true if found. Because it matches the current
+// screen rather than the append-only byte history, it never reports a
+// substring that was rendered and then overwritten (no false positives), and
+// it never misses a substring because a previous call consumed the bytes (no
+// false negatives).
 func (r *rig) WaitFor(substr string, timeout time.Duration) bool {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		if strings.Contains(r.Latest(), substr) {
+		if strings.Contains(r.scr.String(), substr) {
 			return true
 		}
 		time.Sleep(20 * time.Millisecond)
@@ -116,14 +136,15 @@ func (r *rig) WaitFor(substr string, timeout time.Duration) bool {
 	return false
 }
 
-// WaitForNot polls Latest() until substr is NOT in the latest chunk of
-// output. Returns true if the substring disappeared within the timeout.
-// Useful for asserting that a modal or banner has been dismissed.
+// WaitForNot polls the decoded current screen until substr is no longer
+// visible, or the timeout elapses. Returns true if the substring disappeared
+// within the timeout. Useful for asserting that a modal or banner has been
+// dismissed: the match is against what is currently on screen, so a modal
+// closed in an earlier frame does not linger as a ghost.
 func (r *rig) WaitForNot(substr string, timeout time.Duration) bool {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		latest := r.Latest()
-		if !strings.Contains(latest, substr) {
+		if !strings.Contains(r.scr.String(), substr) {
 			return true
 		}
 		time.Sleep(20 * time.Millisecond)
@@ -179,7 +200,7 @@ func TestRigRenameGroup(t *testing.T) {
 	// The modal closes, then the reloaded list shows the new name. Wait for
 	// the modal to go first so "core2" cannot be matched inside its input.
 	if !r.WaitForNot("Rename group", 3*time.Second) {
-		t.Fatalf("rename modal did not close. Output:\n%s", r.Output())
+		t.Fatalf("rename modal did not close. Output:\n%s\n=== DECODED ===\n%s", r.Output(), r.scr.String())
 	}
 	if !r.WaitFor("core2", 3*time.Second) {
 		t.Fatalf("renamed group never appeared in the list. Output:\n%s", r.Output())
@@ -206,13 +227,16 @@ func TestRigAddService(t *testing.T) {
 	}
 
 	r.Send(keyPress('2')) // Services page
-	if !r.WaitFor("Services", 3*time.Second) {
+	// "PROPERTY" is the config table header the details panel renders on the
+	// Services page only; the tab bar label "Services" is on screen on every
+	// page, so waiting on it would race the page switch.
+	if !r.WaitFor("PROPERTY", 3*time.Second) {
 		t.Fatalf("did not switch to the Services page. Output:\n%s", r.Output())
 	}
 
 	r.Send(letterKey('n'))
 	if !r.WaitFor("New service", 3*time.Second) {
-		t.Fatalf("add-service modal did not open. Output:\n%s", r.Output())
+		t.Fatalf("add-service modal did not open. Output:\n%s\n=== DECODED ===\n%s", r.Output(), r.scr.String())
 	}
 
 	// Name field is focused first: type the service name, Tab to the image
