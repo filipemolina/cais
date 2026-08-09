@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="410" height="76" viewBox="0 0 410 76">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#BC3FBC"/>
+      <stop offset="100%" stop-color="#EB4268"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="56" height="56" rx="14" fill="url(#g)"/>
+  
+  <rect x="20" y="23" width="35" height="8" rx="2" fill="#FFFFFF" opacity="0.95"/>
+  <rect x="20" y="34" width="35" height="8" rx="2" fill="#FFFFFF" opacity="0.75"/>
+  <rect x="20" y="45" width="35" height="8" rx="2" fill="#FFFFFF" opacity="0.5499999999999999"/>
+  <text x="82" y="51" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="40" fill="url(#g)" letter-spacing="-1" text-rendering="geometricPrecision">Stack Stitcher</text>
+</svg>
