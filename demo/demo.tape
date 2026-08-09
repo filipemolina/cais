@@ -1,7 +1,13 @@
 # VHS tape for the Stack Stitcher README demo.
 # Install VHS first: https://github.com/charmbracelet/vhs (needs ttyd + ffmpeg too).
 # Requires the binary on PATH: `make build` installs it to $(go env GOPATH)/bin.
+#
+# Pre-start the stack before recording:
+#   cd demo/fixtures && docker compose --profile media --profile home --profile infra up -d
+#
 # Record from the repo root with:  vhs demo/demo.tape
+# The tape hides itself during setup, Show only when the TUI is on screen.
+# Recording stops before the quit key, so the return to terminal isn't captured.
 #
 # Then shrink it. VHS writes every frame in full at 25fps, and this tape comes
 # out around 12MB raw — unacceptable on a file the README loads on every visit.
@@ -26,10 +32,6 @@
 # terminals: shed whole things" in docs/DESIGN.md. Recording at 1440 would show
 # the full bar, at the cost of scaling 1440 -> 900 instead of 1200 -> 900 and
 # the legibility that buys. Legibility won.
-#
-# This starts real containers from demo/fixtures/compose.yaml, so Docker has to
-# be running. The tape stops them again before it quits; anything it misses is
-# cleaned up by:  cd demo/fixtures && docker compose down -v
 
 Output demo/demo.gif
 
@@ -47,17 +49,19 @@ Set TypingSpeed 60ms
 # Same throwaway config dir the screenshots use: the recording should not
 # depend on, or overwrite, the recorder's own theme.
 Hide
-Type "mkdir -p /tmp/stitch-demo-config/stack-stitcher && printf 'theme: stitcher-dark\n' > /tmp/stitch-demo-config/stack-stitcher/config.yaml && export XDG_CONFIG_HOME=/tmp/stitch-demo-config && clear"
+Type "mkdir -p /tmp/stitch-demo-config/stack-stitcher && printf 'theme: stitcher-dark\\\\n' > /tmp/stitch-demo-config/stack-stitcher/config.yaml && export XDG_CONFIG_HOME=/tmp/stitch-demo-config && clear"
 Enter
 Sleep 1s
-Show
 
+# Launch the TUI — this is the first frame we show.
 Type "cd demo/fixtures && stitch"
 Enter
 Sleep 2500ms
+Show
 
-# Groups page: the cursor lands on "downloads" — four *arr services that
-# belong together. The details panel follows the cursor, no select step.
+# Groups page: the cursor lands on "home" (first group, alphabetical) —
+# three home-management services that belong together. The details panel
+# follows the cursor, no select step.
 Sleep 1500ms
 Down
 Sleep 1200ms
@@ -106,7 +110,7 @@ Sleep 800ms
 Escape
 Sleep 1s
 
-# Back to the group, and stop all four again.
+# Back to the group, and stop all three again.
 Type "1"
 Sleep 800ms
 Tab
@@ -119,6 +123,3 @@ Type "?"
 Sleep 2500ms
 Escape
 Sleep 500ms
-
-Type "q"
-Sleep 1s

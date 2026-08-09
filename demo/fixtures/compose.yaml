@@ -1,5 +1,5 @@
 # Fixture stack for the README screenshots and the demo recording. Shaped like
-# a real homelab: three profiles, *arr apps, media servers, and the plumbing
+# a real homelab: three profiles, media and utility apps, and the plumbing
 # underneath. Ports sit in the 14000+ range so they collide with nothing.
 
 name: homelab
@@ -46,62 +46,54 @@ services:
       - kavita-config:/config
     restart: unless-stopped
 
-  # --- downloads ---------------------------------------------------------
-  sonarr:
-    image: ghcr.io/hotio/sonarr:latest
-    profiles: ["downloads"]
+  # --- home management ---------------------------------------------------
+  homeassistant:
+    image: homeassistant/home-assistant:stable
+    profiles: ["home"]
     ports:
-      - "14989:8989"
+      - "14123:8123"
     environment:
-      PUID: 1000
-      PGID: 1000
       TZ: Europe/Lisbon
     volumes:
-      - sonarr-config:/config
-    depends_on:
-      - prowlarr
+      - ha-config:/config
     restart: unless-stopped
 
-  radarr:
-    image: lscr.io/linuxserver/radarr:latest
-    profiles: ["downloads"]
+  paperless:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    profiles: ["home"]
     ports:
-      - "14878:7878"
+      - "14808:8000"
     environment:
-      PUID: 1000
-      PGID: 1000
-      TZ: Europe/Lisbon
+      PAPERLESS_TIME_ZONE: Europe/Lisbon
+      PAPERLESS_SECRET_KEY: stack-stitcher-demo-secret
+      PAPERLESS_REDIS: redis://cache:6379
+      PAPERLESS_DBENGINE: postgresql
+      PAPERLESS_DBHOST: db
+      PAPERLESS_DBPORT: "5432"
+      PAPERLESS_DBUSER: postgres
+      PAPERLESS_DBPASS: demo
+      PAPERLESS_DBNAME: homelab
     volumes:
-      - radarr-config:/config
-    depends_on:
-      - prowlarr
+      - paperless-data:/data
+    # No depends_on here on purpose: db and cache live in the "infra"
+    # profile, and compose rejects a profile-scoped `up` whose service
+    # depends on a service outside the selected profiles ("depends on
+    # undefined service"). The demo pre-starts every profile, so paperless
+    # finds postgres and redis already running.
     restart: unless-stopped
 
-  prowlarr:
-    image: lscr.io/linuxserver/prowlarr:latest
-    profiles: ["downloads"]
+  calibre:
+    image: lscr.io/linuxserver/calibre:latest
+    profiles: ["home"]
     ports:
-      - "14696:9696"
+      - "14809:8083"
     environment:
       PUID: 1000
       PGID: 1000
       TZ: Europe/Lisbon
     volumes:
-      - prowlarr-config:/config
-    restart: unless-stopped
-
-  qbittorrent:
-    image: lscr.io/linuxserver/qbittorrent:latest
-    profiles: ["downloads"]
-    ports:
-      - "14080:8080"
-    environment:
-      PUID: 1000
-      PGID: 1000
-      TZ: Europe/Lisbon
-      WEBUI_PORT: 8080
-    volumes:
-      - qbit-config:/config
+      - calibre-config:/config
+      - calibre-books:/books
     restart: unless-stopped
 
   # --- infra -------------------------------------------------------------
@@ -139,8 +131,8 @@ volumes:
   abs-config:
   abs-metadata:
   kavita-config:
-  sonarr-config:
-  radarr-config:
-  prowlarr-config:
-  qbit-config:
+  ha-config:
+  paperless-data:
+  calibre-config:
+  calibre-books:
   db-data:
