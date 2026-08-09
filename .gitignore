@@ -8,6 +8,9 @@
 # Screenshots and mock data
 mocks/
 
+# VHS byproduct (only the .png screenshots are used)
+demo/screenshots.gif
+
 # BEGIN oh-my-opencode-slim worktrees
 .slim/worktrees/
 .slim/worktrees.json

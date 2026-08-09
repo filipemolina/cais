@@ -5,7 +5,7 @@
 # The stack in demo/fixtures has to be running first, so the panels have real
 # state to show (statuses, health, uptime, live stats):
 #
-#   cd demo/fixtures && docker compose --profile media --profile infra up -d
+#   cd demo/fixtures && docker compose --profile media --profile home --profile infra up -d
 #
 # Then record from the repo root with:  vhs demo/screenshots.tape
 # VHS sometimes drops the last screenshot of a tape — re-run if a file is
@@ -25,7 +25,7 @@ Set TypingSpeed 60ms
 # framed for, so the recording neither depends on nor overwrites whatever
 # theme the person recording happens to use.
 Hide
-Type "mkdir -p /tmp/stitch-demo-config/stack-stitcher && printf 'theme: stitcher-dark\n' > /tmp/stitch-demo-config/stack-stitcher/config.yaml && export XDG_CONFIG_HOME=/tmp/stitch-demo-config && clear"
+Type "mkdir -p /tmp/stitch-demo-config/stack-stitcher && printf 'theme: stitcher-dark\\n' > /tmp/stitch-demo-config/stack-stitcher/config.yaml && export XDG_CONFIG_HOME=/tmp/stitch-demo-config && clear"
 Enter
 Sleep 1s
 Show
@@ -41,7 +41,7 @@ Sleep 2s
 Screenshot demo/screenshot-groups.png
 
 # --- Services: navidrome's config + its live runtime stats ----------------
-# (Alphabetical list: audiobookshelf, cache, db, kavita, navidrome, …)
+# (Alphabetical list: audiobookshelf, cache, calibre, db, ha, kavita, navidrome, …)
 Type "2"
 Sleep 1s
 Down
