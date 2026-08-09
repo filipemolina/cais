@@ -166,6 +166,12 @@ says which commit it is.
   (`env-secrets` A + B), the docker disk/memory usage overlay, and mouse
   divider-drag resize, minus the removed image-search feature. A minor bump
   because it adds surface; a *minor* one, not a patch, for the same reason.
+- **`v0.2.1`** (2026-08-08) is a fixes-only release. The flaky tests are
+  gone at the root: the test rig's waiters now match the decoded visible
+  screen instead of the append-only byte history, and two tests that waited
+  on the static tab-bar label now wait on page-specific content. The README
+  rewrite and the regenerated demo assets ride along. No new surface,
+  nothing removed — hence a patch, not a minor.
 
 ### Done, and kept for the record
 
