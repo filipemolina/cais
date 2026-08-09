@@ -27,7 +27,10 @@ func TestRigHealthcheckInsertion(t *testing.T) {
 	}
 
 	r.Send(keyPress('2')) // Services page
-	if !r.WaitFor("Services", 3*time.Second) {
+	// "PROPERTY" is the config table header the details panel renders on the
+	// Services page only; the tab bar label "Services" is on screen on every
+	// page, so waiting on it would race the page switch.
+	if !r.WaitFor("PROPERTY", 3*time.Second) {
 		t.Fatalf("did not switch to the Services page. Output:\n%s", r.Output())
 	}
 	r.Send(keyPress(tea.KeyTab)) // focus the details panel
@@ -36,10 +39,7 @@ func TestRigHealthcheckInsertion(t *testing.T) {
 	}
 
 	r.Send(letterKey('h'))
-	// Both substrings render in the same frame, so this is one WaitFor, not
-	// two: Latest() (which WaitFor polls) only returns bytes since the last
-	// call, and a second WaitFor immediately after a successful first one
-	// would be looking at a frame that has already been consumed.
+	// Both substrings render in the same frame; one WaitFor covers both.
 	if !r.WaitFor("Add healthcheck", 3*time.Second) {
 		t.Fatalf("healthcheck picker did not open. Output:\n%s", r.Output())
 	}

@@ -127,7 +127,7 @@ func TestAnEditorThatCannotStartDoesNotWedgeTheApp(t *testing.T) {
 	r.Send(tea.WindowSizeMsg{Width: 100, Height: 30})
 
 	if !r.WaitFor("web", 3*time.Second) {
-		t.Fatal("the app stopped rendering after a failed editor launch")
+		t.Fatalf("the app stopped rendering after a failed editor launch. Output:\n%s", r.Output())
 	}
 }
 
