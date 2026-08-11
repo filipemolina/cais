@@ -29,6 +29,17 @@ func ReplaceFileAtomically(fileName string, contents []byte) error {
 // If the file is a symlink, it is resolved and the target is written through.
 // If the symlink is dangling, an error is returned without creating a file.
 func ReplaceFileAtomicallyWithMode(fileName string, contents []byte, newFileMode os.FileMode) error {
+	// Snapshot the current file before anything touches it. This is the
+	// single chokepoint every compose and .env write passes through, so one
+	// insertion here captures every surface. If the snapshot cannot be taken,
+	// refuse the write: no write happens without a retained copy of what it
+	// replaces (a brand-new file has nothing to snapshot, and SnapshotFile
+	// returns nil for that). Validation already gates the write, so a refused
+	// edit never reaches this point.
+	if err := SnapshotFile(fileName); err != nil {
+		return fmt.Errorf("failed to back up %s before writing: %w", fileName, err)
+	}
+
 	// Resolve symlinks before writing. The temp file is created next to the
 	// resolved target (D5.1), so resolving moves the write into the target's
 	// directory. A read-only secrets directory now fails at CreateTemp with the

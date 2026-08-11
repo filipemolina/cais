@@ -172,6 +172,15 @@ says which commit it is.
   on the static tab-bar label now wait on page-specific content. The README
   rewrite and the regenerated demo assets ride along. No new surface,
   nothing removed — hence a patch, not a minor.
+- **`v0.3.0`** (2026-08-11) adds write safety: a sidecar backup store beside
+  the resolved compose file. Every compose and `.env` write is snapshotted
+  into `.cais/backups/` before it lands, per-source slug folders
+  (`compose_yaml/`, `_env/`), content-deduped, pruned to 500 copies per file,
+  with `.env` included and a `.cais/.gitignore` keeping the store out of
+  `git status`. A write that cannot be backed up is refused. This is the
+  store only; a browse and restore UI (v0.4.0) is built on its
+  timestamp-plus-SHA-8 naming. A minor bump: it adds user-facing surface (the
+  compose-write path becomes safe).
 
 ### Done, and kept for the record
 
