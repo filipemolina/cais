@@ -87,7 +87,25 @@ func TestResolveURL(t *testing.T) {
 			note: true,
 		},
 		{
-			name: "stitcher.url label overrides everything",
+			name: "cais.url label overrides everything",
+			svc: types.ServiceConfig{
+				Labels: types.Labels{"cais.url": "https://x.ts.net"},
+				Ports:  []types.ServicePortConfig{port("14533", 4533)},
+			},
+			host: "10.0.0.5",
+			want: "https://x.ts.net",
+		},
+		{
+			name: "cais.url empty suppresses the row",
+			svc: types.ServiceConfig{
+				Labels: types.Labels{"cais.url": ""},
+				Ports:  []types.ServicePortConfig{port("14533", 4533)},
+			},
+			host: "10.0.0.5",
+			want: "",
+		},
+		{
+			name: "legacy stitcher.url label still honored",
 			svc: types.ServiceConfig{
 				Labels: types.Labels{"stitcher.url": "https://x.ts.net"},
 				Ports:  []types.ServicePortConfig{port("14533", 4533)},
@@ -96,13 +114,25 @@ func TestResolveURL(t *testing.T) {
 			want: "https://x.ts.net",
 		},
 		{
-			name: "stitcher.url empty suppresses the row",
+			name: "legacy stitcher.url empty suppresses the row",
 			svc: types.ServiceConfig{
 				Labels: types.Labels{"stitcher.url": ""},
 				Ports:  []types.ServicePortConfig{port("14533", 4533)},
 			},
 			host: "10.0.0.5",
 			want: "",
+		},
+		{
+			name: "cais.url wins over legacy stitcher.url",
+			svc: types.ServiceConfig{
+				Labels: types.Labels{
+					"cais.url":     "https://new.ts.net",
+					"stitcher.url": "https://old.ts.net",
+				},
+				Ports: []types.ServicePortConfig{port("14533", 4533)},
+			},
+			host: "10.0.0.5",
+			want: "https://new.ts.net",
 		},
 		{
 			name: "no ports, no labels",
