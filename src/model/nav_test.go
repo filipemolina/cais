@@ -363,11 +363,11 @@ func TestWordmarkSitsAtTheFarRight(t *testing.T) {
 	firstLine := strings.SplitN(nav, "\n", 2)[0]
 	trimmed := strings.TrimRight(firstLine, " ")
 
-	if !strings.HasSuffix(trimmed, "Stack Stitcher") {
+	if !strings.HasSuffix(trimmed, "Cais") {
 		t.Errorf("wordmark is not at the right edge of the nav: %q", firstLine)
 	}
 
-	if strings.HasPrefix(strings.TrimLeft(firstLine, " "), "▌ Stack Stitcher") {
+	if strings.HasPrefix(strings.TrimLeft(firstLine, " "), "▌ Cais") {
 		t.Error("wordmark is still at the left edge of the nav")
 	}
 }

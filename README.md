@@ -1,4 +1,4 @@
-# Stack Stitcher
+# Cais
 
 **Run your self-hosted stack from the terminal, without leaving your compose file behind.**
 
@@ -7,7 +7,7 @@
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Status](https://img.shields.io/badge/status-work%20in%20progress-orange)
 
-<img src="./assets/logos/stack-stitcher-readme-banner.svg" alt="Stack Stitcher readme banner" width="100%" />
+<img src="./assets/logos/cais-readme-banner.svg" alt="Cais readme banner" width="100%" />
 
 ## Demo
 

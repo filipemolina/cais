@@ -59,7 +59,7 @@ func TestTheAboutModalShowsVersionLicenseAndRepo(t *testing.T) {
 
 	frame := ansi.Strip(m.activeModal.View().Content)
 
-	for _, want := range []string{"Stack Stitcher", "version", "MIT", "github.com/filipemolina/cais"} {
+	for _, want := range []string{"Cais", "version", "MIT", "github.com/filipemolina/cais"} {
 		if !strings.Contains(frame, want) {
 			t.Errorf("About modal does not show %q:\n%s", want, frame)
 		}
