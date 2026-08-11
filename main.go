@@ -34,6 +34,21 @@ func main() {
 		os.Exit(1)
 	}
 
+	// One-shot migration from the previous-identity config dir. Runs
+	// before anything reads config so LoadConfig sees the new layout.
+	// Errors are non-fatal: a fresh install may have no legacy dir,
+	// and a partial legacy needs the user to look, not the app to
+	// refuse to start.
+	if res, err := config.MigrateLegacyConfig(); err == nil {
+		if res.Warning != "" {
+			fmt.Fprintln(os.Stderr, "cais:", res.Warning)
+		} else if res.Migrated && res.ThemeRenamed {
+			fmt.Fprintln(os.Stderr, "cais: migrated", res.From, "→", res.To, "(theme renamed to cais-*)")
+		} else if res.Migrated {
+			fmt.Fprintln(os.Stderr, "cais: migrated", res.From, "→", res.To)
+		}
+	}
+
 	// Apply the saved theme before the program starts. A missing or
 	// malformed config is silently ignored — the default theme is
 	// already active. An unknown theme name is also ignored: the

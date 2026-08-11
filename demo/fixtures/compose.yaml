@@ -65,7 +65,7 @@ services:
       - "14808:8000"
     environment:
       PAPERLESS_TIME_ZONE: Europe/Lisbon
-      PAPERLESS_SECRET_KEY: stack-stitcher-demo-secret
+      PAPERLESS_SECRET_KEY: cais-demo-secret
       PAPERLESS_REDIS: redis://cache:6379
       PAPERLESS_DBENGINE: postgresql
       PAPERLESS_DBHOST: db
