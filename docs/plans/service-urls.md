@@ -461,7 +461,7 @@ install this one.
 2. Ctrl-clicking (or the terminal's equivalent) that text opens the service in
    the local browser.
 3. `y` copies the full URL and the status line says so.
-4. `url_host: homelab.lan` in `~/.config/stack-stitcher/config.yaml` overrides
+4. `url_host: homelab.lan` in `~/.config/cais/config.yaml` overrides
    the detected host everywhere.
 5. `stitcher.url` on a service overrides everything; `stitcher.url: ""`
    suppresses the row.

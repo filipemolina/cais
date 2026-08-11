@@ -151,7 +151,7 @@ people uninstall.
 
 ### D2. Configuration: endpoint in the config file, **key in the environment**
 
-`~/.config/stack-stitcher/config.yaml` gains:
+`~/.config/cais/config.yaml` gains:
 
 ```yaml
 ai:

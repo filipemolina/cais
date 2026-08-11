@@ -1,4 +1,4 @@
-# Plan: Announcing Stack Stitcher to the Self-Hosting Community
+# Plan: Announcing Cais to the Self-Hosting Community
 
 Ask: *"how to advertise the TUI to the self-hosting community, what angle to
 pitch it at given the tools that already exist (lazydocker, HTML GUIs like
@@ -79,7 +79,7 @@ Everything else on the pre-flight list is cheap:
 
 ### One sentence
 
-> **Stack Stitcher makes the compose file you already have operable from the
+> **Cais makes the compose file you already have operable from the
 > terminal — it edits the file, not a database.**
 
 That sentence is doing three jobs. *Compose file you already have* says there is
@@ -162,7 +162,7 @@ The [Show HN rules](https://news.ycombinator.com/showhn.html) (retrieved
 2026-07-31) are compatible: "something you've made that other people can play
 with", non-trivial, "ideally without barriers such as signups", early-stage work
 explicitly welcome — but *"if your work isn't ready for users to try out, please
-don't do a Show HN."* Which is the gate again. Title: `Show HN: Stack Stitcher –
+don't do a Show HN."* Which is the gate again. Title: `Show HN: Cais –
 a terminal UI that edits your Docker Compose file`. Post Tuesday–Thursday
 morning US Eastern, then be at the keyboard for six hours; the comments are the
 actual value of this channel, and a Show HN whose author vanishes reads as

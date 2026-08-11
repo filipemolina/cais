@@ -1,6 +1,6 @@
 # TODO
 
-Working list for Stack Stitcher. Sources: the roadmap in `docs/ROADMAP.md`,
+Working list for Cais. Sources: the roadmap in `docs/ROADMAP.md`,
 the guiding principles in `docs/DESIGN.md`, plus review findings.
 
 Legend: **[P]** = from the original plan/roadmap, **[S]** = suggested next
@@ -32,7 +32,7 @@ called out as such in the roadmap: **write safety** (new, see below) and the
   keys are plain text. Live YAML syntax validation is shown on the status
   line; a save that fails compose validation keeps the editor open with the
   error and leaves the file untouched. **Remaining:** the deferred draft
-  mechanism (resume a rejected edit from `$XDG_CACHE_HOME/stack-stitcher/drafts/`).
+  mechanism (resume a rejected edit from `$XDG_CACHE_HOME/cais/drafts/`).
 
 - [x] **[P] Add a new service** (`docs/plans/image-search.md` Phase 1 + 2A) — `n`
   on the Services page (same binding as "new group" on the Groups page, gate
@@ -106,7 +106,7 @@ called out as such in the roadmap: **write safety** (new, see below) and the
   two rows of content in it, and each of those settings has a better home:
   the compose file is a `--file` flag (per run, explicit), and the theme is a
   picker modal once colors are centralized. What persists goes to
-  `~/.config/stack-stitcher/config.yaml` with no page to maintain.
+  `~/.config/cais/config.yaml` with no page to maintain.
 
 - [x] **[P] About modal** — `a` opens a read-only About overlay carrying the
   reserved ASCII `LOGO` (`src/constants/Branding.go`), the wordmark and
@@ -154,7 +154,7 @@ called out as such in the roadmap: **write safety** (new, see below) and the
   `stitcher-ocean`, `stitcher-ember`), sorted by name. Cursor movement
   previews the theme live — the entire UI behind the modal repaints on
   each cursor step. `Enter` applies and persists to
-  `~/.config/stack-stitcher/config.yaml` (or `$XDG_CONFIG_HOME`); `Esc`
+  `~/.config/cais/config.yaml` (or `$XDG_CONFIG_HOME`); `Esc`
   restores the theme that was active when the picker opened. The saved
   theme is loaded on startup in `main.go`, before the program starts. Two
   new themes (`stitcher-ocean`, `stitcher-ember`) join the existing pair
@@ -176,8 +176,8 @@ called out as such in the roadmap: **write safety** (new, see below) and the
   legacy NDJSON output, so `jq` is no longer a runtime requirement.
 
 - [x] **[S] Rename the module for distribution** — `go.mod` is now
-  `module github.com/filipemolina/stack-stitcher`, so
-  `go install github.com/filipemolina/stack-stitcher@latest` works. Version
+  `module github.com/filipemolina/cais`, so
+  `go install github.com/filipemolina/cais@latest` works. Version
   stamping and `--version` landed in Phase 7: `constants.Version()` prefers
   the `-ldflags -X` stamp, falls back to the commit from the build info, and
   the nav bar renders it dimmed beside the wordmark.
@@ -314,11 +314,11 @@ called out as such in the roadmap: **write safety** (new, see below) and the
   this.
 
 - [ ] **[H] `ReadConfigFile` invents the project name** — it passes
-  `cli.WithName("stack-stitcher")`, which sits at the top of compose's name
+  `cli.WithName("cais")`, which sits at the top of compose's name
   resolution ladder and therefore *overrides the file's own `name:` key*.
   Measured against `demo/fixtures/compose.yaml` (which declares
-  `name: homelab`): the app resolves `stack-stitcher` and computes
-  `stack-stitcher_navidrome-data`, while the `docker compose` calls the app
+  `name: homelab`): the app resolves `cais` and computes
+  `cais_navidrome-data`, while the `docker compose` calls the app
   itself makes resolve `homelab` and create `homelab_navidrome-data`. Removing
   the option yields `homelab` for that file and `mocks` (the directory
   basename) for one with no `name:` — exactly docker's own rules.

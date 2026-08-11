@@ -1,4 +1,4 @@
-# Plan: Test Stack Stitcher on Windows and macOS for Free
+# Plan: Test Cais on Windows and macOS for Free
 
 > **Before you start.** Work on a feature branch of small commits, merged
 > `--no-ff`; `go build ./... && go vet ./... && go test ./... && gofmt -l .`
@@ -14,7 +14,7 @@ platform?"* The plan below is the researched answer, written down.
 ## Status of the ask — what "test" means for a TUI
 
 The platforms people usually mean by "online testing" — BrowserStack,
-LambdaTest, Sauce Labs — test **websites in browsers**. Stack Stitcher is a
+LambdaTest, Sauce Labs — test **websites in browsers**. Cais is a
 terminal app. Its tests don't need a browser, and its runtime needs a real
 terminal. So the answer splits into three distinct kinds of "testing", and the
 free option differs per kind:
@@ -126,7 +126,7 @@ Two sub-parts, cheap first:
    cleanly when terminated. On the Linux/macOS runners, wrap it in `script`
    (or use `timeout`) to give it a PTY — a Bubble Tea program panics or exits
    oddly without one, and *that* is precisely the class of platform bug we are
-   hunting. On Windows, `echo q | stitch` or a short `timeout` run is enough.
+   hunting. On Windows, `echo q | cais` or a short `timeout` run is enough.
    This is the minimal "does it launch" proof.
 2. **VHS screenshots (optional, nicer).** A small tape in `demo/` (e.g.
    `boot-smoke.tape`) that runs the built binary against a fixture, presses a

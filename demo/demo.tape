@@ -1,4 +1,4 @@
-# VHS tape for the Stack Stitcher README demo.
+# VHS tape for the Cais README demo.
 # Install VHS first: https://github.com/charmbracelet/vhs (needs ttyd + ffmpeg too).
 # Requires the binary on PATH: `make build` installs it to $(go env GOPATH)/bin.
 #

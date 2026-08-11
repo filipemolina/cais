@@ -111,7 +111,7 @@ they are the single most common cause of "why is /var/lib/docker full".
 `utils.ReadConfigFile` hardcodes:
 
 ```go
-cli.WithName("stack-stitcher")
+cli.WithName("cais")
 ```
 
 Compose's own name resolution is `-p` flag → `COMPOSE_PROJECT_NAME` → the
@@ -121,7 +121,7 @@ repo's own fixture, which declares `name: homelab`:
 
 | | `project.Name` | volume `navidrome-data` resolves to |
 | --- | --- | --- |
-| today (`WithName`) | `stack-stitcher` | `stack-stitcher_navidrome-data` |
+| today (`WithName`) | `cais` | `cais_navidrome-data` |
 | with the option removed | `homelab` | `homelab_navidrome-data` |
 | what `docker compose --file …` actually creates | `homelab` | `homelab_navidrome-data` |
 
@@ -324,7 +324,7 @@ page's job.
 
 ### Phase 0 — the project name (do this first, alone, one commit)
 
-Remove `cli.WithName("stack-stitcher")` from `utils.ReadConfigFile`. Verify:
+Remove `cli.WithName("cais")` from `utils.ReadConfigFile`. Verify:
 
 - the fixture (`name: homelab`) resolves to `homelab`,
 - `mocks/compose.yaml` (no `name:`) resolves to `mocks`,

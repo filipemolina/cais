@@ -32,7 +32,7 @@ distinct, differently-fixed problems below all arrive as one line of
 `x` — every one of which will fail the same way, one keypress at a time.
 
 The specific first-run failure worth picturing: a stranger installs the binary,
-runs `stitch` in their homelab directory, and their daemon is not running.
+runs `cais` in their homelab directory, and their daemon is not running.
 They see their compose file parsed and their groups listed — the app looks like
 it works — and then `s` prints
 `docker compose ps failed: exit status 1: failed to connect to the docker API`.
@@ -233,7 +233,7 @@ and this verb's trigger is "an action failed", not "a key was pressed".
 If state 2 is detected and `exec.LookPath("docker-compose")` **succeeds**, the
 message says so explicitly:
 
-> `docker-compose` (V1) is installed, but Stack Stitcher needs the V2 plugin
+> `docker-compose` (V1) is installed, but Cais needs the V2 plugin
 > (`docker compose`, no hyphen). V1 reached end of life in July 2023 and does
 > not support `--format json`.
 

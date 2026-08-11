@@ -2,7 +2,7 @@
 
 ## Problem
 
-Stack Stitcher ships two themes (`stitcher-dark` and `stitcher-light`) but
+Cais ships three themes (`cais-dark`, `cais-dusk`, and `cais-day`)
 has no UI to switch between them. `appstyles.Active` is the documented seam
 (docs/DESIGN.md, ROADMAP.md post-alpha list), and the registry
 (`appstyles.Themes`) is already populated. The only missing piece is a way
@@ -15,7 +15,7 @@ cursor moves, `appstyles.Active` is reassigned — the entire TUI repaints
 live. `Esc` or `Enter` closes the modal, keeping whatever theme is active.
 There is no "cancel" — the last theme previewed is the one that sticks.
 
-Persistence is not implemented yet (a future `~/.config/stack-stitcher/
+Persistence is not implemented yet (a future `~/.config/cais/
 config.yaml` will own it), but the architecture is designed so that adding
 persistence later is a one-line change to a single function.
 
@@ -36,7 +36,7 @@ All theme changes flow through one function:
 // setTheme assigns a new active theme. Everything that draws reads Active
 // fresh, so the next frame repaints. Returns nil today; when config file
 // persistence lands, it returns a command that writes the name to
-// ~/.config/stack-stitcher/config.yaml.
+// ~/.config/cais/config.yaml.
 func setTheme(name string) tea.Cmd {
     if t, ok := Themes[name]; ok {
         Active = t
@@ -198,10 +198,10 @@ import (
     "charm.land/bubbles/v2/list"
     tea "charm.land/bubbletea/v2"
     "charm.land/lipgloss/v2"
-    "github.com/filipemolina/stack-stitcher/src/appstyles"
-    "github.com/filipemolina/stack-stitcher/src/apptypes"
-    "github.com/filipemolina/stack-stitcher/src/cmds"
-    "github.com/filipemolina/stack-stitcher/src/keys"
+    "github.com/filipemolina/cais/src/appstyles"
+    "github.com/filipemolina/cais/src/apptypes"
+    "github.com/filipemolina/cais/src/cmds"
+    "github.com/filipemolina/cais/src/keys"
 )
 
 // themeItem is a list row in the theme picker. It implements list.Item.
@@ -445,8 +445,8 @@ import (
     "testing"
 
     tea "charm.land/bubbletea/v2"
-    "github.com/filipemolina/stack-stitcher/src/appstyles"
-    "github.com/filipemolina/stack-stitcher/src/cmds"
+    "github.com/filipemolina/cais/src/appstyles"
+    "github.com/filipemolina/cais/src/cmds"
 )
 
 func TestThemePickerOpensOnActiveTheme(t *testing.T) {
@@ -620,7 +620,7 @@ Add a completed entry under "Suggested next steps":
   `appstyles.Active`, the next frame repaints). Esc or Enter closes
   the modal, keeping the active theme. Persistence is deferred to the
   config file work — the seam is `appstyles.SetTheme`, which gains a
-  disk write when `~/.config/stack-stitcher/config.yaml` lands.
+  disk write when `~/.config/cais/config.yaml` lands.
 ```
 
 #### 10d. `docs/ROADMAP.md`

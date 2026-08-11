@@ -9,7 +9,7 @@
 
 ## Problem
 
-When a user opens Stack Stitcher for the first time with a compose file that
+When a user opens Cais for the first time with a compose file that
 has services but no `profiles:` tags, the Groups page shows:
 
 - **Left panel:** "No groups yet. Press `n` to create one, or add profiles to
@@ -425,8 +425,8 @@ import (
     "testing"
 
     "github.com/compose-spec/compose-go/v2/types"
-    "github.com/filipemolina/stack-stitcher/src/apptypes"
-    "github.com/filipemolina/stack-stitcher/src/cmds"
+    "github.com/filipemolina/cais/src/apptypes"
+    "github.com/filipemolina/cais/src/cmds"
 )
 
 func TestServiceOverviewCardShowsServiceCount(t *testing.T) {
@@ -646,12 +646,12 @@ Each step compiles and passes tests on its own.
 
 ## Acceptance criteria
 
-1. Open Stack Stitcher with a compose file that has services but no
+1. Open Cais with a compose file that has services but no
    `profiles:` tags → the right panel shows the service overview card with
    every service listed by name, image, and running state.
-2. Open Stack Stitcher with a compose file that has groups → the right panel
+2. Open Cais with a compose file that has groups → the right panel
    shows the existing "Select a group" prompt (no change).
-3. Open Stack Stitcher with an empty compose file → the right panel shows the
+3. Open Cais with an empty compose file → the right panel shows the
    "Getting started" card (fallback).
 4. Press `n` from any of the above states → the existing create-group modal
    flow opens (name prompt → service checklist).
