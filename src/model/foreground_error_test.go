@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/components/helpoverlay"
-	"github.com/filipemolina/stack-stitcher/src/utils"
+	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/components/helpoverlay"
+	"github.com/filipemolina/cais/src/utils"
 )
 
 // With the screen free, a foreground error takes the modal.

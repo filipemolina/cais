@@ -4,16 +4,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/components/chrome"
+	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/components/chrome"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/textarea"
 	tea "charm.land/bubbletea/v2"
 	"github.com/compose-spec/compose-go/v2/types"
-	"github.com/filipemolina/stack-stitcher/src/keys"
-	"github.com/filipemolina/stack-stitcher/src/utils"
+	"github.com/filipemolina/cais/src/keys"
+	"github.com/filipemolina/cais/src/utils"
 	"gopkg.in/yaml.v3"
 )
 

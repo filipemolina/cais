@@ -3,8 +3,8 @@ package groupdetailspanel
 import (
 	"testing"
 
-	"github.com/filipemolina/stack-stitcher/src/apptypes"
-	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/cais/src/apptypes"
+	"github.com/filipemolina/cais/src/cmds"
 )
 
 // On Home, a background poll's GetRunningContainersMsg is withheld from the

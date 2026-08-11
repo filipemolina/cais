@@ -3,7 +3,7 @@ package cmds
 import (
 	"fmt"
 
-	"github.com/filipemolina/stack-stitcher/src/utils"
+	"github.com/filipemolina/cais/src/utils"
 
 	tea "charm.land/bubbletea/v2"
 	"gopkg.in/yaml.v3"

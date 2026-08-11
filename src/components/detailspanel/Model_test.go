@@ -6,8 +6,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/compose-spec/compose-go/v2/types"
-	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/keys"
+	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/keys"
 )
 
 func focusedDetails(service types.ServiceConfig) Model {

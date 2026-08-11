@@ -3,7 +3,7 @@ package containerslist
 import (
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
-	"github.com/filipemolina/stack-stitcher/src/apptypes"
+	"github.com/filipemolina/cais/src/apptypes"
 )
 
 type Model struct {

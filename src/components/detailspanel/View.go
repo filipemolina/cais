@@ -5,15 +5,15 @@ import (
 	"image/color"
 	"strings"
 
-	"github.com/filipemolina/stack-stitcher/src/apptypes"
-	"github.com/filipemolina/stack-stitcher/src/components/chrome"
+	"github.com/filipemolina/cais/src/apptypes"
+	"github.com/filipemolina/cais/src/components/chrome"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/docker/go-units"
-	"github.com/filipemolina/stack-stitcher/src/appstyles"
-	"github.com/filipemolina/stack-stitcher/src/keys"
-	"github.com/filipemolina/stack-stitcher/src/utils"
+	"github.com/filipemolina/cais/src/appstyles"
+	"github.com/filipemolina/cais/src/keys"
+	"github.com/filipemolina/cais/src/utils"
 )
 
 // containerForService returns the first container matching the given compose

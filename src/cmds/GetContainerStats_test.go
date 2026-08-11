@@ -3,7 +3,7 @@ package cmds
 import (
 	"testing"
 
-	"github.com/filipemolina/stack-stitcher/src/apptypes"
+	"github.com/filipemolina/cais/src/apptypes"
 )
 
 // A background poll withholds its own GetRunningContainersMsg from the panels

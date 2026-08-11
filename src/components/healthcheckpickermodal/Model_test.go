@@ -7,7 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/compose-spec/compose-go/v2/types"
-	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/cais/src/cmds"
 )
 
 func specialKey(code rune) tea.KeyPressMsg {

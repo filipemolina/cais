@@ -6,11 +6,11 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/filipemolina/stack-stitcher/src/apptypes"
-	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/components/confirmmodal"
-	"github.com/filipemolina/stack-stitcher/src/constants"
-	"github.com/filipemolina/stack-stitcher/src/keys"
+	"github.com/filipemolina/cais/src/apptypes"
+	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/components/confirmmodal"
+	"github.com/filipemolina/cais/src/constants"
+	"github.com/filipemolina/cais/src/keys"
 )
 
 // letter is a plain keystroke as a terminal delivers it.

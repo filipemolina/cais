@@ -7,7 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/cais/src/appstyles"
 )
 
 // PendingAction tracks a docker action that is currently running.

@@ -8,7 +8,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/compose-spec/compose-go/v2/types"
-	"github.com/filipemolina/stack-stitcher/src/apptypes"
+	"github.com/filipemolina/cais/src/apptypes"
 )
 
 // headingsAt is the column headings the table shows at a given width, read back

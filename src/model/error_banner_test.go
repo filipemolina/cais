@@ -3,7 +3,7 @@ package model
 import (
 	"testing"
 
-	"github.com/filipemolina/stack-stitcher/src/constants"
+	"github.com/filipemolina/cais/src/constants"
 )
 
 // Esc dismisses a foreground error banner - the errors that stay until the

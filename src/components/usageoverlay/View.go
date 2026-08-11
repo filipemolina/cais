@@ -7,10 +7,10 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/docker/go-units"
-	"github.com/filipemolina/stack-stitcher/src/appstyles"
-	"github.com/filipemolina/stack-stitcher/src/apptypes"
-	"github.com/filipemolina/stack-stitcher/src/components/chrome"
-	"github.com/filipemolina/stack-stitcher/src/keys"
+	"github.com/filipemolina/cais/src/appstyles"
+	"github.com/filipemolina/cais/src/apptypes"
+	"github.com/filipemolina/cais/src/components/chrome"
+	"github.com/filipemolina/cais/src/keys"
 )
 
 // bar renders a proportional two-part bar: filled for used, shaded for the

@@ -6,7 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/cais/src/cmds"
 )
 
 // openHelp presses ? and drives the resulting message back into the model,

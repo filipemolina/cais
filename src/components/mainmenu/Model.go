@@ -2,7 +2,7 @@ package mainmenu
 
 import (
 	tea "charm.land/bubbletea/v2"
-	"github.com/filipemolina/stack-stitcher/src/apptypes"
+	"github.com/filipemolina/cais/src/apptypes"
 )
 
 // Model is the top nav bar. It is not focusable and handles no keys:

@@ -9,7 +9,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 
-	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/cais/src/appstyles"
 )
 
 // figletLines is the pre-rendered ASCII art for "Stack Stitcher" (font: slant).

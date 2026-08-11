@@ -4,8 +4,8 @@ import (
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"github.com/compose-spec/compose-go/v2/types"
-	"github.com/filipemolina/stack-stitcher/src/apptypes"
-	"github.com/filipemolina/stack-stitcher/src/keys"
+	"github.com/filipemolina/cais/src/apptypes"
+	"github.com/filipemolina/cais/src/keys"
 )
 
 type Model struct {

@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/x/ansi"
-	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/components/composefilepickermodal"
-	"github.com/filipemolina/stack-stitcher/src/utils"
+	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/components/composefilepickermodal"
+	"github.com/filipemolina/cais/src/utils"
 
 	tea "charm.land/bubbletea/v2"
 )

@@ -2,8 +2,8 @@ package cmds
 
 import (
 	tea "charm.land/bubbletea/v2"
-	"github.com/filipemolina/stack-stitcher/src/appstyles"
-	"github.com/filipemolina/stack-stitcher/src/config"
+	"github.com/filipemolina/cais/src/appstyles"
+	"github.com/filipemolina/cais/src/config"
 )
 
 // ApplyThemeMsg asks AppModel to make a theme permanent: set it as the

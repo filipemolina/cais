@@ -2,7 +2,7 @@ package envpanel
 
 import (
 	tea "charm.land/bubbletea/v2"
-	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/cais/src/cmds"
 )
 
 // Model represents the Env page panel showing .env variables.

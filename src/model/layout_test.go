@@ -1,9 +1,9 @@
 package model
 
 import (
-	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/constants"
-	"github.com/filipemolina/stack-stitcher/src/utils"
+	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/constants"
+	"github.com/filipemolina/cais/src/utils"
 	"strings"
 	"testing"
 

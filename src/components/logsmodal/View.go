@@ -5,9 +5,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/filipemolina/stack-stitcher/src/appstyles"
-	"github.com/filipemolina/stack-stitcher/src/components/chrome"
-	"github.com/filipemolina/stack-stitcher/src/keys"
+	"github.com/filipemolina/cais/src/appstyles"
+	"github.com/filipemolina/cais/src/components/chrome"
+	"github.com/filipemolina/cais/src/keys"
 )
 
 // logsModalWrapper builds the near-full-screen overlay's chrome fresh each

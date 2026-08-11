@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/filipemolina/stack-stitcher/src/utils"
+	"github.com/filipemolina/cais/src/utils"
 )
 
 // composeFileIn writes a compose file in a fresh temp directory and returns

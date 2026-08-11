@@ -5,7 +5,7 @@ import (
 
 	"github.com/compose-spec/compose-go/v2/types"
 
-	"github.com/filipemolina/stack-stitcher/src/config"
+	"github.com/filipemolina/cais/src/config"
 )
 
 func port(published string, target uint32) types.ServicePortConfig {

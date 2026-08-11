@@ -6,7 +6,7 @@ import (
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
-	"github.com/filipemolina/stack-stitcher/src/components/servicefieldsstep"
+	"github.com/filipemolina/cais/src/components/servicefieldsstep"
 )
 
 type createStep int

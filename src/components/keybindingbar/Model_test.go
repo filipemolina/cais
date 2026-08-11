@@ -8,10 +8,10 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/components/chrome"
-	"github.com/filipemolina/stack-stitcher/src/constants"
-	"github.com/filipemolina/stack-stitcher/src/keys"
+	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/components/chrome"
+	"github.com/filipemolina/cais/src/constants"
+	"github.com/filipemolina/cais/src/keys"
 )
 
 // joinHints renders hints the way the bar reads them out, so a failure prints

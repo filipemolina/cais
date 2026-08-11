@@ -1,7 +1,7 @@
 package apptypes
 
 import (
-	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/cais/src/appstyles"
 
 	"charm.land/lipgloss/v2"
 )

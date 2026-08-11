@@ -1,8 +1,8 @@
 package detailspanel
 
 import (
-	"github.com/filipemolina/stack-stitcher/src/apptypes"
-	"github.com/filipemolina/stack-stitcher/src/components/chrome"
+	"github.com/filipemolina/cais/src/apptypes"
+	"github.com/filipemolina/cais/src/components/chrome"
 
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/textarea"

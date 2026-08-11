@@ -1,7 +1,7 @@
 package cmds
 
 import (
-	"github.com/filipemolina/stack-stitcher/src/utils"
+	"github.com/filipemolina/cais/src/utils"
 
 	tea "charm.land/bubbletea/v2"
 )

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/compose-spec/compose-go/v2/types"
-	"github.com/filipemolina/stack-stitcher/src/apptypes"
+	"github.com/filipemolina/cais/src/apptypes"
 )
 
 // panelWithContainer builds a details panel showing one service backed by the

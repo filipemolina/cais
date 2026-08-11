@@ -6,7 +6,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 	"github.com/compose-spec/compose-go/v2/types"
-	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/cais/src/appstyles"
 )
 
 type ServiceListItem struct {

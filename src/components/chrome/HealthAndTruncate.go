@@ -4,7 +4,7 @@ import (
 	"image/color"
 
 	"github.com/charmbracelet/x/ansi"
-	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/cais/src/appstyles"
 	"github.com/mattn/go-runewidth"
 )
 

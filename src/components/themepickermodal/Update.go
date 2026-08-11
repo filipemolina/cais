@@ -3,10 +3,10 @@ package themepickermodal
 import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
-	"github.com/filipemolina/stack-stitcher/src/appstyles"
-	"github.com/filipemolina/stack-stitcher/src/apptypes"
-	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/keys"
+	"github.com/filipemolina/cais/src/appstyles"
+	"github.com/filipemolina/cais/src/apptypes"
+	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/keys"
 )
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
