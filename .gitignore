@@ -11,6 +11,11 @@ mocks/
 # VHS byproduct (only the .png screenshots are used)
 demo/screenshots.gif
 
+# Backup store sidecar created by the running app next to a compose file.
+# Test runs that resolve a compose inside the repo can create one too, so
+# ignore it the same way the app's own .cais/.gitignore does.
+/.cais/
+
 # BEGIN oh-my-opencode-slim worktrees
 .slim/worktrees/
 .slim/worktrees.json

@@ -162,10 +162,15 @@ Early, and honest about it. Everything shown above works today; what follows is
 what does not, in the order it is being closed. The sequence and the reasoning
 live in [docs/ROADMAP.md](docs/ROADMAP.md):
 
-- **No write safety yet.** The app rewrites your compose file in place, and
-  the only guard is that a write that would not parse is refused. There is no
-  backup and no undo yet; that is the next launch gate in the roadmap. Until
-  it lands, keep the file somewhere a bad write can recover from, like git.
+- **Write safety: a backup before every edit.** Every compose and `.env`
+  write is snapshotted into `.cais/backups/` next to the compose file before
+  it lands, so a bad edit can be undone. Each source gets its own folder
+  (`compose_yaml/`, `_env/`), and a copy is kept per write, deduped when the
+  content has not changed. Up to 500 past copies are kept per file; older ones
+  are pruned. The `.env` file is backed up too, so its secrets rest in the
+  store alongside the compose file, and a `.cais/.gitignore` keeps the store
+  out of `git status`. This is the store only: a browse and restore UI to
+  travel back through those copies is the next step (v0.4.0).
 - **Blank lines between services are not preserved** across a write. Comments,
   quoting and key order are. This is accepted rather than fixed: a blank line
   inside a block scalar (`command: |`) is part of the string, and silently
