@@ -25,7 +25,7 @@ var lines = []string{
 var LOGO = strings.Join(lines, "\n")
 
 // WORDMARK is the one-line badge rendered in the main menu bar.
-var WORDMARK = "▌ Stack Stitcher"
+var WORDMARK = "▌ Cais"
 
 var SLOGAN = "Nothing to sew here."
-var APP_NAME = "Stk_Stchr"
+var APP_NAME = "Cais"

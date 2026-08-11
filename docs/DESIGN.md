@@ -80,7 +80,7 @@ use the Services page (or a future dedicated page).
 The UI is a full-height TUI. The terminal is divided into three stacked
 regions:
 
-1. **Header** — the page tabs on the left, the wordmark (`▌ Stack Stitcher`)
+1. **Header** — the page tabs on the left, the wordmark (`▌ Cais`)
    pinned to the right. Tabs are decoupled from page IDs via
    `apptypes.PageLabels`: *Home* is displayed as **Groups**, *Compose Files* as
    **Files**.
@@ -235,7 +235,7 @@ The tiers:
 **There is no prefix key**, and this is deliberate. Prefixes (tmux `ctrl+b`,
 zellij `ctrl+p`) exist because those programs host another program that owns the
 keyboard; the prefix is how you address the host without stealing keys from the
-guest. Stack Stitcher has no guest — the only things needing raw keys are text
+guest. Cais has no guest — the only things needing raw keys are text
 inputs, and those live in modals that capture everything. A prefix would add a
 mode to teach, render and exit, and would resolve no conflict. The comparable
 tools (lazydocker, lazygit, k9s) don't use one either: they use one global tier,

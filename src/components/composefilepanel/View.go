@@ -29,7 +29,7 @@ func (m Model) View() tea.View {
 	case m.filePath == "":
 		body = chrome.EmptyCard(bodyWidth, bodyAvail, bg,
 			"No compose file",
-			"No compose file is loaded. Run Stack Stitcher from a directory with a compose file, or use --file/--dir.",
+			"No compose file is loaded. Run Cais from a directory with a compose file, or use --file/--dir.",
 			"", "")
 	case m.readErr != nil:
 		body = chrome.EmptyCard(bodyWidth, bodyAvail, bg,

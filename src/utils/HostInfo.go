@@ -215,7 +215,7 @@ func composeMissingRemedy(family string, status DockerStatus) Remedy {
 		// D6: docker-compose (V1) and docker compose (V2) look like the same
 		// tool and are not. The app's container-status path depends on
 		// `--format json`, which V1 never had.
-		remedy.Note = "`docker-compose` (V1) is installed, but Stack Stitcher needs the V2 plugin " +
+		remedy.Note = "`docker-compose` (V1) is installed, but Cais needs the V2 plugin " +
 			"(`docker compose`, no hyphen). V1 reached end of life in July 2023 and does not support `--format json`."
 	}
 
