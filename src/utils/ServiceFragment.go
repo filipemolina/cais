@@ -225,7 +225,7 @@ func parseServiceFragment(serviceName string, fragment []byte) (*yaml.Node, erro
 // the compose file's own location, so validating anywhere else would reject
 // files that are perfectly fine, and accept ones that aren't.
 func ValidateComposeCandidate(dir string, contents []byte) error {
-	temp, err := os.CreateTemp(dir, ".stack-stitcher-candidate-*.yaml")
+	temp, err := os.CreateTemp(dir, ".cais-candidate-*.yaml")
 	if err != nil {
 		return fmt.Errorf("failed creating a file to validate against: %w", err)
 	}

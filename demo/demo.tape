@@ -49,7 +49,7 @@ Set TypingSpeed 60ms
 # Same throwaway config dir the screenshots use: the recording should not
 # depend on, or overwrite, the recorder's own theme.
 Hide
-Type "mkdir -p /tmp/stitch-demo-config/stack-stitcher && printf 'theme: cais-dark\\\\n' > /tmp/stitch-demo-config/stack-stitcher/config.yaml && export XDG_CONFIG_HOME=/tmp/stitch-demo-config && clear"
+Type "mkdir -p /tmp/cais-demo-config/cais && printf 'theme: cais-dark\\\\n' > /tmp/cais-demo-config/cais/config.yaml && export XDG_CONFIG_HOME=/tmp/cais-demo-config && clear"
 Enter
 Sleep 1s
 

@@ -11,7 +11,7 @@ import (
 )
 
 func ReadConfigFile(fileName string) (*types.Project, error) {
-	projectName := "stack-stitcher"
+	projectName := "cais"
 	ctx := context.Background()
 	workingDir, wdErr := os.Getwd()
 	if wdErr != nil {
@@ -47,7 +47,7 @@ func ReadConfigFile(fileName string) (*types.Project, error) {
 // The .env path is resolved relative to the compose file's directory (compose-go semantics).
 // It may exist but not be loaded if COMPOSE_DISABLE_ENV_FILE is set.
 func ReadConfigFileExt(fileName string) (*types.Project, string, bool, error) {
-	projectName := "stack-stitcher"
+	projectName := "cais"
 	ctx := context.Background()
 	workingDir, wdErr := os.Getwd()
 	if wdErr != nil {
