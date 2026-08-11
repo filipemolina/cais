@@ -86,10 +86,11 @@ Sleep 1s
 Screenshot demo/screenshot-files.png
 
 # --- The theme picker ------------------------------------------------------
+# Capture on the cursor's initial row (the active theme, cais-dark). Pressing
+# Down/Up here would repaint the whole Files page behind the modal in the
+# hovered theme's palette, so the shot would show a different theme than the
+# rest of the README frames. Hold, screenshot, escape.
 Type "T"
-Sleep 1500ms
-Down
-Down
 Sleep 1500ms
 Screenshot demo/screenshot-themes.png
 Escape
