@@ -12,7 +12,7 @@ dev:
 	go run main.go
 
 # Build and install to $(go env GOPATH)/bin (~/go/bin by default).
-# ~/go/bin is on PATH, so `stitch` is runnable immediately
+# ~/go/bin is on PATH, so `cais` is runnable immediately
 # after `make build` — no sudo, no extra setup.
 build:
-	go build -ldflags "$(LDFLAGS)" -o "$(shell go env GOPATH)/bin/stitch" .
+	go build -ldflags "$(LDFLAGS)" -o "$(shell go env GOPATH)/bin/cais" .

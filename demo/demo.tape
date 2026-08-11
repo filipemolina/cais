@@ -54,7 +54,7 @@ Enter
 Sleep 1s
 
 # Launch the TUI — this is the first frame we show.
-Type "cd demo/fixtures && stitch"
+Type "cd demo/fixtures && cais"
 Enter
 Sleep 2500ms
 Show

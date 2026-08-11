@@ -30,7 +30,7 @@ Enter
 Sleep 1s
 Show
 
-Type "cd demo/fixtures && stitch"
+Type "cd demo/fixtures && cais"
 Enter
 Sleep 3s
 
