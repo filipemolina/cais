@@ -2,8 +2,8 @@ package detailspanel
 
 import (
 	"fmt"
-	"github.com/filipemolina/stack-stitcher/src/appstyles"
-	"github.com/filipemolina/stack-stitcher/src/components/chrome"
+	"github.com/filipemolina/cais/src/appstyles"
+	"github.com/filipemolina/cais/src/components/chrome"
 
 	"charm.land/lipgloss/v2"
 	"github.com/compose-spec/compose-go/v2/types"

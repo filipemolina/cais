@@ -4,7 +4,7 @@ import (
 	"slices"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/cais/src/cmds"
 )
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

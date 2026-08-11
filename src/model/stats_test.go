@@ -4,9 +4,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/filipemolina/stack-stitcher/src/apptypes"
-	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/utils"
+	"github.com/filipemolina/cais/src/apptypes"
+	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/utils"
 )
 
 // A background poll suppresses GetRunningContainersMsg so components wait for

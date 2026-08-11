@@ -1,8 +1,8 @@
 package model
 
 import (
-	"github.com/filipemolina/stack-stitcher/src/apptypes"
-	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/cais/src/apptypes"
+	"github.com/filipemolina/cais/src/cmds"
 
 	tea "charm.land/bubbletea/v2"
 )

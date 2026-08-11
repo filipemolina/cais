@@ -6,9 +6,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/filipemolina/stack-stitcher/src/appstyles"
-	"github.com/filipemolina/stack-stitcher/src/apptypes"
-	"github.com/filipemolina/stack-stitcher/src/components/chrome"
+	"github.com/filipemolina/cais/src/appstyles"
+	"github.com/filipemolina/cais/src/apptypes"
+	"github.com/filipemolina/cais/src/components/chrome"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"

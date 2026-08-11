@@ -7,11 +7,11 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/filipemolina/stack-stitcher/src/appstyles"
-	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/components/chrome"
-	"github.com/filipemolina/stack-stitcher/src/constants"
-	"github.com/filipemolina/stack-stitcher/src/keys"
+	"github.com/filipemolina/cais/src/appstyles"
+	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/components/chrome"
+	"github.com/filipemolina/cais/src/constants"
+	"github.com/filipemolina/cais/src/keys"
 )
 
 // Model is the About overlay: the ASCII brand mark reserved for it
@@ -55,7 +55,7 @@ func (m Model) View() tea.View {
 		fmt.Sprintf("%s %s", label("version"), accent.Render(constants.Version())),
 		fmt.Sprintf("%s %s   %s %s",
 			label("license"), primary.Render("MIT"),
-			label("repo"), primary.Render("github.com/filipemolina/stack-stitcher")),
+			label("repo"), primary.Render("github.com/filipemolina/cais")),
 	}
 
 	hint := chrome.RenderKeyHints([]chrome.KeyHint{

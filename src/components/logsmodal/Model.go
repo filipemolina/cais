@@ -5,8 +5,8 @@ import (
 
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
-	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/utils"
+	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/utils"
 )
 
 type Model struct {

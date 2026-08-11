@@ -5,9 +5,9 @@ import (
 
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
-	"github.com/filipemolina/stack-stitcher/src/appstyles"
-	"github.com/filipemolina/stack-stitcher/src/apptypes"
-	"github.com/filipemolina/stack-stitcher/src/components/chrome"
+	"github.com/filipemolina/cais/src/appstyles"
+	"github.com/filipemolina/cais/src/apptypes"
+	"github.com/filipemolina/cais/src/components/chrome"
 )
 
 // Model is the theme picker: a list of registered themes with live preview

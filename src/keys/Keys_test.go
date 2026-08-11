@@ -6,7 +6,7 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
-	"github.com/filipemolina/stack-stitcher/src/constants"
+	"github.com/filipemolina/cais/src/constants"
 )
 
 // entryIn finds binding's entry in scope, failing the test if it is absent.

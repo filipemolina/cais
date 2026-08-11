@@ -6,8 +6,8 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 	"github.com/compose-spec/compose-go/v2/types"
-	"github.com/filipemolina/stack-stitcher/src/apptypes"
-	"github.com/filipemolina/stack-stitcher/src/cmds"
+	"github.com/filipemolina/cais/src/apptypes"
+	"github.com/filipemolina/cais/src/cmds"
 )
 
 // A successful healthcheck insert on a running service sets the apply

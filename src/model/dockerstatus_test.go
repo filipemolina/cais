@@ -3,11 +3,11 @@ package model
 import (
 	"testing"
 
-	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/components/aboutmodal"
-	"github.com/filipemolina/stack-stitcher/src/components/dockerstatusmodal"
-	"github.com/filipemolina/stack-stitcher/src/components/errormodal"
-	"github.com/filipemolina/stack-stitcher/src/utils"
+	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/components/aboutmodal"
+	"github.com/filipemolina/cais/src/components/dockerstatusmodal"
+	"github.com/filipemolina/cais/src/components/errormodal"
+	"github.com/filipemolina/cais/src/utils"
 
 	tea "charm.land/bubbletea/v2"
 )

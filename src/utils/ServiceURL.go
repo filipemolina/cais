@@ -7,7 +7,7 @@ import (
 
 	"github.com/compose-spec/compose-go/v2/types"
 
-	"github.com/filipemolina/stack-stitcher/src/config"
+	"github.com/filipemolina/cais/src/config"
 )
 
 // URLSource is how ResolveURL worked out a service's URL, shown dimmed

@@ -5,8 +5,8 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
-	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/keys"
+	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/keys"
 )
 
 // maxLogLines caps the in-memory scrollback so a long-running, chatty service

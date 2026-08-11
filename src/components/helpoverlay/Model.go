@@ -2,7 +2,7 @@ package helpoverlay
 
 import (
 	tea "charm.land/bubbletea/v2"
-	"github.com/filipemolina/stack-stitcher/src/keys"
+	"github.com/filipemolina/cais/src/keys"
 )
 
 // helpOverlayMaxWidth caps the content column so hint runs wrap in a few

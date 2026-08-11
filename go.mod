@@ -1,4 +1,4 @@
-module github.com/filipemolina/stack-stitcher
+module github.com/filipemolina/cais
 
 go 1.26.4
 

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/utils"
+	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/utils"
 )
 
 // The command returned for OpenEditorMsg is a tea.ExecProcess that would

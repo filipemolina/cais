@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/x/ansi"
-	"github.com/filipemolina/stack-stitcher/src/components/aboutmodal"
+	"github.com/filipemolina/cais/src/components/aboutmodal"
 
 	tea "charm.land/bubbletea/v2"
 )
@@ -59,7 +59,7 @@ func TestTheAboutModalShowsVersionLicenseAndRepo(t *testing.T) {
 
 	frame := ansi.Strip(m.activeModal.View().Content)
 
-	for _, want := range []string{"Stack Stitcher", "version", "MIT", "github.com/filipemolina/stack-stitcher"} {
+	for _, want := range []string{"Stack Stitcher", "version", "MIT", "github.com/filipemolina/cais"} {
 		if !strings.Contains(frame, want) {
 			t.Errorf("About modal does not show %q:\n%s", want, frame)
 		}

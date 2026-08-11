@@ -16,7 +16,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
-	"github.com/filipemolina/stack-stitcher/src/appstyles"
+	"github.com/filipemolina/cais/src/appstyles"
 )
 
 // YAML returns content with syntax coloring applied as ANSI styling, using

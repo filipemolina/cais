@@ -24,8 +24,8 @@ import (
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
 
-	"github.com/filipemolina/stack-stitcher/src/apptypes"
-	"github.com/filipemolina/stack-stitcher/src/constants"
+	"github.com/filipemolina/cais/src/apptypes"
+	"github.com/filipemolina/cais/src/constants"
 )
 
 // GlobalKeys work anywhere that no overlay owns the keyboard.

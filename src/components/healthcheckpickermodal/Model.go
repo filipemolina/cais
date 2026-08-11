@@ -10,8 +10,8 @@ import (
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"github.com/compose-spec/compose-go/v2/types"
-	"github.com/filipemolina/stack-stitcher/src/components/chrome"
-	"github.com/filipemolina/stack-stitcher/src/utils"
+	"github.com/filipemolina/cais/src/components/chrome"
+	"github.com/filipemolina/cais/src/utils"
 )
 
 // templateItem wraps a catalog entry as a list.Item. FilterValue is unused

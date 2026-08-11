@@ -2,7 +2,7 @@
 
 **Run your self-hosted stack from the terminal, without leaving your compose file behind.**
 
-[![CI](https://github.com/filipemolina/stack-stitcher/actions/workflows/ci.yml/badge.svg)](https://github.com/filipemolina/stack-stitcher/actions/workflows/ci.yml)
+[![CI](https://github.com/filipemolina/cais/actions/workflows/ci.yml/badge.svg)](https://github.com/filipemolina/cais/actions/workflows/ci.yml)
 ![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Status](https://img.shields.io/badge/status-work%20in%20progress-orange)
@@ -97,14 +97,14 @@ that do nothing on the current screen dimmed.
 ## Install
 
 ```bash
-go install github.com/filipemolina/stack-stitcher@latest
+go install github.com/filipemolina/cais@latest
 ```
 
 Or build from source:
 
 ```bash
-git clone https://github.com/filipemolina/stack-stitcher.git
-cd stack-stitcher
+git clone https://github.com/filipemolina/cais.git
+cd cais
 make build     # installs to $(go env GOPATH)/bin, usually ~/go/bin
 ```
 

@@ -9,9 +9,9 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/compose-spec/compose-go/v2/types"
-	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/components/detailspanel"
-	"github.com/filipemolina/stack-stitcher/src/constants"
+	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/components/detailspanel"
+	"github.com/filipemolina/cais/src/constants"
 	"gopkg.in/yaml.v3"
 )
 

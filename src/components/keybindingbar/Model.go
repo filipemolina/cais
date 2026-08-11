@@ -3,7 +3,7 @@ package keybindingbar
 import (
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
-	"github.com/filipemolina/stack-stitcher/src/constants"
+	"github.com/filipemolina/cais/src/constants"
 )
 
 // KeybindingBar is a single-line footer that shows the current page, the

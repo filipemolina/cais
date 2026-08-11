@@ -7,11 +7,11 @@ import (
 	"os"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/filipemolina/stack-stitcher/src/appstyles"
-	"github.com/filipemolina/stack-stitcher/src/config"
-	"github.com/filipemolina/stack-stitcher/src/constants"
-	"github.com/filipemolina/stack-stitcher/src/model"
-	"github.com/filipemolina/stack-stitcher/src/utils"
+	"github.com/filipemolina/cais/src/appstyles"
+	"github.com/filipemolina/cais/src/config"
+	"github.com/filipemolina/cais/src/constants"
+	"github.com/filipemolina/cais/src/model"
+	"github.com/filipemolina/cais/src/utils"
 )
 
 // errVersionRequested is how parseFlags reports --version. It is not a

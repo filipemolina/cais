@@ -6,7 +6,7 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 	"github.com/compose-spec/compose-go/v2/types"
-	"github.com/filipemolina/stack-stitcher/src/apptypes"
+	"github.com/filipemolina/cais/src/apptypes"
 )
 
 // panelWith builds a Model in the state renderBody needs: laid out, with the

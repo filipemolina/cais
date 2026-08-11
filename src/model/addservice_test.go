@@ -3,8 +3,8 @@ package model
 import (
 	"testing"
 
-	"github.com/filipemolina/stack-stitcher/src/cmds"
-	"github.com/filipemolina/stack-stitcher/src/components/addservicemodal"
+	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/components/addservicemodal"
 )
 
 // servicesPageWithProject is the app on Services, laid out, with a loaded
