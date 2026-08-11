@@ -120,9 +120,9 @@ daemon, or permissions) and gives you the exact command to fix it.
 ## Use
 
 ```bash
-stitch                                  # the compose file in this directory
-stitch --dir ~/homelab/media            # resolve one in that directory
-stitch --file ~/homelab/compose.prod.yml  # open exactly this file
+cais                                    # the compose file in this directory
+cais --dir ~/homelab/media              # resolve one in that directory
+cais --file ~/homelab/compose.prod.yml  # open exactly this file
 ```
 
 With no flags it auto-detects `compose.yaml`, `compose.yml`,
