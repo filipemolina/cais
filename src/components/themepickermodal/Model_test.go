@@ -19,8 +19,8 @@ func specialKey(code rune) tea.KeyPressMsg {
 
 func TestThemePickerStartsOnActiveTheme(t *testing.T) {
 	// Reset to a known state.
-	appstyles.SetTheme("stitcher-dark")
-	defer appstyles.SetTheme("stitcher-dark")
+	appstyles.SetTheme("cais-dark")
+	defer appstyles.SetTheme("cais-dark")
 
 	m := New(40)
 	tpm, ok := m.(Model)
@@ -33,14 +33,14 @@ func TestThemePickerStartsOnActiveTheme(t *testing.T) {
 	if !ok {
 		t.Fatal("no item selected")
 	}
-	if item.Name != "stitcher-dark" {
-		t.Errorf("cursor starts on %q, want %q", item.Name, "stitcher-dark")
+	if item.Name != "cais-dark" {
+		t.Errorf("cursor starts on %q, want %q", item.Name, "cais-dark")
 	}
 }
 
 func TestThemePickerEscRestoresOriginalTheme(t *testing.T) {
-	appstyles.SetTheme("stitcher-dark")
-	defer appstyles.SetTheme("stitcher-dark")
+	appstyles.SetTheme("cais-dark")
+	defer appstyles.SetTheme("cais-dark")
 
 	m := New(40)
 
@@ -51,7 +51,7 @@ func TestThemePickerEscRestoresOriginalTheme(t *testing.T) {
 
 	// The active theme has changed from the preview.
 	previewTheme := appstyles.Active.Name
-	if previewTheme == "stitcher-dark" {
+	if previewTheme == "cais-dark" {
 		t.Skip("preview did not move (too few themes?)")
 	}
 
@@ -62,8 +62,8 @@ func TestThemePickerEscRestoresOriginalTheme(t *testing.T) {
 	}
 
 	// The active theme is back to the original.
-	if appstyles.Active.Name != "stitcher-dark" {
-		t.Errorf("esc left theme at %q, want %q", appstyles.Active.Name, "stitcher-dark")
+	if appstyles.Active.Name != "cais-dark" {
+		t.Errorf("esc left theme at %q, want %q", appstyles.Active.Name, "cais-dark")
 	}
 
 	// The command should close the modal.
@@ -76,8 +76,8 @@ func TestThemePickerEscRestoresOriginalTheme(t *testing.T) {
 }
 
 func TestThemePickerEnterApplies(t *testing.T) {
-	appstyles.SetTheme("stitcher-dark")
-	defer appstyles.SetTheme("stitcher-dark")
+	appstyles.SetTheme("cais-dark")
+	defer appstyles.SetTheme("cais-dark")
 
 	m := New(40)
 
@@ -122,22 +122,22 @@ func TestThemePickerEnterApplies(t *testing.T) {
 }
 
 func TestThemePickerLivePreview(t *testing.T) {
-	appstyles.SetTheme("stitcher-dark")
-	defer appstyles.SetTheme("stitcher-dark")
+	appstyles.SetTheme("cais-dark")
+	defer appstyles.SetTheme("cais-dark")
 
 	m := New(40)
 
 	// Move down once — the theme should change live.
 	m, _ = m.Update(specialKey(tea.KeyDown))
 
-	if appstyles.Active.Name == "stitcher-dark" {
+	if appstyles.Active.Name == "cais-dark" {
 		t.Error("moving the cursor should have previewed a different theme")
 	}
 }
 
 func TestThemePickerRendersAllThemes(t *testing.T) {
-	appstyles.SetTheme("stitcher-dark")
-	defer appstyles.SetTheme("stitcher-dark")
+	appstyles.SetTheme("cais-dark")
+	defer appstyles.SetTheme("cais-dark")
 
 	m := New(40)
 	tpm, _ := m.(Model)
@@ -153,8 +153,8 @@ func TestThemePickerRendersAllThemes(t *testing.T) {
 }
 
 func TestThemePickerFitsShortTerminal(t *testing.T) {
-	appstyles.SetTheme("stitcher-dark")
-	defer appstyles.SetTheme("stitcher-dark")
+	appstyles.SetTheme("cais-dark")
+	defer appstyles.SetTheme("cais-dark")
 
 	m := New(20)
 	tpm, ok := m.(Model)

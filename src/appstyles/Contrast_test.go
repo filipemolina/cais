@@ -62,7 +62,7 @@ func TestElevationSeparation(t *testing.T) {
 //	TextMuted on panel                  3.0
 //	TextDim on panel                    2.2
 //	Accent on panel and on modal        3.0
-//	InkOn(Accent) on Accent             4.2  (stitcher-dark/day measure 4.40)
+//	InkOn(Accent) on Accent             4.2  (cais-dark/day measure ~7.0)
 //	InkOn(fill) on each status / Danger 4.2  (pills are bold uppercase; WCAG
 //	                                        large-text threshold is 3.0)
 //	each status color as text on panel  2.6
