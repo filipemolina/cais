@@ -51,7 +51,7 @@ func TestEveryModalHasATitleAndAnExitHint(t *testing.T) {
 		// out. Every modal answers esc; About and Help also close on q.
 		exitKey string
 	}{
-		{"about", aboutmodal.New(), "stack-stitcher", "esc"},
+		{"about", aboutmodal.New(), "cais", "esc"},
 		{"help", helpoverlay.New(keys.Context{Page: "Home"}, nil, 100), "Keyboard shortcuts", "esc"},
 		{"confirm", confirmmodal.New("Delete group \"core\"?", nil), "Confirm", "esc"},
 		{"error", errormodal.New("boom", 100), "Error", "esc"},
