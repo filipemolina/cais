@@ -23,6 +23,14 @@ on the command line and Cais never disagree about what your stack is.
 
 ## What it does
 
+**Writes that cannot destroy your stack.** Every change Cais makes reaches
+your compose or `.env` file through a single atomic write path. The existing
+file is snapshotted into `.cais/backups/` before it is replaced, so a bad edit
+is always reversible, and the replacement is a single rename that lands in full
+or not at all. No half-written file, no lost original if the disk fills or the
+process is killed mid-write. The `.env` beside your compose file is backed up
+alongside it, and a `.cais/.gitignore` keeps the store out of `git status`.
+
 **Groups, not a flat list of containers.** A group is a Compose `profiles:`
 tag. Start all services in a group with one key, tail all their logs with another,
 and see at a glance which are running, which are healthy, and on what ports.
@@ -162,15 +170,12 @@ Early, and honest about it. Everything shown above works today; what follows is
 what does not, in the order it is being closed. The sequence and the reasoning
 live in [docs/ROADMAP.md](docs/ROADMAP.md):
 
-- **Write safety: a backup before every edit.** Every compose and `.env`
-  write is snapshotted into `.cais/backups/` next to the compose file before
-  it lands, so a bad edit can be undone. Each source gets its own folder
-  (`compose_yaml/`, `_env/`), and a copy is kept per write, deduped when the
-  content has not changed. Up to 500 past copies are kept per file; older ones
-  are pruned. The `.env` file is backed up too, so its secrets rest in the
-  store alongside the compose file, and a `.cais/.gitignore` keeps the store
-  out of `git status`. This is the store only: a browse and restore UI to
-  travel back through those copies is the next step (v0.4.0).
+- **Browse and restore from the backup store (v0.4.0).** The store itself
+  is done: every compose and `.env` write is snapshotted into `.cais/backups/`
+  before it lands, deduped per write and pruned to 500 copies per file, with a
+  `.cais/.gitignore` keeping it out of `git status`. What is missing is the
+  UI to travel back through those copies, so the backups are there but not yet
+  surfaced in the app.
 - **Blank lines between services are not preserved** across a write. Comments,
   quoting and key order are. This is accepted rather than fixed: a blank line
   inside a block scalar (`command: |`) is part of the string, and silently
