@@ -194,8 +194,10 @@ func srgbLinearize(v float64) float64 {
 	return math.Pow((v+0.055)/1.055, 2.4)
 }
 
-// DefaultTheme is the theme a fresh AppModel starts with.
-const DefaultTheme = "stitcher-dark"
+// DefaultTheme is the theme a fresh AppModel starts with. Cais-dark is
+// the app's default palette; cais-day and cais-dusk remain selectable
+// through the theme picker (docs/DESIGN.md §11).
+const DefaultTheme = "cais-dark"
 
 // Themes is the registry a theme picker (post-alpha, see docs/ROADMAP.md)
 // will choose from. Every entry is built through newTheme rather than a bare
@@ -204,74 +206,61 @@ const DefaultTheme = "stitcher-dark"
 // color.Color renders as no SGR at all, i.e. a background-bleed bug. See
 // src/appstyles/Theme_test.go and src/appstyles/Background_test.go.
 var Themes = map[string]Theme{
-	"stitcher-dark": newTheme(themeParams{
-		Name:   "stitcher-dark",
+	// cais-dark — default. Deep-water panel with a harbor-teal accent
+	// lifted to clear WCAG 3.0 against the dark surface. See
+	// docs/plans/cais/cais-themes.md for the palette rationale.
+	"cais-dark": newTheme(themeParams{
+		Name:   "cais-dark",
 		Dark:   true,
-		Accent: lipgloss.Color("#BC3FBC"),
-		Text:   lipgloss.Color("#FAFAFA"),
-		Panel:  lipgloss.Color("#151520"),
-		Modal:  lipgloss.Color("#282828"),
-		Danger: lipgloss.Color("#D9534F"),
+		Accent: lipgloss.Color("#5FB8AF"),
+		Text:   lipgloss.Color("#F2EFE9"),
+		Panel:  lipgloss.Color("#0F2B33"),
+		Modal:  lipgloss.Color("#3A5860"),
+		Danger: lipgloss.Color("#E6736E"),
 
-		Running:  lipgloss.Color("#67C58A"),
-		Stopped:  lipgloss.Color("#858392"),
-		Starting: lipgloss.Color("#E8C547"),
-		Err:      lipgloss.Color("#EB4268"),
+		Running:  lipgloss.Color("#7DC79E"),
+		Stopped:  lipgloss.Color("#78939A"),
+		Starting: lipgloss.Color("#F5C98A"),
+		Err:      lipgloss.Color("#EE7090"),
 	}),
 
-	// stitcher-ember is a dark theme with a warm brown-black base and an
-	// amber accent. The same shared status/danger colors keep the
-	// container state vocabulary consistent across themes.
-	"stitcher-ember": newTheme(themeParams{
-		Name:   "stitcher-ember",
+	// cais-dusk — second Cais dark variant. Cool slate-blue panel (NOT
+	// teal — a panel pulled from the same teal family would mash the
+	// brand color into the background) with the harbor-teal accent one
+	// step warmer than cais-dark. Modal lifts ~25 channel units above
+	// the elevated tier so the channel-diff floor of 14 is met.
+	"cais-dusk": newTheme(themeParams{
+		Name:   "cais-dusk",
 		Dark:   true,
-		Accent: lipgloss.Color("#E8A44A"),
-		Text:   lipgloss.Color("#F5EDE4"),
-		Panel:  lipgloss.Color("#1E1612"),
-		Modal:  lipgloss.Color("#52413A"),
-		Danger: lipgloss.Color("#D9534F"),
+		Accent: lipgloss.Color("#3FA9A0"),
+		Text:   lipgloss.Color("#E8E4DC"),
+		Panel:  lipgloss.Color("#1A2230"),
+		Modal:  lipgloss.Color("#33425E"),
+		Danger: lipgloss.Color("#E07060"),
 
-		Running:  lipgloss.Color("#67C58A"),
-		Stopped:  lipgloss.Color("#8A8078"),
-		Starting: lipgloss.Color("#E8C547"),
-		Err:      lipgloss.Color("#EB4268"),
+		Running:  lipgloss.Color("#7DC79E"),
+		Stopped:  lipgloss.Color("#7E8A9A"),
+		Starting: lipgloss.Color("#F2C674"),
+		Err:      lipgloss.Color("#EE7090"),
 	}),
 
-	// stitcher-slate is a refined dark theme with golden accents on a blue-
-	// black base - understated elegance with a warm metallic shimmer.
-	"stitcher-slate": newTheme(themeParams{
-		Name:   "stitcher-slate",
-		Dark:   true,
-		Accent: lipgloss.Color("#cca43b"),
-		Text:   lipgloss.Color("#e5e5e5"),
-		Panel:  lipgloss.Color("#1D2634"),
-		Modal:  lipgloss.Color("#363636"),
-		Danger: lipgloss.Color("#EB4268"),
-
-		Running:  lipgloss.Color("#67C58A"),
-		Stopped:  lipgloss.Color("#858392"),
-		Starting: lipgloss.Color("#E8C547"),
-		Err:      lipgloss.Color("#EB4268"),
-	}),
-
-	// stitcher-day is stitcher-dark inverted: the same #BC3FBC magenta on a
-	// warm off-white rather than a violet near-black. The neutral carries a
-	// faint magenta bias so the greys read as chosen rather than as default
-	// terminal grey, and the status colors are darkened from their dark-theme
-	// values because a #67C58A green that reads on a near-black panel washes
-	// out entirely on a near-white one.
-	"stitcher-day": newTheme(themeParams{
-		Name:   "stitcher-day",
+	// cais-day — Cais inverted onto warm cream, the same identity as
+	// cais-dark but flipped. Accent darkened from #5FB8AF so it stays a
+	// chip rather than glow on cream, and the status colors darkened to
+	// match (a #7DC79E green that reads on a near-black panel washes
+	// out on cream).
+	"cais-day": newTheme(themeParams{
+		Name:   "cais-day",
 		Dark:   false,
-		Accent: lipgloss.Color("#BC3FBC"),
-		Text:   lipgloss.Color("#241F2B"),
-		Panel:  lipgloss.Color("#F6F2F7"),
-		Modal:  lipgloss.Color("#FCF8FD"),
+		Accent: lipgloss.Color("#1F5E5E"),
+		Text:   lipgloss.Color("#1B3232"),
+		Panel:  lipgloss.Color("#F1ECE2"),
+		Modal:  lipgloss.Color("#FBF7EF"),
 		Danger: lipgloss.Color("#B33A3A"),
 
 		Running:  lipgloss.Color("#1E7F4E"),
-		Stopped:  lipgloss.Color("#6B6878"),
-		Starting: lipgloss.Color("#A87409"),
+		Stopped:  lipgloss.Color("#5A6F75"),
+		Starting: lipgloss.Color("#B07933"),
 		Err:      lipgloss.Color("#C0243F"),
 	}),
 

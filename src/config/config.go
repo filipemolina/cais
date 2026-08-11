@@ -3,7 +3,7 @@
 //
 // The config file is a small YAML document:
 //
-//	theme: stitcher-dark
+//	theme: cais-dark
 //
 // More fields will land later (default file, keybinding overrides — see
 // docs/ROADMAP.md). The struct and the write path are designed to absorb

@@ -78,11 +78,12 @@ switches which one the app is driving.
 
 ![The Files page: the loaded compose file with syntax highlighting](./demo/screenshot-files.png)
 
-**Fourteen themes,** previewed live as you move the cursor: four built-ins
-(stitcher-dark, stitcher-ember, stitcher-slate, stitcher-day) plus Catppuccin
-Mocha, Gruvbox Dark, Tokyo Night, Nord, Dracula, Solarized Dark, One Dark,
-Everforest Dark, Rosé Pine and Kanagawa Wave. `Enter` applies and persists
-your choice; `Esc` restores the one you started with.
+**Three themes,** previewed live as you move the cursor: cais-dark,
+cais-dusk and cais-day. `Enter` applies and persists your choice;
+`Esc` restores the one you started with. Plus Catppuccin Mocha,
+Gruvbox Dark, Tokyo Night, Nord, Dracula, Solarized Dark, One Dark,
+Everforest Dark, Rosé Pine and Kanagawa Wave for a total of
+fourteen.
 
 ![The theme picker, previewing a theme live over the Files page](./demo/screenshot-themes.png)
 
