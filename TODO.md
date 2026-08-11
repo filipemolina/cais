@@ -363,7 +363,7 @@ up in full in `docs/plans/`; `docs/ROADMAP.md` has the order and the reasons.
   The app never spawns a browser. **Remaining:** Phase 2 (reverse-proxy
   labels — traefik, gethomepage, tsdproxy).
 
-- [ ] **[S] Usage overlay** (`docs/plans/docker-disk-usage.md`) — `u` opens
+- [x] **[S] Usage overlay** (`docs/plans/docker-disk-usage.md`) — `u` opens
   disk and memory as horizontal bars. Not a page, so the *no statistics page*
   decision stands; fetched on open with a spinner because `docker system df` is
   2.3 s. On the author's machine it reports 42 GB of reclaimable images that no

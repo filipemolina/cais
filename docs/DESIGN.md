@@ -598,9 +598,10 @@ body is a two-pane layout:
 
 ### A service's URL is a guess, shown with its reasoning
 
-`utils.ResolveURL` is one pure function: a `stitcher.url` label (used
-verbatim, and the only way to say "no, there isn't one" via an empty value)
-beats a published port's `app_protocol` beats the tiny fixed set of ports
+`utils.ResolveURL` is one pure function: a `cais.url` label (used
+verbatim, and the only way to say "no, there isn't one" via an empty value;
+the rename-era `stitcher.url` is still honored as a fallback) beats a
+published port's `app_protocol` beats the tiny fixed set of ports
 that conventionally mean https ({443, 8443, 9443}) beats plain http. Among
 several published TCP ports, the tie-break promotes a recognised web port
 (Jellyfin's 8096, Sonarr's 8989, and so on - a short, deliberately
@@ -789,8 +790,9 @@ are functions for the same reason, not package-level `var`s: a `var` built at
 init freezes whichever theme was active when the package loaded, and that
 used to be the whole palette's problem before this existed.
 
-`appstyles.Themes` is the registry (14 themes: 3 Stitcher darks, 1
-Stitcher light, 10 community schemes), built by `appstyles.newTheme` from
+`appstyles.Themes` is the registry (13 themes: 3 Cais themes
+cais-dark, cais-dusk and cais-day, plus 10 community schemes), built
+by `appstyles.newTheme` from
 a handful of base colors - `Accent`, the text/panel/modal bases, `Danger`,
 the four status colors - with everything else derived by `Lighten`/`Darken`.
 A dark theme raises a tier's attention by lightening it, a light theme by
@@ -910,15 +912,15 @@ it, and `LoadConfig`/`SaveConfig` round-trip it automatically.
 
 Adding a theme is choosing the handful of base colors in `themeParams`
 (accent, text, panel, modal, danger, the four status colors); `newTheme`
-derives every other field. The 14 registered themes are 3 Stitcher darks,
-1 Stitcher light, and 10 community schemes (Catppuccin Mocha, Gruvbox
-Dark, Tokyo Night, Nord, Dracula, Solarized Dark, One Dark, Everforest
-Dark, Rosé Pine, Kanagawa Wave). The three Stitcher darks share one set of
-status and danger colors on purpose — container state is a vocabulary the
-user shouldn't have to re-learn between them. An imported scheme brings its
-own, because a Stitcher green dropped into Gruvbox would read as the one
-thing on screen that isn't Gruvbox; what stays constant there is the
-*mapping* (green runs, amber starts, red errs), not the hex.
+derives every other field. The 13 registered themes are cais-dark,
+cais-dusk and cais-day plus 10 community schemes (Catppuccin Mocha,
+Gruvbox Dark, Tokyo Night, Nord, Dracula, Solarized Dark, One Dark,
+Everforest Dark, Rosé Pine, Kanagawa Wave). The three Cais themes share
+one set of status and danger colors on purpose: container state is a
+vocabulary the user shouldn't have to re-learn between them. An imported
+scheme brings its own, because a Cais teal dropped into Gruvbox would read
+as the one thing on screen that isn't Gruvbox; what stays constant there is
+the *mapping* (green runs, amber starts, red errs), not the hex.
 
 ### Saying which build this is
 

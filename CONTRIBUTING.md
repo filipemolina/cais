@@ -27,7 +27,7 @@ src/
 ├── apptypes/        # shared data types (list items, docker container, pages)
 ├── keys/            # every keybinding, declared once — panels, footer and ? all read it
 ├── utils/           # the non-Bubble Tea half: compose loading, YAML writing, docker exec
-├── appstyles/       # the Theme type and the 14 registered themes
+├── appstyles/       # the Theme type and the 13 registered themes
 ├── config/          # persisted preferences (~/.config/cais/config.yaml)
 ├── highlight/       # read-only YAML highlighting for the Files page
 └── constants/       # layout widths, branding, focusable component list
