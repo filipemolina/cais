@@ -29,11 +29,15 @@ type ServiceURL struct {
 	Note   string
 }
 
-// stitcherURLLabel is the escape hatch: the user's own answer, used
-// verbatim and never second-guessed. Namespaced under "stitcher." because
-// that is this app's name and squatting on an unprefixed label key in the
-// user's compose file would be rude.
-const stitcherURLLabel = "stitcher.url"
+// urlLabel is the escape hatch: the user's own answer, used
+// verbatim and never second-guessed. Namespaced under "cais." so the app
+// does not squat on an unprefixed label key in the user's compose file.
+// caisURLLabel is the canonical key; stitcherURLLabel is the rename-era
+// predecessor, still honored so existing compose files keep working.
+const (
+	caisURLLabel     = "cais.url"
+	stitcherURLLabel = "stitcher.url"
+)
 
 // httpsTargetPorts is the tiny, fixed set of container ports that imply
 // https when nothing else says so - D2's rung 4. Not the tie-break table
@@ -65,10 +69,18 @@ var knownWebTargetPorts = map[uint32]bool{
 // read from the environment here, so this whole function is a table test -
 // see URLHost for where SSH_CONNECTION is actually read.
 func ResolveURL(svc types.ServiceConfig, host string) (ServiceURL, bool) {
-	if label, ok := svc.Labels[stitcherURLLabel]; ok {
+	// cais.url is canonical; stitcher.url is honored as the rename-era
+	// predecessor so compose files written before the rename keep working.
+	if label, ok := svc.Labels[caisURLLabel]; ok {
 		if label == "" {
 			// Explicit suppression: the only way for a user to say "no,
 			// there isn't one" rather than live with a wrong guess forever.
+			return ServiceURL{}, false
+		}
+		return ServiceURL{URL: label, Source: SourceLabel}, true
+	}
+	if label, ok := svc.Labels[stitcherURLLabel]; ok {
+		if label == "" {
 			return ServiceURL{}, false
 		}
 		return ServiceURL{URL: label, Source: SourceLabel}, true
