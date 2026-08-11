@@ -336,7 +336,7 @@ package components
 
 import (
     "charm.land/bubbles/v2/spinner"
-    "github.com/filipemolina/stack-stitcher/src/appstyles"
+    "github.com/filipemolina/cais/src/appstyles"
 )
 
 func newSpinner() spinner.Model {
@@ -504,9 +504,9 @@ avoid modal fatigue.
 package components
 
 import (
-    "github.com/filipemolina/stack-stitcher/src/appstyles"
-    "github.com/filipemolina/stack-stitcher/src/cmds"
-    "github.com/filipemolina/stack-stitcher/src/keys"
+    "github.com/filipemolina/cais/src/appstyles"
+    "github.com/filipemolina/cais/src/cmds"
+    "github.com/filipemolina/cais/src/keys"
 
     "charm.land/bubbles/v2/key"
     tea "charm.land/bubbletea/v2"

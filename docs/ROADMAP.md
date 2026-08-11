@@ -135,9 +135,9 @@ cracks:
   gates `resources-page.md` Phase 2, which would otherwise add a second write
   surface before the first one is safe.
 - **`resources-page.md` Phase 0, whenever it is convenient.**
-  `utils.ReadConfigFile` hardcodes `cli.WithName("stack-stitcher")`, which
+  `utils.ReadConfigFile` hardcodes `cli.WithName("cais")`, which
   overrides the file's own `name:` key — so the app's idea of the project name
-  is not the one `docker compose` uses (measured: `stack-stitcher` where docker
+  is not the one `docker compose` uses (measured: `cais` where docker
   says `homelab`). Harmless today because nothing reads it; a silent
   correctness bug the moment anything correlates the file against the daemon.
   One line, one test.

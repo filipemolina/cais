@@ -29,7 +29,7 @@ The release pipeline is built and working; it is the *reach* that is missing.
   for the changelog, `contents: write`, and the default `GITHUB_TOKEN`.
 - **`CONTRIBUTING.md` §Releases** documents the `git tag -a` / `git push`
   flow and says the builds are "linux and darwin (amd64 and arm64)".
-- **`go install github.com/filipemolina/stack-stitcher@latest` already works** —
+- **`go install github.com/filipemolina/cais@latest` already works** —
   the module path is public and `main` is at the repo root. That is a real
   install method the README does not mention.
 
@@ -119,7 +119,7 @@ archives:
 
 ### D3. Linux packages, because "download a tarball" is not how servers work
 
-A self-hoster on Debian wants `apt install ./stitch_0.2.0_amd64.deb`, not a
+A self-hoster on Debian wants `apt install ./cais_0.2.0_amd64.deb`, not a
 tarball they have to put on `PATH` themselves. GoReleaser's `nfpms` produces
 `deb`, `rpm`, `apk`, `archlinux`, `ipk` and more from the binaries already
 built. Ship **deb, rpm and apk** — Debian/Ubuntu, Fedora/RHEL, Alpine — which
@@ -128,12 +128,12 @@ covers effectively every Docker host.
 ```yaml
 nfpms:
   - id: packages
-    package_name: stitch
+    package_name: cais
     vendor: Filipe Molina
     maintainer: Filipe Molina <ciriloboy@gmail.com>
     description: A terminal UI for managing Docker Compose stacks.
     license: MIT          # matches LICENSE (MIT, © 2026 Filipe Molina)
-    homepage: https://github.com/filipemolina/stack-stitcher
+    homepage: https://github.com/filipemolina/cais
     formats: [deb, rpm, apk]
 ```
 
@@ -144,7 +144,7 @@ sentence in the README rather than a pretence of packaging maturity.
 ### D4. An install script, written to be readable
 
 ```console
-curl -sSfL https://raw.githubusercontent.com/filipemolina/stack-stitcher/main/scripts/install.sh | sh
+curl -sSfL https://raw.githubusercontent.com/filipemolina/cais/main/scripts/install.sh | sh
 ```
 
 `curl | sh` deserves the suspicion it gets, so: the README shows the **download
@@ -161,7 +161,7 @@ script — if the destination is not writable, print the `sudo` command and exit
 it. `actions/attest-build-provenance` signs a provenance statement for the
 release artifacts with the workflow's own identity — no key to manage, no
 account, no cost — and users verify with
-`gh attestation verify <file> --repo filipemolina/stack-stitcher`.
+`gh attestation verify <file> --repo filipemolina/cais`.
 
 Cosign keyless signing is the alternative; it needs a `cosign` step and gives
 roughly the same guarantee with more moving parts. Take the attestation.
@@ -170,7 +170,7 @@ roughly the same guarantee with more moving parts. Take the attestation.
 
 - **A tap, not homebrew-core.** homebrew-core has notability requirements a
   young project does not meet. A `filipemolina/homebrew-tap` repository gives
-  `brew install filipemolina/tap/stitch` on day one.
+  `brew install filipemolina/tap/cais` on day one.
 - **`homebrew_casks`, not `brews`.** GoReleaser's `brews` (formula) section is
   deprecated; casks are the current path for distributing a prebuilt binary.
 - **The token is the catch.** GoReleaser cannot push to another repository with
@@ -182,7 +182,7 @@ roughly the same guarantee with more moving parts. Take the attestation.
   it until the user clears the attribute:
 
   ```console
-  xattr -dr com.apple.quarantine /usr/local/bin/stitch
+  xattr -dr com.apple.quarantine /usr/local/bin/cais
   ```
 
   GoReleaser's cask can run that as a post-install hook
@@ -206,7 +206,7 @@ roughly the same guarantee with more moving parts. Take the attestation.
 
 ### D8. AUR: only with a maintainer's appetite
 
-`yay -S stitch` is what an Arch self-hoster expects, and GoReleaser publishes a
+`yay -S cais` is what an Arch self-hoster expects, and GoReleaser publishes a
 `aurs` (binary PKGBUILD) to an AUR repository over SSH — which means an AUR
 account and a **private SSH key in GitHub secrets**. That is the highest-admin,
 lowest-reach item on the list. Do it only if an Arch user asks.
@@ -245,14 +245,14 @@ Verify locally before tagging anything:
 goreleaser check
 goreleaser release --snapshot --clean
 ls -la dist/            # 7 archives + checksums.txt
-file dist/*windows*/stitch.exe
+file dist/*windows*/cais.exe
 ```
 
 Then tag a `v0.x.y-rc.1` and confirm the draft release carries every artifact.
 
 Acceptance: seven archives (`linux_amd64`, `linux_arm64`, `linux_armv7`,
 `darwin_amd64`, `darwin_arm64`, `windows_amd64` as **zip**), `checksums.txt`
-covering all of them, `stitch.exe --version` printing the tag on a Windows
+covering all of them, `cais.exe --version` printing the tag on a Windows
 runner, and no config or workflow change beyond `.goreleaser.yaml` and docs.
 
 ### Phase 2 — Packages, install script, provenance
@@ -265,12 +265,12 @@ runner, and no config or workflow change beyond `.goreleaser.yaml` and docs.
 | `README.md` | an Install section: package downloads, the verify commands, `go install`, the script |
 
 Acceptance: `dist/` contains `.deb`, `.rpm` and `.apk`; each installs in a
-throwaway container and `stitch --version` works —
+throwaway container and `cais --version` works —
 
 ```bash
-docker run --rm -v "$PWD/dist:/d" debian:12  sh -c 'apt-get install -y /d/stitch_*_amd64.deb && stitch --version'
-docker run --rm -v "$PWD/dist:/d" fedora:41  sh -c 'dnf install -y /d/stitch_*.x86_64.rpm && stitch --version'
-docker run --rm -v "$PWD/dist:/d" alpine:3   sh -c 'apk add --allow-untrusted /d/stitch_*_amd64.apk && stitch --version'
+docker run --rm -v "$PWD/dist:/d" debian:12  sh -c 'apt-get install -y /d/cais_*_amd64.deb && cais --version'
+docker run --rm -v "$PWD/dist:/d" fedora:41  sh -c 'dnf install -y /d/cais*.x86_64.rpm && cais --version'
+docker run --rm -v "$PWD/dist:/d" alpine:3   sh -c 'apk add --allow-untrusted /d/cais_*.x86_64.apk && cais --version'
 ```
 
 — the install script works on a clean container, and
@@ -290,11 +290,11 @@ dependency in this plan:
 |---|---|
 | `.goreleaser.yaml` | `homebrew_casks:` with the tap repo, `hooks.post.install` xattr, and `caveats` (D6); `scoops:` with the bucket repo (D7) |
 | `.github/workflows/release.yml` | pass the token in `env` |
-| `README.md` | `brew install filipemolina/tap/stitch`, `scoop install stitch` |
+| `README.md` | `brew install filipemolina/tap/cais`, `scoop install cais` |
 
 Acceptance: after a tagged release, the tap and bucket repos each contain a
 generated manifest for the new version; `brew install` from the tap produces a
-working `stitch` on macOS; `scoop install` produces a working `stitch.exe`.
+working `cais` on macOS; `scoop install` produces a working `cais.exe`.
 
 ### Phase 4 — winget, and AUR only on demand
 
@@ -306,7 +306,7 @@ if it does.
 `aurs:` only if an Arch user asks (D8), and only with a dedicated deploy key.
 
 Acceptance: a winget PR opens automatically on tag; once merged,
-`winget install stitch` works.
+`winget install cais` works.
 
 ## What is decided, and what still needs the owner
 
@@ -357,24 +357,25 @@ Phases 1 and 2 are repo-local and need none of it. Those are the ones to do.
    `release.draft: true` anyway — the changelog is the thing being reviewed,
    not the file list.
 6. **Version stamping already works** and must keep working: the ldflags path
-   `github.com/filipemolina/stack-stitcher/src/constants.version` appears in
+   `github.com/filipemolina/cais/src/constants.version` appears in
    both the Makefile and `.goreleaser.yaml`. If the module path ever changes,
-   both change together, and `stitch --version` is the test.
+   both change together, and `cais --version` is the test.
 7. **`checksums.txt` name collisions** across formats — nfpm artifacts are
    included in the checksum file by default; confirm in the snapshot output.
 8. **Tag hygiene.** The changelog is built from commits since the last tag and
    needs `fetch-depth: 0`, which `release.yml` already sets. A re-tagged
    release produces a confusing changelog; prefer a new patch tag over moving
    one.
-9. **Homebrew cask naming.** A cask named `stitch` may collide in a user's tap
+9. **Homebrew cask naming.** A cask named `cais` may collide in a user's tap
    namespace with something else; the tap-qualified install
-   (`filipemolina/tap/stitch`) is unambiguous and is what the README should
+   (`filipemolina/tap/cais`) is unambiguous and is what the README should
    show.
-10. **The binary name is `stitch`, the module is `stack-stitcher`.** Package
-    names, cask names and the install script must all use `stitch`; only the
-    repository and module keep the long name. Sweep for this before Phase 2 —
-    an install that puts `stack-stitcher` on `PATH` while every doc says
-    `stitch` is a support burden forever.
+10. **The binary name is `cais`, the module is `cais`.** Package
+    names, cask names and the install script must all use `cais`; only
+    the repository and module keep the long name. Sweep for this before
+    Phase 2 — an install that puts `cais` on `PATH` while the README,
+    docs and cask names all use the same name keeps the project
+    coherent forever.
 
 ## Do not
 

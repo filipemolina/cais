@@ -162,7 +162,7 @@ func ClassifyForeign(all []HostContainer, project string, services []string) []F
 Everything else is set arithmetic.
 
 **`project` must be the name docker actually uses.** Today
-`utils.ReadConfigFile` hardcodes `cli.WithName("stack-stitcher")`, which
+`utils.ReadConfigFile` hardcodes `cli.WithName("cais")`, which
 overrides the file's own `name:` key — see
 `docs/plans/resources-page.md` §Phase 0, which fixes it. **This plan depends on
 that fix**; without it every container of the loaded project classifies as
@@ -262,7 +262,7 @@ Groups page does that, and one verb, one place.
 
 A container someone deliberately keeps outside compose (a database they manage
 by hand, a one-off) should stop being mentioned. `i` adds its **name** to
-`ignored_containers` in `~/.config/stack-stitcher/config.yaml`; ignored
+`ignored_containers` in `~/.config/cais/config.yaml`; ignored
 containers are excluded from the count and shown in the overlay only under a
 collapsed "ignored (3)" line.
 

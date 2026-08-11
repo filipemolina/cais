@@ -912,7 +912,7 @@ Acceptance: `go test ./src/utils/... -run TestParseSearchOutput` green.
 package cmds
 
 import (
-	"github.com/filipemolina/stack-stitcher/src/utils"
+	"github.com/filipemolina/cais/src/utils"
 
 	tea "charm.land/bubbletea/v2"
 )
@@ -1249,7 +1249,7 @@ helper from `src/components/addservicemodal/Model_test.go` — it already
 exists and does exactly this).
 
 Acceptance: `go test ./src/components/addservicemodal/...` fully green;
-manually run the app (`make build && ./stitch` against `mocks/`), press
+manually run the app (`make build && ./cais` against `mocks/`), press
 `n` on Services, type `sonarr`, Enter, Enter — confirm the service is
 written and the inline editor opens, matching this plan's Phase 2A
 acceptance criteria.
@@ -1283,9 +1283,9 @@ import (
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/filipemolina/stack-stitcher/src/appstyles"
-	"github.com/filipemolina/stack-stitcher/src/components/chrome"
-	"github.com/filipemolina/stack-stitcher/src/utils"
+	"github.com/filipemolina/cais/src/appstyles"
+	"github.com/filipemolina/cais/src/components/chrome"
+	"github.com/filipemolina/cais/src/utils"
 )
 
 type searchResultItem struct{ result utils.ImageResult }

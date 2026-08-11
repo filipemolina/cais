@@ -1,6 +1,6 @@
 # Design
 
-The guiding principles of stack-stitcher. Written down so future
+The guiding principles of Cais. Written down so future
 contributors (human or AI) have a north star when deciding where a
 new feature belongs, what to call it, and how to think about the
 data model.
@@ -10,7 +10,7 @@ data model.
 **The home page operates on groups of services. The Services page operates on
 individual services. This is a navigation rule, not just a feature.**
 
-A *group* in stack-stitcher is a set of services that share a Compose
+A *group* in Cais is a set of services that share a Compose
 `profiles:` tag in the user's `compose.yml`. The user starts, stops, and
 otherwise acts on *groups* from the home page — never on individual
 services. The Services page exists for the rare case where you need to act on
@@ -43,7 +43,7 @@ implementation detail; the user-facing word is **group**.
 ## 3. The data consequence
 
 A group is **not** a first-class object in `compose.yml`. It only exists as
-a `profiles:` string tag on individual services. stack-stitcher derives the
+a `profiles:` string tag on individual services. Cais derives the
 visible group list by scanning every service's `Profiles` field
 (`allGroupNames()` in `src/model/AppModel.go`).
 
@@ -897,7 +897,7 @@ the list update and calls `appstyles.SetTheme`, so the entire UI behind the
 modal repaints on each keystroke. The original theme is captured at
 construction time, so `Esc` always restores what the user started with,
 even after several preview steps. `Enter` applies and persists: the choice
-is written to `~/.config/stack-stitcher/config.yaml` via
+is written to `~/.config/cais/config.yaml` via
 `config.SaveConfig`, and the saved theme is loaded in `main.go` before
 the program starts — a missing or malformed config silently yields the
 default. Persistence errors surface in the banner rather than blocking the
