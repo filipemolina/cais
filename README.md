@@ -11,15 +11,15 @@
 
 ## Demo
 
-![Stack Stitcher: starting a group, tailing its logs, editing a service](./demo/demo.gif)
+![Cais: starting a group, tailing its logs, editing a service](./demo/demo.gif)
 
-Stack Stitcher is a keyboard-driven terminal UI for a self-hosted stack running on
+Cais is a keyboard-driven terminal UI for a self-hosted stack running on
 Docker Compose. It reads your `compose.yml` and groups services the way you think about
 them. Nothing extra to host and nothing listening on a port.
 
-Your compose file stays the source of truth. Every change Stack Stitcher makes is
+Your compose file stays the source of truth. Every change Cais makes is
 written back into that file, comments and key order intact, so `docker compose`
-on the command line and Stack Stitcher never disagree about what your stack is.
+on the command line and Cais never disagree about what your stack is.
 
 ## What it does
 
