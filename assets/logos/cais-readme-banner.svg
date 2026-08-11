@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="753" height="260" viewBox="0 0 753 260"><defs></defs>
+<rect width="753" height="260" fill="#0C2326"/>
+<g transform="translate(40, 40) scale(0.3516)"><defs>
+  <linearGradient id="hbpbg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#2E7B7B"/><stop offset="1" stop-color="#0F2B33"/>
+  </linearGradient>
+</defs>
+  <rect width="512" height="512" rx="120" fill="url(#hbpbg)"/>
+  <rect x="128" y="168" width="256" height="44" rx="18" fill="#FFFFFF"/>
+  <rect x="152" y="196" width="36" height="116" rx="14" fill="#FFFFFF" opacity="0.95"/>
+  <rect x="238" y="196" width="36" height="116" rx="14" fill="#FFFFFF" opacity="0.8"/>
+  <rect x="324" y="196" width="36" height="116" rx="14" fill="#FFFFFF" opacity="0.95"/>
+  <rect x="96" y="354" width="320" height="8" rx="4" fill="#F5C98A" opacity="0.45"/>
+  <rect x="132" y="380" width="248" height="8" rx="4" fill="#F5C98A" opacity="0.22"/>
+</g>
+<g transform="translate(276, 30.0) scale(0.9091)">
+  <text x="50" y="158" font-family="Georgia, 'Iowan Old Style', 'Palatino Linotype', Palatino, 'DejaVu Serif', serif" font-size="160"
+        font-weight="600" fill="#F2EFE9" textLength="291" lengthAdjust="spacingAndGlyphs">Cais</text>
+</g>
+</svg>
