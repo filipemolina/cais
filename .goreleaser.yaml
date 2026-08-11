@@ -5,8 +5,8 @@ before:
     - go mod tidy
 
 builds:
-  - id: stitch
-    binary: stitch
+  - id: cais
+    binary: cais
     main: .
     env:
       - CGO_ENABLED=0
@@ -20,7 +20,7 @@ builds:
     # `make build` answer --version the same way. .Version is the tag with
     # the leading v stripped, so put it back.
     ldflags:
-      - -s -w -X github.com/filipemolina/stack-stitcher/src/constants.version=v{{ .Version }}
+      - -s -w -X github.com/filipemolina/cais/src/constants.version=v{{ .Version }}
 
 # No Windows build: the app shells out to `docker compose` and hands the
 # terminal to $EDITOR, neither of which has been tried there.
