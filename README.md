@@ -58,11 +58,20 @@ straight into the compose file and opens the inline editor on it. Ports,
 volumes and everything else get added in the same YAML you would have
 hand-written, with live validation the whole way.
 
-**The `.env` beside your compose file gets a page of its own.** The Env tab
-lists every variable with values masked by default. `v` reveals a value, `c`
-copies it, add/edit/delete go through small modals with a confirm on delete,
-and `o` opens the whole file in an inline editor. Writes are line-preserving,
-so comments and the variables you did not touch survive.
+**The `.env` beside your compose file opens with one key.** `v` opens it as a
+modal that holds the variable table, a key editor, and the raw file editor, all
+in one surface. Variables are masked by default: `space` reveals the selected
+value, `c` copies it, and add/edit/delete go through small modals with a confirm
+on delete. `o` opens the whole file in an inline editor. Writes are
+line-preserving, so comments and the variables you did not touch survive.
+
+**Your backups are browsable and restorable.** Every compose and `.env` write is
+snapshotted into `.cais/backups/` before it lands, so a bad edit is always
+reversible. Tab `4` (Backups) lists every stored copy of the compose file and the
+`.env`, newest first, with a live preview beside the list, and `enter` (or `r`)
+restores the chosen copy over the live file. The current file is snapshotted
+first, so a restore is itself undoable, and a restore that brings back the `.env`
+also brings back its secrets, which the confirm makes clear.
 
 **Edit the compose file in place, as YAML.** `e` opens the service's own
 fragment in an inline editor: real YAML, not a form, so every Compose field is
@@ -146,7 +155,7 @@ one.
 
 | Key | Action |
 | --- | --- |
-| `1` `2` `3` `4` | Groups / Services / Files / Env (`[` and `]` step through them) |
+| `1` `2` `3` `4` | Groups / Services / Files / Backups (`[` and `]` step through them) |
 | `↑` `↓` `k` `j` | Move the cursor; the details panel follows it |
 | `Tab` | Move focus between the list and the details panel |
 | `s` `t` `r` `p` `x` | Start · Stop · Restart · Pull · Remove (`x` confirms first) |
@@ -154,8 +163,9 @@ one.
 | `y` | Copy a service's URL (when it publishes one) |
 | `h` | Add a healthcheck from the template picker |
 | `e` | Edit: a service's YAML inline, or a group's membership |
-| `E` | Open the whole compose file in `$EDITOR` (the `.env` file on the Env page) |
-| `n` | New: a group on the Groups page, a service on the Services page (name and image, then the inline editor opens on it), a variable on the Env page |
+| `E` | Open the whole compose file in `$EDITOR` (the `.env` file, from the env modal opened with `v`) |
+| `v` | Open the `.env` editor: the variable table, a key editor, and a raw file editor, in one modal |
+| `n` | New: a group on the Groups page, a service on the Services page (name and image, then the inline editor opens on it), a variable from the env modal opened with `v` |
 | `R` `d` | Rename group · Delete group (`d` confirms first) |
 | `/` | Filter the list by name |
 | `u` | Docker disk and memory usage overlay |
@@ -170,12 +180,6 @@ Early, and honest about it. Everything shown above works today; what follows is
 what does not, in the order it is being closed. The sequence and the reasoning
 live in [docs/ROADMAP.md](docs/ROADMAP.md):
 
-- **Browse and restore from the backup store (v0.4.0).** The store itself
-  is done: every compose and `.env` write is snapshotted into `.cais/backups/`
-  before it lands, deduped per write and pruned to 500 copies per file, with a
-  `.cais/.gitignore` keeping it out of `git status`. What is missing is the
-  UI to travel back through those copies, so the backups are there but not yet
-  surfaced in the app.
 - **Blank lines between services are not preserved** across a write. Comments,
   quoting and key order are. This is accepted rather than fixed: a blank line
   inside a block scalar (`command: |`) is part of the string, and silently
