@@ -155,7 +155,7 @@ func MigrateLegacyConfig() (MigrateResult, error) {
 			Migrated: false,
 			From:     legacyDir,
 			To:       newDir,
-			Warning: "both " + legacyAppDir + " and " + appDir + " exist on disk; not migrating",
+			Warning:  "both " + legacyAppDir + " and " + appDir + " exist on disk; not migrating",
 		}, nil
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return MigrateResult{}, err

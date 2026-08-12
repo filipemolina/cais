@@ -73,6 +73,8 @@ restores the chosen copy over the live file. The current file is snapshotted
 first, so a restore is itself undoable, and a restore that brings back the `.env`
 also brings back its secrets, which the confirm makes clear.
 
+![The Backups page: every stored copy of the compose file and the .env, with a live preview](./demo/screenshot-backups.png)
+
 **Edit the compose file in place, as YAML.** `e` opens the service's own
 fragment in an inline editor: real YAML, not a form, so every Compose field is
 reachable. It validates as you type, auto-indents on Enter, indents with
