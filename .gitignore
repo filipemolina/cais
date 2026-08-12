@@ -15,6 +15,7 @@ demo/screenshots.gif
 # Test runs that resolve a compose inside the repo can create one too, so
 # ignore it the same way the app's own .cais/.gitignore does.
 /.cais/
+/src/model/.cais/
 
 # BEGIN oh-my-opencode-slim worktrees
 .slim/worktrees/
