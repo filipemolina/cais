@@ -55,6 +55,10 @@ type GlobalKeys struct {
 	Theme key.Binding
 	// Usage opens the usage overlay: disk and memory usage bars.
 	Usage key.Binding
+	// EditEnv opens the env modal: the .env variable table, editor, and
+	// raw edit, all inside one modal. v (mnemonic: variables), free at the
+	// global tier now that the old Env page's v was only its reveal key.
+	EditEnv key.Binding
 	// Page is advertised but not matched: the digits are recognised by their
 	// key code and the alt+<letter> alias by its modifier, so that 1 as filter
 	// text and alt+shift+g are both left alone. See model.pageForNavKey. The
@@ -169,6 +173,7 @@ var Global = GlobalKeys{
 	About:    key.NewBinding(key.WithKeys("a"), key.WithHelp("a", "about")),
 	Theme:    key.NewBinding(key.WithKeys("T"), key.WithHelp("T", "theme")),
 	Usage:    key.NewBinding(key.WithKeys("u"), key.WithHelp("u", "usage")),
+	EditEnv:  key.NewBinding(key.WithKeys("v"), key.WithHelp("v", "env")),
 }
 
 var List = ListKeys{
@@ -235,25 +240,26 @@ var Files = FilesKeys{
 	Browse: key.NewBinding(key.WithKeys("b"), key.WithHelp("b", "browse")),
 }
 
+// BackupKeys act on the Backups page's version list: navigating the list and
+// requesting a restore of the selected copy. Reveal/copy/edit live in the env
+// modal, not here.
+type BackupKeys struct {
+	// Navigate is help-only, like Files.Scroll: the list owns navigation.
+	Navigate key.Binding
+	// Restore writes the selected .bak back over the live file. enter or r;
+	// r is chosen so it never collides with the service panel's lowercase r
+	// (restart) - the Backups page is the only context this binding is live.
+	Restore key.Binding
+}
+
+var Backup = BackupKeys{
+	Navigate: key.NewBinding(key.WithHelp("↑/↓", "navigate")),
+	Restore:  key.NewBinding(key.WithKeys("enter", "r"), key.WithHelp("r", "restore")),
+}
+
 // EnvKeys act on the Env page's key/value table. Reveal, Copy and RawEdit
 // are new to this page; New, Edit, Delete and EditFile are reused from existing
 // bindings to keep "one verb is one binding".
-type EnvKeys struct {
-	// Navigate is help-only, like Files.Scroll: the table owns navigation.
-	Navigate key.Binding
-	Reveal   key.Binding
-	Copy     key.Binding
-	RawEdit  key.Binding
-	// List.New, List.Edit, List.Delete and Details.EditFile are reused here.
-}
-
-var Env = EnvKeys{
-	Navigate: key.NewBinding(key.WithHelp("↑/↓", "navigate")),
-	Reveal:   key.NewBinding(key.WithKeys("v", "enter"), key.WithHelp("v", "reveal")),
-	Copy:     key.NewBinding(key.WithKeys("c"), key.WithHelp("c", "copy")),
-	RawEdit:  key.NewBinding(key.WithKeys("o"), key.WithHelp("o", "raw edit")),
-}
-
 var Overlay = OverlayKeys{
 	Submit:    key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "confirm")),
 	Cancel:    key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "cancel")),
@@ -434,13 +440,15 @@ func Active(ctx Context) []key.Binding {
 	case "Compose Files":
 		return []key.Binding{Details.EditFile, Files.Browse, Files.Scroll}
 
-	// The Env page has one always-focused table, so the same keys apply regardless.
-	case "Env":
+	// The Backups page has one always-focused list, so the same keys apply
+	// regardless of which component id Tab last touched. It is a single
+	// panel (the version list + preview), so most verbs are help-only: the
+	// list navigates itself, and only restore is an action verb here.
+	case "Backups":
 		return []key.Binding{
-			Env.Reveal, Env.Copy,
-			List.New, List.Edit, List.Delete,
-			Env.RawEdit, Details.EditFile,
-			Env.Navigate,
+			Backup.Restore,
+			Global.Back, Global.NextPanel,
+			Backup.Navigate,
 		}
 	}
 
@@ -590,12 +598,18 @@ func Catalog(ctx Context) []Scope {
 			),
 		},
 		{
+			// The env experience is a modal now, so its keys are dimmed
+			// on the main screen the same way every other modal's are. The
+			// verbs reuse the page/editor bindings (one verb is one
+			// binding); reveal (space) and copy (c) are modal-only.
 			Title: "Env",
 			Entries: entries(
-				Env.Reveal, Env.Copy,
+				key.NewBinding(key.WithHelp("space", "reveal")),
+				key.NewBinding(key.WithKeys("c"), key.WithHelp("c", "copy")),
 				List.New, List.Edit, List.Delete,
-				Env.RawEdit, Details.EditFile,
-				Env.Navigate,
+				key.NewBinding(key.WithKeys("o"), key.WithHelp("o", "raw edit")),
+				Details.EditFile,
+				Overlay.Cancel,
 			),
 		},
 		{

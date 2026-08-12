@@ -301,6 +301,186 @@ func TestSnapshotFileFailsClosed(t *testing.T) {
 	}
 }
 
+// TestListBackupsReturnsNewestFirst covers test 1: a seeded slug dir returns
+// its entries newest-first, with timestamp and SHA-8 parsed, and Source set
+// correctly for compose and .env.
+func TestListBackupsReturnsNewestFirst(t *testing.T) {
+	dir := t.TempDir()
+	compose := filepath.Join(dir, "compose.yaml")
+	env := filepath.Join(dir, ".env")
+
+	for _, path := range []string{compose, env} {
+		if err := os.WriteFile(path, []byte(path+"\n"), 0o644); err != nil {
+			t.Fatalf("writing fixture: %v", err)
+		}
+	}
+
+	// Two compose snapshots and one .env snapshot, written in order so the
+	// names carry distinct timestamps.
+	if err := SnapshotFile(compose); err != nil {
+		t.Fatalf("SnapshotFile compose #1: %v", err)
+	}
+	if err := os.WriteFile(compose, []byte("services:\n  app:\n    image: traefik\n"), 0o644); err != nil {
+		t.Fatalf("writing fixture: %v", err)
+	}
+	if err := SnapshotFile(compose); err != nil {
+		t.Fatalf("SnapshotFile compose #2: %v", err)
+	}
+	if err := SnapshotFile(env); err != nil {
+		t.Fatalf("SnapshotFile env: %v", err)
+	}
+
+	composeBackups, err := ListBackups(compose)
+	if err != nil {
+		t.Fatalf("ListBackups(compose): %v", err)
+	}
+	if len(composeBackups) != 2 {
+		t.Fatalf("compose backups: got %d, want 2", len(composeBackups))
+	}
+	if composeBackups[0].Timestamp.Before(composeBackups[1].Timestamp) {
+		t.Error("compose backups not newest-first")
+	}
+	if composeBackups[0].Source != "compose" || composeBackups[1].Source != "compose" {
+		t.Errorf("compose backups Source: got %q/%q, want both %q",
+			composeBackups[0].Source, composeBackups[1].Source, "compose")
+	}
+	if composeBackups[0].SHA8 == "" {
+		t.Error("compose backup missing SHA-8")
+	}
+	if !strings.HasSuffix(composeBackups[0].Name, composeBackups[0].SHA8+".bak") {
+		t.Errorf("compose backup name %q does not carry its SHA-8 %q",
+			composeBackups[0].Name, composeBackups[0].SHA8)
+	}
+
+	envBackups, err := ListBackups(env)
+	if err != nil {
+		t.Fatalf("ListBackups(env): %v", err)
+	}
+	if len(envBackups) != 1 {
+		t.Fatalf("env backups: got %d, want 1", len(envBackups))
+	}
+	if envBackups[0].Source != ".env" {
+		t.Errorf("env backup Source: got %q, want %q", envBackups[0].Source, ".env")
+	}
+}
+
+// TestListBackupsNeverWrittenReturnsEmpty covers test 2: a source whose slug
+// folder does not exist returns (nil, nil) - an empty slice, no error - so a
+// caller does not have to invent a folder just to read nothing.
+func TestListBackupsNeverWrittenReturnsEmpty(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "compose.yaml")
+
+	backups, err := ListBackups(path)
+	if err != nil {
+		t.Fatalf("ListBackups on never-written file: want nil err, got %v", err)
+	}
+	if len(backups) != 0 {
+		t.Fatalf("ListBackups on never-written file: got %d entries, want 0", len(backups))
+	}
+}
+
+// TestRestoreBackupWritesBackAndIsUndoable covers test 3: the .bak bytes are
+// written back to the source, and because restore routes through
+// ReplaceFileAtomically the slug gains one more entry - a backup of the
+// pre-restore file - so the restore is itself undoable.
+func TestRestoreBackupWritesBackAndIsUndoable(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "compose.yaml")
+
+	preRestore := "services:\n  app:\n    image: nginx:alpine\n"
+	if err := os.WriteFile(path, []byte(preRestore), 0o644); err != nil {
+		t.Fatalf("writing fixture: %v", err)
+	}
+	if err := SnapshotFile(path); err != nil {
+		t.Fatalf("SnapshotFile: %v", err)
+	}
+
+	// Change the file so a restore has something to revert to.
+	changed := "services:\n  app:\n    image: traefik\n"
+	if err := os.WriteFile(path, []byte(changed), 0o644); err != nil {
+		t.Fatalf("writing fixture: %v", err)
+	}
+	if err := SnapshotFile(path); err != nil {
+		t.Fatalf("SnapshotFile #2: %v", err)
+	}
+
+	backups, err := ListBackups(path)
+	if err != nil {
+		t.Fatalf("ListBackups: %v", err)
+	}
+	if len(backups) != 2 {
+		t.Fatalf("precondition: want 2 backups, got %d", len(backups))
+	}
+	// Newest first: the pre-restore copy is backups[1].
+	target := backups[1]
+
+	if err := RestoreBackup(path, target.Name); err != nil {
+		t.Fatalf("RestoreBackup: %v", err)
+	}
+
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading restored file: %v", err)
+	}
+	if string(got) != preRestore {
+		t.Errorf("restored content: got %q, want %q", string(got), preRestore)
+	}
+
+	// The restore is undoable: the replaced state (changed) is still in the
+	// store as the newest entry, so it can be restored back. SnapshotFile
+	// dedups on content, so restoring to a copy that already exists does not
+	// add a new .bak - the store keeps two entries, and the pre-restore file
+	// is still recoverable from backups[0] rather than from a freshly written
+	// third one.
+	after, err := ListBackups(path)
+	if err != nil {
+		t.Fatalf("ListBackups after restore: %v", err)
+	}
+	if len(after) != 2 {
+		t.Errorf("backups after restore: got %d, want 2 (dedup keeps the count stable)", len(after))
+	}
+	if after[0].SHA8 != backups[0].SHA8 {
+		t.Errorf("newest backup after restore: SHA-8 got %q, want %q (the pre-restore file still recoverable)",
+			after[0].SHA8, backups[0].SHA8)
+	}
+
+	// Round-trip: restoring the newest entry puts the pre-restore state back
+	// on disk, proving the restore was undoable.
+	if err := RestoreBackup(path, after[0].Name); err != nil {
+		t.Fatalf("undo RestoreBackup: %v", err)
+	}
+	undone, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading undone file: %v", err)
+	}
+	if string(undone) != changed {
+		t.Errorf("undone content: got %q, want %q", string(undone), changed)
+	}
+}
+
+// TestRestoreBackupUnknownNameErrors covers test 4: a name that is not a
+// .bak, or that is not present in the slug dir, is rejected rather than
+// silently writing the wrong bytes.
+func TestRestoreBackupUnknownNameErrors(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "compose.yaml")
+	if err := os.WriteFile(path, []byte("v1\n"), 0o644); err != nil {
+		t.Fatalf("writing fixture: %v", err)
+	}
+	if err := SnapshotFile(path); err != nil {
+		t.Fatalf("SnapshotFile: %v", err)
+	}
+
+	if err := RestoreBackup(path, "not-a-bak"); err == nil {
+		t.Fatal("RestoreBackup with a non-.bak name: want error, got nil")
+	}
+
+	if err := RestoreBackup(path, "20990101T000000.deadbeef.bak"); err == nil {
+		t.Fatal("RestoreBackup with a missing .bak name: want error, got nil")
+	}
+}
+
 // TestReplaceFileAtomicallyBacksUp is the regression guard: after a replace of
 // an existing file, the store holds a copy equal to the pre-write content;
 // after a first-create, the store holds nothing.
