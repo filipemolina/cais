@@ -8,7 +8,7 @@ var lines = []string{
 	"[38;2;155;191;160m / /   / /| |  / / \\__ \\ [0m",
 	"[38;2;185;194;153m/ /___/ ___ |_/ / ___/ / [0m",
 	"[38;2;215;198;145m\\____/_/  |_/___//____/  [0m",
-	"[38;2;245;201;138m                         [0m",}
+	"[38;2;245;201;138m                         [0m"}
 
 // LOGO is the large ASCII brand mark. Reserved for a future About modal;
 // it is no longer rendered by PanelFrame.

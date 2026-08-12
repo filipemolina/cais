@@ -118,6 +118,20 @@ Sleep 500ms
 Type "t"
 Sleep 6s
 
+# Open the Backups page (tab 4): the merged list of every stored copy of the
+# compose file and the .env, newest first, with a live preview beside it.
+Type "4"
+Sleep 2000ms
+# Walk down the list so the preview follows, showing the copy beneath the
+# newest rather than only the top row.
+Down
+Sleep 1500ms
+Down
+Sleep 1500ms
+Up
+Up
+Sleep 1200ms
+
 # Every key, on one screen.
 Type "?"
 Sleep 2500ms
