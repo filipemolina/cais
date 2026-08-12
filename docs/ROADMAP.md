@@ -41,8 +41,9 @@ sections.
 
 Do not re-open these without asking:
 
-- **Tabs are Groups, Services, Files, Env.** No dead placeholder tabs.
-  *Groups/Services/Files scoped to the alpha; Env added in post-alpha.* Another
+- **Tabs are Groups, Services, Files, Backups.** No dead placeholder tabs.
+  *Groups/Services/Files scoped to the alpha; Env was a post-alpha tab and is now
+  a modal opened by `v`, freeing the fourth tab for Backups.* Another
   plan (`docs/plans/resources-page.md`, "Resources") will add one more, and will
   rewrite this line. The rule: no tab ships empty. The digit range and `alt`+letter
   shortcuts (`1`–`4`, `g`/`s`/`f`/`e`) derive from `apptypes.PageTitles`.
@@ -181,6 +182,14 @@ says which commit it is.
   store only; a browse and restore UI (v0.4.0) is built on its
   timestamp-plus-SHA-8 naming. A minor bump: it adds user-facing surface (the
   compose-write path becomes safe).
+- **`v0.4.0`** (2026-08-11) adds browse and restore: the fourth tab is now
+  Backups, a merged list of every stored copy of the compose file and the `.env`,
+  newest first, with a live preview beside it. `enter` or `r` restores the chosen
+  copy over the live file through the same atomic write, so the restore is itself
+  snapshotted and undoable. The `.env` editor is no longer a tab: `v` opens it as
+  a modal that holds the variable table, a key editor, and the raw file editor. A
+  minor bump: it adds user-facing surface (the backups are now reachable from the
+  app).
 
 ### Done, and kept for the record
 

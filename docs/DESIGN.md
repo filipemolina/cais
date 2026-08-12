@@ -516,6 +516,48 @@ the groups and services lists) already flows from the resolved file, so they
 follow without further work; the contents read above repopulates the
 viewport on the same chain.
 
+### The Backups page
+
+The Backups page answers "what did this file used to be, and can I have it
+back?" in full. It is a single panel with a list on the left and a live preview
+on the right, listing every stored copy of the compose file and the `.env`
+(`.env` only when one sits next to the loaded compose file) newest first.
+
+A backup is a copy in `.cais/backups/`, with a name of
+`UTC-timestamp.sha8-of-content.bak`. `ListBackups` reads both source slugs and
+merges them into one list sorted by the embedded timestamp, descending. A source
+that has never been written returns an empty list, not an error, so a file with no
+history yet just shows the empty state. The preview reads the chosen `.bak` from
+disk on selection; compose copies are shown syntax-highlighted through the same
+`src/highlight` layer the Files page uses, and `.env` copies are shown raw, so
+the preview is the exact bytes a restore would put back.
+
+Restore goes through a confirm modal. `enter` or `r` on a row emits
+`RequestRestoreBackupMsg`; `AppModel` opens a `ConfirmModal` whose follow-up is
+`RestoreBackup`, which writes the chosen `.bak` back over the live file through
+`utils.ReplaceFileAtomically`. Because the write is atomic, the live file is
+snapshotted into the store before it is replaced, so a restore is itself
+undoable: the copy you restored from still sits in the store, and a later restore
+of the post-restore snapshot brings the file you had back. A `.env` restore makes
+this explicit in the confirm text, because it brings the secrets back too. A
+successful restore reloads the config (so the page and any `.env`-derived
+interpolation reflect the restored file) and re-lists the backups so the new
+post-restore snapshot appears; a failed one reports a foreground error.
+
+The page reuses the request/response split every other surface uses: the panel
+emits an intent (`cmds.GetBackups`, `RequestRestoreBackupMsg`), `AppModel`
+supplies the resolved paths and runs the command, and a success message drives a
+reload. The panel never learns which file is loaded, for the same reason the
+editor handoff does not (see *One resolution, passed down* under *Which compose
+file*).
+
+The `.env` editor used to be its own tab. It is now a modal opened by `v`
+(`Globals.EditEnv`): `envmodal.New` holds the same variable table, key editor and
+raw file editor the page had, plus the reveal/copy/delete keys, and `o` opens the
+same inline editor the Files page's `E` does. Moving it off the tab row frees the
+fourth tab for Backups, and an env editor is something you open to act on, not a
+screen you navigate between, so a modal fits it better than a page slot.
+
 ### Home layout
 
 Home is the launchpad. Its body is a two-pane layout:
