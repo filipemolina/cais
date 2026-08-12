@@ -1,47 +1,50 @@
-package envpanel
+package envmodal
 
 import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"github.com/filipemolina/cais/src/cmds"
-	"github.com/filipemolina/cais/src/constants"
+	"github.com/filipemolina/cais/src/keys"
 )
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	// Sizing comes from AppModel like every other panel; deriving it from
-	// WindowSizeMsg here would leave the panel at width 0 whenever Env wasn't
-	// the active page at resize time. As the sole component on its page, it
-	// takes the whole body row: both panel widths plus the gutter.
-	case cmds.SetBodyLayoutMsg:
-		m.SetSize(msg.LeftWidth+constants.BODY_GUTTER_WIDTH+msg.RightWidth, msg.Height)
-		return m, nil
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return m.handleKey(msg)
+
 	case cmds.EnvFileContentsMsg:
-		m.SetEnvEntries(msg.Path, msg.Entries, 0) // TODO: count parse errors
+		// A parse error is non-fatal: the table still shows what parsed.
 		if msg.Err != nil {
 			m.SetLoadError(msg.Err)
+			return m, nil
+		}
+		m.SetEntries(msg.Path, msg.Entries, 0) // TODO: count parse errors
+		return m, nil
+
+	case cmds.SaveEnvFileMsg:
+		// The save is handled by AppModel (reload + reload). Re-request the
+		// contents so the table reflects the write once the modal is back.
+		if m.envPath != "" {
+			return m, cmds.GetEnvFileContents(m.envPath)
 		}
 		return m, nil
-	case cmds.SaveEnvFileMsg:
-		// The save message is handled by the main model, which triggers a reload.
-		// Just update loading state here if needed.
-		return m, nil
 	}
+
 	return m, nil
 }
 
-func (m Model) handleKey(msg tea.KeyMsg) (Model, tea.Cmd) {
+func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	if m.loading {
 		return m, nil
 	}
 
 	if len(m.entries) == 0 {
-		// Empty state: only allow 'n' to add first variable
+		// Empty state: only allow 'n' to add the first variable.
 		switch {
 		case key.Matches(msg, key.NewBinding(key.WithKeys("n"))):
 			return m, func() tea.Msg { return cmds.OpenEnvKeyModalMsg{} }
+		case key.Matches(msg, keys.Overlay.Cancel):
+			return m, cmds.CloseModal(nil)
 		}
 		return m, nil
 	}
@@ -71,14 +74,16 @@ func (m Model) handleKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		m.revealedIdx = -1
 		return m, nil
 
-	case key.Matches(msg, key.NewBinding(key.WithKeys("v", "enter"))):
-		if entry := m.getSelectedVar(); entry != nil {
-			m.Reveal(m.selectedIdx)
+	// Reveal moved off 'v' (now the global opener) to space/enter so the two
+	// never collide. Reveal and Copy share the same verb shape as the page.
+	case key.Matches(msg, key.NewBinding(key.WithKeys("space", "enter"))):
+		if entry := m.selectedVar(); entry != nil {
+			m.revealedIdx = m.selectedIdx
 		}
 		return m, nil
 
 	case key.Matches(msg, key.NewBinding(key.WithKeys("c"))):
-		if entry := m.getSelectedVar(); entry != nil {
+		if entry := m.selectedVar(); entry != nil {
 			return m, tea.SetClipboard(entry.Value)
 		}
 		return m, nil
@@ -87,7 +92,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		return m, func() tea.Msg { return cmds.OpenEnvKeyModalMsg{} }
 
 	case key.Matches(msg, key.NewBinding(key.WithKeys("e"))):
-		if entry := m.getSelectedVar(); entry != nil {
+		if entry := m.selectedVar(); entry != nil {
 			return m, func() tea.Msg {
 				return cmds.OpenEnvEditModalMsg{Key: entry.Key, Value: entry.Value}
 			}
@@ -95,7 +100,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, key.NewBinding(key.WithKeys("d"))):
-		if entry := m.getSelectedVar(); entry != nil {
+		if entry := m.selectedVar(); entry != nil {
 			return m, func() tea.Msg { return cmds.OpenEnvDeleteConfirmMsg{Key: entry.Key} }
 		}
 		return m, nil
@@ -104,20 +109,13 @@ func (m Model) handleKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		return m, func() tea.Msg { return cmds.OpenEnvRawEditMsg{} }
 
 	case key.Matches(msg, key.NewBinding(key.WithKeys("E"))):
-		// Open the .env file in $EDITOR
-		return m, func() tea.Msg { return cmds.OpenEditorMsg{} }
+		// Open the .env file in $EDITOR. The modal closes so the editor
+		// takes the terminal, like the Files page does.
+		return m, cmds.CloseModal(cmds.OpenEditor())
+
+	case key.Matches(msg, keys.Overlay.Cancel):
+		return m, cmds.CloseModal(nil)
 	}
 
 	return m, nil
-}
-
-func (m *Model) getSelectedVar() *cmds.EnvEntry {
-	if m.selectedIdx < 0 || m.selectedIdx >= len(m.entries) {
-		return nil
-	}
-	entry := &m.entries[m.selectedIdx]
-	if entry.Source != "var" {
-		return nil
-	}
-	return entry
 }

@@ -7,7 +7,7 @@ var PageTitles = []string{
 	"Home",
 	"Services",
 	"Compose Files",
-	"Env",
+	"Backups",
 }
 
 // PageLabels maps page IDs to their display labels in the main menu.

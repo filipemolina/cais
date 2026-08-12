@@ -156,6 +156,126 @@ func sha8FromName(name string) string {
 	return sha
 }
 
+// BackupEntry describes one stored version of a source file.
+type BackupEntry struct {
+	// Source is "compose" for any source file whose basename is not
+	// ".env", and ".env" for the .env file. It is derived from the live
+	// file's basename, not from the slug folder, so a merged list can
+	// label each row by what it is.
+	Source string
+	// Name is the .bak filename, e.g. 20260811T091530.ab12cd34.bak.
+	Name string
+	// Timestamp is the UTC write time parsed from the filename prefix.
+	Timestamp time.Time
+	// SHA8 is the content hash (8 hex) parsed from the filename.
+	SHA8 string
+	// Path is the absolute path to the .bak, for restore.
+	Path string
+}
+
+// sourceLabel returns the user-facing source tag for a file: ".env" when
+// the basename is exactly .env, otherwise "compose". The backup store keys
+// on the slug, but a merged list is easier to read with a label that says
+// which live file the copy came from.
+func sourceLabel(fileName string) string {
+	if filepath.Base(fileName) == ".env" {
+		return ".env"
+	}
+	return "compose"
+}
+
+// ListBackups returns the stored versions of sourceFile, newest first. A
+// source whose slug folder does not exist - never written, or brand-new -
+// yields an empty, non-error slice, so a reader need not special-case a
+// missing directory. The timestamp and SHA-8 come from the filename, which
+// SnapshotFile wrote, so no file is opened to learn them.
+func ListBackups(sourceFile string) ([]BackupEntry, error) {
+	slugDir := snapshotDirFor(sourceFile)
+
+	entries, err := os.ReadDir(slugDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed reading backup folder for %s: %w", sourceFile, err)
+	}
+
+	label := sourceLabel(sourceFile)
+	var backups []BackupEntry
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if !strings.HasSuffix(name, ".bak") {
+			continue
+		}
+		sha := sha8FromName(name)
+		if sha == "" {
+			continue
+		}
+
+		tsPart := strings.TrimSuffix(name, "."+sha+".bak")
+		ts, terr := time.Parse("20060102T150405", tsPart)
+		if terr != nil {
+			// A malformed name is not a valid backup; skip rather than
+			// invent a zero timestamp that would sort unpredictably.
+			continue
+		}
+
+		backups = append(backups, BackupEntry{
+			Source:    label,
+			Name:      name,
+			Timestamp: ts,
+			SHA8:      sha,
+			Path:      filepath.Join(slugDir, name),
+		})
+	}
+
+	// Names sort lexically by their UTC prefix, so the newest is last;
+	// reverse to newest-first.
+	sort.SliceStable(backups, func(i, j int) bool {
+		return backups[i].Name > backups[j].Name
+	})
+
+	return backups, nil
+}
+
+// RestoreBackup writes the named .bak back over sourceFile. It goes through
+// ReplaceFileAtomically, so the file being overwritten is snapshotted first
+// and the restore is itself undoable: restoring compose.yaml@T2 leaves a new
+// backup of the current compose.yaml (the one about to be replaced) as the
+// next-newest entry.
+//
+// The .bak name must belong to sourceFile's slug dir; an unknown or mismatched
+// name is an error so a caller cannot accidentally write bytes from another
+// source's folder over this one.
+func RestoreBackup(sourceFile, backupName string) error {
+	slugDir := snapshotDirFor(sourceFile)
+
+	if sha8FromName(backupName) == "" {
+		return fmt.Errorf("backup name %q is not a valid .bak", backupName)
+	}
+
+	bakPath := filepath.Join(slugDir, backupName)
+	if _, err := os.Stat(bakPath); err != nil {
+		return fmt.Errorf("backup %q not found for %s: %w", backupName, sourceFile, err)
+	}
+
+	contents, err := os.ReadFile(bakPath)
+	if err != nil {
+		return fmt.Errorf("failed reading backup %q: %w", backupName, err)
+	}
+
+	// ReplaceFileAtomically snapshots the current file before replacing it,
+	// which is the undo for this restore.
+	if err := ReplaceFileAtomically(sourceFile, contents); err != nil {
+		return fmt.Errorf("failed restoring %s from %q: %w", sourceFile, backupName, err)
+	}
+
+	return nil
+}
+
 // pruneSnapshots keeps the most recent MaxBackupsPerSource entries in
 // slugDir, deleting the oldest beyond the cap.
 func pruneSnapshots(slugDir string) {

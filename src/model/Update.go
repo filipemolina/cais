@@ -23,6 +23,7 @@ import (
 	"github.com/filipemolina/cais/src/components/createcomposefilemodal"
 	"github.com/filipemolina/cais/src/components/dockerstatusmodal"
 	"github.com/filipemolina/cais/src/components/envkeymodal"
+	"github.com/filipemolina/cais/src/components/envmodal"
 	"github.com/filipemolina/cais/src/components/errormodal"
 	"github.com/filipemolina/cais/src/components/groupnamemodal"
 	"github.com/filipemolina/cais/src/components/healthcheckpickermodal"
@@ -437,6 +438,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Global.Usage):
 			finalCmds = append(finalCmds, cmds.OpenUsageOverlay())
 
+		case key.Matches(msg, keys.Global.EditEnv):
+			finalCmds = append(finalCmds, cmds.OpenEnvModal())
+
 		case key.Matches(msg, keys.Global.NextPanel):
 			tabCmd := m.ChangeFocus(nil)
 			finalCmds = append(finalCmds, tabCmd)
@@ -517,7 +521,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
 			finalCmds = append(finalCmds, cfCmd)
 		}
-		if envCmd := m.getEnvFileCmdIfActive(); envCmd != nil {
+		if envCmd := m.getBackupsCmdIfActive(); envCmd != nil {
 			finalCmds = append(finalCmds, envCmd)
 		}
 		finalCmds = append(finalCmds, m.broadcastBodyLayout())
@@ -1091,6 +1095,55 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cmds.OpenEnvKeyModalMsg:
 		if m.config.configProject != nil {
 			m.activeModal = envkeymodal.New()
+		}
+
+	case cmds.OpenEnvModalMsg:
+		// The env experience is a modal opened by the global v key. It only
+		// opens when a .env is known (a compose file is loaded and sits
+		// next to one). With no envPath the key is a no-op, the same gating
+		// the old Env page had.
+		if m.config.envPath != "" {
+			m.activeModal = envmodal.New(m.config.envPath, m.config.terminalHeight)
+			// Fill the table on open, the same way the page used to load.
+			finalCmds = append(finalCmds, cmds.GetEnvFileContents(m.config.envPath))
+		}
+
+	case cmds.RequestRestoreBackupMsg:
+		// Confirm before overwriting the live file. The confirm message names
+		// the source and the UTC timestamp, and notes that .env restores
+		// bring back secrets too, so the user knows exactly what they are
+		// about to write.
+		confirmText := fmt.Sprintf("Restore %s backup %s? The current file is saved as a new backup first, so this is undoable.",
+			msg.Source, msg.Name)
+		if msg.Source == ".env" {
+			confirmText = fmt.Sprintf("Restore .env backup %s? The current .env is saved as a new backup first (secrets included), so this is undoable.",
+				msg.Name)
+		}
+		liveFile := m.config.configFileName
+		if msg.Source == ".env" {
+			liveFile = m.config.envPath
+		}
+		if liveFile == "" {
+			m.lastError = "Cannot restore: no live file for " + msg.Source
+			m.lastErrorFromPoll = false
+			break
+		}
+		m.activeModal = confirmmodal.New(confirmText,
+			cmds.RestoreBackup(msg.Source, msg.Name, m.config.configFileName, m.config.envPath))
+
+	case cmds.RestoreBackupMsg:
+		m.lastErrorFromPoll = false
+		if msg.Err != nil {
+			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
+			break
+		}
+		// Success: clear the error, reload so the page (and any .env-derived
+		// interpolation) reflects the restored file, and re-list backups so
+		// the page shows the new post-restore snapshot.
+		m.lastError = ""
+		finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
+		if backupsCmd := m.getBackupsCmdIfActive(); backupsCmd != nil {
+			finalCmds = append(finalCmds, backupsCmd)
 		}
 
 	case cmds.OpenEnvEditModalMsg:

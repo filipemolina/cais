@@ -9,10 +9,10 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/components/backuppage"
 	"github.com/filipemolina/cais/src/components/chrome"
 	"github.com/filipemolina/cais/src/components/composefilepanel"
 	"github.com/filipemolina/cais/src/components/detailspanel"
-	"github.com/filipemolina/cais/src/components/envpanel"
 	"github.com/filipemolina/cais/src/components/groupdetailspanel"
 	"github.com/filipemolina/cais/src/components/groupslist"
 	"github.com/filipemolina/cais/src/components/keybindingbar"
@@ -202,13 +202,14 @@ func (m AppModel) recomposeFilesCmdIfActive() tea.Cmd {
 	return cmds.GetComposeFileContents(m.config.configFileName)
 }
 
-// getEnvFileCmdIfActive returns a command that reads the .env file for the
-// Env page, or nil when the Env page is not active.
-func (m AppModel) getEnvFileCmdIfActive() tea.Cmd {
-	if m.activePage != "Env" || m.config.envPath == "" {
+// getBackupsCmdIfActive returns a command that reads the backup store for the
+// Backups page, or nil when the Backups page is not active or no compose file
+// is loaded. It lists both the compose file and the .env (when one is known).
+func (m AppModel) getBackupsCmdIfActive() tea.Cmd {
+	if m.activePage != "Backups" || m.config.configFileName == "" {
 		return nil
 	}
-	return cmds.GetEnvFileContents(m.config.envPath)
+	return cmds.GetBackups(m.config.configFileName, m.config.envPath)
 }
 
 // homeStats returns the counts shown in the home page status header:
@@ -292,8 +293,8 @@ func GetInitialModel(source utils.ComposeSource) AppModel {
 		composefilepanel.New(),
 	}
 
-	pages["Env"] = []tea.Model{
-		envpanel.New(),
+	pages["Backups"] = []tea.Model{
+		backuppage.New(),
 	}
 
 	return AppModel{
