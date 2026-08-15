@@ -1,6 +1,6 @@
-# Fixture stack for the README screenshots and the demo recording. Shaped like
-# a real homelab: three profiles, media and utility apps, and the plumbing
-# underneath. Ports sit in the 14000+ range so they collide with nothing.
+# Homelab stack: media, home and infra profiles for my self-hosted apps, with
+# the usual plumbing underneath. Ports live in the 14000+ range so they never
+# collide with anything else on the host.
 
 name: homelab
 
