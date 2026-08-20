@@ -326,24 +326,32 @@ func (m Model) configRows(valWidth int) []propRow {
 		rows = append(rows, propRow{"Networks", []string{strings.Join(netNames, ", ")}})
 	}
 
-	// Volumes summary
+	// Volumes - show actual volume names/details instead of just count
 	if len(svc.Volumes) > 0 {
-		bindCount := 0
-		volCount := 0
+		var volParts []string
 		for _, vol := range svc.Volumes {
 			switch vol.Type {
 			case "bind", "":
-				bindCount++
+				// Bind mount: show target path (container path)
+				if vol.Target != "" {
+					volParts = append(volParts, vol.Target)
+				} else {
+					volParts = append(volParts, vol.String())
+				}
 			case "volume":
-				volCount++
+				// Named volume: show volume name (Source)
+				if vol.Source != "" {
+					volParts = append(volParts, vol.Source)
+				} else {
+					volParts = append(volParts, vol.String())
+				}
+			case "tmpfs":
+				volParts = append(volParts, "tmpfs:"+vol.Target)
+			case "image":
+				volParts = append(volParts, "image:"+vol.Target)
+			default:
+				volParts = append(volParts, vol.String())
 			}
-		}
-		var volParts []string
-		if bindCount > 0 {
-			volParts = append(volParts, fmt.Sprintf("%d bind", bindCount))
-		}
-		if volCount > 0 {
-			volParts = append(volParts, fmt.Sprintf("%d volume", volCount))
 		}
 		rows = append(rows, propRow{"Volumes", []string{strings.Join(volParts, ", ")}})
 	}
