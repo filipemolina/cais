@@ -134,11 +134,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.resizeList()
 
 	case tea.KeyPressMsg:
-		// Space/Enter starts the selected service (quick action).
-		// Selection happens automatically on cursor movement.
-		if m.isFocused && !m.OwnsKeyboard() && key.Matches(msg, keys.List.Select) {
+		// The inner list still gets the key below - that is where the filter
+		// input lives - but neither quick action fires while it is being
+		// typed into. Same guard as groupslist.Model.Update.
+		if !m.isFocused || m.OwnsKeyboard() {
+			break
+		}
+
+		switch {
+		case key.Matches(msg, keys.List.Select):
+			// Space/Enter starts the selected item (quick action).
+			// Selection happens automatically on cursor movement.
 			if m.activeService != "" {
 				finalCmds = append(finalCmds, cmds.RequestDockerAction("start", m.activeService, false))
+			}
+
+		case key.Matches(msg, keys.Details.Stop):
+			// t stops the selected item, the other half of the quick-action
+			// pair - parity with groupslist.Model.Update, so the two lists
+			// behave the same without a Tab to the details panel.
+			if m.activeService != "" {
+				finalCmds = append(finalCmds, cmds.RequestDockerAction("stop", m.activeService, false))
 			}
 		}
 

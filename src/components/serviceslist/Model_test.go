@@ -149,6 +149,39 @@ func TestEnterStartsTheHighlightedService(t *testing.T) {
 	}
 }
 
+// t stops the highlighted service, the other half of the quick-action pair
+// Enter/Space starts with - no Tab to the details panel required. Parity
+// with groupslist.TestStopStopsTheHighlightedGroup.
+func TestStopStopsTheHighlightedService(t *testing.T) {
+	list := drive(t, New(nil, 80, 24),
+		cmds.SetServicesListMsg(servicesOf("api", "db", "web")),
+		cmds.SetFocusMsg(1),
+	)
+
+	model, _ := list.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
+	moved, ok := model.(Model)
+	if !ok {
+		t.Fatalf("expected a Model, got %T", model)
+	}
+	if moved.activeService != "db" {
+		t.Fatalf("auto-select did not fire: activeService = %q", moved.activeService)
+	}
+
+	_, cmd := moved.Update(tea.KeyPressMsg{Code: 't', Text: "t"})
+
+	var stopped bool
+	for _, msg := range messagesFrom(cmd) {
+		if dockerMsg, ok := msg.(cmds.RunDockerActionMsg); ok {
+			if dockerMsg.Action == "stop" && dockerMsg.Target == "db" && !dockerMsg.IsGroup {
+				stopped = true
+			}
+		}
+	}
+	if !stopped {
+		t.Errorf("t did not stop db, got %#v", messagesFrom(cmd))
+	}
+}
+
 // Nothing is active until something is selected. The zero value would point
 // at row 0 and render the first service as though the user had picked it.
 func TestNoActiveRowBeforeAnySelection(t *testing.T) {

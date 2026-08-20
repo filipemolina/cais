@@ -71,7 +71,7 @@ func TestFooterHints(t *testing.T) {
 		{
 			name:  "services list with services",
 			model: Model{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_LIST},
-			want:  "space start · / filter · ↑/↓ navigate · tab next",
+			want:  "space start · t stop · / filter · ↑/↓ navigate · tab next",
 		},
 		{
 			name:  "services list while a filter is being typed",

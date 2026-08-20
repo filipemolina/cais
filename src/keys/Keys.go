@@ -428,9 +428,17 @@ func Active(ctx Context) []key.Binding {
 	case "Services":
 		switch ctx.Focused {
 		case constants.COMPONENT_BODY_LIST:
-			// The services list is read-only: services are created by editing
-			// the compose file, not from here.
-			return listKeys(ctx)
+			// The services list is read-only for management - services are
+			// created by editing the compose file, not from here - but it
+			// offers the same quick-action pair the groups list does: Stop
+			// next to Select's quick start, no Tab to the details panel
+			// required. Parity with the Home list.
+			var own []key.Binding
+			if !ctx.ListEmpty {
+				own = append(own, Details.Stop)
+			}
+
+			return listKeys(ctx, own...)
 
 		case constants.COMPONENT_BODY_DETAILS:
 			if ctx.Editing {
