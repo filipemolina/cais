@@ -58,6 +58,120 @@ On a terminal narrower than roughly 130 columns, the keybinding bar starts dropp
 
 cais re-polls container status every five seconds, so panels reflect changes made outside the app. The Files page re-reads the compose file from disk after every write through the app. If a panel still looks wrong, check the footer for which file is loaded — the panels describe the file the footer names.
 
+## `cais: command not found` after SSHing in
+
+`go install` (and `make build`) put the binary in `$(go env GOPATH)/bin`, which
+defaults to `~/go/bin`. That directory only ends up on `PATH` because your
+shell's startup files put it there — and which startup files run depends on
+*how* the SSH session was started:
+
+| How you connected | Shell type | Startup files read |
+| --- | --- | --- |
+| `ssh host` (opens a shell) | login, interactive | `/etc/profile`, then the first of `~/.bash_profile`, `~/.bash_login`, `~/.profile` (bash) or `~/.zprofile`, `~/.zshrc` (zsh) |
+| `ssh host 'some command'` | **not** login, **not** interactive | none of the above — only the raw system `PATH` |
+
+If you're running `cais` as an inline command over SSH, no per-user startup
+file runs at all, so anything they add to `PATH` is missing. Either open a
+plain interactive session first (`ssh host`, then run `cais`), or force a
+login shell for the inline command: `ssh -t host 'bash -lc cais'` (swap in
+your shell).
+
+If an actual interactive session still can't find it, check what `PATH`
+looks like inside that session and compare it to a local shell:
+
+```bash
+echo $PATH
+which cais
+```
+
+A common cause when `~/go/bin` is missing from an otherwise-normal-looking
+`PATH`: a startup file that builds the Go bin path by *calling* `go`, e.g.
+
+```bash
+export PATH="$PATH:$(go env GOPATH)/bin"
+```
+
+This only works if `go` itself is already resolvable at the point this line
+runs. If some other file adds Go's own install directory (`/usr/local/go/bin`
+or similar) to `PATH` *later* in the startup sequence — which is easy to get
+backwards across `.bashrc`/`.profile` or `.zshrc`/`.zprofile` — `go env
+GOPATH` fails silently and nothing gets appended. It can work by accident in
+sessions that inherited a `PATH` from somewhere else (a long-lived terminal,
+a multiplexer) and only break on a genuinely fresh login, which is exactly
+what SSH gives you.
+
+The fix is to stop depending on `go` being resolvable yet — the default
+`GOPATH/bin` is always `$HOME/go/bin` (or `%USERPROFILE%\go\bin` on
+Windows), so hardcode it instead of shelling out:
+
+```bash
+export PATH="$PATH:$HOME/go/bin"
+```
+
+Open a new session and confirm with `echo $PATH` / `which cais`.
+
+## Colors look wrong after SSHing in
+
+TUI color rendering (cais included, via Lip Gloss) picks a color profile —
+true color (24-bit), 256-color, or basic 16-color — based on environment
+variables, mainly `COLORTERM` and `TERM`. Over SSH those two variables don't
+travel the same way:
+
+- **`TERM`** is sent as part of the SSH protocol's pty request whenever a
+  session allocates a terminal, so it survives regardless of configuration.
+- **`COLORTERM`** is an ordinary environment variable. Like most env vars, it
+  only crosses an SSH connection if the *client* is configured to send it
+  (`SendEnv`) **and** the *server* is configured to accept it (`AcceptEnv`).
+  Most default `sshd_config`s only allow `LANG` and `LC_*` through, so
+  `COLORTERM` is silently dropped — even though `TERM` looks fine and the
+  session otherwise behaves normally.
+
+The result: a terminal that renders true color locally falls back to an
+approximated 256-color palette once you're SSHed in, and colors that were
+exact hex values on the local run look subtly (or very) wrong remotely.
+
+Confirm this is what's happening:
+
+```bash
+echo $COLORTERM   # should be "truecolor" or "24bit" locally
+```
+then compare against the same command run inside the SSH session.
+
+**Fix — no sshd config or restart needed.** If the terminal you're
+connecting *from* supports true color (most modern ones do — iTerm2, Kitty,
+WezTerm, Alacritty, Windows Terminal, Ghostty, and others), export it
+yourself on the machine you're connecting *to*, gated on the session
+actually being SSH so you don't force it in cases where it might not apply:
+
+```bash
+# ~/.bashrc, ~/.zshrc, or equivalent, on the machine being SSHed into
+[ -n "$SSH_TTY" ] && export COLORTERM=truecolor
+```
+
+`SSH_TTY` is set by `sshd` itself for any session with an allocated
+terminal, so this doesn't depend on `SendEnv`/`AcceptEnv` at all — it works
+whatever the client is.
+
+**Alternative — configure the SSH env forwarding properly.** If you'd
+rather have the real client-side value forwarded instead of assuming
+true color support, add `COLORTERM` to both sides and restart `sshd`:
+
+```
+# client: /etc/ssh/ssh_config or ~/.ssh/config
+SendEnv COLORTERM
+
+# server: /etc/ssh/sshd_config
+AcceptEnv COLORTERM
+```
+```bash
+sudo systemctl restart sshd
+```
+
+This is more invasive (it's shared system configuration, and needs a
+service restart), so the `SSH_TTY` shell snippet above is the simpler
+default unless you specifically need the forwarded value to differ from
+`truecolor`.
+
 ## Still stuck?
 
 Open an issue at [github.com/filipemolina/cais](https://github.com/filipemolina/cais). Include the output of `cais --version` (or the commit hash it reports on an unstamped build) and what you were doing when it failed.

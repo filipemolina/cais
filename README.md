@@ -194,6 +194,26 @@ live in [docs/ROADMAP.md](docs/ROADMAP.md):
 Issues and ideas are welcome, and at this stage they still change the
 direction.
 
+## Troubleshooting
+
+Two SSH-specific gotchas worth knowing about, since they'll happen with any
+terminal app, not just cais:
+
+- **`cais: command not found`.** `~/go/bin` (where `go install` puts the
+  binary) only lands on `PATH` via your shell's startup files, and which of
+  those run depends on how the SSH session was opened — an inline command
+  (`ssh host cais`) skips them entirely. If your `PATH` setup shells out to
+  `go env GOPATH` to find that directory, make sure it runs *after* `go`
+  itself is already on `PATH`, or just hardcode `$HOME/go/bin` instead.
+- **Colors look wrong.** `TERM` survives SSH, but `COLORTERM` usually
+  doesn't (most `sshd` configs don't forward it), so true-color rendering
+  silently degrades to 256-color. If both ends support true color, force it
+  for SSH sessions: `[ -n "$SSH_TTY" ] && export COLORTERM=truecolor` in the
+  shell rc on the machine you're connecting *to*.
+
+Full walkthrough, including why, in [the troubleshooting
+guide](website/src/content/docs/users/troubleshooting.md).
+
 ## Built with
 
 Go, [Bubble Tea](https://github.com/charmbracelet/bubbletea) /
