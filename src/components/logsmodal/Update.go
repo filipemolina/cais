@@ -27,8 +27,8 @@ func (m *Model) resize(termWidth, termHeight int) {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case cmds.LogLineMsg:
-		m.lines = append(m.lines, string(msg))
+	case cmds.LogLinesMsg:
+		m.lines = append(m.lines, msg...)
 		if len(m.lines) > maxLogLines {
 			m.lines = m.lines[len(m.lines)-maxLogLines:]
 		}
@@ -36,7 +36,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.follow {
 			m.viewport.GotoBottom()
 		}
-		// Pull the next line to keep the stream flowing.
+		// Pull the next batch to keep the stream flowing.
 		return m, cmds.WaitForLog(m.logCh)
 
 	case cmds.LogStreamEndedMsg:
