@@ -34,7 +34,7 @@ func TestForegroundErrorOpensModalWhenScreenIsFree(t *testing.T) {
 // action that silently did nothing.
 func TestForegroundErrorFallsBackToBannerWhenModalIsOpen(t *testing.T) {
 	m := GetInitialModel(utils.ComposeSource{})
-	m.activeModal = helpoverlay.New(m.helpContext(), m.config.configFiles, 80)
+	m.activeModal = helpoverlay.New(m.helpContext(), m.config.configFiles, 80, 24)
 	openType := fmt.Sprintf("%T", m.activeModal)
 
 	m.reportForegroundError("docker start failed")
@@ -71,7 +71,7 @@ func TestForegroundErrorModalKeepsPollOwnershipOfTheBanner(t *testing.T) {
 // real Update path, not just the helper.
 func TestDockerActionErrorReachesBannerThroughUpdate(t *testing.T) {
 	m := GetInitialModel(utils.ComposeSource{})
-	m.activeModal = helpoverlay.New(m.helpContext(), m.config.configFiles, 80)
+	m.activeModal = helpoverlay.New(m.helpContext(), m.config.configFiles, 80, 24)
 
 	m = updateForTest(t, m, cmds.DockerActionMsg{Err: errors.New("docker start failed")})
 

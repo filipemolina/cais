@@ -87,7 +87,12 @@ func TestQuestionMarkIsALetterWhileFiltering(t *testing.T) {
 // The overlay renders what the keymap says - the scopes and the rows - and,
 // when several compose files were in the running, the candidates that lost.
 func TestHelpOverlayRendersTheCatalog(t *testing.T) {
-	m := applyLayout(drive(startup(120, 40),
+	// Tall enough that nothing is windowed out — one line per entry makes the
+	// catalog taller than a realistic terminal, so a short one only shows
+	// part of it (TestCatalogFitsASmallTerminalAndScrolls, in the
+	// helpoverlay package, covers what a short terminal does with the same
+	// catalog).
+	m := applyLayout(drive(startup(120, 400),
 		cmds.GetConfigMsg{
 			FileName: "compose.yaml",
 			Files:    []string{"compose.yaml", "compose.yml", "docker-compose.yml"},
@@ -101,7 +106,7 @@ func TestHelpOverlayRendersTheCatalog(t *testing.T) {
 	for _, want := range []string{
 		"Keyboard shortcuts",
 		"Pages", "List", "Details", "Editor", "Overlays", "Global",
-		"space start",
+		"space  start",
 		"alt+g/s/f",
 		"Compose files",
 		"compose.yml",

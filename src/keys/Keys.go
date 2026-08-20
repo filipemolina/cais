@@ -151,6 +151,10 @@ type OverlayKeys struct {
 	Yes       key.Binding
 	No        key.Binding
 	Follow    key.Binding
+	// Navigation is the help overlay's own scroll keys - the arrows every
+	// overlay already means "move within me" with, matched directly since
+	// the overlay has no list to hand the keystrokes to.
+	Navigation key.Binding
 }
 
 var Global = GlobalKeys{
@@ -261,13 +265,14 @@ var Backup = BackupKeys{
 // are new to this page; New, Edit, Delete and EditFile are reused from existing
 // bindings to keep "one verb is one binding".
 var Overlay = OverlayKeys{
-	Submit:    key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "confirm")),
-	Cancel:    key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "cancel")),
-	NextField: key.NewBinding(key.WithKeys("tab"), key.WithHelp("tab", "next field")),
-	Toggle:    key.NewBinding(key.WithKeys("space"), key.WithHelp("space", "toggle")),
-	Yes:       key.NewBinding(key.WithKeys("y", "Y"), key.WithHelp("y", "yes")),
-	No:        key.NewBinding(key.WithKeys("n", "N"), key.WithHelp("n", "no")),
-	Follow:    key.NewBinding(key.WithKeys("f"), key.WithHelp("f", "follow")),
+	Submit:     key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "confirm")),
+	Cancel:     key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "cancel")),
+	NextField:  key.NewBinding(key.WithKeys("tab"), key.WithHelp("tab", "next field")),
+	Toggle:     key.NewBinding(key.WithKeys("space"), key.WithHelp("space", "toggle")),
+	Yes:        key.NewBinding(key.WithKeys("y", "Y"), key.WithHelp("y", "yes")),
+	No:         key.NewBinding(key.WithKeys("n", "N"), key.WithHelp("n", "no")),
+	Follow:     key.NewBinding(key.WithKeys("f"), key.WithHelp("f", "follow")),
+	Navigation: key.NewBinding(key.WithKeys("up", "down", "k", "j"), key.WithHelp("↑/↓", "navigate")),
 }
 
 // ListKeyMap is the keymap the two body lists install on their inner bubbles
@@ -618,7 +623,7 @@ func Catalog(ctx Context) []Scope {
 			Title: "Overlays",
 			Entries: entries(
 				Overlay.Submit, Overlay.Cancel, Overlay.Yes, Overlay.No,
-				Overlay.NextField, Overlay.Toggle, Overlay.Follow,
+				Overlay.NextField, Overlay.Toggle, Overlay.Follow, Overlay.Navigation,
 			),
 		},
 		{

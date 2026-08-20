@@ -918,6 +918,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.helpContext(),
 			m.config.configFiles,
 			m.config.terminalWidth,
+			m.config.terminalHeight,
 		)
 
 	case cmds.OpenAboutModalMsg:

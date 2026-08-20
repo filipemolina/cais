@@ -52,7 +52,7 @@ func TestEveryModalHasATitleAndAnExitHint(t *testing.T) {
 		exitKey string
 	}{
 		{"about", aboutmodal.New(), "cais", "esc"},
-		{"help", helpoverlay.New(keys.Context{Page: "Home"}, nil, 100), "Keyboard shortcuts", "esc"},
+		{"help", helpoverlay.New(keys.Context{Page: "Home"}, nil, 100, 40), "Keyboard shortcuts", "esc"},
 		{"confirm", confirmmodal.New("Delete group \"core\"?", nil), "Confirm", "esc"},
 		{"error", errormodal.New("boom", 100), "Error", "esc"},
 		{"group name", groupnamemodal.New(nil, []string{"web"}, 40), "New group", "esc"},
