@@ -70,6 +70,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				finalCmds = append(finalCmds, cmds.RequestDockerAction("start", m.activeGroup, true))
 			}
 
+		case key.Matches(msg, keys.Details.Stop):
+			// t stops the selected item, the other half of the quick action
+			// pair - no Tab to the details panel required.
+			if m.activeGroup != "" {
+				finalCmds = append(finalCmds, cmds.RequestDockerAction("stop", m.activeGroup, true))
+			}
+
 		case key.Matches(msg, keys.List.Delete):
 			if selectedGroup, ok := m.list.SelectedItem().(apptypes.GroupListItem); ok {
 				finalCmds = append(finalCmds, cmds.OpenDeleteGroupModal(string(selectedGroup)))

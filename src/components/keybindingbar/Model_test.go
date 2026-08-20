@@ -39,7 +39,7 @@ func TestFooterHints(t *testing.T) {
 		{
 			name:  "groups list with groups",
 			model: Model{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST},
-			want:  "space start · n new · e edit · d delete · R rename · / filter · ↑/↓ navigate · tab next",
+			want:  "space start · t stop · n new · e edit · d delete · R rename · / filter · ↑/↓ navigate · tab next",
 		},
 		{
 			// The list has the keyboard: every other key is a letter.
@@ -51,7 +51,7 @@ func TestFooterHints(t *testing.T) {
 			// The filter slot becomes the way out of the filter.
 			name:  "groups list with a filter applied",
 			model: Model{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST, filterState: list.FilterApplied},
-			want:  "space start · n new · e edit · d delete · R rename · esc clear filter · ↑/↓ navigate · tab next",
+			want:  "space start · t stop · n new · e edit · d delete · R rename · esc clear filter · ↑/↓ navigate · tab next",
 		},
 		{
 			name:  "groups list while empty",

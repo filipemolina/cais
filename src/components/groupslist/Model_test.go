@@ -172,11 +172,11 @@ func TestEnterStartsTheHighlightedGroup(t *testing.T) {
 	}
 }
 
-// The other letters the default map claimed. None of them is a list key in this
-// app: l opens logs, f follows a log stream, and h, b and u mean nothing yet,
-// which is still not "page the list".
+// The other letters the default map claimed, still spent elsewhere in the app
+// regardless of which panel is focused: f follows a log stream, b browses
+// compose files, u opens the usage overlay. None of them pages the list.
 func TestPanelLettersDoNotPageTheList(t *testing.T) {
-	for _, keystroke := range []string{"l", "h", "f", "b", "u"} {
+	for _, keystroke := range []string{"f", "b", "u"} {
 		t.Run(keystroke, func(t *testing.T) {
 			groups := focusedGroupsList(t, 12)
 			startPage := groups.list.Paginator.Page
@@ -191,6 +191,67 @@ func TestPanelLettersDoNotPageTheList(t *testing.T) {
 				t.Errorf("%q moved the list from page %d to page %d", keystroke, startPage, after.list.Paginator.Page)
 			}
 		})
+	}
+}
+
+// h and l page the list like the arrow keys do - they mean nothing else while
+// the list itself has focus, so they get the vim treatment left/right already
+// have in k/j's up/down.
+func TestVimLettersPageTheList(t *testing.T) {
+	tests := []struct {
+		keystroke string
+		wantDelta int
+	}{
+		{"l", 1},
+		{"h", -1},
+	}
+
+	for _, test := range tests {
+		t.Run(test.keystroke, func(t *testing.T) {
+			groups := focusedGroupsList(t, 12)
+			// Land on page 1 first so "h" (prev page) has somewhere to go.
+			groups.list.Paginator.Page = 1
+			startPage := groups.list.Paginator.Page
+
+			model, _ := press(t, groups, test.keystroke)
+
+			after, ok := model.(Model)
+			if !ok {
+				t.Fatalf("expected a Model, got %T", model)
+			}
+			if got := after.list.Paginator.Page; got != startPage+test.wantDelta {
+				t.Errorf("%q moved the list from page %d to page %d, want %d", test.keystroke, startPage, got, startPage+test.wantDelta)
+			}
+		})
+	}
+}
+
+// t stops the highlighted group, the other half of the quick-action pair
+// Enter/Space starts with - no Tab to the details panel required.
+func TestStopStopsTheHighlightedGroup(t *testing.T) {
+	groups := focusedGroupsList(t, 12)
+
+	model, _ := groups.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
+	moved, ok := model.(Model)
+	if !ok {
+		t.Fatalf("expected a Model, got %T", model)
+	}
+	if moved.activeGroup != "group-01" {
+		t.Fatalf("auto-select did not fire: activeGroup = %q", moved.activeGroup)
+	}
+
+	_, cmd := moved.Update(tea.KeyPressMsg{Code: 't', Text: "t"})
+
+	var stopped bool
+	for _, msg := range messagesFrom(cmd) {
+		if dockerMsg, ok := msg.(cmds.RunDockerActionMsg); ok {
+			if dockerMsg.Action == "stop" && dockerMsg.Target == "group-01" && dockerMsg.IsGroup {
+				stopped = true
+			}
+		}
+	}
+	if !stopped {
+		t.Errorf("t did not stop group-01, got %#v", messagesFrom(cmd))
 	}
 }
 

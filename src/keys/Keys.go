@@ -222,10 +222,10 @@ var Details = DetailsKeys{
 	// exclusively while it is open, the same double life n already lives
 	// (List.New / Overlay.No).
 	CopyURL: key.NewBinding(key.WithKeys("y"), key.WithHelp("y", "copy url")),
-	// Unbound everywhere else - verified by grep, the only prior occurrence
-	// in the codebase was a test asserting the bubbles list's own paging
-	// keys (l h f b u) are not bound. l (logs) and h (health) sit
-	// naturally together in this scope.
+	// l (logs) and h (health) sit naturally together in this scope. Both
+	// letters are reused for pagination on the body lists (see ListKeyMap) -
+	// no collision, since a list and a details panel are never focused at
+	// once.
 	Healthcheck: key.NewBinding(key.WithKeys("h"), key.WithHelp("h", "healthcheck")),
 }
 
@@ -297,10 +297,14 @@ func ListKeyMap() list.KeyMap {
 	return list.KeyMap{
 		CursorUp:   key.NewBinding(key.WithKeys("up", "k"), key.WithHelp("↑/k", "up")),
 		CursorDown: key.NewBinding(key.WithKeys("down", "j"), key.WithHelp("↓/j", "down")),
-		// pgup/pgdown and the arrows only; the letter aliases (h/l/b/u/f/d)
-		// are the ones that collided with the panel verbs.
-		PrevPage:  key.NewBinding(key.WithKeys("left", "pgup"), key.WithHelp("←/pgup", "prev page")),
-		NextPage:  key.NewBinding(key.WithKeys("right", "pgdown"), key.WithHelp("→/pgdn", "next page")),
+		// h/l rejoin the vim aliases here - left/right, the way k/j already
+		// read as up/down. Neither means anything while a body list itself
+		// has focus, unlike b/u/f/d, which stay out: d is this list's own
+		// Delete, and b/u/f are spent elsewhere in the app (Files.Browse,
+		// Global.Usage, the logs modal's Follow) checked independently of
+		// which panel is focused.
+		PrevPage:  key.NewBinding(key.WithKeys("left", "h", "pgup"), key.WithHelp("←/h/pgup", "prev page")),
+		NextPage:  key.NewBinding(key.WithKeys("right", "l", "pgdown"), key.WithHelp("→/l/pgdn", "next page")),
 		GoToStart: List.GoToStart,
 		GoToEnd:   List.GoToEnd,
 
@@ -385,9 +389,13 @@ func Active(ctx Context) []key.Binding {
 		switch ctx.Focused {
 		case constants.COMPONENT_BODY_LIST:
 			// New is offered even with no groups - it is how the first one gets
-			// made - but Edit, Delete and Rename need something to act on.
+			// made - but Stop, Edit, Delete and Rename need something to act on.
 			own := []key.Binding{List.New}
 			if !ctx.ListEmpty {
+				// Stop leads, next to Select's quick start: the pair of quick
+				// docker actions the list offers without a Tab to the details
+				// panel, ahead of the list-management verbs.
+				own = append([]key.Binding{Details.Stop}, own...)
 				own = append(own, List.Edit, List.Delete, List.Rename)
 			}
 
