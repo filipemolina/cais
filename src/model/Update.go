@@ -766,6 +766,28 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			finalCmds = append(finalCmds, bodyCmd)
 		}
 
+	case cmds.CycleRestartPolicyRequestMsg:
+		// The details panel knows the service name; AppModel knows the
+		// current policy (off m.config.configProject) and the file it has
+		// to be written into - the same split OpenHealthcheckPickerMsg uses.
+		if m.config.configProject != nil {
+			if svc, ok := m.config.configProject.Services[msg.ServiceName]; ok {
+				finalCmds = append(finalCmds, cmds.CycleRestartPolicy(m.config.configFileName, msg.ServiceName, svc.Restart))
+			}
+		}
+
+	case cmds.CycleRestartPolicyMsg:
+		m.lastErrorFromPoll = false
+		if msg.Err != nil {
+			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
+		} else {
+			m.lastError = ""
+			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
+		}
+		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
+			finalCmds = append(finalCmds, cfCmd)
+		}
+
 	case cmds.OpenLogsModalMsg:
 		var startCmd tea.Cmd
 		m.activeModal, startCmd = logsmodal.New(

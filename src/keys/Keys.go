@@ -97,10 +97,10 @@ type ListKeys struct {
 
 // DetailsKeys act on whatever the body's right panel is showing. The first six
 // are shared verbatim between the group panel and the service panel: same key,
-// same meaning, one scope wider or narrower. EditService, EditFile, CopyURL
-// and Healthcheck exist only on the service panel, which is the only place a
-// single service is the subject. Save and OpenEditor are only live while the
-// inline editor is open.
+// same meaning, one scope wider or narrower. EditService, EditFile, CopyURL,
+// Healthcheck and Boot exist only on the service panel, which is the only
+// place a single service is the subject. Save and OpenEditor are only live
+// while the inline editor is open.
 type DetailsKeys struct {
 	Start       key.Binding
 	Stop        key.Binding
@@ -117,6 +117,11 @@ type DetailsKeys struct {
 	CopyURL key.Binding
 	// Healthcheck opens the template picker (docs/plans/healthcheck-insertion.md).
 	Healthcheck key.Binding
+	// Boot cycles the service's restart: policy (no -> on-failure ->
+	// unless-stopped -> always -> no). Uppercase, alongside Healthcheck's
+	// lowercase h, to leave b free for Files.Browse - the same shape as
+	// EditFile's E next to EditService's e.
+	Boot key.Binding
 }
 
 // EditorKeys act inside the inline YAML editor, and only there. The editor
@@ -227,6 +232,7 @@ var Details = DetailsKeys{
 	// no collision, since a list and a details panel are never focused at
 	// once.
 	Healthcheck: key.NewBinding(key.WithKeys("h"), key.WithHelp("h", "healthcheck")),
+	Boot:        key.NewBinding(key.WithKeys("B"), key.WithHelp("B", "boot")),
 }
 
 var Editor = EditorKeys{
@@ -442,7 +448,7 @@ func Active(ctx Context) []key.Binding {
 			return []key.Binding{
 				Details.Start, Details.Stop, Details.Restart,
 				Details.Pull, Details.Remove, Details.Logs,
-				Details.CopyURL, Details.Healthcheck,
+				Details.CopyURL, Details.Healthcheck, Details.Boot,
 				Details.EditService, Details.EditFile,
 				Global.Back, Global.NextPanel,
 			}
@@ -589,7 +595,7 @@ func Catalog(ctx Context) []Scope {
 			Entries: entries(
 				Details.Start, Details.Stop, Details.Restart,
 				Details.Pull, Details.Remove, Details.Logs,
-				Details.CopyURL, Details.Healthcheck,
+				Details.CopyURL, Details.Healthcheck, Details.Boot,
 				Details.EditService, Details.EditFile,
 				Details.Save, Details.OpenEditor,
 			),

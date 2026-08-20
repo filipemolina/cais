@@ -73,6 +73,61 @@ func TestAddHealthcheckMsgErrorSetsNoHint(t *testing.T) {
 	}
 }
 
+// A successful restart-policy cycle on a running service sets the same
+// apply hint the healthcheck insert does - restart: is a container-level
+// attribute, applied only when the container is recreated.
+func TestCycleRestartPolicyMsgSetsTheApplyHintForARunningService(t *testing.T) {
+	svc := types.ServiceConfig{Name: "db", Image: "postgres:16"}
+	m := Model{
+		service:     &svc,
+		panelWidth:  100,
+		panelHeight: 30,
+		containers:  []apptypes.DockerContainer{{Service: "db", State: "running"}},
+	}
+
+	updated, _ := m.Update(cmds.CycleRestartPolicyMsg{ServiceName: "db", Policy: "unless-stopped"})
+	got := updated.(Model)
+
+	if got.applyHint == "" {
+		t.Fatal("applyHint is empty, want the apply-gap hint")
+	}
+	if !strings.Contains(got.applyHint, "press s") {
+		t.Errorf("applyHint = %q, want it to name s specifically", got.applyHint)
+	}
+}
+
+// A stopped service gets no hint - the config table already shows the new
+// policy once the reload lands.
+func TestCycleRestartPolicyMsgNoHintForAStoppedService(t *testing.T) {
+	svc := types.ServiceConfig{Name: "db", Image: "postgres:16"}
+	m := Model{service: &svc, panelWidth: 100, panelHeight: 30}
+
+	updated, _ := m.Update(cmds.CycleRestartPolicyMsg{ServiceName: "db", Policy: "unless-stopped"})
+	got := updated.(Model)
+
+	if got.applyHint != "" {
+		t.Errorf("applyHint = %q, want empty for a stopped service", got.applyHint)
+	}
+}
+
+// An error does not set the hint - nothing was applied.
+func TestCycleRestartPolicyMsgErrorSetsNoHint(t *testing.T) {
+	svc := types.ServiceConfig{Name: "db", Image: "postgres:16"}
+	m := Model{
+		service:     &svc,
+		panelWidth:  100,
+		panelHeight: 30,
+		containers:  []apptypes.DockerContainer{{Service: "db", State: "running"}},
+	}
+
+	updated, _ := m.Update(cmds.CycleRestartPolicyMsg{ServiceName: "db", Err: errBoom{}})
+	got := updated.(Model)
+
+	if got.applyHint != "" {
+		t.Errorf("applyHint = %q, want empty when the write failed", got.applyHint)
+	}
+}
+
 // A docker action request clears a stale apply hint - the user is already
 // doing something about it.
 func TestDockerActionClearsTheApplyHint(t *testing.T) {

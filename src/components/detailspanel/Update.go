@@ -74,6 +74,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.applyHint = "running: press s to apply - restart won't re-read the compose file"
 		}
 
+	case cmds.CycleRestartPolicyMsg:
+		if msg.Err == nil && m.service != nil && m.service.Name == msg.ServiceName && m.isServiceRunning(msg.ServiceName) {
+			m.applyHint = "running: press s to apply - restart won't re-read the compose file"
+		}
+
 	case cmds.InlineEditReadyMsg:
 		if msg.Select != nil {
 			m.service = msg.Select
@@ -172,6 +177,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		} else if key.Matches(msg, keys.Details.Healthcheck) {
 			finalCmds = append(finalCmds, cmds.OpenHealthcheckPicker(m.service.Name))
+		} else if key.Matches(msg, keys.Details.Boot) {
+			m.applyHint = ""
+			finalCmds = append(finalCmds, cmds.RequestCycleRestartPolicy(m.service.Name))
 		} else if key.Matches(msg, keys.Details.EditService) {
 			finalCmds = append(finalCmds, cmds.RequestInlineEdit(m.service.Name))
 		} else if key.Matches(msg, keys.Details.EditFile) {

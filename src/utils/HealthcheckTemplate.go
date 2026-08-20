@@ -229,3 +229,15 @@ func setMappingValue(mapping *yaml.Node, key string, value *yaml.Node) {
 	keyNode := &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: key}
 	mapping.Content = append(mapping.Content, keyNode, value)
 }
+
+// removeMappingValue deletes key from mapping if present. A no-op when the
+// key is absent, so callers can call it unconditionally rather than
+// checking first.
+func removeMappingValue(mapping *yaml.Node, key string) {
+	for i := 0; i+1 < len(mapping.Content); i += 2 {
+		if mapping.Content[i].Value == key {
+			mapping.Content = append(mapping.Content[:i], mapping.Content[i+2:]...)
+			return
+		}
+	}
+}

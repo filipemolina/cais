@@ -720,6 +720,42 @@ save was rejected — the editor this hint sits beside edits *any* config field,
 and recreating a running container unprompted is destructive; a hint is
 reversible, an action is not.
 
+### Boot persistence is a one-key cycle of the compose `restart:` field
+
+`B` on the Services details panel advances the selected service's `restart:`
+policy through Docker Compose's four valid values - unset, `on-failure`,
+`unless-stopped`, `always` - and back to unset, one step per press. No modal:
+unlike `Healthcheck`, which picks from a catalog of image-specific probes,
+every value here is already known and there is nothing to fill in, so a
+picker would be a screen in the way of a single decision.
+
+This is deliberately the compose-native mechanism and nothing more. Docker
+restarts a container on its own once the daemon comes back - after a reboot,
+included - when that container carries `unless-stopped` or `always` and the
+daemon itself is enabled to start at boot (`systemctl enable docker`, or
+Docker Desktop's own login-start setting); cais has no opinion about the
+daemon or the host's init system, only about what the compose file says.
+A systemd unit that runs `docker compose up -d` at boot was considered and
+rejected for now: it would be a second artifact cais owns outside
+compose/.env, needs root to install, and only exists on Linux - the opposite
+of "nothing extra to host."
+
+`utils.SetRestartPolicy` writes the field with the same read-modify-write
+shape `ApplyHealthcheck` uses - find the service's value node, set or remove
+one key, validate the whole candidate, then `ReplaceFileAtomically`. Landing
+back on the unset state removes the `restart:` key entirely rather than
+writing `restart: ""`, which compose does not accept; a hand-edited
+`restart: no` is treated as the same unset state so cycling from it does not
+get stuck one step behind the rest of the cycle.
+
+`B` reuses the same apply-gap hint `Healthcheck` sets: `restart:` is a
+container-level attribute, so a running container only picks up a new policy
+on the next `up -d`, not on `restart`. Rather than teach the panel a second
+hint, `CycleRestartPolicyMsg` sets `applyHint` through the identical
+condition (`AddHealthcheckMsg` and `CycleRestartPolicyMsg` both handled in
+`detailspanel.Update`) - one message shape, one hint, two write paths that
+share the same caveat.
+
 ### The panel footer
 
 Both details panels reserve their body's last line for a footer, laid out by
