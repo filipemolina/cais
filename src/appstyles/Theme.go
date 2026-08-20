@@ -194,10 +194,11 @@ func srgbLinearize(v float64) float64 {
 	return math.Pow((v+0.055)/1.055, 2.4)
 }
 
-// DefaultTheme is the theme a fresh AppModel starts with. Cais-dark is
-// the app's default palette; cais-day and cais-dusk remain selectable
-// through the theme picker (docs/DESIGN.md §11).
-const DefaultTheme = "cais-dark"
+// DefaultTheme is the theme a fresh AppModel starts with. Cais-dusk is
+// the app's default palette (changed 2026-08-18, was cais-dark); cais-dark
+// and cais-day remain selectable through the theme picker (docs/DESIGN.md
+// §11).
+const DefaultTheme = "cais-dusk"
 
 // Themes is the registry a theme picker (post-alpha, see docs/ROADMAP.md)
 // will choose from. Every entry is built through newTheme rather than a bare
@@ -206,8 +207,8 @@ const DefaultTheme = "cais-dark"
 // color.Color renders as no SGR at all, i.e. a background-bleed bug. See
 // src/appstyles/Theme_test.go and src/appstyles/Background_test.go.
 var Themes = map[string]Theme{
-	// cais-dark — default. Deep-water panel with a harbor-teal accent
-	// lifted to clear WCAG 3.0 against the dark surface. See
+	// cais-dark — deep-water panel with a harbor-teal accent lifted to
+	// clear WCAG 3.0 against the dark surface. See
 	// docs/plans/cais/cais-themes.md for the palette rationale.
 	"cais-dark": newTheme(themeParams{
 		Name:   "cais-dark",
@@ -224,11 +225,12 @@ var Themes = map[string]Theme{
 		Err:      lipgloss.Color("#EE7090"),
 	}),
 
-	// cais-dusk — second Cais dark variant. Cool slate-blue panel (NOT
-	// teal — a panel pulled from the same teal family would mash the
-	// brand color into the background) with the harbor-teal accent one
-	// step warmer than cais-dark. Modal lifts ~25 channel units above
-	// the elevated tier so the channel-diff floor of 14 is met.
+	// cais-dusk — default (changed 2026-08-18, was cais-dark). Cool
+	// slate-blue panel (NOT teal — a panel pulled from the same teal
+	// family would mash the brand color into the background) with the
+	// harbor-teal accent one step warmer than cais-dark. Modal lifts ~25
+	// channel units above the elevated tier so the channel-diff floor of
+	// 14 is met.
 	"cais-dusk": newTheme(themeParams{
 		Name:   "cais-dusk",
 		Dark:   true,
@@ -360,22 +362,6 @@ var Themes = map[string]Theme{
 		Err:      lipgloss.Color("#DC322F"),
 	}),
 
-	// one-dark — One Dark (github.com/joshdick/onedark.vim)
-	"one-dark": newTheme(themeParams{
-		Name:   "one-dark",
-		Dark:   true,
-		Accent: lipgloss.Color("#61AFEF"),
-		Text:   lipgloss.Color("#ABB2BF"),
-		Panel:  lipgloss.Color("#21252B"),
-		Modal:  lipgloss.Color("#2C323C"),
-		Danger: lipgloss.Color("#E06C75"),
-
-		Running:  lipgloss.Color("#98C379"),
-		Stopped:  lipgloss.Color("#828997"),
-		Starting: lipgloss.Color("#E5C07B"),
-		Err:      lipgloss.Color("#E06C75"),
-	}),
-
 	// everforest-dark — Everforest Dark (github.com/sainnhe/everforest)
 	"everforest-dark": newTheme(themeParams{
 		Name:   "everforest-dark",
@@ -392,11 +378,13 @@ var Themes = map[string]Theme{
 		Err:      lipgloss.Color("#E67E80"),
 	}),
 
-	// rose-pine — Rosé Pine (rosepinetheme.com)
+	// rose-pine — Rosé Pine (rosepinetheme.com). Accent is Rose, not Iris -
+	// Iris duplicated catppuccin-mocha/dracula's purple, and Rose is unused
+	// elsewhere in this theme (Foam and Gold are already Running/Starting).
 	"rose-pine": newTheme(themeParams{
 		Name:   "rose-pine",
 		Dark:   true,
-		Accent: lipgloss.Color("#C4A7E7"),
+		Accent: lipgloss.Color("#EBBCBA"),
 		Text:   lipgloss.Color("#E0DEF4"),
 		Panel:  lipgloss.Color("#191724"),
 		Modal:  lipgloss.Color("#403D52"),
@@ -408,20 +396,58 @@ var Themes = map[string]Theme{
 		Err:      lipgloss.Color("#EB6F92"),
 	}),
 
-	// kanagawa-wave — Kanagawa Wave (github.com/rebelot/kanagawa.nvim)
-	"kanagawa-wave": newTheme(themeParams{
-		Name:   "kanagawa-wave",
+	// monokai-pro — Monokai Pro (monokai.pro). Danger uses classic Monokai's
+	// red-magenta (#F92672), distinct from Pro's coral-pink accent.
+	"monokai-pro": newTheme(themeParams{
+		Name:   "monokai-pro",
 		Dark:   true,
-		Accent: lipgloss.Color("#7E9CD8"),
-		Text:   lipgloss.Color("#DCD7BA"),
-		Panel:  lipgloss.Color("#16161D"),
-		Modal:  lipgloss.Color("#223249"),
-		Danger: lipgloss.Color("#E82424"),
+		Accent: lipgloss.Color("#FF6188"),
+		Text:   lipgloss.Color("#FCFCFA"),
+		Panel:  lipgloss.Color("#221F22"),
+		Modal:  lipgloss.Color("#2E272E"),
+		Danger: lipgloss.Color("#F92672"),
 
-		Running:  lipgloss.Color("#98BB6C"),
-		Stopped:  lipgloss.Color("#727169"),
-		Starting: lipgloss.Color("#FF9E3B"),
-		Err:      lipgloss.Color("#E82424"),
+		Running:  lipgloss.Color("#A9DC76"),
+		Stopped:  lipgloss.Color("#7C797D"),
+		Starting: lipgloss.Color("#FFD866"),
+		Err:      lipgloss.Color("#F92672"),
+	}),
+
+	// gruvbox-light — Gruvbox Light (github.com/morhetz/gruvbox). Accent is
+	// the neutral red, not the orange gruvbox-dark already owns.
+	"gruvbox-light": newTheme(themeParams{
+		Name:   "gruvbox-light",
+		Dark:   false,
+		Accent: lipgloss.Color("#CC241D"),
+		Text:   lipgloss.Color("#3C3836"),
+		Panel:  lipgloss.Color("#F0EBC8"),
+		Modal:  lipgloss.Color("#FFFDF0"),
+		Danger: lipgloss.Color("#9D0006"),
+
+		Running:  lipgloss.Color("#79740E"),
+		Stopped:  lipgloss.Color("#7C6F64"),
+		Starting: lipgloss.Color("#B57614"),
+		Err:      lipgloss.Color("#9D0006"),
+	}),
+
+	// catppuccin-latte — Catppuccin Latte (github.com/catppuccin/catppuccin).
+	// Text and Accent are darkened from Catppuccin's own Text/Yellow swatches
+	// - those are tuned for contrast against Latte's Base, but TextMuted/
+	// TextDim lighten further still, and Panel here is a derived tier, not
+	// Base directly.
+	"catppuccin-latte": newTheme(themeParams{
+		Name:   "catppuccin-latte",
+		Dark:   false,
+		Accent: lipgloss.Color("#9A6300"),
+		Text:   lipgloss.Color("#33364A"),
+		Panel:  lipgloss.Color("#E9EBF0"),
+		Modal:  lipgloss.Color("#F8F9FC"),
+		Danger: lipgloss.Color("#D20F39"),
+
+		Running:  lipgloss.Color("#2B7A1C"),
+		Stopped:  lipgloss.Color("#6B6F80"),
+		Starting: lipgloss.Color("#B24C08"),
+		Err:      lipgloss.Color("#D20F39"),
 	}),
 }
 
