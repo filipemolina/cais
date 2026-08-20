@@ -213,11 +213,23 @@ advertises those close keys itself, built from the same bindings. It is also
 where the keys with no footer room live: the `alt`+letter aliases (one derived
 row), the `[`/`]` brackets, `g`/`G`, `shift+tab` and `ctrl+c`.
 
-`a` opens the About overlay: the ASCII brand mark reserved for it
-(`constants.LOGO`), the wordmark and slogan, the version, the license and the
-repo link. It is a read-only surface like the help overlay and closes on the
-same three keys (`a`, `esc`, `q`). `a` is advertised in the help overlay
-rather than the footer — the footer is width-constrained, and `?` is the
+Each scope renders one key/description **per line** rather than packing
+several side-by-side and wrapping — a scope with several keys used to read as
+a run-on paragraph once it wrapped past one line. The full catalog is taller
+than a terminal, so it windows and scrolls with `↑`/`↓`
+(`keys.Overlay.Navigation`), and narrows with the same `/`-fuzzy filter every
+list in the app already uses (`keys.List.Filter`), matching each entry's key
+and description text. A scope with no matching entry disappears entirely
+rather than leaving an empty heading, so filtering never breaks the section
+separation described above; the compose-files section is not a keybinding
+and only shows with an empty query.
+
+`a` opens the About overlay: the figlet brand mark (`banner.Banner`,
+gradient-colored from the active theme), the wordmark and slogan, the
+version, the license and the repo link. It is a read-only surface like the
+help overlay and closes on the same three keys (`a`, `esc`, `q`). `a` is
+advertised in the help overlay rather than the footer — the footer is
+width-constrained, and `?` is the
 comprehensive list — so it lives in `pressableNow` (always available) and the
 Catalog's Global scope, not in `Globals()` (the footer's pinned right side).
 
@@ -393,24 +405,18 @@ are plain text then. `E` still opens the whole compose file in `$EDITOR`,
 which is the only way to touch top-level keys (`name:`, `volumes:`, …).
 
 **Adding a service stays true to the same argument, one step earlier.** `n`
-on the Services page is a two-stage modal (Phase 2A of
-`docs/plans/image-search.md`): first a live, debounced search of Docker Hub
-— official images marked, star counts shown, powered by `docker search`
-through `utils.SearchImages` — then a confirm stage that collects only what
-a service cannot exist without: a name and an image, in the same two-field
-shape `servicefieldsstep` always had. Enter on the search stage takes the
-highlighted row, or the typed text verbatim when nothing is highlighted
-(which is how a `ghcr.io/...` reference, or any search failure, stays
-free text — the table is a shortcut, never a gate); the confirm stage
-pre-fills a service name derived from the image and flags a collision
-with an existing name the moment it renders, and writes a minimal two-line
-fragment via `utils.AddServiceFragment` and opens straight into the inline
-editor above. No wizard with a field for ports, volumes, environment: two
-fields, then the same YAML a hand-written service would have. `AddServiceFragment` mirrors
-`ApplyServiceFragment` (same fragment shape, same validation, same atomic
-write) but refuses a name that already exists rather than one that is
-missing, and inserts at the end of the `services:` mapping — the position a
-reader expects a new entry in.
+on the Services page opens a small two-field modal (Phase 1 of
+`docs/plans/image-search.md`; the search-first Phase 2A that briefly landed
+was removed in `v0.2.0`) that collects only what a service cannot exist
+without: a name and an image, in the shared `servicefieldsstep`. Enter
+writes a minimal two-line fragment via `utils.AddServiceFragment` and opens
+straight into the inline editor above. No wizard with a field for ports,
+volumes, environment: two fields, then the same YAML a hand-written service
+would have. `AddServiceFragment` mirrors `ApplyServiceFragment` (same
+fragment shape, same validation, same atomic write) but refuses a name
+that already exists rather than one that is missing, and inserts at the
+end of the `services:` mapping — the position a reader expects a new
+entry in.
 
 Nothing is written unless the fragment parses, keeps its name, and the whole
 resulting document still loads as compose — validated by writing a candidate
@@ -578,8 +584,9 @@ Home is the launchpad. Its body is a two-pane layout:
   NAME, IMAGE, STATE, HEALTH, UPTIME, PORTS), and a pinned footer (see *The
   panel footer* below).
 
-The large ASCII logo is no longer rendered here; it remains reserved for a
-future About modal.
+The large ASCII logo is no longer rendered here; the About modal carries the
+brand mark now, as the figlet banner (`banner.Banner`) - see *Where
+keybindings live* above.
 
 ### Services layout
 
@@ -609,9 +616,10 @@ body is a two-pane layout:
     rows below the first value. The table rows shown depend on what the service
     defines, and include: ports, **web** (a real hyperlink to the service's
     resolved URL, directly under ports - see below), container name, restart
-    policy, connected networks, volumes summary (count by bind/volume type),
-    healthcheck command (trimmed for brevity), depends_on, pull policy,
-    PUID/PGID (common in self-hosted *arr stacks), memory limits (in
+    policy, connected networks, volumes (bind mounts by container path,
+    named volumes by volume name), healthcheck command (trimmed for
+    brevity), depends_on, pull policy, PUID/PGID (common in self-hosted
+    *arr stacks), memory limits (in
     human-readable form via `docker/go-units`), and label count.
     
     When the service has a running container with stats data, a live runtime
@@ -832,8 +840,8 @@ are functions for the same reason, not package-level `var`s: a `var` built at
 init freezes whichever theme was active when the package loaded, and that
 used to be the whole palette's problem before this existed.
 
-`appstyles.Themes` is the registry (13 themes: 3 Cais themes
-cais-dark, cais-dusk and cais-day, plus 10 community schemes), built
+`appstyles.Themes` is the registry (14 themes: 3 Cais themes
+cais-dark, cais-dusk and cais-day, plus 11 community schemes), built
 by `appstyles.newTheme` from
 a handful of base colors - `Accent`, the text/panel/modal bases, `Danger`,
 the four status colors - with everything else derived by `Lighten`/`Darken`.
@@ -954,10 +962,10 @@ it, and `LoadConfig`/`SaveConfig` round-trip it automatically.
 
 Adding a theme is choosing the handful of base colors in `themeParams`
 (accent, text, panel, modal, danger, the four status colors); `newTheme`
-derives every other field. The 13 registered themes are cais-dark,
-cais-dusk and cais-day plus 10 community schemes (Catppuccin Mocha,
-Gruvbox Dark, Tokyo Night, Nord, Dracula, Solarized Dark, One Dark,
-Everforest Dark, Rosé Pine, Kanagawa Wave). The three Cais themes share
+derives every other field. The 14 registered themes are cais-dark,
+cais-dusk and cais-day plus 11 community schemes (Catppuccin Mocha,
+Catppuccin Latte, Gruvbox Dark, Gruvbox Light, Tokyo Night, Nord, Dracula,
+Solarized Dark, Everforest Dark, Rosé Pine, Monokai Pro). The three Cais themes share
 one set of status and danger colors on purpose: container state is a
 vocabulary the user shouldn't have to re-learn between them. An imported
 scheme brings its own, because a Cais teal dropped into Gruvbox would read
