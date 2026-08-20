@@ -1,0 +1,178 @@
+---
+title: Home
+description: cais — a keyboard-driven terminal UI for managing Docker Compose stacks. Documentation for users and contributors.
+---
+
+import HeroDemo from '../../components/HeroDemo.astro';
+
+<div class="hero">
+
+# cais
+
+**Run your self-hosted stack from the terminal, without leaving your compose file behind.**
+
+cais is a keyboard-driven terminal UI for a self-hosted stack running on Docker Compose. It reads your `compose.yml` and groups services the way you think about them. Nothing extra to host and nothing listening on a port.
+
+Your compose file stays the source of truth. Every change cais makes is written back into that file, comments and key order intact, so `docker compose` on the command line and cais never disagree about what your stack is.
+
+</div>
+
+<div class="terminal-frame">
+  <div class="titlebar">
+    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    <span class="path">~/homelab — cais</span>
+  </div>
+  <img
+    src="/landing-hero.png"
+    alt="cais Groups page showing the home group with calibre, homeassistant, and paperless services and their running states"
+    class="terminal-screenshot terminal-shot--day"
+  />
+  <img
+    src="/screenshot-groups.png"
+    alt="cais Groups page showing the media group with audiobookshelf, kavita, and navidrome services and their running states"
+    class="terminal-screenshot terminal-shot--dark"
+  />
+</div>
+
+<div class="card-grid">
+  <a href="/users/introduction/">
+    <div class="card-title">User Guide →</div>
+    <div class="card-desc">Install cais, point it at your compose stack, and manage groups, services, logs, healthchecks, and backups from the terminal.</div>
+  </a>
+  <a href="/contributors/overview/">
+    <div class="card-title">Contributor Guide →</div>
+    <div class="card-desc">Understand the architecture — the seven layers, the keybinding system, the write-safety design — and how to contribute.</div>
+  </a>
+</div>
+
+## See it in action
+
+<HeroDemo />
+
+## What it does
+
+### Groups, not a flat list of containers
+
+A group is a Compose `profiles:` tag. Start every service in a group with one key, tail all their logs with another, and see at a glance which are running, which are healthy, and on what ports.
+
+### Everything you need to check a service
+
+Ports, restart policy, networks, volumes, `depends_on`, healthcheck, image reference and resource limits — beside live memory, CPU, network and disk I/O for the running container.
+
+<div class="terminal-frame">
+  <div class="titlebar">
+    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    <span class="path">~/homelab — cais — the Services page</span>
+  </div>
+  <img
+    src="/landing-service.png"
+    alt="The Services page: one service's compose configuration side-by-side with its live runtime stats"
+    class="terminal-screenshot terminal-shot--day"
+  />
+  <img
+    src="/screenshot-service.png"
+    alt="The Services page: one service's compose configuration side-by-side with its live runtime stats"
+    class="terminal-screenshot terminal-shot--dark"
+  />
+</div>
+
+### Edit the compose file in place, as YAML
+
+`e` opens a service's own fragment in an inline editor: real YAML, not a form, so every Compose field is reachable. It validates as you type, auto-indents on Enter, indents with `tab`/`shift+tab`, and refuses to write a fragment that would not parse as Compose.
+
+<div class="terminal-frame">
+  <div class="titlebar">
+    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    <span class="path">~/homelab — cais — inline YAML editor with live validation</span>
+  </div>
+  <img
+    src="/landing-editor.png"
+    alt="The inline YAML editor open on a service, with live validation on the status line"
+    class="terminal-screenshot terminal-shot--day"
+  />
+  <img
+    src="/screenshot-editor.png"
+    alt="The inline YAML editor open on a service, with live validation on the status line"
+    class="terminal-screenshot terminal-shot--dark"
+  />
+</div>
+
+### Logs without leaving
+
+`l` streams `docker compose logs -f` for a service or a whole group in an overlay, with follow mode and scrollback.
+
+<div class="terminal-frame">
+  <div class="titlebar">
+    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    <span class="path">~/homelab — cais — streaming logs</span>
+  </div>
+  <img
+    src="/landing-logs.png"
+    alt="Streaming logs overlay for a running service"
+    class="terminal-screenshot terminal-shot--day"
+  />
+  <img
+    src="/screenshot-logs.png"
+    alt="Streaming logs overlay for a running service"
+    class="terminal-screenshot terminal-shot--dark"
+  />
+</div>
+
+### Your backups are browsable and restorable
+
+Every compose and `.env` write is snapshotted into `.cais/backups/` before it lands, so a bad edit is always reversible. Tab `4` lists every stored copy, newest first, with a live preview. `enter` restores; the current file is snapshotted first, so a restore is itself undoable.
+
+<div class="terminal-frame">
+  <div class="titlebar">
+    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    <span class="path">~/homelab — cais — Backups page</span>
+  </div>
+  <img
+    src="/landing-backups.png"
+    alt="The Backups page: every stored copy of the compose file and the .env, with a live preview"
+    class="terminal-screenshot terminal-shot--day"
+  />
+  <img
+    src="/screenshot-backups.png"
+    alt="The Backups page: every stored copy of the compose file and the .env, with a live preview"
+    class="terminal-screenshot terminal-shot--dark"
+  />
+</div>
+
+### Thirteen themes, previewed live
+
+Three cais themes (dark, dusk, day) and eleven community schemes — Catppuccin Mocha & Latte, Gruvbox Dark & Light, Tokyo Night, Nord, Dracula, Solarized Dark, Everforest Dark, Rosé Pine, Monokai Pro. Cursor movement in the theme picker previews live; `Enter` applies and persists.
+
+<div class="terminal-frame">
+  <div class="titlebar">
+    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    <span class="path">~/homelab — cais — theme picker</span>
+  </div>
+  <img
+    src="/landing-themes.png"
+    alt="The theme picker, cais-day active, over the Files page"
+    class="terminal-screenshot terminal-shot--day"
+  />
+  <img
+    src="/screenshot-themes.png"
+    alt="The theme picker, cais-dark active, over the Files page"
+    class="terminal-screenshot terminal-shot--dark"
+  />
+</div>
+
+Also: create, rename, and delete groups; a healthcheck template picker; a `.env` editor with masked values, copy, and reveal; a Files page with syntax-highlighted YAML; a `new-service` modal that writes a starter YAML fragment and drops you straight into the inline editor; a status re-poll every five seconds so panels reflect changes made outside the app; and a `?` overlay listing every key, with the ones that do nothing on the current screen dimmed.
+
+## Quick links
+
+- [Installation](/users/installation/) — prerequisites and the two ways to install
+- [Quickstart](/users/quickstart/) — running in under a minute
+- [Usage](/users/usage/) — the four pages, in depth
+- [Keybindings](/users/keybindings/) — the complete reference
+- [Architecture](/contributors/architecture/) — how the layers fit together
+- [Contributing](/contributors/contributing/) — how to get involved
+
+## Built with
+
+Go, [Bubble Tea](https://github.com/charmbracelet/bubbletea) / [Lip Gloss](https://github.com/charmbracelet/lipgloss) for the UI, and [compose-go](https://github.com/compose-spec/compose-go), the same parser Docker itself uses, for the file. Docker actions shell out to the `docker compose` CLI rather than binding the SDK, so what the app does is what you would have typed.
+
+[MIT](https://github.com/filipemolina/cais/blob/main/LICENSE) licensed. © 2026 Filipe Molina.

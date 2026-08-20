@@ -1,0 +1,447 @@
+/* cais documentation — palette matched to the TUI's cais-dark (dark) and
+   cais-day (light) themes in src/appstyles/Theme.go.
+
+   Dark
+     Accent   #5FB8AF  harbor teal
+     Panel    #0F2B33  deep water
+     Modal    #3A5860  raised surface
+     Text     #F2EFE9  warm cream
+     Danger   #E6736E
+   Light
+     Accent   #1F5E5E  darkened teal (stays a chip on cream)
+     Panel    #F1ECE2  warm cream
+     Modal    #FBF7EF
+     Text     #1B3232
+     Danger   #B33A3A
+
+   Starlight's gray-1..6 run brightest→darkest text/surface. We map them onto
+   tiers derived from the theme's Panel (lightened for dark, darkened for
+   light) so cards, hairlines, and nav chrome all sit inside the same family
+   as the TUI, not just the hero. */
+
+:root {
+  /* Accent scale — Starlight consumes accent-low/accent/accent-high for
+     link hovers, focus rings, tab underlines. */
+  --sl-color-accent-low: #123f3d;
+  --sl-color-accent: #5fb8af;
+  --sl-color-accent-high: #b6e0da;
+
+  /* Text/surface ladder (dark). */
+  --sl-color-white: #f2efe9;         /* TextPrimary */
+  --sl-color-gray-1: #e2ded6;
+  --sl-color-gray-2: #b8b3aa;        /* TextMuted-ish */
+  --sl-color-gray-3: #8a9498;        /* TextDim-ish */
+  --sl-color-gray-4: #4d6a71;
+  --sl-color-gray-5: #24444d;        /* BackgroundElevated */
+  --sl-color-gray-6: #17363f;        /* BackgroundContent */
+  --sl-color-black: #0f2b33;         /* PanelBg */
+
+  --sl-color-bg: #0f2b33;
+  --sl-color-bg-nav: #143540;
+  --sl-color-bg-sidebar: #12313a;
+  --sl-color-bg-inline-code: #1a3a44;
+  --sl-color-bg-accent: #5fb8af;
+
+  --sl-color-hairline: #082129;
+  --sl-color-hairline-light: #1e4652;
+  --sl-color-hairline-shade: #082129;
+
+  /* App-level status hues (theme-invariant in the TUI too — see
+     Theme.InkOn/StatusRunning/StatusStarting/StatusError). Used for the
+     terminal-frame traffic-light dots and inline accents. */
+  --cais-status-running: #7dc79e;
+  --cais-status-starting: #f5c98a;
+  --cais-status-error: #ee7090;
+  --cais-danger: #e6736e;
+
+  /* Convenience aliases for the hand-rolled cards / terminal chrome
+     below — kept so the rest of the file reads as "surface" and "text"
+     rather than raw palette values. */
+  --cais-bg: var(--sl-color-bg);
+  --cais-panel: #143540;             /* BackgroundContent */
+  --cais-elevated: #1c4050;          /* BackgroundElevated */
+  --cais-modal: #3a5860;             /* ModalBg */
+  --cais-border: var(--sl-color-hairline-light);
+  --cais-border-card: #37606a;       /* BorderCard */
+  --cais-text: var(--sl-color-white);
+  --cais-text-dim: var(--sl-color-gray-3);
+}
+
+/* Light theme — Starlight sets data-theme="light" on <html> when the user
+   picks the sun. We ship a cais-day palette rather than reusing the default
+   Starlight light. */
+:root[data-theme='light'] {
+  --sl-color-accent-low: #c4d9d9;
+  --sl-color-accent: #1f5e5e;
+  --sl-color-accent-high: #0a3232;
+
+  --sl-color-white: #1b3232;         /* TextPrimary on cream */
+  --sl-color-gray-1: #2a4141;
+  --sl-color-gray-2: #445959;
+  --sl-color-gray-3: #6b7a7a;
+  --sl-color-gray-4: #8c9998;
+  --sl-color-gray-5: #cfc9bb;        /* darkened panel */
+  --sl-color-gray-6: #e5dfd1;
+  --sl-color-gray-7: #ebe6d9;
+  --sl-color-black: #f1ece2;         /* PanelBg (cream) */
+
+  --sl-color-bg: #f1ece2;
+  --sl-color-bg-nav: #ebe5d5;
+  --sl-color-bg-sidebar: #ede7d8;
+  --sl-color-bg-inline-code: #e5dfd1;
+  --sl-color-bg-accent: #1f5e5e;
+
+  --sl-color-hairline: #d2cabd;
+  --sl-color-hairline-light: #c6bda8;
+  --sl-color-hairline-shade: #b8ae97;
+
+  --cais-status-running: #1e7f4e;
+  --cais-status-starting: #b07933;
+  --cais-status-error: #c0243f;
+  --cais-danger: #b33a3a;
+
+  --cais-bg: var(--sl-color-bg);
+  --cais-panel: #e8e2d3;
+  --cais-elevated: #fbf7ef;          /* ModalBg — lifts above the cream */
+  --cais-modal: #fbf7ef;
+  --cais-border: var(--sl-color-hairline);
+  --cais-border-card: #b9ae97;
+  --cais-text: var(--sl-color-white);
+  --cais-text-dim: var(--sl-color-gray-3);
+}
+
+/* Typography: sans for prose, mono reserved for code and the terminal frame. */
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif,
+    'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+h1, h2, h3, h4 {
+  letter-spacing: -0.02em;
+}
+
+code,
+kbd,
+samp,
+pre,
+.terminal-frame,
+.terminal-frame .titlebar .path {
+  font-family: ui-monospace, 'JetBrains Mono', 'Fira Code', 'Fira Mono',
+    'Source Code Pro', Menlo, Consolas, 'Liberation Mono', 'Courier New', monospace;
+}
+
+/* Landing hero. */
+.hero {
+  padding: 3rem 0 1.5rem;
+}
+
+.hero h1 {
+  font-size: 2.75rem;
+  line-height: 1.1;
+  margin-bottom: 0.5rem;
+}
+
+.hero .tagline {
+  font-size: 1.15rem;
+  color: var(--cais-text-dim);
+  max-width: 42rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Terminal-window frame for hero visuals. The hairline border/panel tint
+   used elsewhere is too close to the page background to read as a window
+   edge, so this frame borrows the higher-contrast card border/elevated
+   tones instead. */
+.terminal-frame {
+  margin: 2rem 0 1rem;
+  border: 1px solid var(--cais-border-card);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--cais-bg);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme='light'] .terminal-frame {
+  box-shadow: 0 8px 24px rgba(31, 94, 94, 0.12);
+}
+
+.terminal-frame .titlebar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--sl-color-gray-5);
+  border-bottom: 1px solid var(--cais-border-card);
+  font-size: 0.75rem;
+  color: var(--cais-text-dim);
+}
+
+.terminal-frame .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--cais-border);
+}
+
+/* Traffic-light dots recolored to the TUI's status hues so the frame reads
+   as "cais" rather than "mac window". */
+.terminal-frame .dot:first-child { background: var(--cais-status-error); }
+.terminal-frame .dot:nth-child(2) { background: var(--cais-status-starting); }
+.terminal-frame .dot:nth-child(3) { background: var(--cais-status-running); }
+
+.terminal-frame .titlebar .path {
+  margin-left: 0.5rem;
+}
+
+.terminal-frame .terminal-screenshot {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  border: none;
+  background: var(--cais-bg);
+}
+
+/* Theme-aware screenshot: Starlight sets data-theme on <html>. Dark is the
+   default (also the no-JS fallback); day shot only when explicitly light. */
+.terminal-frame .terminal-shot--day { display: none; }
+html[data-theme='light'] .terminal-frame .terminal-shot--day { display: block; }
+html[data-theme='light'] .terminal-frame .terminal-shot--dark { display: none; }
+
+/* Landing page link cards. */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.stacked-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.stacked-cards > * { margin-top: 0 !important; }
+
+.card-grid a {
+  display: block;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--cais-border-card);
+  border-radius: 8px;
+  background: var(--cais-elevated);
+  color: var(--cais-text);
+  text-decoration: none;
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card-grid a:hover {
+  border-color: var(--sl-color-accent);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(95, 184, 175, 0.18);
+}
+
+:root[data-theme='light'] .card-grid a:hover {
+  box-shadow: 0 6px 18px rgba(31, 94, 94, 0.14);
+}
+
+.card-grid .card-title {
+  font-weight: 700;
+  color: var(--sl-color-white);
+  margin-bottom: 0.35rem;
+}
+
+.card-grid .card-desc {
+  font-size: 0.9rem;
+  color: var(--cais-text-dim);
+}
+
+/* Code blocks: bordered, terminal-like. */
+.sl-markdown-content pre {
+  border: 1px solid var(--cais-border);
+  border-radius: 6px;
+}
+
+/* Expressive Code terminal frames (```bash and other shell fences) render
+   with their own titlebar-plus-dots chrome. Three defaults break the
+   illusion: the dots are a single muted color, the inner <pre> keeps its
+   own rounded border inside the frame, and the header/body share one
+   background so there's no titlebar to see. Override all three so the
+   frame reads as an actual terminal window in the cais palette. */
+
+.expressive-code .frame.is-terminal {
+  border: 1px solid var(--cais-border-card);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme='light'] .expressive-code .frame.is-terminal {
+  box-shadow: 0 8px 24px rgba(31, 94, 94, 0.12);
+}
+
+/* Zero out the inner pre's own rounded border and stray border color so it
+   sits flush inside the frame's chrome. */
+.expressive-code .frame.is-terminal pre,
+.expressive-code .frame.is-terminal figure > pre {
+  border: none;
+  border-radius: 0;
+  background: var(--cais-panel) !important;
+  margin: 0;
+}
+
+/* Titlebar gets the elevated tier so it reads as a distinct strip above the
+   body, not the same surface as the code. */
+.expressive-code .frame.is-terminal .header {
+  background: var(--sl-color-gray-5) !important;
+  border-bottom: 1px solid var(--cais-border-card);
+}
+
+/* Three real traffic lights: error / starting / running, left to right,
+   drawn as three colored dots layered over the header. */
+.expressive-code .frame.is-terminal .header::before {
+  background:
+    radial-gradient(circle at 5px 50%,  var(--cais-status-error)    3.75px, transparent 4.25px),
+    radial-gradient(circle at 17px 50%, var(--cais-status-starting) 3.75px, transparent 4.25px),
+    radial-gradient(circle at 29px 50%, var(--cais-status-running)  3.75px, transparent 4.25px) !important;
+  background-repeat: no-repeat !important;
+  opacity: 1 !important;
+}
+
+/* Tables: subtle borders, header tint from the panel tier. */
+.sl-markdown-content table {
+  border: 1px solid var(--cais-border);
+}
+
+.sl-markdown-content th {
+  background: var(--cais-panel);
+}
+
+/* Callouts: keep Starlight structure, accent-tint the note variant. */
+.starlight-aside--note {
+  border-color: var(--sl-color-accent);
+}
+
+/* Build-time rendered mermaid diagrams: centered, scrollable when wide. */
+.mermaid-diagram {
+  display: flex;
+  justify-content: center;
+  margin: 2rem 0;
+  overflow-x: auto;
+}
+
+.mermaid-diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Theme preview grid (users/themes.mdx): one mini terminal-frame per
+   registered theme, drawn from that theme's own derived colors via CSS
+   custom properties set per card — not the site's own light/dark mode,
+   which only controls the chrome around the grid. */
+.theme-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0 2rem;
+}
+
+.theme-preview-card {
+  border-radius: 8px;
+  border: 1px solid var(--tp-border);
+  background: var(--tp-panel);
+  overflow: hidden;
+  font-family: ui-monospace, 'JetBrains Mono', 'Fira Code', 'Fira Mono',
+    'Source Code Pro', Menlo, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.theme-preview-card .tp-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.6rem;
+  background: var(--tp-elevated);
+  border-bottom: 1px solid var(--tp-border);
+}
+
+.theme-preview-card .tp-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tp-accent);
+  flex-shrink: 0;
+}
+
+.theme-preview-card .tp-name {
+  font-size: 0.68rem;
+  color: var(--tp-text);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.theme-preview-card .tp-default {
+  margin-left: auto;
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--tp-accent);
+  color: var(--tp-accent-ink);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.theme-preview-card .tp-body {
+  padding: 0.55rem 0.65rem 0.3rem;
+}
+
+.theme-preview-card .tp-title {
+  font-size: 0.78rem;
+  color: var(--tp-text);
+  margin-bottom: 0.2rem;
+}
+
+.theme-preview-card .tp-sub {
+  font-size: 0.62rem;
+  color: var(--tp-muted);
+  margin-bottom: 0.5rem;
+}
+
+.theme-preview-card .tp-row {
+  font-size: 0.68rem;
+  padding: 0.3rem 0.45rem;
+  border-radius: 4px;
+  background: var(--tp-modal);
+  color: var(--tp-text);
+  margin-bottom: 0.45rem;
+}
+
+.theme-preview-card .tp-row::before {
+  content: '▸ ';
+  color: var(--tp-accent);
+}
+
+.theme-preview-card .tp-hint {
+  font-size: 0.56rem;
+  color: var(--tp-dim);
+  margin-bottom: 0.5rem;
+}
+
+.theme-preview-card .tp-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0 0.65rem 0.65rem;
+}
+
+.theme-preview-card .tp-pill {
+  font-size: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.12rem 0.35rem;
+  border-radius: 999px;
+  font-weight: 700;
+}

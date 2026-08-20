@@ -1,0 +1,68 @@
+---
+// The hero demo video: light/dark variants toggled by the same
+// terminal-shot--day/--dark CSS classes the screenshot pairs use (see
+// custom.css). Lives in its own .astro file, not index.mdx, because MDX
+// parses <script> children as JSX - the curly braces and comparisons a real
+// autoplay-sync script needs break that parser. Astro components don't have
+// that restriction.
+---
+
+<div class="terminal-frame">
+  <div class="titlebar">
+    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    <span class="path">~/homelab — cais — starting a group, tailing logs, editing a service</span>
+  </div>
+  <video
+    class="terminal-screenshot terminal-shot--day"
+    loop
+    muted
+    playsinline
+    poster="/landing-demo-poster.webp"
+    aria-label="Animated demo: starting a group of services, tailing their logs, and editing one inline"
+  >
+    <source src="/landing-demo.mp4" type="video/mp4" />
+  </video>
+  <video
+    class="terminal-screenshot terminal-shot--dark"
+    loop
+    muted
+    playsinline
+    poster="/landing-demo-dark-poster.webp"
+    aria-label="Animated demo: starting a group of services, tailing their logs, and editing one inline"
+  >
+    <source src="/landing-demo-dark.mp4" type="video/mp4" />
+  </video>
+</div>
+
+<script>
+  // Only the theme-matching hero video plays; the hidden one (CSS `display:
+  // none` from terminal-shot--day/--dark) stays paused instead of decoding
+  // in the background too - both would otherwise autoplay at once, which the
+  // page's sub-second load budget (see demo/landing-demo.tape) doesn't have
+  // room for.
+  const videos = document.querySelectorAll<HTMLVideoElement>(
+    '.terminal-frame video.terminal-screenshot',
+  );
+
+  function sync() {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    videos.forEach((v) => {
+      const shouldPlay = isLight
+        ? v.classList.contains('terminal-shot--day')
+        : v.classList.contains('terminal-shot--dark');
+      if (shouldPlay) {
+        if (v.paused) v.play().catch(() => {});
+      } else {
+        v.pause();
+      }
+    });
+  }
+
+  if (videos.length) {
+    sync();
+    new MutationObserver(sync).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+  }
+</script>
