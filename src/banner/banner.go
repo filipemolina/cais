@@ -1,7 +1,8 @@
 // Package banner renders the Cais ASCII art banner for use as the
-// TUI title and CLI startup splash. The figlet text is shared across all
-// three repos; only the color gradient differs, sourced from that repo's
-// active appstyles.Theme.
+// TUI title and CLI startup splash - in this repo, the About modal's brand
+// mark (aboutmodal.Model.View). The figlet text is shared across all three
+// repos; only the color gradient differs, sourced from that repo's active
+// appstyles.Theme.
 package banner
 
 import (

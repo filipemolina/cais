@@ -8,15 +8,16 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/filipemolina/cais/src/appstyles"
+	"github.com/filipemolina/cais/src/banner"
 	"github.com/filipemolina/cais/src/cmds"
 	"github.com/filipemolina/cais/src/components/chrome"
 	"github.com/filipemolina/cais/src/constants"
 	"github.com/filipemolina/cais/src/keys"
 )
 
-// Model is the About overlay: the ASCII brand mark reserved for it
-// (constants.LOGO), the version, the license, and the repo link. It is a
-// read-only surface like the help overlay, and closes on the same three keys:
+// Model is the About overlay: the figlet brand mark (banner.Banner), the
+// version, the license, and the repo link. It is a read-only surface like
+// the help overlay, and closes on the same three keys:
 // the one that opened it (a toggle would be a fourth binding for one job), esc
 // (the cancel every overlay answers), and q (the quitter's habit, which closes
 // the overlay rather than quitting the app while it owns the keyboard).
@@ -46,9 +47,10 @@ func (m Model) View() tea.View {
 
 	sections := []string{
 		chrome.ModalTitle("About"),
-		// The brand mark carries its own color (truecolor purple); render it
-		// as-is so the embedded SGR codes land untouched.
-		constants.LOGO,
+		// The figlet carries its own gradient, rendered fresh from the active
+		// theme on every call; render it as-is so the embedded SGR codes land
+		// untouched.
+		banner.Banner(appstyles.Active),
 		fmt.Sprintf("%s %s",
 			primary.Render(constants.WORDMARK),
 			dim.Render(constants.SLOGAN)),
