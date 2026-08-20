@@ -28,6 +28,7 @@ func ReadConfigFile(fileName string) (*types.Project, error) {
 	options, projectErr := cli.NewProjectOptions(
 		[]string{path},
 		cli.WithOsEnv,
+		cli.WithEnvFiles(),
 		cli.WithDotEnv,
 		cli.WithName(projectName),
 	)
@@ -67,6 +68,7 @@ func ReadConfigFileExt(fileName string) (*types.Project, string, bool, error) {
 	options, projectErr := cli.NewProjectOptions(
 		[]string{path},
 		cli.WithOsEnv,
+		cli.WithEnvFiles(),
 		cli.WithDotEnv,
 		cli.WithName(projectName),
 	)
