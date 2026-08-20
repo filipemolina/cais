@@ -320,6 +320,107 @@ func TestAddServiceFragmentLeavesTheFileUntouchedOnValidationFailure(t *testing.
 	}
 }
 
+func TestDeleteServiceRemovesTheEntry(t *testing.T) {
+	path := writeFixture(t, fragmentFixture)
+
+	if err := DeleteService(path, "cache"); err != nil {
+		t.Fatalf("DeleteService: %v", err)
+	}
+
+	after := readFile(t, path)
+	if strings.Contains(after, "cache:") || strings.Contains(after, "redis:alpine") {
+		t.Errorf("cache was not removed, got:\n%s", after)
+	}
+
+	// Everything else has to survive, comments included.
+	for _, untouched := range []string{
+		"app:", "# core services", "postgres:alpine # the database",
+	} {
+		if !strings.Contains(after, untouched) {
+			t.Errorf("deleting cache lost %q, got:\n%s", untouched, after)
+		}
+	}
+}
+
+func TestDeleteServiceUnknownService(t *testing.T) {
+	path := writeFixture(t, fragmentFixture)
+	before := readFile(t, path)
+
+	err := DeleteService(path, "nope")
+	if err == nil {
+		t.Fatal("expected an unknown service to be refused")
+	}
+	if !strings.Contains(err.Error(), "not found") {
+		t.Errorf("error %q does not say the service was not found", err)
+	}
+
+	if after := readFile(t, path); after != before {
+		t.Errorf("a rejected delete changed the file:\n%s", after)
+	}
+}
+
+// Deleting a service another one depends_on: would leave a dangling
+// reference - ensureNoDependents refuses it explicitly, and the file must be
+// left exactly as it was before the attempt.
+func TestDeleteServiceRefusedWhenSomethingDependsOnIt(t *testing.T) {
+	fixture := `services:
+  db:
+    image: postgres:alpine
+  app:
+    image: nginx:alpine
+    depends_on:
+      - db
+`
+	path := writeFixture(t, fixture)
+	before := readFile(t, path)
+
+	err := DeleteService(path, "db")
+	if err == nil {
+		t.Fatal("expected the delete to be refused")
+	}
+	if !strings.Contains(err.Error(), `"app" depends on "db"`) {
+		t.Errorf("error %q does not explain the dangling depends_on", err)
+	}
+
+	if after := readFile(t, path); after != before {
+		t.Errorf("a rejected delete changed the file:\n%s", after)
+	}
+}
+
+// Regression test: both services carrying a profiles: tag - the common case
+// for cais, where depends_on typically links two members of the same group -
+// used to slip past this guard. compose-go's own consistency check only
+// walks project.Services, the profile-enabled set for whatever profile (none
+// here) ReadConfigFile asks for; a tagged service loads into
+// project.DisabledServices instead and was never visited, so deleting "db"
+// here used to silently succeed and leave "app"'s depends_on dangling.
+func TestDeleteServiceRefusedWhenAGroupedDependentDependsOnIt(t *testing.T) {
+	fixture := `services:
+  db:
+    image: postgres:alpine
+    profiles: ["core"]
+  app:
+    image: nginx:alpine
+    profiles: ["core"]
+    depends_on:
+      - db
+`
+	path := writeFixture(t, fixture)
+	before := readFile(t, path)
+
+	err := DeleteService(path, "db")
+	if err == nil {
+		t.Fatal("expected the delete to be refused")
+	}
+	if !strings.Contains(err.Error(), `"app" depends on "db"`) {
+		t.Errorf("error %q does not explain the dangling depends_on", err)
+	}
+
+	if after := readFile(t, path); after != before {
+		t.Errorf("a rejected delete changed the file:\n%s", after)
+	}
+}
+
 func readFile(t *testing.T, path string) string {
 	t.Helper()
 

@@ -67,7 +67,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.urlMessage = ""
 			m.applyHint = ""
 		}
-		m.service = &service
+		// The zero ServiceConfig means "nothing is selected" - configSyncCmds
+		// sends it when the services list has just gone empty (e.g. the
+		// selected service was deleted) instead of leaving the previous
+		// selection standing with nothing behind it. Adopting it as a real
+		// service would render its empty name; nil is what every other empty
+		// path (View's "Select a service" card) already checks for.
+		if service.Name == "" {
+			m.service = nil
+		} else {
+			m.service = &service
+		}
 
 	case cmds.AddHealthcheckMsg:
 		if msg.Err == nil && m.service != nil && m.service.Name == msg.ServiceName && m.isServiceRunning(msg.ServiceName) {

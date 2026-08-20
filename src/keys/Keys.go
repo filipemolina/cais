@@ -428,14 +428,17 @@ func Active(ctx Context) []key.Binding {
 	case "Services":
 		switch ctx.Focused {
 		case constants.COMPONENT_BODY_LIST:
-			// The services list is read-only for management - services are
-			// created by editing the compose file, not from here - but it
-			// offers the same quick-action pair the groups list does: Stop
-			// next to Select's quick start, no Tab to the details panel
-			// required. Parity with the Home list.
+			// The services list offers the same pair the groups list does:
+			// Stop next to Select's quick start, ahead of Delete - no Tab to
+			// the details panel required for any of the three. New and Edit
+			// stay off this list: a new service is a bigger flow than a
+			// group tag (see cmds.OpenAddServiceModal, bound globally by
+			// List.New), and there is no per-field edit here to widen -
+			// EditService already means "open the inline YAML editor",
+			// which needs the details panel's textarea, not a list row.
 			var own []key.Binding
 			if !ctx.ListEmpty {
-				own = append(own, Details.Stop)
+				own = append(own, Details.Stop, List.Delete)
 			}
 
 			return listKeys(ctx, own...)

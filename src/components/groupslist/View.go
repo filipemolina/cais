@@ -95,16 +95,35 @@ func (d GroupsListCustomDelegate) Render(w io.Writer, m list.Model, index int, l
 // statsLine is the counts footer, in the longest form that fits `width`
 // columns. It has to fit on one row: it is the panel's last line, so wrapping
 // it eats into the padding below instead of just pushing the list down.
+//
+// The ungrouped count only means something once groups exist to be left out
+// of - with none yet, every service is ungrouped by definition (see
+// groupdetailspanel.renderServiceOverview), so the number would just repeat
+// Services rather than warn about anything. It sheds before the core three
+// on a narrow terminal (the "shed whole things" rule in docs/DESIGN.md,
+// *Narrow terminals*): the standing count is a courtesy, not the panel's own
+// verb, so it goes first when there is no room for it.
 func statsLine(stats cmds.SetHomeStatsMsg, width int) string {
-	full := fmt.Sprintf("%d %s · %d %s · %d running",
+	core := fmt.Sprintf("%d %s · %d %s · %d running",
 		stats.Groups, plural(stats.Groups, "group"),
 		stats.Services, plural(stats.Services, "service"),
 		stats.Running)
-	if lipgloss.Width(full) <= width {
-		return full
+	shortCore := fmt.Sprintf("%d grp · %d svc · %d run", stats.Groups, stats.Services, stats.Running)
+
+	if stats.Groups > 0 && stats.Ungrouped > 0 {
+		if withNote := core + fmt.Sprintf(" · %d ungrouped, always run", stats.Ungrouped); lipgloss.Width(withNote) <= width {
+			return withNote
+		}
+		if withNote := shortCore + fmt.Sprintf(" · %d ungrp", stats.Ungrouped); lipgloss.Width(withNote) <= width {
+			return withNote
+		}
 	}
 
-	return fmt.Sprintf("%d grp · %d svc · %d run", stats.Groups, stats.Services, stats.Running)
+	if lipgloss.Width(core) <= width {
+		return core
+	}
+
+	return shortCore
 }
 
 // plural is the naive English plural of word for n: enough for the handful of

@@ -6,6 +6,7 @@ import (
 
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/filipemolina/cais/src/cmds"
 )
 
@@ -223,6 +224,55 @@ func TestVimLettersPageTheList(t *testing.T) {
 				t.Errorf("%q moved the list from page %d to page %d, want %d", test.keystroke, startPage, got, startPage+test.wantDelta)
 			}
 		})
+	}
+}
+
+// The ungrouped note only means anything once groups exist to be left out
+// of - with none yet, every service is ungrouped by definition, so the
+// count would just repeat Services rather than warn about anything.
+func TestStatsLineOmitsUngroupedUntilAGroupExists(t *testing.T) {
+	stats := cmds.SetHomeStatsMsg{Groups: 0, Services: 3, Running: 0, Ungrouped: 3}
+
+	got := statsLine(stats, 80)
+	if got != "0 groups · 3 services · 0 running" {
+		t.Errorf("statsLine with no groups: got %q", got)
+	}
+}
+
+func TestStatsLineNotesUngroupedServices(t *testing.T) {
+	stats := cmds.SetHomeStatsMsg{Groups: 1, Services: 3, Running: 1, Ungrouped: 2}
+
+	got := statsLine(stats, 80)
+	want := "1 group · 3 services · 1 running · 2 ungrouped, always run"
+	if got != want {
+		t.Errorf("statsLine with ungrouped services:\n got: %q\nwant: %q", got, want)
+	}
+}
+
+// A narrow terminal sheds the ungrouped note before it sheds the abbreviated
+// form of the core three counts - the same "shed whole things" ladder
+// docs/DESIGN.md documents for the footer and the member table: the note is
+// a courtesy, not the panel's own verb, so it goes first.
+func TestStatsLineShedsTheUngroupedNoteFirst(t *testing.T) {
+	stats := cmds.SetHomeStatsMsg{Groups: 1, Services: 3, Running: 1, Ungrouped: 2}
+
+	full := "1 group · 3 services · 1 running · 2 ungrouped, always run"
+	short := "1 grp · 3 svc · 1 run · 2 ungrp"
+	shortCore := "1 grp · 3 svc · 1 run"
+
+	tests := []struct {
+		width int
+		want  string
+	}{
+		{80, full},
+		{lipgloss.Width(short), short},
+		{lipgloss.Width(short) - 1, shortCore},
+	}
+
+	for _, tc := range tests {
+		if got := statsLine(stats, tc.width); got != tc.want {
+			t.Errorf("statsLine at width %d: got %q, want %q", tc.width, got, tc.want)
+		}
 	}
 }
 

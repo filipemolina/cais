@@ -38,16 +38,17 @@ Act on the body's left panel — the groups list and the services list.
 | --- | --- |
 | `↑` `↓` `k` `j` | Move the cursor |
 | `space` / `enter` | Select (start the selected item) |
+| `t` | Stop the highlighted item — the quick-action pair to `space`/`enter`, no `Tab` to the details panel required |
 | `n` | New — a group on the Groups page, a service on the Services page |
 | `e` | Edit — a group's membership on the Groups page |
-| `d` | Delete (confirm-guarded) — groups list only |
+| `d` | Delete (confirm-guarded) — a group on the Groups page, a service's whole compose entry on the Services page |
 | `R` | Rename group — groups list only |
 | `/` | Filter the list by name |
 | `esc` | Clear an applied filter |
 | `enter` / `esc` | Apply / cancel a filter being typed |
 | `g` / `G` | First / last row |
 
-The services list is read-only: services are created by editing the compose file, not from here.
+Deleting a service is refused if another service still names it in `depends_on:` — the confirm explains why instead of leaving the file broken.
 
 ## Details
 

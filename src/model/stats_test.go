@@ -7,7 +7,38 @@ import (
 	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/cmds"
 	"github.com/filipemolina/cais/src/utils"
+
+	"github.com/compose-spec/compose-go/v2/types"
 )
+
+// A service with no profiles: tag is started by Compose alongside every
+// group, not just the group the user picked - homeStats surfaces that count
+// on its own (cmds.SetHomeStatsMsg.Ungrouped) so it is not something the
+// user only discovers by tracing a failed start back to a service they never
+// selected.
+func TestHomeStatsCountsUngroupedServices(t *testing.T) {
+	m := GetInitialModel(utils.ComposeSource{})
+	m.config.configProject = &types.Project{
+		Services: types.Services{
+			"web":   types.ServiceConfig{Name: "web", Profiles: []string{"core"}},
+			"db":    types.ServiceConfig{Name: "db", Profiles: []string{"core"}},
+			"proxy": types.ServiceConfig{Name: "proxy"},
+			"cache": types.ServiceConfig{Name: "cache"},
+		},
+	}
+
+	groups, services, _, ungrouped := m.homeStats()
+
+	if groups != 1 {
+		t.Errorf("groups = %d, want 1", groups)
+	}
+	if services != 4 {
+		t.Errorf("services = %d, want 4", services)
+	}
+	if ungrouped != 2 {
+		t.Errorf("ungrouped = %d, want 2 (proxy and cache carry no profile)", ungrouped)
+	}
+}
 
 // A background poll suppresses GetRunningContainersMsg so components wait for
 // the enriched GetContainerStatsMsg instead. When the stats fetch fails, that

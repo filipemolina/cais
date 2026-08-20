@@ -149,6 +149,97 @@ func AddServiceFragment(fileName string, serviceName string, fragment []byte) er
 	return ReplaceFileAtomically(fileName, candidate)
 }
 
+// DeleteService removes serviceName's entry from the services: mapping in
+// fileName - AddServiceFragment's opposite number, minus a fragment to parse.
+//
+// The removal goes through the same validate-by-reload every other writer in
+// this file uses, plus an explicit dependents check ValidateComposeCandidate
+// alone cannot cover - see ensureNoDependents.
+func DeleteService(fileName string, serviceName string) error {
+	if err := ensureNoDependents(fileName, serviceName); err != nil {
+		return err
+	}
+
+	doc, err := readComposeNode(fileName)
+	if err != nil {
+		return err
+	}
+
+	servicesNode, err := servicesMappingNode(doc)
+	if err != nil {
+		return err
+	}
+
+	removed := false
+	for i := 0; i+1 < len(servicesNode.Content); i += 2 {
+		if servicesNode.Content[i].Value == serviceName {
+			servicesNode.Content = append(servicesNode.Content[:i], servicesNode.Content[i+2:]...)
+			removed = true
+			break
+		}
+	}
+
+	if !removed {
+		return fmt.Errorf("service %q not found in compose file", serviceName)
+	}
+
+	candidate, err := encodeNode(doc)
+	if err != nil {
+		return err
+	}
+
+	// Still run the general reload check too: it is what catches every other
+	// way a removal could leave the document broken (e.g. a network: or
+	// volume: block left orphaned), the same guarantee every other writer in
+	// this file gives.
+	if err := ValidateComposeCandidate(filepath.Dir(fileName), candidate); err != nil {
+		return err
+	}
+
+	return ReplaceFileAtomically(fileName, candidate)
+}
+
+// ensureNoDependents refuses to delete a service another one still names in
+// depends_on:.
+//
+// This cannot be left to ValidateComposeCandidate's reload-and-check alone.
+// compose-go's own consistency check (loader.checkConsistency) only walks
+// project.Services - the profile-enabled set for whatever profile (if any)
+// the load was asked for - and ReadConfigFile asks for none, so a service
+// carrying a profiles: tag is loaded into project.DisabledServices instead
+// and is never visited by that check. depends_on between two members of the
+// same group is exactly this shape (both tagged, neither in project.Services
+// without --profile), which is the common case for cais, not an edge case -
+// so relying on the reload alone would silently accept a deletion that
+// leaves a grouped service's depends_on dangling. This checks every service
+// regardless of profile, merging Services and DisabledServices the same way
+// AppModel.configSyncCmds does to build the full list cais shows.
+func ensureNoDependents(fileName, serviceName string) error {
+	project, err := ReadConfigFile(fileName)
+	if err != nil {
+		return err
+	}
+
+	for name, svc := range project.Services {
+		if name == serviceName {
+			continue
+		}
+		if _, ok := svc.DependsOn[serviceName]; ok {
+			return fmt.Errorf("service %q depends on %q: remove that depends_on entry (or delete %q too) before deleting %q", name, serviceName, name, serviceName)
+		}
+	}
+	for name, svc := range project.DisabledServices {
+		if name == serviceName {
+			continue
+		}
+		if _, ok := svc.DependsOn[serviceName]; ok {
+			return fmt.Errorf("service %q depends on %q: remove that depends_on entry (or delete %q too) before deleting %q", name, serviceName, name, serviceName)
+		}
+	}
+
+	return nil
+}
+
 // addServicesMappingNode is servicesMappingNode's insertion counterpart: it
 // returns doc's services: mapping node, creating it (as an empty mapping)
 // when the key is absent, and replacing it in place when present but null -

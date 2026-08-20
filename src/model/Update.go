@@ -181,20 +181,36 @@ func (m AppModel) configSyncCmds() []tea.Cmd {
 	// Re-select what the user had selected before the reload. A missing name
 	// (nothing selected yet, or it was removed or renamed outside the app)
 	// gives -1, and falling back to the first entry is the only answer left.
+	// An empty list broadcasts the zero ServiceConfig instead of skipping the
+	// message: without it, deleting the last (or only) service left
+	// detailspanel holding the deleted service's stale data forever, because
+	// nothing ever told it the selection was gone - SetSelectedServiceMsg was
+	// the only message that changed m.service, and configSyncCmds never sent
+	// one for an empty list.
 	syncCmds = append(syncCmds, cmds.SetServicesList(orderedServices))
 	if len(orderedServices) > 0 {
 		index := slices.IndexFunc(orderedServices, func(service types.ServiceConfig) bool {
 			return service.Name == m.selection.serviceName
 		})
 		syncCmds = append(syncCmds, cmds.SetSelectedService(orderedServices[max(0, index)]))
+	} else {
+		syncCmds = append(syncCmds, cmds.SetSelectedService(types.ServiceConfig{}))
 	}
 
 	orderedGroups := m.allGroupNames()
 
+	// Same fix, mirrored for groups: an empty groups list broadcasts "" as
+	// the selection rather than leaving the last value standing.
+	// groupdetailspanel happens to mask this today (it falls back to the
+	// service-overview state whenever no group exists, regardless of
+	// m.selectedGroup), but the mirror keeps the two paths from silently
+	// diverging on a fix like the one above.
 	syncCmds = append(syncCmds, cmds.SetGroupsList(orderedGroups))
 	if len(orderedGroups) > 0 {
 		index := slices.Index(orderedGroups, m.selection.groupName)
 		syncCmds = append(syncCmds, cmds.SetSelectedGroup(orderedGroups[max(0, index)]))
+	} else {
+		syncCmds = append(syncCmds, cmds.SetSelectedGroup(""))
 	}
 
 	return syncCmds
@@ -803,6 +819,17 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds.DeleteGroup(m.config.configFileName, groupName),
 		)
 
+	case cmds.OpenDeleteServiceModalMsg:
+		// Unlike a group delete (which only strips a tag), this removes the
+		// service's whole entry from the compose file - the confirm text
+		// says so, and utils.DeleteService refuses the write if another
+		// service's depends_on: still names it.
+		serviceName := string(msg)
+		m.activeModal = confirmmodal.New(
+			fmt.Sprintf("Delete service %q?\nThis removes it from the compose file, not just its container.", serviceName),
+			cmds.DeleteService(m.config.configFileName, serviceName),
+		)
+
 	case cmds.OpenEditGroupModalMsg:
 		if m.config.configProject != nil {
 			members := m.groupMembers(msg.GroupName)
@@ -1048,6 +1075,21 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case cmds.DeleteGroupMsg:
+		m.lastErrorFromPoll = false
+		if msg.Err != nil {
+			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
+		} else {
+			m.lastError = ""
+			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
+		}
+		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
+			finalCmds = append(finalCmds, cfCmd)
+		}
+		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
+			finalCmds = append(finalCmds, bodyCmd)
+		}
+
+	case cmds.DeleteServiceMsg:
 		m.lastErrorFromPoll = false
 		if msg.Err != nil {
 			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))

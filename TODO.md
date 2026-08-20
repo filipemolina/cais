@@ -482,6 +482,26 @@ up in full in `docs/plans/`; `docs/ROADMAP.md` has the order and the reasons.
   (inline editor, docker actions, action buttons, logs modal) preserved.
   Branch: `service-details-redesign`.
 
+- [x] **[S] Delete a service, and warn about ungrouped ones** — `d` on the
+  services list opens a confirm modal and removes the service's whole entry
+  from the compose file (`utils.DeleteService`); previously `x` (Remove)
+  only ever touched the *container*, and there was no in-app way to delete a
+  service definition at all. The delete is refused if another service still
+  names it in `depends_on:` (`utils.ensureNoDependents`) — checked across
+  both `project.Services` and `project.DisabledServices`, because
+  compose-go's own consistency check only walks the profile-enabled set and
+  silently misses a `depends_on:` between two tagged (grouped) services,
+  which is cais's common case. Fixed a related latent bug along the way:
+  `configSyncCmds` now sends an empty selection instead of skipping the
+  message when a list reloads to zero items, so deleting the last selected
+  service no longer leaves `detailspanel` showing a service that no longer
+  exists. Separately, the groups list's stats footer now counts services
+  with no `profiles:` tag once a group exists (`N ungrouped, always run`) —
+  Compose starts an untagged service alongside *every* group regardless of
+  which one was picked, so a broken one can block every group's start
+  without ever being the group the user selected. See *Deleting a service*
+  and §3 in `docs/DESIGN.md`.
+
 ## Housekeeping
 
 - [x] **[H] The HEALTH column was never populated** — `docker compose ps

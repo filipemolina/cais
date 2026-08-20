@@ -19,9 +19,11 @@ The home page operates on **groups of services** — a group being a Compose `pr
 
 - The **groups list** shows every derived group with a status header.
 - The **group details** panel shows a header card with a status pill, a running/stopped/services summary, and the member-services table (status dot, name, image, state, health, uptime, ports).
-- With a group selected: `s` starts every service in the group, `t` stops, `r` restarts, `p` pulls, `x` removes (confirm-guarded), `l` tails all their logs.
+- With a group selected: `s` starts every service in the group, `t` stops, `r` restarts, `p` pulls, `x` removes (confirm-guarded), `l` tails all their logs. `space`/`enter` (start) and `t` (stop) also work straight from the list, no `Tab` to the details panel required.
 - `n` creates a new group (pick a name, then check which services belong to it). `e` edits a group's membership. `R` renames, `d` deletes (confirm-guarded).
 - When no groups exist but the file has services, the details panel shows a service overview over every loaded service — so you can see what you have before creating the first group.
+
+**A service with no `profiles:` tag is not "in no group" — it starts alongside every group.** Compose brings up an untagged service for *any* `--profile` you request, cais's included, so it rides along on whichever group you pick even though the groups list never shows it. If it's broken, it can block every group's start without ever being the one you selected. Once at least one group exists, the groups list's stats line at the bottom counts these for you (`N ungrouped, always run`) — worth checking there before chasing a failed start through groups it looks like it has nothing to do with.
 
 ## 2 · Services
 
@@ -29,7 +31,7 @@ The Services page is the counterpart to Home for single-service operations.
 
 ![The Services page: one service's configuration side by side with its live runtime stats](/screenshot-service.png)
 
-- The **services list** shows every compose service with status and memory summary per row.
+- The **services list** shows every compose service with status and memory summary per row. `space`/`enter` starts the highlighted service and `t` stops it, straight from the list; `d` opens a confirm to delete its whole entry from the compose file (refused if another service still names it in `depends_on:`).
 - The **service details** panel shows a header card (name, image, status line with coloured dot, state, health, uptime) and a compact PROPERTY | VALUE table of the service's compose configuration: ports, a live **web** hyperlink to the service's resolved URL, container name, restart policy, networks, volumes, healthcheck, `depends_on`, pull policy, PUID/PGID, memory limits, and label count.
 - When the service has a running container, a live runtime stats table joins it: memory usage + percentage, CPU, network I/O, disk I/O, PIDs, uptime.
 - With a service selected: `s`/`t`/`r`/`p`/`x` act on that one service, `l` streams its logs, `y` copies its URL, `h` opens the healthcheck template picker.
@@ -73,4 +75,4 @@ See [Backups](/users/backups/) for how the store works.
 - `T` opens the theme picker with live preview; `Enter` applies and persists, `Esc` restores the theme you started with.
 - `u` opens the usage overlay: Docker disk and memory usage bars.
 - `v` opens the `.env` editor modal: the variable table, a key editor, and the raw file editor in one surface. Variables are masked by default — `space` reveals the selected value, `c` copies it, `n`/`e`/`d` add/edit/delete, `o` opens the whole file in an inline editor. Writes are line-preserving, so comments and the variables you did not touch survive.
-- Destructive actions (`x` remove, `d` delete group) always go through a confirm modal. `y` confirms, `n` or `esc` cancels.
+- Destructive actions (`x` remove, `d` delete group or service) always go through a confirm modal. `y` confirms, `n` or `esc` cancels.

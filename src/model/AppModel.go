@@ -214,11 +214,17 @@ func (m AppModel) getBackupsCmdIfActive() tea.Cmd {
 
 // homeStats returns the counts shown in the home page status header:
 // groups (distinct Compose profiles), services (total in the project),
-// and running containers.
-func (m AppModel) homeStats() (groups, services, running int) {
+// running containers, and ungrouped (services with no profile tag - see
+// cmds.SetHomeStatsMsg for why that count matters on its own).
+func (m AppModel) homeStats() (groups, services, running, ungrouped int) {
 	if m.config.configProject != nil {
 		groups = len(m.allGroupNames())
 		services = len(m.config.configProject.Services)
+		for _, service := range m.config.configProject.Services {
+			if len(service.Profiles) == 0 {
+				ungrouped++
+			}
+		}
 	}
 	running = m.containers.runningCount
 	return
@@ -231,8 +237,8 @@ func (m AppModel) broadcastHomeStats() tea.Cmd {
 	if m.activePage != "Home" {
 		return nil
 	}
-	groups, services, running := m.homeStats()
-	return cmds.SetHomeStats(groups, services, running)
+	groups, services, running, ungrouped := m.homeStats()
+	return cmds.SetHomeStats(groups, services, running, ungrouped)
 }
 
 func (m *AppModel) UpdateInnerComponent(activePage string, msg tea.Msg) tea.Cmd {

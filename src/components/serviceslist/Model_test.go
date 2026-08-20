@@ -182,6 +182,39 @@ func TestStopStopsTheHighlightedService(t *testing.T) {
 	}
 }
 
+// d opens the delete confirm for the highlighted service - the same key,
+// same "delete the highlighted thing" meaning as the groups list's d.
+// Deletion itself goes through AppModel and a confirm modal (see
+// cmds.OpenDeleteServiceModal and utils.DeleteService), so this only pins
+// that the list asks for it.
+func TestDeleteOpensTheDeleteConfirmForTheHighlightedService(t *testing.T) {
+	list := drive(t, New(nil, 80, 24),
+		cmds.SetServicesListMsg(servicesOf("api", "db", "web")),
+		cmds.SetFocusMsg(1),
+	)
+
+	model, _ := list.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
+	moved, ok := model.(Model)
+	if !ok {
+		t.Fatalf("expected a Model, got %T", model)
+	}
+	if moved.activeService != "db" {
+		t.Fatalf("auto-select did not fire: activeService = %q", moved.activeService)
+	}
+
+	_, cmd := moved.Update(tea.KeyPressMsg{Code: 'd', Text: "d"})
+
+	var opened bool
+	for _, msg := range messagesFrom(cmd) {
+		if openMsg, ok := msg.(cmds.OpenDeleteServiceModalMsg); ok && string(openMsg) == "db" {
+			opened = true
+		}
+	}
+	if !opened {
+		t.Errorf("d did not open the delete confirm for db, got %#v", messagesFrom(cmd))
+	}
+}
+
 // Nothing is active until something is selected. The zero value would point
 // at row 0 and render the first service as though the user had picked it.
 func TestNoActiveRowBeforeAnySelection(t *testing.T) {

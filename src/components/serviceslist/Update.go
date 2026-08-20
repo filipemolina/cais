@@ -156,6 +156,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.activeService != "" {
 				finalCmds = append(finalCmds, cmds.RequestDockerAction("stop", m.activeService, false))
 			}
+
+		case key.Matches(msg, keys.List.Delete):
+			// d deletes the service's whole entry from the compose file -
+			// same key, same "delete the highlighted thing" meaning as the
+			// groups list's d, widened rather than given a second key. Goes
+			// through a confirm modal because, unlike a group delete, this
+			// removes a service definition rather than just a tag.
+			if m.activeService != "" {
+				finalCmds = append(finalCmds, cmds.OpenDeleteServiceModal(m.activeService))
+			}
 		}
 
 	// AppModel decides which service is selected after a config reload, so

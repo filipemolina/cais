@@ -82,6 +82,10 @@ The home page operates on **groups of services**; the Services page operates on 
 
 The data consequence: creating a group is tagging services with a new profile name; deleting a group is stripping that tag; editing membership is reconciling tags so exactly the chosen services carry it. Renaming a group is a value rename (`utils.RenameGroupTag`) — nothing else in a compose file references a profile by name, so a rename cannot leave dangling references the way a service rename would.
 
+**An untagged service is not "no group" — it is every group.** Compose starts a service with no `profiles:` key alongside any profile that is requested, so it rides along on whichever group's `up`/`start` is run even though cais's groups list never shows it. The groups list's stats footer (`groupslist.statsLine`) counts these once a group exists, specifically so a broken one is discoverable without tracing a failed start back to a service nobody selected.
+
+Deleting a service (`d` on the services list, `utils.DeleteService`) is refused when another service still names it in `depends_on:`. This check cannot be left to compose-go's own consistency check: that check only walks `project.Services`, the profile-*enabled* set for whatever profile the load asked for (none, from `ReadConfigFile`) — a tagged service loads into `project.DisabledServices` instead and is silently skipped. `utils.ensureNoDependents` scans both maps explicitly, because a `depends_on:` between two members of the same group is the common case for cais's data model, not an edge case.
+
 ## Narrow terminals: shed whole things
 
 lipgloss pads to `Width` but does not truncate, so a fixed set of controls squeezed into a panel narrower than their own labels wraps on the cell. Three surfaces answer this the same way: **drop whole units, in a declared priority order, until what is left fits.**

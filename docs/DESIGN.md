@@ -66,6 +66,20 @@ This means:
 This is a deliberate constraint: we don't add a separate "groups" file or a
 sidecar index. The user's `compose.yml` is the source of truth.
 
+**An untagged service is not "no group" — it is every group.** Docker
+Compose starts a service with no `profiles:` key alongside *any* profile
+that is requested, cais's included: `docker compose --profile core up -d`
+also brings up every service that carries no tag at all, the same as it
+would for `--profile anything-else`. Cais's groups list only shows what has
+a tag, so an untagged service is invisible there while still riding along
+on every group's start - and if it is broken (bad image, bad config), it
+can fail *every* group's start without ever being the group the user
+picked. This is Compose's own semantics, not something cais can opt out of,
+so the groups list's stats footer says how many ungrouped services exist
+once at least one group does (`cmds.SetHomeStatsMsg.Ungrouped`,
+`groupslist.statsLine`) - the standing count exists specifically so a
+failed start does not have to be traced back to a service nobody selected.
+
 ## 4. What home is not
 
 Home is **not** a dashboard. It is not a place to monitor metrics, see CPU
@@ -472,6 +486,60 @@ The request/response split is the one every write uses: the modal emits
 supplies the loaded file and runs `cmds.EditGroup`, and a success reloads the
 config so the lists re-derive from disk. A component never learns which file
 is loaded — see *One resolution, passed down* under *Which compose file*.
+
+### Deleting a service
+
+Before this, the only way to remove a service's whole entry from the
+compose file was to hand-edit it and restart cais — `x` (Remove) only ever
+ran `docker compose rm -fs`, which stops and removes a *container*, and
+never touched the file; `e` (inline edit) can only replace an existing
+service's value node, never delete the key. That gap mattered in practice:
+a broken service (bad image, bad config) blocks every group's start (see
+§3's untagged-service note above, and the same is true of a broken *tagged*
+service the moment its group is picked), and there was no in-app recovery
+short of leaving the TUI to edit YAML by hand.
+
+`d` on the services list opens a confirm modal — the same key, same
+"delete the highlighted thing" meaning as `d` on the groups list, widened
+rather than given a second binding. Confirming runs `utils.DeleteService`,
+which removes the service's key from the `services:` mapping and writes
+through the same validate-then-atomic-write path every other compose
+writer in `src/utils/ServiceFragment.go` uses.
+
+**The unsupported case is a service another one still needs.** Deleting a
+service another one names in `depends_on:` would leave that reference
+dangling, so the delete is refused rather than silently breaking the file
+— the same call rename already makes (see *Editing services*), applied to
+the more destructive edit. This cannot be left to the general
+validate-by-reload check alone: compose-go's own consistency check
+(`loader.checkConsistency`) only walks `project.Services`, the
+profile-enabled set for whatever profile the load asked for, and
+`ReadConfigFile` asks for none — so a service carrying a `profiles:` tag
+loads into `project.DisabledServices` instead and is never visited by that
+check. A `depends_on:` between two members of the *same group* is exactly
+this shape (both tagged, neither in `project.Services` without
+`--profile`), which is the common case for cais's own data model, not an
+edge case. `utils.ensureNoDependents` checks every service regardless of
+profile — merging `Services` and `DisabledServices` the same way
+`AppModel.configSyncCmds` does to build the lists cais shows — before the
+node is ever removed, so the general reload check still runs afterward for
+everything else a removal could break, but is not relied on for this.
+
+Deleting the only (or last) selected service also exercised a latent gap
+in reload handling: `configSyncCmds` used to skip sending
+`cmds.SetSelectedService`/`SetSelectedGroup` entirely when the list it was
+re-deriving came back empty, on the theory that there was nothing to
+select. That left whichever component only updates on those messages —
+`detailspanel`, `groupdetailspanel` — holding the *previous* selection
+forever, rendering a service or group that no longer existed. Both messages
+are now sent unconditionally, with an empty value standing for "nothing is
+selected"; `detailspanel.Update` treats the zero `ServiceConfig` (empty
+`Name`) as "clear" rather than adopting it as a real service, which is what
+`View`'s existing `m.service == nil` check already renders as the "Select a
+service" empty card. `groupdetailspanel` needed no equivalent case: its
+empty state already keys off `knownGroups() == 0` rather than
+`m.selectedGroup`, so an empty `selectedGroup` was already handled, just
+never previously sent.
 
 ### The Files page
 

@@ -121,17 +121,24 @@ func TestReloadSelectsTheFirstEntryWithNoPriorSelection(t *testing.T) {
 	}
 }
 
-func TestReloadOfAnEmptyProjectSelectsNothing(t *testing.T) {
+// A reload down to zero services (e.g. the last one was just deleted) has to
+// broadcast an empty selection rather than send nothing: sending nothing left
+// the previous selection - "web" here - standing in every component that
+// only updates on a SetSelected*Msg, so detailspanel and groupdetailspanel
+// went on rendering a service/group that no longer existed. See
+// detailspanel.Update's SetSelectedServiceMsg case for the other half of
+// this fix, which treats the zero ServiceConfig as "clear".
+func TestReloadOfAnEmptyProjectClearsTheSelection(t *testing.T) {
 	m := AppModel{selection: selectionModel{serviceName: "web", groupName: "media"}}
 	m.config.configProject = projectWith(nil)
 
 	msgs := syncMsgs(m)
 
-	if got, ok := selectedServiceFrom(msgs); ok {
-		t.Errorf("empty project selected service %q, want no selection message", got)
+	if got, ok := selectedServiceFrom(msgs); !ok || got != "" {
+		t.Errorf("empty project selected service = (%q, %v), want (\"\", true)", got, ok)
 	}
-	if got, ok := selectedGroupFrom(msgs); ok {
-		t.Errorf("empty project selected group %q, want no selection message", got)
+	if got, ok := selectedGroupFrom(msgs); !ok || got != "" {
+		t.Errorf("empty project selected group = (%q, %v), want (\"\", true)", got, ok)
 	}
 }
 

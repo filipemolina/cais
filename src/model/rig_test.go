@@ -272,6 +272,137 @@ func TestRigAddService(t *testing.T) {
 	t.Fatalf("compose.yaml was not written with the new service to %s", dir)
 }
 
+// TestRigHomeNotesUngroupedServices drives the actual failure mode reported
+// against the app: a service with no profiles: tag is started by Compose
+// alongside *every* group, not just the one the user picked, so it silently
+// sabotages every group's start if it is broken. The groups list's stats
+// footer now says so on its own - this pins that it survives the real
+// render pipeline, not just statsLine's own unit tests.
+func TestRigHomeNotesUngroupedServices(t *testing.T) {
+	dir := t.TempDir()
+	fixture := `services:
+  web:
+    image: nginx:alpine
+    profiles: ["core"]
+  proxy:
+    image: traefik:v3
+`
+	if err := os.WriteFile(filepath.Join(dir, "compose.yaml"), []byte(fixture), 0o644); err != nil {
+		t.Fatalf("writing fixture: %v", err)
+	}
+	t.Chdir(dir)
+
+	r := newRig(t)
+	// The rig's 120-column terminal leaves the groups list panel narrower
+	// than the full "1 ungrouped, always run" note fits in, so the footer
+	// sheds to its abbreviated "1 ungrp" form - see statsLine's shedding
+	// ladder. Match the substring both forms share.
+	if !r.WaitFor("ungr", 3*time.Second) {
+		t.Fatalf("ungrouped note never appeared. Output:\n%s", r.Output())
+	}
+}
+
+// TestRigDeleteService drives the delete-service flow end to end on the
+// Services page: d opens a confirm, y writes the removal to the compose
+// file, and the reloaded list no longer shows the deleted service.
+func TestRigDeleteService(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "compose.yaml"), []byte(panelKeyFixture), 0o644); err != nil {
+		t.Fatalf("writing fixture: %v", err)
+	}
+	t.Chdir(dir)
+
+	r := newRig(t)
+	if !r.WaitFor("core", 3*time.Second) {
+		t.Fatal("groups never rendered")
+	}
+
+	r.Send(keyPress('2')) // Services page
+	if !r.WaitFor("PROPERTY", 3*time.Second) {
+		t.Fatalf("did not switch to the Services page. Output:\n%s", r.Output())
+	}
+
+	r.Send(letterKey('d'))
+	if !r.WaitFor("Delete service", 3*time.Second) {
+		t.Fatalf("delete confirm did not open. Output:\n%s\n=== DECODED ===\n%s", r.Output(), r.scr.String())
+	}
+
+	r.Send(letterKey('y'))
+	if !r.WaitForNot("Delete service", 3*time.Second) {
+		t.Fatalf("delete confirm did not close. Output:\n%s", r.Output())
+	}
+	if !r.WaitForNot("web", 3*time.Second) {
+		t.Fatalf("deleted service still on screen. Output:\n%s", r.Output())
+	}
+
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		contents, err := os.ReadFile(filepath.Join(dir, "compose.yaml"))
+		if err == nil && !strings.Contains(string(contents), "web:") {
+			return // success
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatalf("compose.yaml still contains the deleted service")
+}
+
+// TestRigDeleteServiceRefusedOnDanglingDependsOn drives the safety guard: a
+// service another one depends_on: cannot be deleted, and the confirm's
+// follow-up reports why instead of silently leaving the file broken.
+func TestRigDeleteServiceRefusedOnDanglingDependsOn(t *testing.T) {
+	d := t.TempDir()
+	// "db" sorts before "web" alphabetically, so it is the list's default
+	// selection (index 0) - the test deletes it without needing to navigate
+	// first.
+	fixture := `services:
+  db:
+    image: postgres:alpine
+    profiles: ["core"]
+  web:
+    image: nginx:alpine
+    profiles: ["core"]
+    depends_on:
+      - db
+`
+	if err := os.WriteFile(filepath.Join(d, "compose.yaml"), []byte(fixture), 0o644); err != nil {
+		t.Fatalf("writing fixture: %v", err)
+	}
+	t.Chdir(d)
+
+	r := newRig(t)
+	if !r.WaitFor("core", 3*time.Second) {
+		t.Fatal("groups never rendered")
+	}
+
+	r.Send(keyPress('2')) // Services page
+	// Wait for the details panel's own render, not just the list's - the
+	// list can paint before SetFocusMsg has landed on it (see
+	// TestRigAddService/TestRigDeleteService, which sync on the details
+	// panel for the same reason), and a 'd' sent before focus lands is
+	// dropped rather than queued.
+	if !r.WaitFor("PROPERTY", 3*time.Second) {
+		t.Fatalf("services list never rendered. Output:\n%s", r.Output())
+	}
+
+	r.Send(letterKey('d'))
+	if !r.WaitFor("Delete service", 3*time.Second) {
+		t.Fatalf("delete confirm did not open. Output:\n%s", r.Output())
+	}
+	r.Send(letterKey('y'))
+
+	if !r.WaitFor("depends on", 3*time.Second) {
+		t.Fatalf("the dangling depends_on was not reported. Output:\n%s\n=== DECODED ===\n%s", r.Output(), r.scr.String())
+	}
+
+	contents, err := os.ReadFile(filepath.Join(d, "compose.yaml"))
+	if err != nil {
+		t.Fatalf("reading compose.yaml: %v", err)
+	}
+	if !strings.Contains(string(contents), "db:") || !strings.Contains(string(contents), "depends_on") {
+		t.Fatalf("a refused delete changed the file:\n%s", contents)
+	}
+}
+
 // setupProjectDir drops a minimal compose project in a temp dir and moves
 // the test there. Extracted here so other rig panel-key tests can reuse it.
 func setupProjectDir(t *testing.T) {

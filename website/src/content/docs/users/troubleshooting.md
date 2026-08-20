@@ -38,6 +38,18 @@ The inline editor refuses to write a fragment that would not parse as Compose, a
 
 Every write is snapshotted into `.cais/backups/` before it lands. Tab `4` (Backups), pick the copy you want, `enter`/`r` to restore. A restore is itself undoable. See [Backups](/users/backups/).
 
+## A group won't start, and the error doesn't mention it
+
+Check whether any service has **no `profiles:` tag at all**. Compose starts an untagged service alongside *every* group you pick — not just the one it happens to sit near in the file — so a broken untagged service (bad image, invalid config) can fail every group's start without ever being the group you selected.
+
+- Once at least one group exists, the groups list's stats line at the bottom of the panel counts these: `N ungrouped, always run`.
+- Switch to the Services page (`2`) to see every service, tagged or not, and find the one causing the failure.
+- Either fix it, or tag it into a group (or a dedicated one of its own) so it stops running unconditionally. If it's not something you want at all, `d` on the Services page deletes it (confirm-guarded, refused if another service still `depends_on:` it).
+
+## I deleted a service and something else broke
+
+`d` on the Services page removes the service's whole entry from the compose file — not just its container, the way `x` (Remove) does. If another service still names it in `depends_on:`, the delete is refused and the file is left untouched; the confirm's error names which service depends on it. Remove that `depends_on:` entry (or delete the dependent too) first.
+
 ## The footer is missing hints
 
 On a terminal narrower than roughly 130 columns, the keybinding bar starts dropping hints in a declared priority order rather than wrapping to a second line. `? help` and `q quit` are never dropped, and `?` lists every key — so a shed hint is hidden, not lost. A narrow details panel also drops columns from the member table, widest and least important first, and never `q quit`, `? help`, or the service's own name.
