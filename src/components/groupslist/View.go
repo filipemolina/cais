@@ -69,14 +69,6 @@ func (d GroupsListCustomDelegate) Render(w io.Writer, m list.Model, index int, l
 		wrapperStyle = wrapperStyle.Bold(true)
 	}
 
-	titleStyle := lipgloss.NewStyle().
-		Bold(isActive).
-		Foreground(titleColor).
-		Background(rowBg).
-		Width(m.Width() - 2)
-
-	title := titleStyle.Render(item.Title())
-
 	// The status dot rides the far right of the title line: a green full
 	// circle when every member service is running, an amber half circle when
 	// some but not all are, and nothing when the group is stopped. It uses
@@ -84,10 +76,22 @@ func (d GroupsListCustomDelegate) Render(w io.Writer, m list.Model, index int, l
 	// the two read as one visual language.
 	dot := statusDot(item, rowBg)
 
-	// The title yields the dot's column (Width above is one less than the
-	// row), so joining the dot after it lands flush at the right edge without
-	// overflowing the row. A stopped group's empty dot adds nothing, keeping
-	// the row the same width either way.
+	// The wrapper's Width includes its Padding(1), so the content area is two
+	// columns narrower than the wrapper. The title and the dot must share that
+	// content area on one line: the title yields the dot's column and is
+	// truncated with an ellipsis when it does not fit, so a running or mixed
+	// group's dot always shows even at the cost of a shortened name.
+	contentWidth := max(0, (m.Width()-1)-2)
+	titleWidth := max(0, contentWidth-lipgloss.Width(dot))
+
+	titleStyle := lipgloss.NewStyle().
+		Bold(isActive).
+		Foreground(titleColor).
+		Background(rowBg).
+		Width(titleWidth)
+
+	title := titleStyle.Render(chrome.Truncate(item.Title(), titleWidth))
+
 	titleRow := lipgloss.JoinHorizontal(lipgloss.Left, title, dot)
 
 	content := wrapperStyle.Render(lipgloss.JoinVertical(lipgloss.Left, titleRow))
