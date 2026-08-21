@@ -24,7 +24,7 @@ func homeWithGroups(t *testing.T) AppModel {
 	t.Helper()
 
 	m := applyLayout(startup(120, 40))
-	m = drive(m, cmds.SetGroupsListMsg{"core", "media", "monitoring"})
+	m = drive(m, cmds.SetGroupsListMsg{{Name: "core"}, {Name: "media"}, {Name: "monitoring"}})
 
 	if m.keyboardOwned() {
 		t.Fatal("nothing should own the keyboard before a filter is started")
@@ -164,7 +164,7 @@ func TestApplyingTheFilterHandsTheKeyboardBack(t *testing.T) {
 // where the empty state says "press n" but the key only works on one panel.
 func TestNWorksFromEitherPanel(t *testing.T) {
 	m := applyLayout(startup(120, 40))
-	m = drive(m, cmds.SetGroupsListMsg{"core", "media"})
+	m = drive(m, cmds.SetGroupsListMsg{{Name: "core"}, {Name: "media"}})
 
 	// Switch focus to the details panel.
 	rightPanel := constants.COMPONENT_BODY_DETAILS

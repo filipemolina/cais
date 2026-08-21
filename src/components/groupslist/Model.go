@@ -64,7 +64,7 @@ func New(groups []string, width int, height int) tea.Model {
 	var items []list.Item
 
 	for _, group := range groups {
-		items = append(items, apptypes.GroupListItem(group))
+		items = append(items, apptypes.GroupListItem{Name: group})
 	}
 
 	// -1 rather than the zero value: no group is active until one is

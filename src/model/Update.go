@@ -205,7 +205,7 @@ func (m AppModel) configSyncCmds() []tea.Cmd {
 	// service-overview state whenever no group exists, regardless of
 	// m.selectedGroup), but the mirror keeps the two paths from silently
 	// diverging on a fix like the one above.
-	syncCmds = append(syncCmds, cmds.SetGroupsList(orderedGroups))
+	syncCmds = append(syncCmds, cmds.SetGroupsList(m.groupStatuses()))
 	if len(orderedGroups) > 0 {
 		index := slices.Index(orderedGroups, m.selection.groupName)
 		syncCmds = append(syncCmds, cmds.SetSelectedGroup(orderedGroups[max(0, index)]))
@@ -534,6 +534,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if homeStatsCmd := m.broadcastHomeStats(); homeStatsCmd != nil {
 			finalCmds = append(finalCmds, homeStatsCmd)
 		}
+		if groupsCmd := m.broadcastGroupsList(); groupsCmd != nil {
+			finalCmds = append(finalCmds, groupsCmd)
+		}
 		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
 			finalCmds = append(finalCmds, cfCmd)
 		}
@@ -601,6 +604,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.containers.runningCount = count
 			if homeStatsCmd := m.broadcastHomeStats(); homeStatsCmd != nil {
 				finalCmds = append(finalCmds, homeStatsCmd)
+			}
+			if groupsCmd := m.broadcastGroupsList(); groupsCmd != nil {
+				finalCmds = append(finalCmds, groupsCmd)
 			}
 		}
 		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
@@ -699,6 +705,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		finalCmds = append(finalCmds, m.configSyncCmds()...)
 		if homeStatsCmd := m.broadcastHomeStats(); homeStatsCmd != nil {
 			finalCmds = append(finalCmds, homeStatsCmd)
+		}
+		if groupsCmd := m.broadcastGroupsList(); groupsCmd != nil {
+			finalCmds = append(finalCmds, groupsCmd)
 		}
 		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
 			finalCmds = append(finalCmds, cfCmd)

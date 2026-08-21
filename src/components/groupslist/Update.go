@@ -17,7 +17,7 @@ func (m *Model) syncActiveIndex() {
 	active := -1
 
 	for i, item := range m.list.Items() {
-		if group, ok := item.(apptypes.GroupListItem); ok && string(group) == m.activeGroup {
+		if group, ok := item.(apptypes.GroupListItem); ok && group.Name == m.activeGroup {
 			active = i
 			break
 		}
@@ -79,17 +79,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case key.Matches(msg, keys.List.Delete):
 			if selectedGroup, ok := m.list.SelectedItem().(apptypes.GroupListItem); ok {
-				finalCmds = append(finalCmds, cmds.OpenDeleteGroupModal(string(selectedGroup)))
+				finalCmds = append(finalCmds, cmds.OpenDeleteGroupModal(selectedGroup.Name))
 			}
 
 		case key.Matches(msg, keys.List.Edit):
 			if selectedGroup, ok := m.list.SelectedItem().(apptypes.GroupListItem); ok {
-				finalCmds = append(finalCmds, cmds.OpenEditGroupModal(string(selectedGroup)))
+				finalCmds = append(finalCmds, cmds.OpenEditGroupModal(selectedGroup.Name))
 			}
 
 		case key.Matches(msg, keys.List.Rename):
 			if selectedGroup, ok := m.list.SelectedItem().(apptypes.GroupListItem); ok {
-				finalCmds = append(finalCmds, cmds.OpenRenameGroupModal(string(selectedGroup)))
+				finalCmds = append(finalCmds, cmds.OpenRenameGroupModal(selectedGroup.Name))
 			}
 		}
 
@@ -109,7 +109,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		groupsList := []list.Item{}
 
 		for _, group := range msg {
-			newGroup := apptypes.GroupListItem(group)
+			newGroup := apptypes.GroupListItem{
+				Name:    group.Name,
+				Running: group.Running,
+				Total:   group.Total,
+			}
 
 			groupsList = append(groupsList, newGroup)
 		}
@@ -143,9 +147,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.list.Index() != previousIndex {
 			if item := m.list.SelectedItem(); item != nil {
 				if group, ok := item.(apptypes.GroupListItem); ok {
-					m.activeGroup = string(group)
+					m.activeGroup = group.Name
 					m.syncActiveIndex()
-					finalCmds = append(finalCmds, cmds.SetSelectedGroup(string(group)))
+					finalCmds = append(finalCmds, cmds.SetSelectedGroup(group.Name))
 				}
 			}
 		}

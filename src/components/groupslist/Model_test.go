@@ -13,9 +13,9 @@ import (
 // groupNames makes n distinct group names, enough of them to force the list
 // onto more than one page.
 func groupNames(n int) cmds.SetGroupsListMsg {
-	names := make([]string, 0, n)
+	names := make([]cmds.GroupStatus, 0, n)
 	for i := range n {
-		names = append(names, fmt.Sprintf("group-%02d", i))
+		names = append(names, cmds.GroupStatus{Name: fmt.Sprintf("group-%02d", i)})
 	}
 
 	return cmds.SetGroupsListMsg(names)

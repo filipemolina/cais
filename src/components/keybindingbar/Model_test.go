@@ -264,7 +264,7 @@ func barAt(t *testing.T, width int) string {
 	var model tea.Model = New()
 	for _, msg := range []tea.Msg{
 		cmds.SetComposeFileMsg{Name: "/srv/homelab/compose.yaml"},
-		cmds.SetGroupsListMsg([]string{"media", "infra", "downloads"}),
+		cmds.SetGroupsListMsg([]cmds.GroupStatus{{Name: "media"}, {Name: "infra"}, {Name: "downloads"}}),
 		tea.WindowSizeMsg{Width: width, Height: 24},
 	} {
 		model, _ = model.Update(msg)

@@ -191,6 +191,47 @@ func (m AppModel) groupMembers(groupName string) []string {
 	return members
 }
 
+// groupStatuses returns the running/total counts for every group, so the
+// groups list can render a status dot per row. A group is "running" when
+// every member service has a live container in the running state; "mixed"
+// when some but not all do; "stopped" when none do.
+func (m AppModel) groupStatuses() []cmds.GroupStatus {
+	if m.config.configProject == nil {
+		return nil
+	}
+
+	groups := m.allGroupNames()
+	statuses := make([]cmds.GroupStatus, 0, len(groups))
+
+	for _, g := range groups {
+		members := m.groupMembers(g)
+		running := 0
+
+		for _, member := range members {
+			for _, c := range m.currentDockerContainers {
+				if c.Service == member && c.State == "running" {
+					running++
+					break
+				}
+			}
+		}
+
+		statuses = append(statuses, cmds.GroupStatus{Name: g, Running: running, Total: len(members)})
+	}
+
+	return statuses
+}
+
+// broadcastGroupsList returns a SetGroupsList command for the home page, or
+// nil if the active page isn't Home. Call this whenever the underlying
+// container state changes so the groups list's status dots stay in sync.
+func (m AppModel) broadcastGroupsList() tea.Cmd {
+	if m.activePage != "Home" {
+		return nil
+	}
+	return cmds.SetGroupsList(m.groupStatuses())
+}
+
 // recomposeFilesCmdIfActive returns a command that reads the raw compose
 // file for the Files page's viewport, or nil when the Files page is not
 // active. Called on page switch and after any write through the app, so

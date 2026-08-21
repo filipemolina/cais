@@ -73,11 +73,24 @@ func (d GroupsListCustomDelegate) Render(w io.Writer, m list.Model, index int, l
 		Bold(isActive).
 		Foreground(titleColor).
 		Background(rowBg).
-		Width(m.Width() - 1)
+		Width(m.Width() - 2)
 
 	title := titleStyle.Render(item.Title())
 
-	content := wrapperStyle.Render(lipgloss.JoinVertical(lipgloss.Left, title))
+	// The status dot rides the far right of the title line: a green full
+	// circle when every member service is running, an amber half circle when
+	// some but not all are, and nothing when the group is stopped. It uses
+	// the same glyphs and status colors as the member table's dot column, so
+	// the two read as one visual language.
+	dot := statusDot(item, rowBg)
+
+	// The title yields the dot's column (Width above is one less than the
+	// row), so joining the dot after it lands flush at the right edge without
+	// overflowing the row. A stopped group's empty dot adds nothing, keeping
+	// the row the same width either way.
+	titleRow := lipgloss.JoinHorizontal(lipgloss.Left, title, dot)
+
+	content := wrapperStyle.Render(lipgloss.JoinVertical(lipgloss.Left, titleRow))
 
 	// The bar spans the row's full height, one ▌ per line, rather than a sliver
 	// at the top - the nav's single-line bar stretched to the row's height.
@@ -90,6 +103,32 @@ func (d GroupsListCustomDelegate) Render(w io.Writer, m list.Model, index int, l
 
 	// Print the styled string to the Bubble Tea io.Writer
 	fmt.Fprint(w, row)
+}
+
+// statusDot returns the styled status glyph for a group row: a green full
+// circle when every member service is running, an amber half circle when some
+// but not all are, and an empty string when the group is stopped (no services
+// running). It mirrors the member table's dot column - same glyphs, same
+// status colors - so the group list and the details panel read as one visual
+// language. The dot is rendered on the row background so it stays legible
+// across selection/focus states.
+func statusDot(item apptypes.GroupListItem, rowBg color.Color) string {
+	var glyph string
+	var dotColor color.Color
+
+	switch {
+	case item.Total > 0 && item.Running == item.Total:
+		glyph, dotColor = "●", appstyles.Active.StatusRunning
+	case item.Running > 0:
+		glyph, dotColor = "◐", appstyles.Active.StatusStarting
+	default:
+		return ""
+	}
+
+	return lipgloss.NewStyle().
+		Foreground(dotColor).
+		Background(rowBg).
+		Render(glyph)
 }
 
 // statsLine is the counts footer, in the longest form that fits `width`
