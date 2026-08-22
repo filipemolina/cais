@@ -241,6 +241,50 @@ func ensureGroupTag(serviceNode *yaml.Node, groupName string) {
 	}
 }
 
+// NormalizeUngrouped reconciles the reserved profile in fileName in a single
+// read-modify-write pass: every service carrying ungroupedName alongside
+// another profile drops it, and every service with no profiles at all gains
+// it. Callers invoke it only while the reserved profile is materialized.
+// Returns nil without writing when the file already satisfies the invariant.
+func NormalizeUngrouped(fileName string, ungroupedName string) error {
+	doc, err := readComposeNode(fileName)
+	if err != nil {
+		return err
+	}
+
+	servicesNode, err := servicesMappingNode(doc)
+	if err != nil {
+		return err
+	}
+
+	changed := false
+	for i := 0; i+1 < len(servicesNode.Content); i += 2 {
+		serviceNode := servicesNode.Content[i+1]
+		profilesNode := findMappingValue(serviceNode, "profiles")
+
+		if profilesNode == nil {
+			// A service with no profiles key is ungrouped by derivation; while
+			// the reserved profile is materialized it must carry the tag.
+			ensureGroupTag(serviceNode, ungroupedName)
+			changed = true
+			continue
+		}
+
+		if sequenceContains(profilesNode, ungroupedName) && len(profilesNode.Content) > 1 {
+			// The reserved profile never coexists with another: the service
+			// has joined a real group, so it leaves the ungrouped one.
+			removeGroupFromService(serviceNode, ungroupedName)
+			changed = true
+		}
+	}
+
+	if !changed {
+		return nil
+	}
+
+	return writeComposeNode(fileName, doc)
+}
+
 // WriteNewComposeFile creates a brand-new compose file at fileName with a
 // top-level services mapping, optionally pre-seeded with one service. It
 // refuses to overwrite an existing file: the caller is expected to have

@@ -30,6 +30,10 @@ type Model struct {
 	// pendingAction is true while a docker action is running, so the footer
 	// can disable action key hints.
 	pendingAction bool
+	// ungroupedMaterialized is true when the reserved ungrouped row is backed
+	// by a written profile tag rather than derived, so the footer can
+	// advertise the row's 'A' verb (adopt vs release).
+	ungroupedMaterialized bool
 }
 
 func (m Model) Init() tea.Cmd { return nil }

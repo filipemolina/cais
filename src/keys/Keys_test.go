@@ -208,6 +208,38 @@ func TestCatalogListsTheChordAliases(t *testing.T) {
 	}
 }
 
+// The ungrouped row's 'A' verb flips with its materialization: adopt while
+// the row is derived, release once a real ungrouped profile backs it. The
+// other face is dimmed, and neither is offered on a real group.
+func TestUngroupedAdoptReleaseAvailability(t *testing.T) {
+	derived := Catalog(Context{Page: "Home", Focused: constants.COMPONENT_BODY_LIST, ReadOnlyGroup: true})
+	listScope := scopeTitled(t, derived, "List")
+	if !entryIn(t, listScope, List.AdoptUngrouped).Available {
+		t.Error("A adopt should be available on the derived ungrouped row")
+	}
+	if entryIn(t, listScope, List.ReleaseUngrouped).Available {
+		t.Error("A release should be dimmed while the row is derived")
+	}
+
+	materialized := Catalog(Context{Page: "Home", Focused: constants.COMPONENT_BODY_LIST, ReadOnlyGroup: true, UngroupedMaterialized: true})
+	listScope = scopeTitled(t, materialized, "List")
+	if !entryIn(t, listScope, List.ReleaseUngrouped).Available {
+		t.Error("A release should be available on the materialized ungrouped row")
+	}
+	if entryIn(t, listScope, List.AdoptUngrouped).Available {
+		t.Error("A adopt should be dimmed while the row is materialized")
+	}
+
+	realGroup := Catalog(Context{Page: "Home", Focused: constants.COMPONENT_BODY_LIST})
+	listScope = scopeTitled(t, realGroup, "List")
+	if entryIn(t, listScope, List.AdoptUngrouped).Available {
+		t.Error("A adopt should be dimmed on a real group")
+	}
+	if entryIn(t, listScope, List.ReleaseUngrouped).Available {
+		t.Error("A release should be dimmed on a real group")
+	}
+}
+
 // A binding identity is keystrokes plus help text: the overlay's dimming is
 // only as good as this comparison.
 func TestSameBinding(t *testing.T) {

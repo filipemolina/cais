@@ -50,6 +50,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case cmds.ClearPendingActionMsg:
 		m.pendingAction = false
+
+	case cmds.SetUngroupedMaterializedMsg:
+		m.ungroupedMaterialized = bool(msg)
 	}
 	return m, nil
 }

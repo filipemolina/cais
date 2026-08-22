@@ -81,18 +81,24 @@ type GlobalKeys struct {
 // the help overlay advertise them from the same place as everything else.
 // See ListKeyMap.
 type ListKeys struct {
-	Navigate     key.Binding
-	Select       key.Binding
-	New          key.Binding
-	Edit         key.Binding
-	Delete       key.Binding
-	Rename       key.Binding
-	Filter       key.Binding
-	ClearFilter  key.Binding
-	ApplyFilter  key.Binding
-	CancelFilter key.Binding
-	GoToStart    key.Binding
-	GoToEnd      key.Binding
+	Navigate key.Binding
+	Select   key.Binding
+	New      key.Binding
+	Edit     key.Binding
+	Delete   key.Binding
+	Rename   key.Binding
+	// A on the reserved ungrouped row toggles its materialization: adopt
+	// writes profiles: [ungrouped] onto every profile-less service, release
+	// removes it. One key, two faces - the footer shows the state-appropriate
+	// one (see Context.UngroupedMaterialized), the handler matches both.
+	AdoptUngrouped   key.Binding
+	ReleaseUngrouped key.Binding
+	Filter           key.Binding
+	ClearFilter      key.Binding
+	ApplyFilter      key.Binding
+	CancelFilter     key.Binding
+	GoToStart        key.Binding
+	GoToEnd          key.Binding
 }
 
 // DetailsKeys act on whatever the body's right panel is showing. The first six
@@ -199,9 +205,14 @@ var List = ListKeys{
 	// R on the groups list renames the highlighted group. Uppercase so it
 	// does not collide with the details panel's lowercase r (restart); the
 	// same shape as E next to e on the services panel.
-	Rename:      key.NewBinding(key.WithKeys("R"), key.WithHelp("R", "rename")),
-	Filter:      key.NewBinding(key.WithKeys("/"), key.WithHelp("/", "filter")),
-	ClearFilter: key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "clear filter")),
+	Rename: key.NewBinding(key.WithKeys("R"), key.WithHelp("R", "rename")),
+	// A is uppercase so it does not collide with Global.About's lowercase a.
+	// The ungrouped row is the only place either binding is offered; the
+	// footer picks adopt or release from Context.UngroupedMaterialized.
+	AdoptUngrouped:   key.NewBinding(key.WithKeys("A"), key.WithHelp("A", "adopt")),
+	ReleaseUngrouped: key.NewBinding(key.WithKeys("A"), key.WithHelp("A", "release")),
+	Filter:           key.NewBinding(key.WithKeys("/"), key.WithHelp("/", "filter")),
+	ClearFilter:      key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "clear filter")),
 	// The same keystrokes as Overlay.Submit and Overlay.Cancel, because a
 	// filtering list is an overlay. They are declared separately only so the
 	// help text can say what enter and esc do to a filter rather than the
@@ -348,6 +359,10 @@ type Context struct {
 	// profile tag, so the list-management verbs are not offered on it - the
 	// docker verbs still are.
 	ReadOnlyGroup bool
+	// UngroupedMaterialized is true when the reserved ungrouped row is backed
+	// by a written profile tag rather than derived. It decides whether the
+	// ungrouped row's 'A' verb is adopt or release.
+	UngroupedMaterialized bool
 	// Editing is true when the service details panel is in inline edit mode.
 	// The editor owns the keyboard, so the panel's action keys and the page
 	// digits are dead; the footer shows the editor-specific keys instead.
@@ -407,7 +422,16 @@ func Active(ctx Context) []key.Binding {
 				// docker actions the list offers without a Tab to the details
 				// panel, ahead of the list-management verbs.
 				own = append([]key.Binding{Details.Stop}, own...)
-				if !ctx.ReadOnlyGroup {
+				if ctx.ReadOnlyGroup {
+					// The reserved row's only list verb is the adopt/release
+					// toggle; which face it shows depends on whether a real
+					// ungrouped profile backs the row.
+					if ctx.UngroupedMaterialized {
+						own = append(own, List.ReleaseUngrouped)
+					} else {
+						own = append(own, List.AdoptUngrouped)
+					}
+				} else {
 					own = append(own, List.Edit, List.Delete, List.Rename)
 				}
 			}
@@ -603,7 +627,7 @@ func Catalog(ctx Context) []Scope {
 		{
 			Title: "List",
 			Entries: append(
-				entries(List.Select, List.New, List.Edit, List.Delete, List.Rename, List.Filter, List.ClearFilter, List.Navigate),
+				entries(List.Select, List.New, List.Edit, List.Delete, List.Rename, List.AdoptUngrouped, List.ReleaseUngrouped, List.Filter, List.ClearFilter, List.Navigate),
 				Entry{Binding: List.GoToStart, Available: listNavigable},
 				Entry{Binding: List.GoToEnd, Available: listNavigable},
 			),
