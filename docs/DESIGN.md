@@ -95,6 +95,21 @@ membership is derived, not chosen. Nothing is written to the compose file
 to make the row appear; a real profile named `ungrouped` written by hand
 wins over the derived row.
 
+**Cais can write that profile, but only when asked.** `A` on the ungrouped
+row adopts it — `profiles: [ungrouped]` onto every service that has none —
+and `A` again releases it. It is behind a confirmation that spells out the
+consequence, because the consequence is not local to cais: once *every*
+service in the file carries a profile, a plain `docker compose up -d` outside
+cais prints `no service selected` and starts nothing (measured on Compose
+v5.5.0). A cron job, a systemd unit or a habit would silently stop working,
+so this is never done on load, on reload, or as a migration — the write is a
+deliberate act, reversible from the same key, and snapshotted by
+`ReplaceFileAtomically` like every other compose write. Once adopted, the
+file is in *materialised* mode and `utils.NormalizeUngrouped` keeps the
+invariant after each group write: a service that joins a real group leaves
+`ungrouped`, one left with no profile rejoins it. See
+`docs/plans/ungrouped-services.md`.
+
 ## 4. What home is not
 
 Home is **not** a dashboard. It is not a place to monitor metrics, see CPU
@@ -798,9 +813,9 @@ about a file the user's tooling then rejects.
 existing config; only `up -d` re-reads compose. `detailspanel` already knows
 whether its service is running (no round trip through `AppModel` needed), so
 when `AddHealthcheckMsg` succeeds against a running service it sets the same
-footer slot the pending-action spinner uses: `running: press s
-to apply - restart won't re-read the compose file`. Auto-running `up -d` on
-save was rejected — the editor this hint sits beside edits *any* config field,
+footer slot the pending-action spinner uses: `running: press s to apply -
+restart won't re-read the compose file`. Auto-running `up -d` on save was
+rejected — the editor this hint sits beside edits *any* config field,
 and recreating a running container unprompted is destructive; a hint is
 reversible, an action is not.
 
@@ -849,6 +864,16 @@ panel's `copied http://…` confirmation after `y` (`docs/plans/service-urls.md`
 D6) - the pending-action spinner still wins when both would apply, since a
 running action is the more urgent thing to be looking at. Idle with nothing
 to report, a panel has no footer at all.
+
+**The group panel advertises no keys of its own.** It used to pin `Press s to
+start.` here whenever a selected group had nothing running. `s` is
+`keys.Details.Start`, which only the details panel matches, so the hint was
+dead text in the state the page opens in — the groups list has focus, and
+there a group starts with `space` (`keys.List.Select`). A panel-local hint
+has to re-derive which of the two keys is live from which component has
+focus; `keys.Active` already does that from one place, and the footer bar
+renders it. So the hint went the way the action chip rows went, and for a
+version of the same reason.
 
 **It is pinned by one layout, not by each panel's arithmetic.**
 `PanelBodyWithFooter` takes a panel's content and its footer and pads between

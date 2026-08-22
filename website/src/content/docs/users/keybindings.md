@@ -43,6 +43,7 @@ Act on the body's left panel — the groups list and the services list.
 | `e` | Edit — a group's membership on the Groups page |
 | `d` | Delete (confirm-guarded) — a group on the Groups page, a service's whole compose entry on the Services page |
 | `R` | Rename group — groups list only |
+| `A` | Adopt the `ungrouped` row — write `profiles: [ungrouped]` onto every service that has none — or release it again (confirm-guarded); offered only while that row is selected |
 | `/` | Filter the list by name |
 | `esc` | Clear an applied filter |
 | `enter` / `esc` | Apply / cancel a filter being typed |

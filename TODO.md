@@ -516,6 +516,20 @@ up in full in `docs/plans/`; `docs/ROADMAP.md` has the order and the reasons.
   the same member table with a real header card and working action keys. See
   `docs/plans/ungrouped-services.md`.
 
+- [x] **[S] Opt-in write of the `ungrouped` profile** — `A` on the reserved
+  row adopts it (`profiles: [ungrouped]` onto every service that has none)
+  and `A` again releases it, behind a confirmation that spells out the
+  consequence: once every service carries a profile, a bare
+  `docker compose up -d` outside cais prints `no service selected` and starts
+  nothing, so a cron job or a systemd unit would silently stop working. That
+  is why the tag is never written on load, on reload, or as a migration. The
+  write goes through the existing `GroupTags` writers, so it is snapshotted
+  like every other compose write. Once materialized,
+  `utils.NormalizeUngrouped` holds the invariant after each group write: a
+  service that joins a real group leaves `ungrouped`, one left with no
+  profile rejoins it. See `docs/plans/ungrouped-services.md` and §3 in
+  `docs/DESIGN.md`.
+
 ## Housekeeping
 
 - [x] **[H] The HEALTH column was never populated** — `docker compose ps
