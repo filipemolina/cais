@@ -162,6 +162,28 @@ The version is never hardcoded: `constants.Version()` prefers the build-time
 the commit. So the number only becomes real at a tag — a dev build honestly
 says which commit it is.
 
+**The tags before `v0.5.0` are not on this history.** `v0.1.0` through
+`v0.4.0` point at commits that are not ancestors of `main`, on the remote as
+well as locally — history was rewritten after `v0.4.0` was cut, and the tags
+kept pointing at the old commits. The visible symptom was `v0.5.0`'s
+generated changelog: with no reachable previous tag, GoReleaser listed every
+commit in the repository, and the release notes were written by hand instead.
+
+**Do not move them to fix it.** The module is published:
+`proxy.golang.org` has recorded commit `0673f4e` for `v0.4.0`, and
+`sum.golang.org` holds an immutable checksum for that tree
+(`h1:qgEthXhgKAmwBIYYBwMzSdR9pupb9cSEQpf8ADUN5tE=`). Re-pointing a published
+tag does not update either one, so `go install …@v0.4.0` would start failing
+with a checksum mismatch for everyone, permanently — the checksum database is
+append-only by design. `docs/plans/release-distribution.md` §Tag hygiene
+already says to prefer a new tag over moving one; this is the version of that
+rule with teeth.
+
+It heals on its own from here: `v0.5.0` is reachable from `main`, so
+`git describe --tags` answers again and every changelog after it diffs
+against a tag that exists in this history. The gap stays as a one-off seam
+between `v0.4.0` and `v0.5.0`.
+
 - **`v0.1.0`** was cut administratively (see above): a clock-starter, not a
   feature line. Read no milestone into it.
 - **`v0.2.0`** (2026-08-07) is the first content-driven release — the Env tab
