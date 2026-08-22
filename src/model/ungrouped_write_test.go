@@ -7,6 +7,9 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/components/confirmmodal"
+
+	"charm.land/lipgloss/v2"
 )
 
 // materializedProject is a loaded project where the reserved ungrouped
@@ -207,5 +210,53 @@ func TestAdoptUngroupedFailureShowsError(t *testing.T) {
 
 	if m.lastError == "" {
 		t.Error("a failed adopt left no error")
+	}
+}
+
+// Both ungrouped confirms have to fit an 80-column terminal. confirmmodal
+// renders the message it is handed and ModalSurface sets no width, so
+// lipgloss pads but never wraps - a long line makes a modal wider than the
+// screen it is centred on, and renderWithModal clamps the offset to 0 rather
+// than shrinking it ("Narrow terminals: shed whole things" in
+// docs/DESIGN.md). The adopt copy is the longest in the app, so it is the one
+// that would have gone over.
+func TestUngroupedConfirmsFitANarrowTerminal(t *testing.T) {
+	cases := []struct {
+		name    string
+		project *types.Project
+	}{
+		{"adopt", &types.Project{Services: types.Services{
+			"web":   types.ServiceConfig{Name: "web", Profiles: []string{"core"}},
+			"proxy": types.ServiceConfig{Name: "proxy"},
+		}}},
+		{"release", materializedProject()},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := withProjectLoaded(t, tc.project)
+			_, cmd := m.Update(cmds.ToggleUngroupedRequestMsg{})
+
+			var confirm *cmds.OpenConfirmModalMsg
+			for _, msg := range collect(cmd) {
+				if c, ok := msg.(cmds.OpenConfirmModalMsg); ok {
+					confirm = &c
+				}
+			}
+			if confirm == nil {
+				t.Fatal("no confirm was opened")
+			}
+
+			// The snapshot is the reassurance that makes this reversible even
+			// if the write is not what the user expected; it is part of the
+			// safety copy, not decoration.
+			if !strings.Contains(confirm.Message, "backed up") {
+				t.Errorf("confirm does not mention the backup: %q", confirm.Message)
+			}
+
+			if got := lipgloss.Width(confirmmodal.New(confirm.Message, nil).View().Content); got > 80 {
+				t.Errorf("confirm modal is %d columns wide, want <= 80:\n%s", got, confirm.Message)
+			}
+		})
 	}
 }

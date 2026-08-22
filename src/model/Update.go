@@ -1045,10 +1045,17 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.config.configFileName == "" || m.config.configProject == nil {
 			break
 		}
+		// The copy is hard-wrapped: confirmmodal renders its message as it is
+		// given, and the surface sets no width, so a long line makes a modal
+		// wider than the terminal it is centred on. Every line here stays
+		// inside the ~60 columns the other confirms use.
 		if m.ungroupedMaterialized() {
 			n := len(m.groupMembers(apptypes.UngroupedGroup))
 			finalCmds = append(finalCmds, cmds.OpenConfirmModal(
-				fmt.Sprintf("Remove the ungrouped profile from %d services?\n\nThey go back to having no profile, so plain \"docker compose up\" starts them again.", n),
+				fmt.Sprintf("Remove the ungrouped profile from %d services?\n"+
+					"\nThey go back to having no profile, so a plain\n"+
+					"\"docker compose up\" starts them again.\n"+
+					"\nThe file is backed up first; the Backups page restores it.", n),
 				cmds.ReleaseUngrouped(m.config.configFileName),
 			))
 		} else {
@@ -1057,7 +1064,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				break
 			}
 			finalCmds = append(finalCmds, cmds.OpenConfirmModal(
-				fmt.Sprintf("Add profiles: [ungrouped] to %d services?\n\nOnce every service has a profile, plain \"docker compose up\" starts nothing (no service selected). You can undo this from the app.", len(services)),
+				fmt.Sprintf("Add profiles: [ungrouped] to %d services?\n"+
+					"\nThis writes to your compose file. Afterwards every\n"+
+					"service has a profile, so a plain \"docker compose up\"\n"+
+					"starts nothing (\"no service selected\") until you name a\n"+
+					"service or a profile. Cais keeps working either way, and\n"+
+					"A releases the tag again.\n"+
+					"\nThe file is backed up first; the Backups page restores it.", len(services)),
 				cmds.AdoptUngrouped(m.config.configFileName, services),
 			))
 		}
