@@ -20,9 +20,9 @@ const logTailCount = "200"
 // Unlike RunDockerCompose, which captures CombinedOutput() once and returns,
 // this reads stdout+stderr incrementally on a goroutine so the TUI can render
 // lines as they arrive.
-func StreamDockerLogs(target string, isGroup bool, composeFile string, members []string) (<-chan string, context.CancelFunc, error) {
-	ctx, cancel := context.WithCancel(context.Background())
-
+// dockerLogsArgs builds the argument list for `docker compose logs -f`
+// without starting a process, so tests can assert on it.
+func dockerLogsArgs(target string, isGroup bool, composeFile string, members []string) ([]string, error) {
 	args := ComposeFileArgs(composeFile)
 	if isGroup {
 		// Named services, for the same reason RunDockerCompose names them:
@@ -30,13 +30,24 @@ func StreamDockerLogs(target string, isGroup bool, composeFile string, members [
 		// key, so a group's log view carried lines from services that are
 		// not in it.
 		if len(members) == 0 {
-			cancel()
-			return nil, nil, fmt.Errorf("group %q has no services to tail", target)
+			return nil, fmt.Errorf("group %q has no services to tail", target)
 		}
 		args = append(args, "logs", "-f", "--tail", logTailCount)
 		args = append(args, members...)
 	} else {
 		args = append(args, "logs", "-f", "--tail", logTailCount, target)
+	}
+
+	return args, nil
+}
+
+func StreamDockerLogs(target string, isGroup bool, composeFile string, members []string) (<-chan string, context.CancelFunc, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	args, err := dockerLogsArgs(target, isGroup, composeFile, members)
+	if err != nil {
+		cancel()
+		return nil, nil, err
 	}
 
 	command := exec.CommandContext(ctx, "docker", args...)

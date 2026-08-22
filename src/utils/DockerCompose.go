@@ -16,7 +16,10 @@ import (
 // Remove uses `rm -fs` rather than `down`: `down` also tears down the
 // project's shared network, which would affect services outside the
 // selected service/profile.
-func RunDockerCompose(action string, target string, isGroup bool, composeFile string, members []string) error {
+// composeActionArgs builds the argument list for a docker compose action
+// without running anything, so tests can assert on it. It is the whole
+// decision RunDockerCompose makes; the function itself only shells out.
+func composeActionArgs(action string, target string, isGroup bool, composeFile string, members []string) ([]string, error) {
 	subcommand, ok := map[string][]string{
 		"start":   {"up", "-d"},
 		"stop":    {"stop"},
@@ -26,7 +29,7 @@ func RunDockerCompose(action string, target string, isGroup bool, composeFile st
 	}[action]
 
 	if !ok {
-		return fmt.Errorf("unknown docker compose action: %s", action)
+		return nil, fmt.Errorf("unknown docker compose action: %s", action)
 	}
 
 	args := ComposeFileArgs(composeFile)
@@ -46,7 +49,7 @@ func RunDockerCompose(action string, target string, isGroup bool, composeFile st
 		// RunDockerActionMsg case - so this is the backstop, not the message
 		// the user reads.
 		if len(members) == 0 {
-			return fmt.Errorf("group %q has no services to %s", target, action)
+			return nil, fmt.Errorf("group %q has no services to %s", target, action)
 		}
 
 		args = append(args, subcommand...)
@@ -54,6 +57,15 @@ func RunDockerCompose(action string, target string, isGroup bool, composeFile st
 	} else {
 		args = append(args, subcommand...)
 		args = append(args, target)
+	}
+
+	return args, nil
+}
+
+func RunDockerCompose(action string, target string, isGroup bool, composeFile string, members []string) error {
+	args, err := composeActionArgs(action, target, isGroup, composeFile, members)
+	if err != nil {
+		return err
 	}
 
 	command := exec.Command("docker", args...)
