@@ -25,11 +25,12 @@ func (m Model) Init() tea.Cmd {
 }
 
 // New opens a near-full-screen overlay streaming logs for target (a
-// service when isGroup is false, a group otherwise), from composeFile. It
-// starts the stream immediately and returns the model plus the initial
-// WaitForLog cmd; on a start failure it returns a model that just displays
-// the error.
-func New(target string, isGroup bool, composeFile string, termWidth, termHeight int) (tea.Model, tea.Cmd) {
+// service when isGroup is false, a group otherwise), from composeFile.
+// members is the group's member services, resolved by AppModel; it is
+// ignored when isGroup is false. It starts the stream immediately and
+// returns the model plus the initial WaitForLog cmd; on a start failure it
+// returns a model that just displays the error.
+func New(target string, isGroup bool, composeFile string, members []string, termWidth, termHeight int) (tea.Model, tea.Cmd) {
 	vp := viewport.New()
 
 	m := Model{
@@ -39,7 +40,7 @@ func New(target string, isGroup bool, composeFile string, termWidth, termHeight 
 	}
 	m.resize(termWidth, termHeight)
 
-	ch, cancel, err := utils.StreamDockerLogs(target, isGroup, composeFile)
+	ch, cancel, err := utils.StreamDockerLogs(target, isGroup, composeFile, members)
 	if err != nil {
 		m.err = err
 		return m, nil

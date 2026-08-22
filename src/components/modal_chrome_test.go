@@ -40,7 +40,7 @@ func specialKey(code rune) tea.KeyPressMsg {
 // This is the regression guard for both: a new modal that skips either shows
 // up here rather than as a user stuck on an unlabelled box.
 func TestEveryModalHasATitleAndAnExitHint(t *testing.T) {
-	logs, _ := logsmodal.New("web", false, "compose.yaml", 100, 40)
+	logs, _ := logsmodal.New("web", false, "compose.yaml", nil, 100, 40)
 
 	cases := []struct {
 		name  string

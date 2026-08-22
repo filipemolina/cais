@@ -35,9 +35,11 @@ func RequestDockerAction(action string, target string, isGroup bool) tea.Cmd {
 // RunDockerAction runs a docker compose action (start, stop, restart, pull,
 // remove) against a single service or every service in a group, off the
 // main Update loop. composeFile scopes it to the file the app has loaded.
-func RunDockerAction(action string, target string, isGroup bool, composeFile string) tea.Cmd {
+// members is the group's member services, resolved by AppModel; it is ignored
+// when isGroup is false.
+func RunDockerAction(action string, target string, isGroup bool, composeFile string, members []string) tea.Cmd {
 	return func() tea.Msg {
-		err := utils.RunDockerCompose(action, target, isGroup, composeFile)
+		err := utils.RunDockerCompose(action, target, isGroup, composeFile, members)
 
 		return DockerActionMsg{
 			Action:  action,

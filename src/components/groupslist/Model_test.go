@@ -243,7 +243,7 @@ func TestStatsLineNotesUngroupedServices(t *testing.T) {
 	stats := cmds.SetHomeStatsMsg{Groups: 1, Services: 3, Running: 1, Ungrouped: 2}
 
 	got := statsLine(stats, 80)
-	want := "1 group · 3 services · 1 running · 2 ungrouped, always run"
+	want := "1 group · 3 services · 1 running · 2 ungrouped"
 	if got != want {
 		t.Errorf("statsLine with ungrouped services:\n got: %q\nwant: %q", got, want)
 	}
@@ -256,7 +256,7 @@ func TestStatsLineNotesUngroupedServices(t *testing.T) {
 func TestStatsLineShedsTheUngroupedNoteFirst(t *testing.T) {
 	stats := cmds.SetHomeStatsMsg{Groups: 1, Services: 3, Running: 1, Ungrouped: 2}
 
-	full := "1 group · 3 services · 1 running · 2 ungrouped, always run"
+	full := "1 group · 3 services · 1 running · 2 ungrouped"
 	short := "1 grp · 3 svc · 1 run · 2 ungrp"
 	shortCore := "1 grp · 3 svc · 1 run"
 

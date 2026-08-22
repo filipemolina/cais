@@ -496,11 +496,12 @@ up in full in `docs/plans/`; `docs/ROADMAP.md` has the order and the reasons.
   message when a list reloads to zero items, so deleting the last selected
   service no longer leaves `detailspanel` showing a service that no longer
   exists. Separately, the groups list's stats footer now counts services
-  with no `profiles:` tag once a group exists (`N ungrouped, always run`) —
-  Compose starts an untagged service alongside *every* group regardless of
-  which one was picked, so a broken one can block every group's start
-  without ever being the group the user selected. See *Deleting a service*
-  and §3 in `docs/DESIGN.md`.
+  with no `profiles:` tag once a group exists (`N ungrouped`) — the count
+  means "in no group, so no group action reaches them": group actions name
+  their member services rather than requesting the profile, so an untagged
+  service is never touched by a cais group action (see
+  `docs/plans/ungrouped-services.md`). See *Deleting a service* and §3 in
+  `docs/DESIGN.md`.
 
 ## Housekeeping
 

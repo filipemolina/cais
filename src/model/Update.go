@@ -614,8 +614,26 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case cmds.RunDockerActionMsg:
-		// The panel asked for the action; AppModel is what knows which compose
-		// file it has to run against.
+		// The panel asked for the action; AppModel is what knows which
+		// compose file it has to run against, and which services the group
+		// actually holds - a group action names its members rather than
+		// requesting the profile (see utils.RunDockerCompose).
+		var members []string
+		if msg.IsGroup {
+			members = m.groupMembers(msg.Target)
+		}
+
+		if msg.IsGroup && len(members) == 0 {
+			// No members, no command. `up -d` with no service names is
+			// "start the default set", so running it would start every
+			// untagged service in the file - the exact over-reach naming
+			// the members removed. Nothing is pending, so no spinner is
+			// raised and none has to be cleared.
+			finalCmds = append(finalCmds, m.reportForegroundError(
+				fmt.Sprintf("Group %q has no services.", msg.Target)))
+			break
+		}
+
 		m.pendingAction = &chrome.PendingAction{
 			Action:  msg.Action,
 			Target:  msg.Target,
@@ -623,7 +641,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		finalCmds = append(finalCmds, cmds.SetPendingAction(msg.Action, msg.Target, msg.IsGroup))
 		finalCmds = append(finalCmds, cmds.RunDockerAction(
-			msg.Action, msg.Target, msg.IsGroup, m.config.configFileName,
+			msg.Action, msg.Target, msg.IsGroup, m.config.configFileName, members,
 		))
 
 	case cmds.DockerActionMsg:
@@ -814,9 +832,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case cmds.OpenLogsModalMsg:
+		var members []string
+		if msg.IsGroup {
+			members = m.groupMembers(msg.Target)
+		}
+
 		var startCmd tea.Cmd
 		m.activeModal, startCmd = logsmodal.New(
-			msg.Target, msg.IsGroup, m.config.configFileName,
+			msg.Target, msg.IsGroup, m.config.configFileName, members,
 			m.config.terminalWidth, m.config.terminalHeight,
 		)
 		finalCmds = append(finalCmds, startCmd)

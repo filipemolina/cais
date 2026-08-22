@@ -34,7 +34,7 @@ field is still `profiles:` because that's what Docker calls it.
 | ------------------------- | --------------------------------------- |
 | group                     | profile                                 |
 | "Create a group"          | adds a new `profiles:` tag to services  |
-| "Start a group"           | `docker compose --profile <name> up`     |
+| "Start a group"           | `docker compose up <the group's services>` |
 
 The data layer still references `service.Profiles` (the field name from
 [`compose-go`](https://github.com/compose-spec/compose-go)). That's an
@@ -66,19 +66,24 @@ This means:
 This is a deliberate constraint: we don't add a separate "groups" file or a
 sidecar index. The user's `compose.yml` is the source of truth.
 
-**An untagged service is not "no group" — it is every group.** Docker
-Compose starts a service with no `profiles:` key alongside *any* profile
-that is requested, cais's included: `docker compose --profile core up -d`
-also brings up every service that carries no tag at all, the same as it
-would for `--profile anything-else`. Cais's groups list only shows what has
-a tag, so an untagged service is invisible there while still riding along
-on every group's start - and if it is broken (bad image, bad config), it
-can fail *every* group's start without ever being the group the user
-picked. This is Compose's own semantics, not something cais can opt out of,
-so the groups list's stats footer says how many ungrouped services exist
-once at least one group does (`cmds.SetHomeStatsMsg.Ungrouped`,
-`groupslist.statsLine`) - the standing count exists specifically so a
-failed start does not have to be traced back to a service nobody selected.
+**An untagged service is not "no group" — but it no longer rides along on a
+group action.** Docker Compose starts a service with no `profiles:` key
+alongside *any* profile that is requested: `docker compose --profile core
+up -d` also brings up every service that carries no tag at all, the same as
+it would for `--profile anything-else`. Cais used to request the profile
+(`--profile <group>`), so every group action reached the untagged services
+too — a group *stop* stopped services the user never selected, which is the
+worst of it. Cais now names the group's member services instead
+(`docker compose up -d core_a db`), which scopes the command to exactly
+them and auto-enables their profile on the way; the fix costs no compose
+file write. Compose's own semantics are unchanged — a plain
+`docker compose --profile core up -d` outside cais still brings up the
+untagged services — but a cais group action no longer does. The groups
+list's stats footer still counts the ungrouped services once at least one
+group does (`cmds.SetHomeStatsMsg.Ungrouped`, `groupslist.statsLine`): the
+count now means "in no group, so no group action reaches them", and it
+exists so a failed start does not have to be traced back to a service
+nobody selected.
 
 ## 4. What home is not
 

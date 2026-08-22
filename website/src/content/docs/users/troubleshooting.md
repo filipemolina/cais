@@ -40,11 +40,11 @@ Every write is snapshotted into `.cais/backups/` before it lands. Tab `4` (Backu
 
 ## A group won't start, and the error doesn't mention it
 
-Check whether any service has **no `profiles:` tag at all**. Compose starts an untagged service alongside *every* group you pick — not just the one it happens to sit near in the file — so a broken untagged service (bad image, invalid config) can fail every group's start without ever being the group you selected.
+A group action names the group's member services, so a service with no `profiles:` tag is never touched by it — a broken untagged service can no longer block a group's start. If a group still won't start, the error modal names the failing service.
 
-- Once at least one group exists, the groups list's stats line at the bottom of the panel counts these: `N ungrouped, always run`.
+- Once at least one group exists, the groups list's stats line at the bottom of the panel counts the untagged services: `N ungrouped`.
 - Switch to the Services page (`2`) to see every service, tagged or not, and find the one causing the failure.
-- Either fix it, or tag it into a group (or a dedicated one of its own) so it stops running unconditionally. If it's not something you want at all, `d` on the Services page deletes it (confirm-guarded, refused if another service still `depends_on:` it).
+- If a service never starts, it may simply be untagged: tag it into a group (or a dedicated one of its own) so a group action reaches it. If it's not something you want at all, `d` on the Services page deletes it (confirm-guarded, refused if another service still `depends_on:` it).
 
 ## I deleted a service and something else broke
 
