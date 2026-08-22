@@ -230,6 +230,20 @@ between `v0.4.0` and `v0.5.0`.
   keeps an adopted file consistent runs inside the group writers, in the same
   pass as the edit. A minor bump: it adds user-facing surface (a new row, a
   new key, and a new write). See `docs/plans/ungrouped-services.md`.
+- **`v0.5.1`** (2026-08-22) is a fixes-only release, and an honest one: the
+  binary is `v0.5.0` with a different version stamp. What it carries is the
+  Docs Build workflow, which had failed on every push since 2026-08-20 — two
+  breaks stacked on each other. `pnpm/action-setup` reads the repository root
+  and `packageManager` lives in `website/package.json`, so no pnpm version
+  was ever found; both setup actions now point at `website/` explicitly.
+  Underneath that, `astro.config.mjs` imports `@astrojs/markdown-satteri`,
+  which was never declared — it is an optional peer of `@astrojs/mdx` that
+  `autoInstallPeers` had linked locally, so every local build worked while
+  `pnpm install --frozen-lockfile` on a clean checkout linked nothing. It is
+  a direct dependency now. The workflow's path filter also gains its own
+  file, so a broken workflow can report its own repair rather than waiting
+  for an unrelated docs edit. The tag discontinuity above is written down in
+  the same release. A patch: no new surface, nothing removed.
 
 ### Done, and kept for the record
 
