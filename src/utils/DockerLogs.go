@@ -3,6 +3,7 @@ package utils
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"os/exec"
 )
 
@@ -19,15 +20,21 @@ const logTailCount = "200"
 // Unlike RunDockerCompose, which captures CombinedOutput() once and returns,
 // this reads stdout+stderr incrementally on a goroutine so the TUI can render
 // lines as they arrive.
-func StreamDockerLogs(target string, isGroup bool, composeFile string) (<-chan string, context.CancelFunc, error) {
+func StreamDockerLogs(target string, isGroup bool, composeFile string, members []string) (<-chan string, context.CancelFunc, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	args := ComposeFileArgs(composeFile)
 	if isGroup {
-		// Follows the same --profile convention as RunDockerCompose. Note this
-		// also activates no-profile default services, so their lines can appear
-		// too - identical to how start/stop already scope with --profile.
-		args = append(args, "--profile", target, "logs", "-f", "--tail", logTailCount)
+		// Named services, for the same reason RunDockerCompose names them:
+		// `--profile X logs -f` also tails every service with no profiles:
+		// key, so a group's log view carried lines from services that are
+		// not in it.
+		if len(members) == 0 {
+			cancel()
+			return nil, nil, fmt.Errorf("group %q has no services to tail", target)
+		}
+		args = append(args, "logs", "-f", "--tail", logTailCount)
+		args = append(args, members...)
 	} else {
 		args = append(args, "logs", "-f", "--tail", logTailCount, target)
 	}
