@@ -782,7 +782,7 @@ about a file the user's tooling then rejects.
 existing config; only `up -d` re-reads compose. `detailspanel` already knows
 whether its service is running (no round trip through `AppModel` needed), so
 when `AddHealthcheckMsg` succeeds against a running service it sets the same
-footer slot the group panel's `Press s to start.` hint uses: `running: press s
+footer slot the pending-action spinner uses: `running: press s
 to apply - restart won't re-read the compose file`. Auto-running `up -d` on
 save was rejected — the editor this hint sits beside edits *any* config field,
 and recreating a running container unprompted is destructive; a hint is
@@ -828,9 +828,8 @@ share the same caveat.
 
 Both details panels reserve their body's last line for a footer, laid out by
 `chrome.PanelBodyWithFooter` in `src/components/chrome/PanelFrame.go`. Things
-that go there: the pending-action spinner, in either panel; the group panel's
-`Press s to start.` hint when a selected group has nothing running; and the
-service panel's `copied http://…` confirmation after `y` (`docs/plans/service-urls.md`
+that go there: the pending-action spinner, in either panel; and the service
+panel's `copied http://…` confirmation after `y` (`docs/plans/service-urls.md`
 D6) - the pending-action spinner still wins when both would apply, since a
 running action is the more urgent thing to be looking at. Idle with nothing
 to report, a panel has no footer at all.
