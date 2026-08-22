@@ -160,22 +160,26 @@ func TestServiceDetailsKeepsPendingActionWhenContentOverflows(t *testing.T) {
 	}
 }
 
-// The group panel's start hint is the one thing it pins to the foot of an idle
-// panel, so it goes where the spinner goes rather than trailing the member
-// table. It used to ride one row above the action chip row; with the chips gone
-// it has to be pinned in its own right.
-func TestGroupDetailsPinsStartHintToBottom(t *testing.T) {
+// A stopped group's panel has no standing footer: the start hint is gone, so
+// the body's last row is empty rather than advertising a key. The spinner is
+// the only thing that ever claims the footer slot, and it still pins to the
+// bottom (TestDetailsPanelsPinPendingActionToBottom).
+func TestIdleGroupPanelSpendsNoRowOnItsFooter(t *testing.T) {
 	const height = 40
 
-	group := focusedGroupDetailsPanel(
+	idle := focusedGroupDetailsPanel(
 		[]types.ServiceConfig{{Name: "web", Profiles: []string{"stack"}}},
 		"stack", 90, height,
 	)
 
-	screen := group.View().Content
+	lines := strings.Split(idle.View().Content, "\n")
 
-	if got, want := lineOf(screen, "Press s to start."), height-2; got != want {
-		t.Errorf("start hint on line %d, want %d\n%s", got, want, ansi.Strip(screen))
+	// The frame pads by one row at the bottom, so the last body row is the
+	// second-to-last line of the panel. With no footer it is the background
+	// gap filler - a row of spaces - where the hint used to sit.
+	if got := strings.TrimSpace(ansi.Strip(lines[height-2])); got != "" {
+		t.Errorf("idle group panel's last body row is %q, want empty - a standing hint would sit here\n%s",
+			got, ansi.Strip(idle.View().Content))
 	}
 }
 
