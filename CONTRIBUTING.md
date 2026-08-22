@@ -106,3 +106,10 @@ git push origin v0.1.0
 
 `cais --version` reports the stamp. An unstamped local build reports
 its commit instead, which is what a bug report wants anyway.
+
+Never move a tag that has been pushed. The module is on `proxy.golang.org`
+and its checksums are in the append-only `sum.golang.org`, so re-pointing a
+released tag breaks `go install` at that version for everyone, permanently.
+Cut a new patch tag instead. The tags before `v0.5.0` sit on rewritten
+history for this reason and are left where they are — see *Versioning* in
+`docs/ROADMAP.md`.

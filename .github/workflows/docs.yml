@@ -5,10 +5,14 @@ on:
     branches: [main]
     paths:
       - 'website/**'
+      # A change to this file has to run this file, or a broken workflow only
+      # shows up on the next unrelated docs edit.
+      - '.github/workflows/docs.yml'
   pull_request:
     branches: [main]
     paths:
       - 'website/**'
+      - '.github/workflows/docs.yml'
 
 jobs:
   build:
@@ -21,14 +25,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Both actions read paths from the repository root, which
+      # defaults.run.working-directory does not touch - it only applies to
+      # `run:` steps. The site lives in website/, so each one is pointed at
+      # it explicitly: the pnpm version comes from website/package.json's
+      # packageManager field, and the cache key from its lockfile.
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
+        with:
+          package_json_file: website/package.json
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: 'pnpm'
+          cache-dependency-path: website/pnpm-lock.yaml
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
