@@ -5,17 +5,6 @@ import (
 	"os/exec"
 )
 
-// RunDockerCompose runs a `docker compose` action scoped either to a single
-// service or to an explicit set of services (a group's members).
-//
-// composeFile is the file the app resolved and is showing in its UI; it is
-// passed to docker as --file so the command acts on the same file the panels
-// describe. Empty means "let docker resolve it", which is only correct before
-// a file is loaded - see ComposeFileArgs.
-//
-// Remove uses `rm -fs` rather than `down`: `down` also tears down the
-// project's shared network, which would affect services outside the
-// selected service/profile.
 // composeActionArgs builds the argument list for a docker compose action
 // without running anything, so tests can assert on it. It is the whole
 // decision RunDockerCompose makes; the function itself only shells out.
@@ -62,6 +51,17 @@ func composeActionArgs(action string, target string, isGroup bool, composeFile s
 	return args, nil
 }
 
+// RunDockerCompose runs a `docker compose` action scoped either to a single
+// service or to an explicit set of services (a group's members).
+//
+// composeFile is the file the app resolved and is showing in its UI; it is
+// passed to docker as --file so the command acts on the same file the panels
+// describe. Empty means "let docker resolve it", which is only correct before
+// a file is loaded - see ComposeFileArgs.
+//
+// Remove uses `rm -fs` rather than `down`: `down` also tears down the
+// project's shared network, which would affect services outside the
+// selected set.
 func RunDockerCompose(action string, target string, isGroup bool, composeFile string, members []string) error {
 	args, err := composeActionArgs(action, target, isGroup, composeFile, members)
 	if err != nil {

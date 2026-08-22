@@ -10,16 +10,6 @@ import (
 // logTailCount is how many past lines `logs -f` replays before following.
 const logTailCount = "200"
 
-// StreamDockerLogs starts `docker compose logs -f` for a single service or for
-// every service tagged with a profile, scoped to composeFile (see
-// ComposeFileArgs), and streams each output line over the returned channel. The channel is closed when the process exits (or is
-// cancelled). Call the returned CancelFunc to kill the process and stop the
-// stream - this is the first long-lived subprocess in the app, so tearing it
-// down is the caller's responsibility.
-//
-// Unlike RunDockerCompose, which captures CombinedOutput() once and returns,
-// this reads stdout+stderr incrementally on a goroutine so the TUI can render
-// lines as they arrive.
 // dockerLogsArgs builds the argument list for `docker compose logs -f`
 // without starting a process, so tests can assert on it.
 func dockerLogsArgs(target string, isGroup bool, composeFile string, members []string) ([]string, error) {
@@ -41,6 +31,17 @@ func dockerLogsArgs(target string, isGroup bool, composeFile string, members []s
 	return args, nil
 }
 
+// StreamDockerLogs starts `docker compose logs -f` for a single service or for
+// the named members of a group, scoped to composeFile (see ComposeFileArgs),
+// and streams each output line over the returned channel. The channel is
+// closed when the process exits (or is cancelled). Call the returned
+// CancelFunc to kill the process and stop the stream - this is the first
+// long-lived subprocess in the app, so tearing it down is the caller's
+// responsibility.
+//
+// Unlike RunDockerCompose, which captures CombinedOutput() once and returns,
+// this reads stdout+stderr incrementally on a goroutine so the TUI can render
+// lines as they arrive.
 func StreamDockerLogs(target string, isGroup bool, composeFile string, members []string) (<-chan string, context.CancelFunc, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
