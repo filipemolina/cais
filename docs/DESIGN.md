@@ -95,6 +95,21 @@ membership is derived, not chosen. Nothing is written to the compose file
 to make the row appear; a real profile named `ungrouped` written by hand
 wins over the derived row.
 
+**Cais can write that profile, but only when asked.** `A` on the ungrouped
+row adopts it — `profiles: [ungrouped]` onto every service that has none —
+and `A` again releases it. It is behind a confirmation that spells out the
+consequence, because the consequence is not local to cais: once *every*
+service in the file carries a profile, a plain `docker compose up -d` outside
+cais prints `no service selected` and starts nothing (measured on Compose
+v5.5.0). A cron job, a systemd unit or a habit would silently stop working,
+so this is never done on load, on reload, or as a migration — the write is a
+deliberate act, reversible from the same key, and snapshotted by
+`ReplaceFileAtomically` like every other compose write. Once adopted, the
+file is in *materialised* mode and `utils.NormalizeUngrouped` keeps the
+invariant after each group write: a service that joins a real group leaves
+`ungrouped`, one left with no profile rejoins it. See
+`docs/plans/ungrouped-services.md`.
+
 ## 4. What home is not
 
 Home is **not** a dashboard. It is not a place to monitor metrics, see CPU

@@ -169,6 +169,7 @@ one.
 | `v` | Open the `.env` editor: the variable table, a key editor, and a raw file editor, in one modal |
 | `n` | New: a group on the Groups page, a service on the Services page (name and image, then the inline editor opens on it), a variable from the env modal opened with `v` |
 | `R` `d` | Rename group · Delete group (`d` confirms first) |
+| `A` | Adopt or release the `ungrouped` row: writes (or removes) `profiles: [ungrouped]` on every untagged service, confirm-guarded |
 | `/` | Filter the list by name |
 | `u` | Docker disk and memory usage overlay |
 | `T` `?` `a` `q` | Themes · Help · About · Quit |
