@@ -148,9 +148,8 @@ func statusDot(item apptypes.GroupListItem, rowBg color.Color) string {
 // it eats into the padding below instead of just pushing the list down.
 //
 // The ungrouped count only means something once groups exist to be left out
-// of - with none yet, every service is ungrouped by definition (see
-// groupdetailspanel.renderServiceOverview), so the number would just repeat
-// Services rather than warn about anything. It sheds before the core three
+// of - with none yet, every service is ungrouped by definition and the number
+// would just repeat Services rather than warn about anything. It sheds before the core three
 // on a narrow terminal (the "shed whole things" rule in docs/DESIGN.md,
 // *Narrow terminals*): the standing count is a courtesy, not the panel's own
 // verb, so it goes first when there is no room for it. The count means "in no
