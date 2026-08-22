@@ -1,5 +1,13 @@
 # Service-Aware Empty State — Implementation Plan
 
+> **SUPERSEDED** (2026-08-22): the service overview this plan describes was
+> removed when the reserved `ungrouped` group landed
+> (`docs/plans/ungrouped-services.md`, P2). A file with services always has at
+> least the `ungrouped` row to select, and selecting it shows the same member
+> table with a real header card and working action keys — the overview was the
+> worse version of the screen it was standing in for. This document is kept
+> for historical reference only.
+
 > **Before you start.** Work on a feature branch of small commits, merged
 > `--no-ff`; `go build ./... && go vet ./... && go test ./... && gofmt -l .`
 > green at **every** commit, not just at the tip — `docs/ROADMAP.md`

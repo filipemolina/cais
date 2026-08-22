@@ -197,7 +197,7 @@ func (m AppModel) configSyncCmds() []tea.Cmd {
 		syncCmds = append(syncCmds, cmds.SetSelectedService(types.ServiceConfig{}))
 	}
 
-	orderedGroups := m.allGroupNames()
+	orderedGroups := m.listedGroupNames()
 
 	// Same fix, mirrored for groups: an empty groups list broadcasts "" as
 	// the selection rather than leaving the last value standing.
@@ -279,8 +279,9 @@ func (m AppModel) helpContext() keys.Context {
 
 	switch m.activePage {
 	case "Home":
-		ctx.ListEmpty = len(m.allGroupNames()) == 0
+		ctx.ListEmpty = len(m.listedGroupNames()) == 0
 		ctx.Selected = m.selection.groupName != ""
+		ctx.ReadOnlyGroup = m.selection.groupName == apptypes.UngroupedGroup
 	case "Services":
 		ctx.ListEmpty = m.config.configProject == nil || len(m.config.configProject.Services) == 0
 		ctx.Selected = m.selection.serviceName != ""
@@ -620,7 +621,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// requesting the profile (see utils.RunDockerCompose).
 		var members []string
 		if msg.IsGroup {
-			members = m.groupMembers(msg.Target)
+			members = m.membersOf(msg.Target)
 		}
 
 		if msg.IsGroup && len(members) == 0 {
@@ -834,7 +835,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cmds.OpenLogsModalMsg:
 		var members []string
 		if msg.IsGroup {
-			members = m.groupMembers(msg.Target)
+			members = m.membersOf(msg.Target)
 		}
 
 		var startCmd tea.Cmd

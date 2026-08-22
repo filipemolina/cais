@@ -6,6 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/cmds"
 )
 
@@ -90,6 +91,45 @@ func TestRenameModalRejectsACollision(t *testing.T) {
 	}
 	if cmd != nil {
 		t.Error("a colliding name produced a command; nothing should be written")
+	}
+}
+
+// The reserved ungrouped name cannot be claimed: cais shows a group of that
+// name for every service with no profiles: key, so a real group by the same
+// name would collide with it in the list and in every membership check. The
+// refusal is its own message, not the generic "already exists" - the name is
+// reserved even when no real group carries it.
+func TestRenameModalRejectsTheReservedName(t *testing.T) {
+	m := NewForRename("core", []string{"core", "extra"}).(Model)
+	m.input.SetValue(apptypes.UngroupedGroup)
+
+	updated, cmd := m.Update(specialKey(tea.KeyEnter))
+	m = updated.(Model)
+
+	frame := renameModalFrame(m)
+	if !strings.Contains(frame, "reserved for services with no group") {
+		t.Errorf("reserved name was not refused inline:\n%s", frame)
+	}
+	if cmd != nil {
+		t.Error("a reserved name produced a command; nothing should be written")
+	}
+}
+
+// The create flow goes through the same submit handler, so the reserved name
+// is refused there too.
+func TestCreateModalRejectsTheReservedName(t *testing.T) {
+	m := New([]string{"core"}, []string{"web", "db"}, 24).(Model)
+	m.input.SetValue(apptypes.UngroupedGroup)
+
+	updated, cmd := m.Update(specialKey(tea.KeyEnter))
+	m = updated.(Model)
+
+	frame := renameModalFrame(m)
+	if !strings.Contains(frame, "reserved for services with no group") {
+		t.Errorf("reserved name was not refused inline:\n%s", frame)
+	}
+	if cmd != nil {
+		t.Error("a reserved name produced a command; nothing should be written")
 	}
 }
 

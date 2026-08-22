@@ -6,8 +6,9 @@
 > §Conventions is the full contract and `CONTRIBUTING.md` explains how a TUI
 > gets tested. Behaviour that only shows on screen gets checked in the real app
 > with VHS before it is committed. **P1 is a bug fix and landed ahead of the
-> post-alpha sequence (2026-08-22); P2 and P3 remain in the order after the
-> alpha** (`docs/ROADMAP.md` §The order after the alpha).
+> post-alpha sequence (2026-08-22); P2 landed in the post-alpha order
+> (2026-08-22); P3 remains after it** (`docs/ROADMAP.md` §The order after
+> the alpha).
 
 ## Problem
 
@@ -94,7 +95,7 @@ and the copy that described the old behaviour:
   no group action reaches them"), plus `docs/DESIGN.md` §3, the website usage
   and troubleshooting pages, and `TODO.md`.
 
-### P2 — a derived, read-only "ungrouped" group (medium)
+### P2 — a derived, read-only "ungrouped" group (done, 2026-08-22)
 
 Show the ungrouped set as a group row, still with zero file writes:
 

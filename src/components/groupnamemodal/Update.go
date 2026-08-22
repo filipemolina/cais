@@ -6,6 +6,7 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/cmds"
 	"github.com/filipemolina/cais/src/components/servicechecklistmodal"
 	"github.com/filipemolina/cais/src/keys"
@@ -30,6 +31,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// blank lines - see README's YAML caveat), so refuse it as a
 				// no-op rather than doing the write.
 				m.errMsg = fmt.Sprintf("Group is already named %q", name)
+				return m, nil
+
+			case name == apptypes.UngroupedGroup:
+				// Reserved: cais shows a group of this name for every service
+				// with no profiles: key. A real group by the same name would
+				// collide with it in the list and in every membership check.
+				m.errMsg = fmt.Sprintf("%q is reserved for services with no group", name)
 				return m, nil
 
 			case slices.Contains(m.existingGroups, name):
