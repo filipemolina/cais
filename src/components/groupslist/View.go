@@ -153,7 +153,11 @@ func statusDot(item apptypes.GroupListItem, rowBg color.Color) string {
 // Services rather than warn about anything. It sheds before the core three
 // on a narrow terminal (the "shed whole things" rule in docs/DESIGN.md,
 // *Narrow terminals*): the standing count is a courtesy, not the panel's own
-// verb, so it goes first when there is no room for it.
+// verb, so it goes first when there is no room for it. The count means "in no
+// group, so no group action reaches them" - it used to claim untagged
+// services ran with every group, because --profile pulled them into each
+// group action; group actions now name their members, so untagged services
+// are simply left alone.
 func statsLine(stats cmds.SetHomeStatsMsg, width int) string {
 	core := fmt.Sprintf("%d %s · %d %s · %d running",
 		stats.Groups, plural(stats.Groups, "group"),
@@ -162,7 +166,7 @@ func statsLine(stats cmds.SetHomeStatsMsg, width int) string {
 	shortCore := fmt.Sprintf("%d grp · %d svc · %d run", stats.Groups, stats.Services, stats.Running)
 
 	if stats.Groups > 0 && stats.Ungrouped > 0 {
-		if withNote := core + fmt.Sprintf(" · %d ungrouped, always run", stats.Ungrouped); lipgloss.Width(withNote) <= width {
+		if withNote := core + fmt.Sprintf(" · %d ungrouped", stats.Ungrouped); lipgloss.Width(withNote) <= width {
 			return withNote
 		}
 		if withNote := shortCore + fmt.Sprintf(" · %d ungrp", stats.Ungrouped); lipgloss.Width(withNote) <= width {

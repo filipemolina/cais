@@ -23,7 +23,7 @@ The home page operates on **groups of services** — a group being a Compose `pr
 - `n` creates a new group (pick a name, then check which services belong to it). `e` edits a group's membership. `R` renames, `d` deletes (confirm-guarded).
 - When no groups exist but the file has services, the details panel shows a service overview over every loaded service — so you can see what you have before creating the first group.
 
-**A service with no `profiles:` tag is not "in no group" — it starts alongside every group.** Compose brings up an untagged service for *any* `--profile` you request, cais's included, so it rides along on whichever group you pick even though the groups list never shows it. If it's broken, it can block every group's start without ever being the one you selected. Once at least one group exists, the groups list's stats line at the bottom counts these for you (`N ungrouped, always run`) — worth checking there before chasing a failed start through groups it looks like it has nothing to do with.
+**A service with no `profiles:` tag is not "in no group" — it is simply left alone.** Compose itself starts an untagged service for *any* `--profile` you request, but cais no longer requests a profile: a group action names the group's member services, so an untagged service is never touched by a cais group action — a broken one can no longer block a group's start. Once at least one group exists, the groups list's stats line at the bottom counts these for you (`N ungrouped`) — worth checking there if a service never seems to start.
 
 ## 2 · Services
 

@@ -273,11 +273,13 @@ func TestRigAddService(t *testing.T) {
 }
 
 // TestRigHomeNotesUngroupedServices drives the actual failure mode reported
-// against the app: a service with no profiles: tag is started by Compose
-// alongside *every* group, not just the one the user picked, so it silently
-// sabotages every group's start if it is broken. The groups list's stats
-// footer now says so on its own - this pins that it survives the real
-// render pipeline, not just statsLine's own unit tests.
+// against the app: a service with no profiles: tag used to be started by
+// Compose alongside *every* group, because cais requested the group's
+// profile and --profile also activates untagged services - so a broken
+// untagged service silently sabotaged every group's start. Group actions now
+// name their members, so untagged services are left alone, and the groups
+// list's stats footer counts them ("N ungrouped") - this pins that the note
+// survives the real render pipeline, not just statsLine's own unit tests.
 func TestRigHomeNotesUngroupedServices(t *testing.T) {
 	dir := t.TempDir()
 	fixture := `services:
@@ -294,9 +296,9 @@ func TestRigHomeNotesUngroupedServices(t *testing.T) {
 
 	r := newRig(t)
 	// The rig's 120-column terminal leaves the groups list panel narrower
-	// than the full "1 ungrouped, always run" note fits in, so the footer
-	// sheds to its abbreviated "1 ungrp" form - see statsLine's shedding
-	// ladder. Match the substring both forms share.
+	// than the full "1 ungrouped" note fits in, so the footer sheds to its
+	// abbreviated "1 ungrp" form - see statsLine's shedding ladder. Match
+	// the substring both forms share.
 	if !r.WaitFor("ungr", 3*time.Second) {
 		t.Fatalf("ungrouped note never appeared. Output:\n%s", r.Output())
 	}
