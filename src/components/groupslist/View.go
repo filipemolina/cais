@@ -23,7 +23,15 @@ type GroupsListCustomDelegate struct {
 	activeIndex     int
 }
 
-func (d GroupsListCustomDelegate) Height() int                             { return 4 }
+// Height must agree with the rows Render actually emits: one title line
+// inside the wrapper's Padding(1), so three. The list budgets Height() rows
+// per item when it works out how many fit on a page, but it then prints
+// whatever Render returns - so a Height() larger than the row both pages the
+// list earlier than it needs to and pads the shortfall out as dead space
+// above the paginator. The row lost its description line and this was left at
+// 4, which is where the gap came from. TestDelegateHeightMatchesTheRow holds
+// the two together.
+func (d GroupsListCustomDelegate) Height() int                             { return 3 }
 func (d GroupsListCustomDelegate) Spacing() int                            { return 0 }
 func (d GroupsListCustomDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 
