@@ -137,6 +137,14 @@ func AddServiceFragment(fileName string, serviceName string, fragment []byte) er
 	keyNode := &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: serviceName}
 	servicesNode.Content = append(servicesNode.Content, keyNode, newValue)
 
+	// A new service arrives with no profiles: key. On a file whose ungrouped
+	// set has been adopted that leaves it in no group at all - invisible on
+	// the Groups page, since the reserved row is a real profile there and the
+	// derived one is not offered, and the only thing a bare
+	// `docker compose up -d` would start. The same exit rule the group
+	// writers run puts it in the ungrouped set, in this same write.
+	normalizeUngrouped(servicesNode)
+
 	candidate, err := encodeNode(doc)
 	if err != nil {
 		return err

@@ -121,10 +121,21 @@ The real write, opt-in and reversible:
 - Wire adopt and release through the existing `GroupTags` writers
   (`AddGroupTag` / `RemoveGroupTag`), so every write still flows through
   `ReplaceFileAtomically` and its snapshot.
-- Exit rule both ways: while materialized, a group edit normalizes the
-  reserved profile — a service that joins another group leaves `ungrouped`,
-  and one left with no profile rejoins it (`utils.NormalizeUngrouped`, fired
-  after successful create/edit/delete group writes).
+- Exit rule both ways: a group edit normalizes the reserved profile — a
+  service that joins another group leaves `ungrouped`, and one left with no
+  profile rejoins it while the file is materialized (`utils.normalizeUngrouped`,
+  called from `AddGroupTag`, `SetGroupMembers` and `RemoveGroupTag` inside
+  their existing read-modify-write pass). It landed first as a follow-up write
+  fired from `AppModel` after each successful group write; that was reviewed
+  and moved (2026-08-22), because two writes leave a crash window with the
+  invariant half-applied, let the config poll render the intermediate file,
+  and snapshot the user's file twice for one edit. `RemoveGroupTag` against
+  the reserved name is the release, and is the one write that must not
+  normalize. `AddServiceFragment` runs the same pass (reviewed 2026-08-22): a
+  new service arrives with no `profiles:` key, which on an adopted file left
+  it in no group at all. The inline editor, `$EDITOR` and a backup restore do
+  not — cais reconciles what cais writes, and a user who deletes a
+  `profiles:` key by hand is speaking directly.
 - Tests at the writer, model, keys, groups list and footer layers; the
   writer tests drive the flow against real temp files.
 

@@ -128,76 +128,41 @@ func TestReleaseUngroupedSuccessReloadsConfig(t *testing.T) {
 	}
 }
 
-// While the ungrouped profile is materialized, a group edit must normalize
-// the reserved profile before the reload reads the file - otherwise a service
-// that joined another group would keep the ungrouped tag, and one that left
-// every group would be left profile-less.
-func TestEditGroupSuccessWhileMaterializedNormalizesFirst(t *testing.T) {
-	m := withProjectLoaded(t, materializedProject())
-
-	_, cmd := m.Update(cmds.EditGroupMsg{})
-
-	var normalized, reloaded bool
-	for _, msg := range collect(cmd) {
-		switch msg.(type) {
-		case cmds.NormalizeUngroupedMsg:
-			normalized = true
-		case cmds.GetConfigMsg:
-			reloaded = true
-		}
-	}
-	if !normalized {
-		t.Error("a materialized edit did not fire the ungrouped normalization")
-	}
-	if reloaded {
-		t.Error("a materialized edit reloaded before normalizing")
-	}
-}
-
-// While the row is derived there is nothing to normalize: the edit reloads
-// directly, and the derived row re-derives from the updated file.
-func TestEditGroupSuccessWhileDerivedReloadsDirectly(t *testing.T) {
-	m := withProjectLoaded(t, &types.Project{
+// A successful group edit reloads and nothing else, in both modes. The exit
+// rule used to be a second write fired from here while materialized; it now
+// runs inside the writers, in the same pass as the edit that makes it
+// necessary (utils.normalizeUngrouped, pinned by the GroupTags tests), so
+// there is no chain to drive from the model any more.
+func TestGroupEditReloadsWithoutASecondWrite(t *testing.T) {
+	derived := &types.Project{
 		Services: types.Services{
 			"web":   types.ServiceConfig{Name: "web", Profiles: []string{"core"}},
 			"proxy": types.ServiceConfig{Name: "proxy"},
 		},
-	})
-
-	_, cmd := m.Update(cmds.EditGroupMsg{})
-
-	var normalized, reloaded bool
-	for _, msg := range collect(cmd) {
-		switch msg.(type) {
-		case cmds.NormalizeUngroupedMsg:
-			normalized = true
-		case cmds.GetConfigMsg:
-			reloaded = true
-		}
 	}
-	if normalized {
-		t.Error("a derived edit fired the ungrouped normalization")
-	}
-	if !reloaded {
-		t.Error("a derived edit did not reload the config")
-	}
-}
 
-// A successful normalization reloads the config, completing the
-// edit -> normalize -> reload chain.
-func TestNormalizeUngroupedSuccessReloadsConfig(t *testing.T) {
-	m := withProjectLoaded(t, materializedProject())
+	for _, tc := range []struct {
+		name    string
+		project *types.Project
+	}{
+		{"materialized", materializedProject()},
+		{"derived", derived},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m := withProjectLoaded(t, tc.project)
 
-	_, cmd := m.Update(cmds.NormalizeUngroupedMsg{})
+			_, cmd := m.Update(cmds.EditGroupMsg{})
 
-	var reloaded bool
-	for _, msg := range collect(cmd) {
-		if _, ok := msg.(cmds.GetConfigMsg); ok {
-			reloaded = true
-		}
-	}
-	if !reloaded {
-		t.Error("a successful normalization did not trigger a config reload")
+			reloads := 0
+			for _, msg := range collect(cmd) {
+				if _, ok := msg.(cmds.GetConfigMsg); ok {
+					reloads++
+				}
+			}
+			if reloads != 1 {
+				t.Errorf("a successful group edit produced %d reloads, want 1", reloads)
+			}
+		})
 	}
 }
 

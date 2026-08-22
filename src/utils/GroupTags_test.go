@@ -459,95 +459,141 @@ func TestRenameGroupTag_MergesIntoExistingName(t *testing.T) {
 	}
 }
 
-// NormalizeUngrouped tags every profile-less service with the reserved
-// profile, so the materialized ungrouped row covers exactly the services
-// that would otherwise be derived into it.
-func TestNormalizeUngrouped_TagsProfileLessServices(t *testing.T) {
+// materializedFixture is a file that has been adopted: every service carries
+// a profile, and the profile-less ones carry the reserved name.
+const materializedFixture = `services:
+  app:
+    image: nginx:alpine
+    profiles: ["core"] # core services
+
+  db:
+    image: postgres:alpine
+    profiles: ["ungrouped"]
+
+  cache:
+    image: redis:alpine
+    profiles: ["ungrouped"]
+`
+
+// The exit rule, half one: a service that joins a real group leaves the
+// ungrouped set, in the same write that put it in the group. It runs inside
+// the writer, so there is no moment on disk where the service is in both.
+func TestSetGroupMembers_JoiningAGroupLeavesUngrouped(t *testing.T) {
+	path := writeFixture(t, materializedFixture)
+
+	if err := SetGroupMembers(path, "core", []string{"app", "db"}); err != nil {
+		t.Fatalf("SetGroupMembers: %v", err)
+	}
+
+	if got := readServiceGroups(t, path, "db"); !slices.Equal(got, []string{"core"}) {
+		t.Errorf("db groups = %v, want [core] - the reserved profile should have dropped off", got)
+	}
+
+	// Untouched services keep what they had, and a service that already has a
+	// profile never collects the reserved one on top of it.
+	if got := readServiceGroups(t, path, "app"); !slices.Equal(got, []string{"core"}) {
+		t.Errorf("app groups = %v, want [core]", got)
+	}
+	if got := readServiceGroups(t, path, "cache"); !slices.Equal(got, []string{"ungrouped"}) {
+		t.Errorf("cache groups = %v, want [ungrouped]", got)
+	}
+}
+
+// Creating a group goes through AddGroupTag rather than SetGroupMembers, and
+// has to shed the reserved profile the same way.
+func TestAddGroupTag_JoiningAGroupLeavesUngrouped(t *testing.T) {
+	path := writeFixture(t, materializedFixture)
+
+	if err := AddGroupTag(path, "extra", []string{"db"}); err != nil {
+		t.Fatalf("AddGroupTag: %v", err)
+	}
+
+	if got := readServiceGroups(t, path, "db"); !slices.Equal(got, []string{"extra"}) {
+		t.Errorf("db groups = %v, want [extra]", got)
+	}
+}
+
+// The exit rule, half two: an edit that leaves a service with no profile at
+// all puts it back in the ungrouped set - but only while the file is
+// materialized. Deleting a group is what usually orphans a service.
+func TestRemoveGroupTag_OrphansRejoinUngroupedWhenMaterialized(t *testing.T) {
+	path := writeFixture(t, materializedFixture)
+
+	if err := RemoveGroupTag(path, "core"); err != nil {
+		t.Fatalf("RemoveGroupTag: %v", err)
+	}
+
+	if got := readServiceGroups(t, path, "app"); !slices.Equal(got, []string{"ungrouped"}) {
+		t.Errorf("app groups = %v, want [ungrouped] - an orphaned service rejoins", got)
+	}
+	if got := readServiceGroups(t, path, "db"); !slices.Equal(got, []string{"ungrouped"}) {
+		t.Errorf("db groups = %v, want [ungrouped] (untouched)", got)
+	}
+}
+
+// On a file nobody has adopted, the same delete leaves the orphans alone: no
+// service carries the reserved name, so the file is not in materialized mode
+// and must not start growing tags nobody asked for.
+func TestRemoveGroupTag_OrphansStayUntaggedWhenNotMaterialized(t *testing.T) {
 	path := writeFixture(t, baseFixture)
 
-	if err := NormalizeUngrouped(path, "ungrouped"); err != nil {
-		t.Fatalf("NormalizeUngrouped: %v", err)
+	if err := RemoveGroupTag(path, "core"); err != nil {
+		t.Fatalf("RemoveGroupTag: %v", err)
+	}
+
+	for _, service := range []string{"app", "db", "cache"} {
+		if hasGroupsKey(t, path, service) {
+			t.Errorf("%s gained a profiles key on a file that was never adopted", service)
+		}
+	}
+}
+
+// Releasing is RemoveGroupTag against the reserved name itself. The exit rule
+// must not run there: re-tagging the services it just untagged would undo the
+// release in the same write.
+func TestRemoveGroupTag_ReleasingTheReservedNameDoesNotRetag(t *testing.T) {
+	path := writeFixture(t, materializedFixture)
+
+	if err := RemoveGroupTag(path, "ungrouped"); err != nil {
+		t.Fatalf("RemoveGroupTag: %v", err)
+	}
+
+	for _, service := range []string{"db", "cache"} {
+		if hasGroupsKey(t, path, service) {
+			t.Errorf("%s still has a profiles key after the release", service)
+		}
+	}
+	if got := readServiceGroups(t, path, "app"); !slices.Equal(got, []string{"core"}) {
+		t.Errorf("app groups = %v, want [core] - a real group is not touched by the release", got)
+	}
+}
+
+// Adopting is AddGroupTag against the reserved name: the profile-less
+// services get it, and the ones that already have a profile do not.
+func TestAddGroupTag_AdoptTagsOnlyTheProfileLessServices(t *testing.T) {
+	path := writeFixture(t, baseFixture)
+
+	if err := AddGroupTag(path, "ungrouped", []string{"cache"}); err != nil {
+		t.Fatalf("AddGroupTag: %v", err)
 	}
 
 	if got := readServiceGroups(t, path, "cache"); !slices.Equal(got, []string{"ungrouped"}) {
 		t.Errorf("cache groups = %v, want [ungrouped]", got)
 	}
-
-	// Tagged services are untouched: they already have a profile, so the
-	// reserved one must not be added on top of it.
 	if got := readServiceGroups(t, path, "app"); !slices.Equal(got, []string{"core"}) {
 		t.Errorf("app groups = %v, want [core] (untouched)", got)
 	}
 }
 
-// A service carrying the reserved profile alongside another one has joined a
-// real group; the reserved profile must drop off it.
-func TestNormalizeUngrouped_DropsCoexistingReservedProfile(t *testing.T) {
-	path := writeFixture(t, `services:
-  app:
-    image: nginx:alpine
-    profiles: ["ungrouped", "core"]
+// The exit rule is a node-tree edit like every other writer's, so comments on
+// lines it does not touch ride through it. (A comment sharing a line with a
+// profiles key that the edit deletes goes with the line, as it does for every
+// other writer here.)
+func TestGroupWriters_ExitRulePreservesComments(t *testing.T) {
+	path := writeFixture(t, materializedFixture)
 
-  db:
-    image: postgres:alpine
-    profiles: ["ungrouped"]
-`)
-
-	if err := NormalizeUngrouped(path, "ungrouped"); err != nil {
-		t.Fatalf("NormalizeUngrouped: %v", err)
-	}
-
-	if got := readServiceGroups(t, path, "app"); !slices.Equal(got, []string{"core"}) {
-		t.Errorf("app groups = %v, want [core] (reserved profile dropped)", got)
-	}
-
-	// A service whose only profile is the reserved one keeps it.
-	if got := readServiceGroups(t, path, "db"); !slices.Equal(got, []string{"ungrouped"}) {
-		t.Errorf("db groups = %v, want [ungrouped]", got)
-	}
-}
-
-// A file that already satisfies the invariant must not be rewritten: the
-// normalization runs after every group write while materialized, so a no-op
-// pass must not churn the file (and close its blank lines - see README's
-// YAML caveat).
-func TestNormalizeUngrouped_NoOpLeavesFileUntouched(t *testing.T) {
-	path := writeFixture(t, `services:
-  app:
-    image: nginx:alpine
-    profiles: ["core"]
-
-  db:
-    image: postgres:alpine
-    profiles: ["ungrouped"]
-`)
-
-	before, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("reading fixture: %v", err)
-	}
-
-	if err := NormalizeUngrouped(path, "ungrouped"); err != nil {
-		t.Fatalf("NormalizeUngrouped: %v", err)
-	}
-
-	after, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("reading result file: %v", err)
-	}
-
-	if string(after) != string(before) {
-		t.Errorf("a no-op normalization rewrote the file:\n%s", after)
-	}
-}
-
-// The normalization is a node-tree edit, so comments on untouched lines ride
-// through the same way every other writer preserves them.
-func TestNormalizeUngrouped_PreservesComments(t *testing.T) {
-	path := writeFixture(t, baseFixture)
-
-	if err := NormalizeUngrouped(path, "ungrouped"); err != nil {
-		t.Fatalf("NormalizeUngrouped: %v", err)
+	if err := SetGroupMembers(path, "core", []string{"app", "db"}); err != nil {
+		t.Fatalf("SetGroupMembers: %v", err)
 	}
 
 	raw, err := os.ReadFile(path)
