@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -253,6 +254,47 @@ func TestAddServiceFragmentInsertsIntoAnExistingFile(t *testing.T) {
 	// entry finds it there rather than shuffled in among the existing ones.
 	if strings.Index(after, "proxy:") < strings.Index(after, "cache:") {
 		t.Errorf("the new service was not appended at the end, got:\n%s", after)
+	}
+}
+
+// A service added to a file whose ungrouped set has been adopted joins that
+// set in the same write. Without it the newcomer carries no profile in a file
+// where everything else does: it shows up in no group on the Groups page, and
+// it is the only service a bare `docker compose up -d` would start.
+func TestAddServiceFragmentJoinsUngroupedWhenMaterialized(t *testing.T) {
+	path := writeFixture(t, `services:
+  app:
+    image: nginx:alpine
+    profiles: ["core"]
+
+  cache:
+    image: redis:alpine
+    profiles: ["ungrouped"]
+`)
+
+	if err := AddServiceFragment(path, "proxy", []byte("proxy:\n  image: traefik:v3\n")); err != nil {
+		t.Fatalf("AddServiceFragment: %v", err)
+	}
+
+	if got := readServiceGroups(t, path, "proxy"); !slices.Equal(got, []string{"ungrouped"}) {
+		t.Errorf("proxy groups = %v, want [ungrouped]", got)
+	}
+	if got := readServiceGroups(t, path, "app"); !slices.Equal(got, []string{"core"}) {
+		t.Errorf("app groups = %v, want [core] (untouched)", got)
+	}
+}
+
+// On a file nobody has adopted, the newcomer stays untagged: it lands in the
+// derived ungrouped row, which needs nothing written to hold it.
+func TestAddServiceFragmentLeavesTheNewServiceUntaggedWhenDerived(t *testing.T) {
+	path := writeFixture(t, fragmentFixture)
+
+	if err := AddServiceFragment(path, "proxy", []byte("proxy:\n  image: traefik:v3\n")); err != nil {
+		t.Fatalf("AddServiceFragment: %v", err)
+	}
+
+	if hasGroupsKey(t, path, "proxy") {
+		t.Error("proxy gained a profiles key on a file that was never adopted")
 	}
 }
 

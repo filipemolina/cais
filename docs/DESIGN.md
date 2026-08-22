@@ -120,7 +120,20 @@ orphans in a file where everything else is tagged — the 1s config poll can
 read and render that intermediate file, and the user gets two Backups
 entries for one edit. Releasing is the one write that must *not* normalize:
 `RemoveGroupTag` against the reserved name is the release itself, and
-re-tagging what it just untagged would undo it in the same pass. See
+re-tagging what it just untagged would undo it in the same pass.
+`AddServiceFragment` runs it too: a new service arrives with no `profiles:`
+key, which on an adopted file would leave it in no group at all — invisible
+on the Groups page, and the only service a bare `docker compose up -d` would
+start.
+
+The line is that **cais reconciles what cais writes**. Editing a service's
+YAML inline (`e`), opening the whole file in `$EDITOR` (`E`), or restoring a
+backup can all leave a service profile-less on an adopted file, and none of
+them re-tag it. The user typing `profiles:` out of a service is the user
+speaking directly; putting it back under them would make the editor feel
+broken, and `E` hands the file to another program entirely. Those services
+show up in the stats footer's `N ungrouped` count, and pressing `A` twice
+reconciles the file if that is what is wanted. See
 `docs/plans/ungrouped-services.md`.
 
 ## 4. What home is not

@@ -131,7 +131,11 @@ The real write, opt-in and reversible:
   invariant half-applied, let the config poll render the intermediate file,
   and snapshot the user's file twice for one edit. `RemoveGroupTag` against
   the reserved name is the release, and is the one write that must not
-  normalize.
+  normalize. `AddServiceFragment` runs the same pass (reviewed 2026-08-22): a
+  new service arrives with no `profiles:` key, which on an adopted file left
+  it in no group at all. The inline editor, `$EDITOR` and a backup restore do
+  not — cais reconciles what cais writes, and a user who deletes a
+  `profiles:` key by hand is speaking directly.
 - Tests at the writer, model, keys, groups list and footer layers; the
   writer tests drive the flow against real temp files.
 
