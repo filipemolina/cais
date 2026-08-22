@@ -25,12 +25,21 @@ func ApplyEnvEdit(filePath string, ops []EnvEditOp) error {
 	content := string(bytes)
 	lines := parseLines(content)
 
-	// Track which keys have been modified or deleted
+	// Track which keys have been modified or deleted. setOrder keeps the order
+	// the caller asked for, because the keys that turn out to be new are
+	// appended to the end of the file below: ranging over keysToSet to do that
+	// would write them in Go's randomized map order, so the same edit would
+	// produce a different file - and a different diff - on every run.
 	keysToDelete := make(map[string]bool)
 	keysToSet := make(map[string]string)
+	var setOrder []string
+
 	for _, op := range ops {
 		switch op.Type {
 		case "set":
+			if _, alreadySet := keysToSet[op.Key]; !alreadySet {
+				setOrder = append(setOrder, op.Key)
+			}
 			keysToSet[op.Key] = op.Value
 		case "delete":
 			keysToDelete[op.Key] = true
@@ -77,8 +86,15 @@ func ApplyEnvEdit(filePath string, ops []EnvEditOp) error {
 		}
 	}
 
-	// Append any new keys that weren't in the file
-	for key, value := range keysToSet {
+	// Append any new keys that weren't in the file, in the order they were
+	// asked for. Keys already rewritten in place were dropped from keysToSet
+	// by the walk above, so what is left here is exactly the new ones.
+	for _, key := range setOrder {
+		value, isNew := keysToSet[key]
+		if !isNew {
+			continue
+		}
+
 		newLines = append(newLines, formatEnvLine(key, value, ""))
 	}
 

@@ -129,6 +129,44 @@ func TestApplyEnvEditCreateNewFile(t *testing.T) {
 	}
 }
 
+// New keys are appended in the order they were asked for. They used to be
+// appended straight out of a map, so Go's randomized iteration order wrote
+// them differently on each run: the same edit produced a different file, and
+// TestApplyEnvEditCreateNewFile failed roughly one run in three. Six keys are
+// enough that a chance ordering would not save a regression here.
+func TestApplyEnvEditAppendsNewKeysInOrder(t *testing.T) {
+	envPath := filepath.Join(t.TempDir(), ".env")
+
+	if err := os.WriteFile(envPath, []byte("EXISTING=kept\n"), 0o600); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	ops := []EnvEditOp{
+		{Type: "set", Key: "ZULU", Value: "1"},
+		{Type: "set", Key: "ALPHA", Value: "2"},
+		{Type: "set", Key: "EXISTING", Value: "updated"},
+		{Type: "set", Key: "MIKE", Value: "3"},
+		{Type: "set", Key: "BRAVO", Value: "4"},
+		{Type: "set", Key: "YANKEE", Value: "5"},
+	}
+
+	if err := ApplyEnvEdit(envPath, ops); err != nil {
+		t.Fatalf("ApplyEnvEdit: %v", err)
+	}
+
+	// EXISTING keeps its line - only the keys the file did not have are
+	// appended, and they arrive in the order the ops listed them.
+	want := "EXISTING=updated\nZULU=1\nALPHA=2\nMIKE=3\nBRAVO=4\nYANKEE=5\n"
+
+	got, err := os.ReadFile(envPath)
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	if string(got) != want {
+		t.Errorf("got:\n%q\n\nwant:\n%q", string(got), want)
+	}
+}
+
 func TestFormatEnvLineQuoting(t *testing.T) {
 	tests := []struct {
 		key   string
