@@ -191,6 +191,49 @@ func (m AppModel) groupMembers(groupName string) []string {
 	return members
 }
 
+// ungroupedServices returns the names of every loaded service with no
+// profiles: key, sorted. These are the members of the reserved
+// apptypes.UngroupedGroup row.
+func (m AppModel) ungroupedServices() []string {
+	if m.config.configProject == nil {
+		return nil
+	}
+
+	var members []string
+	for _, service := range m.config.configProject.Services {
+		if len(service.Profiles) == 0 {
+			members = append(members, service.Name)
+		}
+	}
+
+	slices.Sort(members)
+	return members
+}
+
+// listedGroupNames is what the groups list shows: every real group, plus
+// the reserved ungrouped row when there are services with no profile and
+// no real profile has taken the name. allGroupNames stays "real profiles
+// only" because homeStats counts groups with it and the name modal checks
+// collisions against it.
+func (m AppModel) listedGroupNames() []string {
+	groups := m.allGroupNames()
+	if len(m.ungroupedServices()) > 0 && !slices.Contains(groups, apptypes.UngroupedGroup) {
+		groups = append(groups, apptypes.UngroupedGroup)
+	}
+	return groups
+}
+
+// membersOf is groupMembers, plus the reserved group's derived
+// membership. Used by everything that acts on a group; groupMembers
+// stays as it is, because the edit-members checklist must only ever
+// offer real profile membership.
+func (m AppModel) membersOf(groupName string) []string {
+	if groupName == apptypes.UngroupedGroup && !slices.Contains(m.allGroupNames(), groupName) {
+		return m.ungroupedServices()
+	}
+	return m.groupMembers(groupName)
+}
+
 // groupStatuses returns the running/total counts for every group, so the
 // groups list can render a status dot per row. A group is "running" when
 // every member service has a live container in the running state; "mixed"
@@ -200,11 +243,11 @@ func (m AppModel) groupStatuses() []cmds.GroupStatus {
 		return nil
 	}
 
-	groups := m.allGroupNames()
+	groups := m.listedGroupNames()
 	statuses := make([]cmds.GroupStatus, 0, len(groups))
 
 	for _, g := range groups {
-		members := m.groupMembers(g)
+		members := m.membersOf(g)
 		running := 0
 
 		for _, member := range members {
