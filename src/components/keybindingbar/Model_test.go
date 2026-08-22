@@ -8,6 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/cmds"
 	"github.com/filipemolina/cais/src/components/chrome"
 	"github.com/filipemolina/cais/src/constants"
@@ -40,6 +41,13 @@ func TestFooterHints(t *testing.T) {
 			name:  "groups list with groups",
 			model: Model{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST},
 			want:  "space start · t stop · n new · e edit · d delete · R rename · / filter · ↑/↓ navigate · tab next",
+		},
+		{
+			// The reserved ungrouped row is read-only: the docker verbs stay,
+			// the list-management verbs leave the footer.
+			name:  "groups list with the ungrouped row selected",
+			model: Model{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST, selectedGroup: apptypes.UngroupedGroup},
+			want:  "space start · t stop · n new · / filter · ↑/↓ navigate · tab next",
 		},
 		{
 			// The list has the keyboard: every other key is a letter.

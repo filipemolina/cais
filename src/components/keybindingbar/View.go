@@ -9,6 +9,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/filipemolina/cais/src/appstyles"
+	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/components/chrome"
 	"github.com/filipemolina/cais/src/keys"
 )
@@ -31,6 +32,7 @@ func (m Model) bindingsFor() []key.Binding {
 		Focused:       m.focusedComponent,
 		ListEmpty:     listEmpty,
 		Selected:      selected,
+		ReadOnlyGroup: m.selectedGroup == apptypes.UngroupedGroup,
 		Editing:       m.editing,
 		PendingAction: m.pendingAction,
 		Filter:        m.filterState,

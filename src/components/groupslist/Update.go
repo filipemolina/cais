@@ -77,18 +77,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				finalCmds = append(finalCmds, cmds.RequestDockerAction("stop", m.activeGroup, true))
 			}
 
+		// The reserved ungrouped row has no profile tag behind it, so there
+		// is nothing to rename, delete, or reconcile membership against - the
+		// three list-management verbs refuse it. Select (start) and Stop
+		// still work on it: that is the point of the row.
 		case key.Matches(msg, keys.List.Delete):
-			if selectedGroup, ok := m.list.SelectedItem().(apptypes.GroupListItem); ok {
+			if selectedGroup, ok := m.list.SelectedItem().(apptypes.GroupListItem); ok &&
+				selectedGroup.Name != apptypes.UngroupedGroup {
 				finalCmds = append(finalCmds, cmds.OpenDeleteGroupModal(selectedGroup.Name))
 			}
 
 		case key.Matches(msg, keys.List.Edit):
-			if selectedGroup, ok := m.list.SelectedItem().(apptypes.GroupListItem); ok {
+			if selectedGroup, ok := m.list.SelectedItem().(apptypes.GroupListItem); ok &&
+				selectedGroup.Name != apptypes.UngroupedGroup {
 				finalCmds = append(finalCmds, cmds.OpenEditGroupModal(selectedGroup.Name))
 			}
 
 		case key.Matches(msg, keys.List.Rename):
-			if selectedGroup, ok := m.list.SelectedItem().(apptypes.GroupListItem); ok {
+			if selectedGroup, ok := m.list.SelectedItem().(apptypes.GroupListItem); ok &&
+				selectedGroup.Name != apptypes.UngroupedGroup {
 				finalCmds = append(finalCmds, cmds.OpenRenameGroupModal(selectedGroup.Name))
 			}
 		}

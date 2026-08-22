@@ -281,6 +281,7 @@ func (m AppModel) helpContext() keys.Context {
 	case "Home":
 		ctx.ListEmpty = len(m.listedGroupNames()) == 0
 		ctx.Selected = m.selection.groupName != ""
+		ctx.ReadOnlyGroup = m.selection.groupName == apptypes.UngroupedGroup
 	case "Services":
 		ctx.ListEmpty = m.config.configProject == nil || len(m.config.configProject.Services) == 0
 		ctx.Selected = m.selection.serviceName != ""

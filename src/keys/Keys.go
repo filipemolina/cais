@@ -343,6 +343,11 @@ type Context struct {
 	// group on Home, a chosen service on Services. Without one, the action
 	// keys do nothing and are not offered.
 	Selected bool
+	// ReadOnlyGroup is true when the selected group is the reserved
+	// apptypes.UngroupedGroup row. Its membership is derived and it has no
+	// profile tag, so the list-management verbs are not offered on it - the
+	// docker verbs still are.
+	ReadOnlyGroup bool
 	// Editing is true when the service details panel is in inline edit mode.
 	// The editor owns the keyboard, so the panel's action keys and the page
 	// digits are dead; the footer shows the editor-specific keys instead.
@@ -402,7 +407,9 @@ func Active(ctx Context) []key.Binding {
 				// docker actions the list offers without a Tab to the details
 				// panel, ahead of the list-management verbs.
 				own = append([]key.Binding{Details.Stop}, own...)
-				own = append(own, List.Edit, List.Delete, List.Rename)
+				if !ctx.ReadOnlyGroup {
+					own = append(own, List.Edit, List.Delete, List.Rename)
+				}
 			}
 
 			return listKeys(ctx, own...)
