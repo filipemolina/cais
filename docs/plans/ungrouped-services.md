@@ -7,7 +7,7 @@
 > gets tested. Behaviour that only shows on screen gets checked in the real app
 > with VHS before it is committed. **P1 is a bug fix and landed ahead of the
 > post-alpha sequence (2026-08-22); P2 landed in the post-alpha order
-> (2026-08-22); P3 remains after it** (`docs/ROADMAP.md` §The order after
+> (2026-08-22); P3 landed after it** (`docs/ROADMAP.md` §The order after
 > the alpha).
 
 ## Problem
@@ -108,15 +108,25 @@ Show the ungrouped set as a group row, still with zero file writes:
 - Tests for the derived group and the read-only guards.
 - Docs, then drive the real app on a profile-less compose file.
 
-### P3 — opt-in write of the ungrouped profile (low)
+### P3 — opt-in write of the ungrouped profile (done, 2026-08-22)
 
 The real write, opt-in and reversible:
 
-- Bind `A` on the groups list, offered only on the ungrouped row.
-- A confirmation modal that spells out the `docker compose up` consequence.
-- Wire adopt and release through the existing `GroupTags` writers.
-- Exit rule both ways: leave ungrouped on join, rejoin when orphaned.
-- Tests, docs, and drive the whole flow against a real file.
+- Bind `A` on the groups list, offered only on the ungrouped row; the footer
+  advertises `A adopt` while the row is derived and `A release` once a real
+  ungrouped profile backs it.
+- A confirmation modal that spells out the `docker compose up` consequence
+  (once every service carries a profile, a plain `docker compose up` starts
+  nothing) and that the write is reversible from inside the app.
+- Wire adopt and release through the existing `GroupTags` writers
+  (`AddGroupTag` / `RemoveGroupTag`), so every write still flows through
+  `ReplaceFileAtomically` and its snapshot.
+- Exit rule both ways: while materialized, a group edit normalizes the
+  reserved profile — a service that joins another group leaves `ungrouped`,
+  and one left with no profile rejoins it (`utils.NormalizeUngrouped`, fired
+  after successful create/edit/delete group writes).
+- Tests at the writer, model, keys, groups list and footer layers; the
+  writer tests drive the flow against real temp files.
 
 ## Testing
 
