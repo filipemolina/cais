@@ -7,6 +7,7 @@ import (
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/cmds"
 )
 
@@ -73,6 +74,87 @@ func press(t *testing.T, model tea.Model, keystroke string) (tea.Model, []tea.Ms
 	model, cmd := model.Update(tea.KeyPressMsg{Code: rune(keystroke[0]), Text: keystroke})
 
 	return model, messagesFrom(cmd)
+}
+
+// ungroupedSelectedList is a focused groups list whose cursor sits on the
+// reserved ungrouped row.
+func ungroupedSelectedList(t *testing.T) Model {
+	t.Helper()
+
+	var model tea.Model = New(nil, 40, 20)
+	for _, msg := range []tea.Msg{
+		cmds.SetBodyLayoutMsg{LeftWidth: 40, Height: 20},
+		cmds.SetGroupsListMsg([]cmds.GroupStatus{{Name: "core"}, {Name: apptypes.UngroupedGroup}}),
+		cmds.SetFocusMsg(1),
+	} {
+		model, _ = model.Update(msg)
+	}
+
+	// Move the cursor down to the ungrouped row; auto-select fires on cursor
+	// movement, the same way it does in the real app.
+	model, _ = model.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
+
+	groups, ok := model.(Model)
+	if !ok {
+		t.Fatalf("expected a Model, got %T", model)
+	}
+	if groups.activeGroup != apptypes.UngroupedGroup {
+		t.Fatalf("precondition: activeGroup = %q, want %q", groups.activeGroup, apptypes.UngroupedGroup)
+	}
+
+	return groups
+}
+
+// The reserved ungrouped row is read-only: d, e and R refuse it - there is
+// no profile tag behind it to rename, delete, or reconcile membership
+// against.
+func TestListManagementKeysRefuseTheUngroupedRow(t *testing.T) {
+	for _, keystroke := range []string{"d", "e", "R"} {
+		t.Run(keystroke, func(t *testing.T) {
+			groups := ungroupedSelectedList(t)
+
+			_, msgs := press(t, groups, keystroke)
+
+			for _, msg := range msgs {
+				switch msg.(type) {
+				case cmds.OpenDeleteGroupModalMsg, cmds.OpenEditGroupModalMsg, cmds.OpenRenameGroupModalMsg:
+					t.Errorf("%s opened a modal on the ungrouped row: %#v", keystroke, msgs)
+				}
+			}
+		})
+	}
+}
+
+// The docker verbs still work on the ungrouped row: space starts exactly the
+// untagged services and t stops them - that is the point of the row.
+func TestDockerKeysStillWorkOnTheUngroupedRow(t *testing.T) {
+	groups := ungroupedSelectedList(t)
+
+	_, msgs := press(t, groups, " ")
+	var started bool
+	for _, msg := range msgs {
+		if dockerMsg, ok := msg.(cmds.RunDockerActionMsg); ok {
+			if dockerMsg.Action == "start" && dockerMsg.Target == apptypes.UngroupedGroup && dockerMsg.IsGroup {
+				started = true
+			}
+		}
+	}
+	if !started {
+		t.Errorf("space did not start the ungrouped row, got %#v", msgs)
+	}
+
+	_, msgs = press(t, groups, "t")
+	var stopped bool
+	for _, msg := range msgs {
+		if dockerMsg, ok := msg.(cmds.RunDockerActionMsg); ok {
+			if dockerMsg.Action == "stop" && dockerMsg.Target == apptypes.UngroupedGroup && dockerMsg.IsGroup {
+				stopped = true
+			}
+		}
+	}
+	if !stopped {
+		t.Errorf("t did not stop the ungrouped row, got %#v", msgs)
+	}
 }
 
 // TestDeleteKeyDoesNotAlsoPageTheList is the regression this phase exists for.
