@@ -108,7 +108,7 @@ that measures whether the rest are done.
 | — | `adopt-unmanaged-containers.md` | **After the launch.** Phase 2 is blocked on nothing at the code level any more (`utils.AddServiceFragment` landed with `image-search.md` Phase 1) but stays post-launch anyway: the feature finds nothing at all on a tidy machine, and its audience - the homelab that grew by accretion - is a good post-launch story rather than a gate. Phase 1 (see them, switch to their file, remove them) is standalone and can be pulled forward if it is wanted sooner. |
 | — | `resources-page.md` — **Phase 2** (writes) | **After the write-safety story.** Attaching a volume is a two-place edit to the user's file, and adding a new write surface before there is a backup or an undo is the wrong order. |
 | — | `ai-service-authoring.md` | **Deliberately out of the sequence.** It is the only plan that adds a dependency on something outside the repo, and its own Phase 1 (an offline catalog) delivers most of the value with none of that. It needed `image-search.md`'s insert path to exist first, which is now done. Pick it up after the launch, or take its Phase 1 alone at any point. |
-| — | `ungrouped-services.md` — **Phases 2–3** | P1 (group actions name their members instead of `--profile`) landed 2026-08-22 as a bug fix, ahead of the sequence — a group stop was stopping services the user never selected. P2 (a derived, read-only `ungrouped` group) and P3 (the opt-in write of `profiles: [ungrouped]`) remain; P3 stays opt-in because tagging every service makes a plain `docker compose up -d` outside cais start nothing. |
+| — | `ungrouped-services.md` — **done** | All three phases landed 2026-08-22 and shipped in `v0.5.0`. P1 (group actions name their members instead of `--profile`) came first as a bug fix, ahead of the sequence — a group stop was stopping services the user never selected. P2 added the derived, read-only `ungrouped` row; P3 the opt-in write of `profiles: [ungrouped]` behind `A`, which stays opt-in because tagging every service makes a plain `docker compose up -d` outside cais start nothing. |
 
 `group-table-legibility.md`, `docker-preflight.md`, `service-urls.md` and
 `docker-disk-usage.md` are the round of feature ideas discussed on 2026-08-01
@@ -191,6 +191,23 @@ says which commit it is.
   a modal that holds the variable table, a key editor, and the raw file editor. A
   minor bump: it adds user-facing surface (the backups are now reachable from the
   app).
+- **`v0.5.0`** (2026-08-22) is the ungrouped release. It starts as a bug fix:
+  a group action ran `docker compose --profile <group> <verb>`, and Compose
+  starts every service that carries no `profiles:` key alongside *any*
+  profile you request — so a group *stop* stopped services the user never
+  selected. Group actions and the log stream now name their member services
+  instead, which scopes them to exactly those and costs no compose file
+  write. On top of that, the services with no profile become a group:
+  `ungrouped`, a reserved row derived from the file, read-only (no `e`, `R`
+  or `d`) and shown like any other, so a compose file with no profiles at all
+  finally has something to select and act on. `A` on that row adopts it for
+  real — `profiles: [ungrouped]` written onto every service that has none —
+  and `A` again releases it, behind a confirmation that spells out the
+  consequence: once every service carries a profile, a bare
+  `docker compose up -d` outside cais starts nothing. The exit rule that
+  keeps an adopted file consistent runs inside the group writers, in the same
+  pass as the edit. A minor bump: it adds user-facing surface (a new row, a
+  new key, and a new write). See `docs/plans/ungrouped-services.md`.
 
 ### Done, and kept for the record
 
