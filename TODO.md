@@ -503,6 +503,19 @@ up in full in `docs/plans/`; `docs/ROADMAP.md` has the order and the reasons.
   `docs/plans/ungrouped-services.md`). See *Deleting a service* and §3 in
   `docs/DESIGN.md`.
 
+- [x] **[S] A derived, read-only `ungrouped` group** — the groups list gains
+  a reserved `ungrouped` row holding every service with no `profiles:` key,
+  so a file with no groups still has something to select and act on. The
+  name is reserved on both counts: the group-name modal refuses it, and the
+  row is read-only in the UI (no `e`, `R` or `d`, and no footer hints for
+  them) because its membership is derived, not chosen, and there is no
+  profile tag behind it to write. Nothing is written to the compose file; a
+  hand-written real profile named `ungrouped` wins over the derived row. The
+  old service overview in the details panel is deleted — a file with
+  services always has at least the `ungrouped` row to select, which shows
+  the same member table with a real header card and working action keys. See
+  `docs/plans/ungrouped-services.md`.
+
 ## Housekeeping
 
 - [x] **[H] The HEALTH column was never populated** — `docker compose ps

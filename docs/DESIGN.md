@@ -85,6 +85,16 @@ count now means "in no group, so no group action reaches them", and it
 exists so a failed start does not have to be traced back to a service
 nobody selected.
 
+**Those services now surface as a group.** The groups list gains one row,
+`ungrouped`, holding every service with no `profiles:` key, so a file with
+no groups at all still has something to select and act on. The name is
+reserved on both counts: it cannot be given to a real group (the name modal
+refuses it), and the row is read-only in the UI — no rename, delete, or
+membership edit, because there is no profile tag behind it and its
+membership is derived, not chosen. Nothing is written to the compose file
+to make the row appear; a real profile named `ungrouped` written by hand
+wins over the derived row.
+
 ## 4. What home is not
 
 Home is **not** a dashboard. It is not a place to monitor metrics, see CPU
@@ -644,18 +654,19 @@ Home is the launchpad. Its body is a two-pane layout:
 - **Groups list** — the selectable list of derived groups (Compose profiles)
   with a status header. The empty state is rendered as normal panel text, not
   an inverted box.
-- **Group Details** — the right panel. When no groups exist *and the compose
-  file has services*, it shows a service overview: a count header and the
-  same member-services table a selected group uses, over every loaded
-  service, so a user with an ungrouped file can see what they have before
-  creating the first group rather than only an explanation of what a group
-  is (`docs/plans/service-aware-empty-state.md`). When the compose file has
-  no services at all, it falls back to the original onboarding card. When
-  groups exist but none is selected it prompts the user to pick one; when a
-  group is selected it shows a header card with a status pill, a
-  running/stopped/services summary, the member-services table (status dot,
-  NAME, IMAGE, STATE, HEALTH, UPTIME, PORTS), and a pinned footer (see *The
-  panel footer* below).
+- **Group Details** — the right panel. When the compose file has no services
+  at all it shows the original onboarding card. When nothing is selected it
+  prompts the user to pick a group. When a group is selected it shows a
+  header card with a status pill, a running/stopped/services summary, the
+  member-services table (status dot, NAME, IMAGE, STATE, HEALTH, UPTIME,
+  PORTS), and a pinned footer (see *The panel footer* below). The reserved
+  `ungrouped` row is a group like any other here: selecting it shows the
+  same member table over every service with no `profiles:` key. The old
+  service overview — a count header and member table over every service when
+  no groups existed — is gone: a file with services always has at least the
+  `ungrouped` row to select, which shows the same table with a real header
+  card and working action keys (`docs/plans/service-aware-empty-state.md` is
+  annotated as superseded).
 
 The large ASCII logo is no longer rendered here; the About modal carries the
 brand mark now, as the figlet banner (`banner.Banner`) - see *Where
