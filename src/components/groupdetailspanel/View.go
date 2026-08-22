@@ -18,6 +18,17 @@ import (
 func (m Model) memberServices() []types.ServiceConfig {
 	var members []types.ServiceConfig
 
+	// The reserved ungrouped row's membership is derived: every service
+	// with no profiles: key, unless a real profile has taken the name.
+	if m.selectedGroup == apptypes.UngroupedGroup && !m.hasRealProfile(apptypes.UngroupedGroup) {
+		for _, service := range m.services {
+			if len(service.Profiles) == 0 {
+				members = append(members, service)
+			}
+		}
+		return members
+	}
+
 	for _, service := range m.services {
 		if slices.Contains(service.Profiles, m.selectedGroup) {
 			members = append(members, service)
@@ -27,9 +38,25 @@ func (m Model) memberServices() []types.ServiceConfig {
 	return members
 }
 
+// hasRealProfile reports whether any loaded service carries name as a
+// profiles: tag - the guard that lets a hand-written real profile named
+// "ungrouped" win over the derived row, the same way AppModel's membersOf
+// does.
+func (m Model) hasRealProfile(name string) bool {
+	for _, service := range m.services {
+		if slices.Contains(service.Profiles, name) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // knownGroups returns every distinct Compose profile referenced by the
-// loaded services. It distinguishes the "no groups exist yet" onboarding
-// state from "groups exist but nothing is selected".
+// loaded services, plus the reserved ungrouped row when at least one
+// service carries no profiles: key and no real profile has taken the
+// name. It distinguishes the "no groups exist yet" onboarding state from
+// "groups exist but nothing is selected".
 func (m Model) knownGroups() []string {
 	seen := make(map[string]bool)
 	var groups []string
@@ -39,6 +66,15 @@ func (m Model) knownGroups() []string {
 			if !seen[profile] {
 				seen[profile] = true
 				groups = append(groups, profile)
+			}
+		}
+	}
+
+	if !seen[apptypes.UngroupedGroup] {
+		for _, service := range m.services {
+			if len(service.Profiles) == 0 {
+				groups = append(groups, apptypes.UngroupedGroup)
+				break
 			}
 		}
 	}
@@ -111,10 +147,14 @@ func (m Model) renderBody() string {
 	bodyAvail := max(1, chrome.PanelBodyHeight(m.panelHeight))
 	bg := chrome.PanelBg(m.isFocused)
 
-	// No groups exist anywhere yet -> the service overview, or onboarding
-	// when there is nothing to show one of.
+	// No groups exist anywhere yet -> onboarding. With the reserved
+	// ungrouped row in knownGroups, this state only happens when the
+	// compose file has no services at all - a fresh or newly bootstrapped
+	// file - where there is nothing to list.
 	if len(m.knownGroups()) == 0 {
-		return m.renderServiceOverview(bodyWidth, bodyAvail, bg)
+		return chrome.EmptyCard(bodyWidth, bodyAvail, bg, "Getting started",
+			"Groups are Compose profiles: sets of services you run together. Add a `profiles:` key to a service in your compose file to make one.",
+			"n", "new group")
 	}
 
 	// Groups exist but none is selected.
@@ -144,51 +184,6 @@ func (m Model) renderBody() string {
 
 	return chrome.PanelBodyWithFooter(bodyWidth, bodyAvail, bg,
 		content, lipgloss.JoinVertical(lipgloss.Left, footerParts...))
-}
-
-// renderServiceOverview replaces the plain "Getting started" onboarding
-// card with a live list of the compose file's services when it has some but
-// no groups reference any of them yet (knownGroups() derives every group
-// name from services' Profiles, so knownGroups() == 0 means every loaded
-// service is already exactly the "ungrouped" set - there is no separate
-// filter to apply). The reader gets to see what they have to work with
-// before creating the first group, rather than only an explanation of what
-// a group is. Falls back to the original onboarding card when the compose
-// file has no services at all - a fresh or newly bootstrapped file - where
-// there is nothing to list.
-func (m Model) renderServiceOverview(width, availHeight int, bg color.Color) string {
-	if len(m.services) == 0 {
-		return chrome.EmptyCard(width, availHeight, bg, "Getting started",
-			"Groups are Compose profiles: sets of services you run together. Add a `profiles:` key to a service in your compose file to make one.",
-			"n", "new group")
-	}
-
-	header := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(appstyles.Active.TextPrimary).
-		Width(width).
-		Render(fmt.Sprintf("%d %s, no groups yet", len(m.services), plural(len(m.services), "service")))
-
-	content := lipgloss.JoinVertical(lipgloss.Left,
-		header,
-		m.renderMemberTable(m.services, width),
-	)
-
-	keyStyle := lipgloss.NewStyle().Bold(true).Foreground(appstyles.Active.Accent)
-	hintStyle := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim)
-	hint := keyStyle.Render("n") + hintStyle.Render(" create your first group  ") +
-		keyStyle.Render("2") + hintStyle.Render(" browse services")
-
-	return chrome.PanelBodyWithFooter(width, availHeight, bg, content, hint)
-}
-
-// plural is the naive English plural of word for n: enough for the handful
-// of countable nouns this panel puts in front of a number.
-func plural(n int, word string) string {
-	if n == 1 {
-		return word
-	}
-	return word + "s"
 }
 
 // groupHeaderCard renders the selected group's name and a
