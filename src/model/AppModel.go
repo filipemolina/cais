@@ -210,6 +210,14 @@ func (m AppModel) ungroupedServices() []string {
 	return members
 }
 
+// ungroupedMaterialized reports whether a real profile named ungrouped exists
+// in the loaded project, i.e. the reserved row is backed by a written tag
+// rather than derived. Group edits never create or destroy it (the name modal
+// refuses the reserved name), so checking the loaded project is always valid.
+func (m AppModel) ungroupedMaterialized() bool {
+	return slices.Contains(m.allGroupNames(), apptypes.UngroupedGroup)
+}
+
 // listedGroupNames is what the groups list shows: every real group, plus
 // the reserved ungrouped row when there are services with no profile and
 // no real profile has taken the name. allGroupNames stays "real profiles

@@ -458,3 +458,104 @@ func TestRenameGroupTag_MergesIntoExistingName(t *testing.T) {
 		t.Errorf("app groups = %v, want %v (merge, no dedup at the writer)", appGot, want)
 	}
 }
+
+// NormalizeUngrouped tags every profile-less service with the reserved
+// profile, so the materialized ungrouped row covers exactly the services
+// that would otherwise be derived into it.
+func TestNormalizeUngrouped_TagsProfileLessServices(t *testing.T) {
+	path := writeFixture(t, baseFixture)
+
+	if err := NormalizeUngrouped(path, "ungrouped"); err != nil {
+		t.Fatalf("NormalizeUngrouped: %v", err)
+	}
+
+	if got := readServiceGroups(t, path, "cache"); !slices.Equal(got, []string{"ungrouped"}) {
+		t.Errorf("cache groups = %v, want [ungrouped]", got)
+	}
+
+	// Tagged services are untouched: they already have a profile, so the
+	// reserved one must not be added on top of it.
+	if got := readServiceGroups(t, path, "app"); !slices.Equal(got, []string{"core"}) {
+		t.Errorf("app groups = %v, want [core] (untouched)", got)
+	}
+}
+
+// A service carrying the reserved profile alongside another one has joined a
+// real group; the reserved profile must drop off it.
+func TestNormalizeUngrouped_DropsCoexistingReservedProfile(t *testing.T) {
+	path := writeFixture(t, `services:
+  app:
+    image: nginx:alpine
+    profiles: ["ungrouped", "core"]
+
+  db:
+    image: postgres:alpine
+    profiles: ["ungrouped"]
+`)
+
+	if err := NormalizeUngrouped(path, "ungrouped"); err != nil {
+		t.Fatalf("NormalizeUngrouped: %v", err)
+	}
+
+	if got := readServiceGroups(t, path, "app"); !slices.Equal(got, []string{"core"}) {
+		t.Errorf("app groups = %v, want [core] (reserved profile dropped)", got)
+	}
+
+	// A service whose only profile is the reserved one keeps it.
+	if got := readServiceGroups(t, path, "db"); !slices.Equal(got, []string{"ungrouped"}) {
+		t.Errorf("db groups = %v, want [ungrouped]", got)
+	}
+}
+
+// A file that already satisfies the invariant must not be rewritten: the
+// normalization runs after every group write while materialized, so a no-op
+// pass must not churn the file (and close its blank lines - see README's
+// YAML caveat).
+func TestNormalizeUngrouped_NoOpLeavesFileUntouched(t *testing.T) {
+	path := writeFixture(t, `services:
+  app:
+    image: nginx:alpine
+    profiles: ["core"]
+
+  db:
+    image: postgres:alpine
+    profiles: ["ungrouped"]
+`)
+
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading fixture: %v", err)
+	}
+
+	if err := NormalizeUngrouped(path, "ungrouped"); err != nil {
+		t.Fatalf("NormalizeUngrouped: %v", err)
+	}
+
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading result file: %v", err)
+	}
+
+	if string(after) != string(before) {
+		t.Errorf("a no-op normalization rewrote the file:\n%s", after)
+	}
+}
+
+// The normalization is a node-tree edit, so comments on untouched lines ride
+// through the same way every other writer preserves them.
+func TestNormalizeUngrouped_PreservesComments(t *testing.T) {
+	path := writeFixture(t, baseFixture)
+
+	if err := NormalizeUngrouped(path, "ungrouped"); err != nil {
+		t.Fatalf("NormalizeUngrouped: %v", err)
+	}
+
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading result file: %v", err)
+	}
+
+	if !strings.Contains(string(raw), "core services") {
+		t.Errorf("expected the # core services comment to survive, got:\n%s", raw)
+	}
+}

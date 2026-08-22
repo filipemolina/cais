@@ -213,6 +213,11 @@ func (m AppModel) configSyncCmds() []tea.Cmd {
 		syncCmds = append(syncCmds, cmds.SetSelectedGroup(""))
 	}
 
+	// The footer advertises the ungrouped row's 'A' verb (adopt vs release)
+	// from this state, so it has to ride every reload the way the selection
+	// does.
+	syncCmds = append(syncCmds, cmds.SetUngroupedMaterialized(m.ungroupedMaterialized()))
+
 	return syncCmds
 }
 
@@ -282,6 +287,7 @@ func (m AppModel) helpContext() keys.Context {
 		ctx.ListEmpty = len(m.listedGroupNames()) == 0
 		ctx.Selected = m.selection.groupName != ""
 		ctx.ReadOnlyGroup = m.selection.groupName == apptypes.UngroupedGroup
+		ctx.UngroupedMaterialized = m.ungroupedMaterialized()
 	case "Services":
 		ctx.ListEmpty = m.config.configProject == nil || len(m.config.configProject.Services) == 0
 		ctx.Selected = m.selection.serviceName != ""
@@ -1031,6 +1037,31 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			finalCmds = append(finalCmds, bodyCmd)
 		}
 
+	case cmds.ToggleUngroupedRequestMsg:
+		// The list only knows the ungrouped row is selected; which verb
+		// applies - adopt (write the tag) or release (remove it) - is a fact
+		// about the loaded project, so the confirm is built here, where the
+		// file and the membership are known.
+		if m.config.configFileName == "" || m.config.configProject == nil {
+			break
+		}
+		if m.ungroupedMaterialized() {
+			n := len(m.groupMembers(apptypes.UngroupedGroup))
+			finalCmds = append(finalCmds, cmds.OpenConfirmModal(
+				fmt.Sprintf("Remove the ungrouped profile from %d services?\n\nThey go back to having no profile, so plain \"docker compose up\" starts them again.", n),
+				cmds.ReleaseUngrouped(m.config.configFileName),
+			))
+		} else {
+			services := m.ungroupedServices()
+			if len(services) == 0 {
+				break
+			}
+			finalCmds = append(finalCmds, cmds.OpenConfirmModal(
+				fmt.Sprintf("Add profiles: [ungrouped] to %d services?\n\nOnce every service has a profile, plain \"docker compose up\" starts nothing (no service selected). You can undo this from the app.", len(services)),
+				cmds.AdoptUngrouped(m.config.configFileName, services),
+			))
+		}
+
 	case cmds.OpenConfirmModalMsg:
 		m.activeModal = confirmmodal.New(msg.Message, msg.Follow)
 
@@ -1067,7 +1098,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
 		} else {
 			m.lastError = ""
-			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
+			if m.ungroupedMaterialized() {
+				finalCmds = append(finalCmds, cmds.NormalizeUngrouped(m.config.configFileName))
+			} else {
+				finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
+			}
 		}
 		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
 			finalCmds = append(finalCmds, bodyCmd)
@@ -1098,7 +1133,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
 		} else {
 			m.lastError = ""
-			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
+			if m.ungroupedMaterialized() {
+				finalCmds = append(finalCmds, cmds.NormalizeUngrouped(m.config.configFileName))
+			} else {
+				finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
+			}
 		}
 		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
 			finalCmds = append(finalCmds, cfCmd)
@@ -1108,6 +1147,55 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case cmds.DeleteGroupMsg:
+		m.lastErrorFromPoll = false
+		if msg.Err != nil {
+			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
+		} else {
+			m.lastError = ""
+			if m.ungroupedMaterialized() {
+				finalCmds = append(finalCmds, cmds.NormalizeUngrouped(m.config.configFileName))
+			} else {
+				finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
+			}
+		}
+		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
+			finalCmds = append(finalCmds, cfCmd)
+		}
+		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
+			finalCmds = append(finalCmds, bodyCmd)
+		}
+
+	case cmds.AdoptUngroupedMsg:
+		m.lastErrorFromPoll = false
+		if msg.Err != nil {
+			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
+		} else {
+			m.lastError = ""
+			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
+		}
+		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
+			finalCmds = append(finalCmds, cfCmd)
+		}
+		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
+			finalCmds = append(finalCmds, bodyCmd)
+		}
+
+	case cmds.ReleaseUngroupedMsg:
+		m.lastErrorFromPoll = false
+		if msg.Err != nil {
+			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
+		} else {
+			m.lastError = ""
+			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
+		}
+		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
+			finalCmds = append(finalCmds, cfCmd)
+		}
+		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
+			finalCmds = append(finalCmds, bodyCmd)
+		}
+
+	case cmds.NormalizeUngroupedMsg:
 		m.lastErrorFromPoll = false
 		if msg.Err != nil {
 			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))

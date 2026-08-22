@@ -44,10 +44,17 @@ func TestFooterHints(t *testing.T) {
 		},
 		{
 			// The reserved ungrouped row is read-only: the docker verbs stay,
-			// the list-management verbs leave the footer.
+			// the list-management verbs leave the footer, and the row's own
+			// 'A' verb (adopt, while the row is derived) takes their place.
 			name:  "groups list with the ungrouped row selected",
 			model: Model{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST, selectedGroup: apptypes.UngroupedGroup},
-			want:  "space start · t stop · n new · / filter · ↑/↓ navigate · tab next",
+			want:  "space start · t stop · n new · A adopt · / filter · ↑/↓ navigate · tab next",
+		},
+		{
+			// Once a real ungrouped profile backs the row, 'A' releases it.
+			name:  "groups list with the materialized ungrouped row selected",
+			model: Model{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST, selectedGroup: apptypes.UngroupedGroup, ungroupedMaterialized: true},
+			want:  "space start · t stop · n new · A release · / filter · ↑/↓ navigate · tab next",
 		},
 		{
 			// The list has the keyboard: every other key is a letter.

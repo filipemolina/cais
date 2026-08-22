@@ -98,6 +98,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				selectedGroup.Name != apptypes.UngroupedGroup {
 				finalCmds = append(finalCmds, cmds.OpenRenameGroupModal(selectedGroup.Name))
 			}
+
+		// A toggles the reserved ungrouped row's materialization. The list
+		// only knows the row is selected; AppModel decides adopt vs release
+		// from the loaded project.
+		case key.Matches(msg, keys.List.AdoptUngrouped, keys.List.ReleaseUngrouped):
+			if selectedGroup, ok := m.list.SelectedItem().(apptypes.GroupListItem); ok &&
+				selectedGroup.Name == apptypes.UngroupedGroup {
+				finalCmds = append(finalCmds, cmds.RequestToggleUngrouped())
+			}
 		}
 
 	case cmds.SetHomeStatsMsg:

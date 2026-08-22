@@ -28,14 +28,15 @@ func (m Model) bindingsFor() []key.Binding {
 	}
 
 	return keys.Active(keys.Context{
-		Page:          m.activePage,
-		Focused:       m.focusedComponent,
-		ListEmpty:     listEmpty,
-		Selected:      selected,
-		ReadOnlyGroup: m.selectedGroup == apptypes.UngroupedGroup,
-		Editing:       m.editing,
-		PendingAction: m.pendingAction,
-		Filter:        m.filterState,
+		Page:                  m.activePage,
+		Focused:               m.focusedComponent,
+		ListEmpty:             listEmpty,
+		Selected:              selected,
+		ReadOnlyGroup:         m.selectedGroup == apptypes.UngroupedGroup,
+		UngroupedMaterialized: m.ungroupedMaterialized,
+		Editing:               m.editing,
+		PendingAction:         m.pendingAction,
+		Filter:                m.filterState,
 	})
 }
 

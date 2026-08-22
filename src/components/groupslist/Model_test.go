@@ -185,6 +185,38 @@ func TestDeleteKeyDoesNotAlsoPageTheList(t *testing.T) {
 	}
 }
 
+// A on the reserved ungrouped row asks AppModel to show the adopt/release
+// confirm. The list does not know whether the row is derived or materialized -
+// that is a fact about the loaded project, so it sends a generic request.
+func TestUngroupedKeyRequestsTheToggleOnTheUngroupedRow(t *testing.T) {
+	groups := ungroupedSelectedList(t)
+
+	_, msgs := press(t, groups, "A")
+
+	var requested bool
+	for _, msg := range msgs {
+		if _, ok := msg.(cmds.ToggleUngroupedRequestMsg); ok {
+			requested = true
+		}
+	}
+	if !requested {
+		t.Errorf("A did not request the ungrouped toggle on the ungrouped row, got %#v", msgs)
+	}
+}
+
+// A on a real group does nothing: the toggle is the reserved row's verb alone.
+func TestUngroupedKeyRefusesRealGroups(t *testing.T) {
+	groups := focusedGroupsList(t, 12)
+
+	_, msgs := press(t, groups, "A")
+
+	for _, msg := range msgs {
+		if _, ok := msg.(cmds.ToggleUngroupedRequestMsg); ok {
+			t.Errorf("A requested the ungrouped toggle on a real group: %#v", msgs)
+		}
+	}
+}
+
 // The list keeps esc only while it can use it: focused, with a filter
 // standing. Unfocused or unfiltered it has no claim, and mid-typing it owns
 // the whole keyboard instead.
