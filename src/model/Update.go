@@ -1111,11 +1111,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
 		} else {
 			m.lastError = ""
-			if m.ungroupedMaterialized() {
-				finalCmds = append(finalCmds, cmds.NormalizeUngrouped(m.config.configFileName))
-			} else {
-				finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
-			}
+			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
 		}
 		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
 			finalCmds = append(finalCmds, bodyCmd)
@@ -1146,11 +1142,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
 		} else {
 			m.lastError = ""
-			if m.ungroupedMaterialized() {
-				finalCmds = append(finalCmds, cmds.NormalizeUngrouped(m.config.configFileName))
-			} else {
-				finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
-			}
+			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
 		}
 		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
 			finalCmds = append(finalCmds, cfCmd)
@@ -1165,11 +1157,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
 		} else {
 			m.lastError = ""
-			if m.ungroupedMaterialized() {
-				finalCmds = append(finalCmds, cmds.NormalizeUngrouped(m.config.configFileName))
-			} else {
-				finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
-			}
+			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
 		}
 		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
 			finalCmds = append(finalCmds, cfCmd)
@@ -1194,21 +1182,6 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case cmds.ReleaseUngroupedMsg:
-		m.lastErrorFromPoll = false
-		if msg.Err != nil {
-			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
-		} else {
-			m.lastError = ""
-			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
-		}
-		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
-			finalCmds = append(finalCmds, cfCmd)
-		}
-		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
-			finalCmds = append(finalCmds, bodyCmd)
-		}
-
-	case cmds.NormalizeUngroupedMsg:
 		m.lastErrorFromPoll = false
 		if msg.Err != nil {
 			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/filipemolina/cais/src/apptypes"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -31,6 +33,10 @@ func AddGroupTag(fileName string, groupName string, serviceNames []string) error
 		ensureGroupTag(serviceNode, groupName)
 	}
 
+	if groupName != apptypes.UngroupedGroup {
+		normalizeUngrouped(servicesNode)
+	}
+
 	return writeComposeNode(fileName, doc)
 }
 
@@ -52,6 +58,12 @@ func RemoveGroupTag(fileName string, groupName string) error {
 	// Content[1] is its value, and so on.
 	for i := 0; i+1 < len(servicesNode.Content); i += 2 {
 		removeGroupFromService(servicesNode.Content[i+1], groupName)
+	}
+
+	// Not when the reserved name is what is being removed: that call IS the
+	// release, and re-tagging the services it just untagged would undo it.
+	if groupName != apptypes.UngroupedGroup {
+		normalizeUngrouped(servicesNode)
 	}
 
 	return writeComposeNode(fileName, doc)
@@ -177,6 +189,10 @@ func SetGroupMembers(fileName string, groupName string, members []string) error 
 		}
 	}
 
+	if groupName != apptypes.UngroupedGroup {
+		normalizeUngrouped(servicesNode)
+	}
+
 	return writeComposeNode(fileName, doc)
 }
 
@@ -241,48 +257,56 @@ func ensureGroupTag(serviceNode *yaml.Node, groupName string) {
 	}
 }
 
-// NormalizeUngrouped reconciles the reserved profile in fileName in a single
-// read-modify-write pass: every service carrying ungroupedName alongside
-// another profile drops it, and every service with no profiles at all gains
-// it. Callers invoke it only while the reserved profile is materialized.
-// Returns nil without writing when the file already satisfies the invariant.
-func NormalizeUngrouped(fileName string, ungroupedName string) error {
-	doc, err := readComposeNode(fileName)
-	if err != nil {
-		return err
-	}
+// normalizeUngrouped applies the reserved profile's exit rule to an
+// already-parsed services mapping, in the same pass as the edit that made it
+// necessary. Two halves, and the file drifts back into a mixed state without
+// either:
+//
+//   - a service that carries the reserved profile alongside a real one has
+//     joined a group, so it leaves the ungrouped set;
+//   - once the reserved profile is materialized - some service still carries
+//     it after that first step - a service left with no profile at all
+//     rejoins it.
+//
+// The materialized check is what keeps this from growing tags nobody asked
+// for: on a file that has never been adopted, no service carries the reserved
+// name, so an edit that orphans a service leaves it orphaned, which is what
+// the ungrouped row already shows.
+//
+// It runs inside the writers rather than as a second write afterwards, for
+// the reason SetGroupMembers' own comment gives: composing two writes leaves
+// a crash window with the invariant half-applied, and it would snapshot the
+// user's file twice for one edit.
+func normalizeUngrouped(servicesNode *yaml.Node) {
+	materialized := false
 
-	servicesNode, err := servicesMappingNode(doc)
-	if err != nil {
-		return err
-	}
-
-	changed := false
 	for i := 0; i+1 < len(servicesNode.Content); i += 2 {
 		serviceNode := servicesNode.Content[i+1]
-		profilesNode := findMappingValue(serviceNode, "profiles")
 
-		if profilesNode == nil {
-			// A service with no profiles key is ungrouped by derivation; while
-			// the reserved profile is materialized it must carry the tag.
-			ensureGroupTag(serviceNode, ungroupedName)
-			changed = true
+		profilesNode := findMappingValue(serviceNode, "profiles")
+		if profilesNode == nil || !sequenceContains(profilesNode, apptypes.UngroupedGroup) {
 			continue
 		}
 
-		if sequenceContains(profilesNode, ungroupedName) && len(profilesNode.Content) > 1 {
-			// The reserved profile never coexists with another: the service
-			// has joined a real group, so it leaves the ungrouped one.
-			removeGroupFromService(serviceNode, ungroupedName)
-			changed = true
+		if len(profilesNode.Content) > 1 {
+			removeGroupFromService(serviceNode, apptypes.UngroupedGroup)
+			continue
+		}
+
+		materialized = true
+	}
+
+	if !materialized {
+		return
+	}
+
+	for i := 0; i+1 < len(servicesNode.Content); i += 2 {
+		serviceNode := servicesNode.Content[i+1]
+
+		if findMappingValue(serviceNode, "profiles") == nil {
+			ensureGroupTag(serviceNode, apptypes.UngroupedGroup)
 		}
 	}
-
-	if !changed {
-		return nil
-	}
-
-	return writeComposeNode(fileName, doc)
 }
 
 // WriteNewComposeFile creates a brand-new compose file at fileName with a

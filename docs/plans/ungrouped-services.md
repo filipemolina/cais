@@ -121,10 +121,17 @@ The real write, opt-in and reversible:
 - Wire adopt and release through the existing `GroupTags` writers
   (`AddGroupTag` / `RemoveGroupTag`), so every write still flows through
   `ReplaceFileAtomically` and its snapshot.
-- Exit rule both ways: while materialized, a group edit normalizes the
-  reserved profile — a service that joins another group leaves `ungrouped`,
-  and one left with no profile rejoins it (`utils.NormalizeUngrouped`, fired
-  after successful create/edit/delete group writes).
+- Exit rule both ways: a group edit normalizes the reserved profile — a
+  service that joins another group leaves `ungrouped`, and one left with no
+  profile rejoins it while the file is materialized (`utils.normalizeUngrouped`,
+  called from `AddGroupTag`, `SetGroupMembers` and `RemoveGroupTag` inside
+  their existing read-modify-write pass). It landed first as a follow-up write
+  fired from `AppModel` after each successful group write; that was reviewed
+  and moved (2026-08-22), because two writes leave a crash window with the
+  invariant half-applied, let the config poll render the intermediate file,
+  and snapshot the user's file twice for one edit. `RemoveGroupTag` against
+  the reserved name is the release, and is the one write that must not
+  normalize.
 - Tests at the writer, model, keys, groups list and footer layers; the
   writer tests drive the flow against real temp files.
 
