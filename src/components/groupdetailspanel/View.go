@@ -134,19 +134,10 @@ func (m Model) renderBody() string {
 		m.renderMemberTable(members, bodyWidth),
 	)
 
-	// The footnote is about the actions, so it belongs at the foot of the panel
-	// rather than against the table. It used to ride above the action chip row;
-	// with the chips gone it is the panel's only standing hint that a stopped
-	// group is one keypress from running - see "The panel footer" in
+	// The spinner is the panel's only footer content. An idle panel with
+	// nothing to report has no footer at all - see "The panel footer" in
 	// docs/DESIGN.md.
 	var footerParts []string
-	if running == 0 && len(members) > 0 {
-		footerParts = append(footerParts,
-			lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Render("Press s to start."))
-	}
-
-	// The spinner replaces the hint while an action is pending: the hint is
-	// about a key that is disabled for as long as the spinner is up.
 	if m.pendingAction != nil {
 		footerParts = []string{m.renderPendingAction(bodyWidth, bg)}
 	}

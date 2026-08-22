@@ -55,7 +55,7 @@ func PanelRule(width int) string {
 // An empty footer costs no rows. lipgloss.Height("") is 1, so passing "" would
 // otherwise reserve a blank line at the foot of every panel that has nothing
 // to pin there - which is most frames, now that the panels only use the footer
-// for the spinner and the group's start hint.
+// for the spinner and the service panel's transient confirmations.
 func PanelBodyWithFooter(width, avail int, bg color.Color, content, footer string) string {
 	footerHeight := 0
 	if footer != "" {
