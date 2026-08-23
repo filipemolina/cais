@@ -109,9 +109,12 @@ fourteen.
 </details>
 
 Also: create, rename, and delete groups; change which services belong to them;
-confirm-guarded removes; a status re-poll every five seconds so panels reflect
-changes made outside the app; and a `?` overlay listing every key, with the ones
-that do nothing on the current screen dimmed.
+confirm-guarded removes; an `ungrouped` row derived from the services carrying no
+`profiles:` key, so a compose file with no profiles at all still has something to
+select and act on (read-only — `A` adopts it for real); a status re-poll every
+five seconds so panels reflect changes made outside the app; and a `?` overlay
+listing every key, scrollable and `/`-filterable, with the ones that do nothing
+on the current screen dimmed.
 
 ## Install
 
@@ -127,9 +130,9 @@ cd cais
 make build     # installs to $(go env GOPATH)/bin, usually ~/go/bin
 ```
 
-There are no downloadable binaries yet. A `v*` tag builds them (Linux and
-macOS, amd64 and arm64), but the releases stay in draft until the launch
-work in the roadmap, so `go install` or a clone is the way in for now.
+Or grab a pre-built binary from the
+[latest release](https://github.com/filipemolina/cais/releases/latest) —
+Linux and macOS, amd64 and arm64, with `checksums.txt` beside them.
 
 **Requirements:** Docker with the Compose plugin on your `PATH`, a terminal, and
 Go 1.26+ to build. If something is missing or the daemon is not running, the
@@ -168,7 +171,8 @@ one.
 | `E` | Open the whole compose file in `$EDITOR` (the `.env` file, from the env modal opened with `v`) |
 | `v` | Open the `.env` editor: the variable table, a key editor, and a raw file editor, in one modal |
 | `n` | New: a group on the Groups page, a service on the Services page (name and image, then the inline editor opens on it), a variable from the env modal opened with `v` |
-| `R` `d` | Rename group · Delete group (`d` confirms first) |
+| `R` `d` | Rename group · Delete: the group on the Groups page, or the service's whole entry in the compose file on the Services page (both confirm first) |
+| `B` | Cycle the service's restart policy: none → `on-failure` → `unless-stopped` → `always`, written straight into the compose file |
 | `A` | Adopt or release the `ungrouped` row: writes (or removes) `profiles: [ungrouped]` on every untagged service, confirm-guarded |
 | `/` | Filter the list by name |
 | `u` | Docker disk and memory usage overlay |

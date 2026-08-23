@@ -37,7 +37,7 @@ The Services page is the counterpart to Home for single-service operations.
 - The **services list** shows every compose service with status and memory summary per row. `space`/`enter` starts the highlighted service and `t` stops it, straight from the list; `d` opens a confirm to delete its whole entry from the compose file (refused if another service still names it in `depends_on:`).
 - The **service details** panel shows a header card (name, image, status line with coloured dot, state, health, uptime) and a compact PROPERTY | VALUE table of the service's compose configuration: ports, a live **web** hyperlink to the service's resolved URL, container name, restart policy, networks, volumes, healthcheck, `depends_on`, pull policy, PUID/PGID, memory limits, and label count.
 - When the service has a running container, a live runtime stats table joins it: memory usage + percentage, CPU, network I/O, disk I/O, PIDs, uptime.
-- With a service selected: `s`/`t`/`r`/`p`/`x` act on that one service, `l` streams its logs, `y` copies its URL, `h` opens the healthcheck template picker.
+- With a service selected: `s`/`t`/`r`/`p`/`x` act on that one service, `l` streams its logs, `y` copies its URL, `h` opens the healthcheck template picker, and `B` cycles its restart policy — none → `on-failure` → `unless-stopped` → `always`, written straight into the compose file.
 - `e` opens the service's own YAML fragment in an inline editor (real YAML, not a form — every Compose field is reachable). It validates as you type, auto-indents on Enter, indents with `tab`/`shift+tab`, and refuses to write a fragment that would not parse as Compose. `ctrl+s` saves, `ctrl+o` opens the same fragment in `$EDITOR`, `esc` cancels.
 
 ![The inline YAML editor open on a service, with live validation](/screenshot-editor.png)
@@ -73,9 +73,9 @@ See [Backups](/users/backups/) for how the store works.
 
 ## Overlays and modals
 
-- `?` opens the help overlay: every key grouped by scope, with the ones that do nothing on the current screen dimmed. Closes with `?`, `esc`, or `q`.
+- `?` opens the help overlay: every key grouped by scope, with the ones that do nothing on the current screen dimmed. It scrolls, and `/` fuzzy-filters the catalog. Closes with `?`, `esc`, or `q`.
 - `a` opens the About overlay: brand mark, version, license, repo link.
 - `T` opens the theme picker with live preview; `Enter` applies and persists, `Esc` restores the theme you started with.
 - `u` opens the usage overlay: Docker disk and memory usage bars.
-- `v` opens the `.env` editor modal: the variable table, a key editor, and the raw file editor in one surface. Variables are masked by default — `space` reveals the selected value, `c` copies it, `n`/`e`/`d` add/edit/delete, `o` opens the whole file in an inline editor. Writes are line-preserving, so comments and the variables you did not touch survive.
+- `v` opens the `.env` editor modal: the variable table, a key editor, and the raw file editor in one surface. Variables are masked by default — `space` reveals the selected value, `c` copies it, `n`/`e`/`d` add/edit/delete, `o` opens the whole file in an inline editor, `E` opens it in `$EDITOR`. Writes are line-preserving, so comments and the variables you did not touch survive.
 - Destructive actions (`x` remove, `d` delete group or service) always go through a confirm modal. `y` confirms, `n` or `esc` cancels.

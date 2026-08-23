@@ -9,7 +9,7 @@ sidebar:
 
 Every key in cais is declared exactly once, in `src/keys/Keys.go`. The footer bar and the `?` help overlay render from that same declaration, so what they advertise is what the handlers do — they cannot drift apart.
 
-`?` lists every key in context, with the ones that do nothing on the current screen dimmed. The tables below are the full reference.
+`?` lists every key in context, with the ones that do nothing on the current screen dimmed. The overlay scrolls, and `/` fuzzy-filters the catalog. The tables below are the full reference.
 
 ## Global
 
@@ -49,7 +49,7 @@ Act on the body's left panel — the groups list and the services list.
 | `enter` / `esc` | Apply / cancel a filter being typed |
 | `g` / `G` | First / last row |
 
-Deleting a service is refused if another service still names it in `depends_on:` — the confirm explains why instead of leaving the file broken.
+Deleting a service is refused if another service still names it in `depends_on:`. The confirm modal opens either way; the write is what refuses, with an error naming the service that depends on it and what to do about it — rather than leaving the file broken.
 
 ## Details
 
@@ -67,6 +67,7 @@ Act on whatever the body's right panel is showing. The first six are shared verb
 | `h` | Add a healthcheck from the template picker — service panel only |
 | `e` | Edit the service's YAML inline — service panel only |
 | `E` | Open the whole compose file in `$EDITOR` — service panel only |
+| `B` | Cycle the service's restart policy — none → `on-failure` → `unless-stopped` → `always`, written into the compose file; service panel only |
 | `ctrl+s` | Save the inline editor |
 | `ctrl+o` | Open the inline editor's fragment in `$EDITOR` |
 
@@ -113,6 +114,7 @@ The keys every modal answers to.
 | `f` | Follow (logs overlay) |
 | `c` | Copy (env modal) |
 | `o` | Raw edit (env modal) |
+| `E` | Open the `.env` in `$EDITOR` (env modal — the modal closes so the editor takes the terminal) |
 
 ## Design notes
 

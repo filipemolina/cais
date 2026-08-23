@@ -21,6 +21,7 @@ theme: cais-dusk
 | Field | Meaning | Default |
 | --- | --- | --- |
 | `theme` | The theme to start with. Any of the [14 themes](/users/themes/). | `cais-dusk` |
+| `url_host` | The host part of every service URL the app builds. Overrides detection. | detected — `SSH_CONNECTION`'s server address over SSH, `localhost` otherwise |
 
 The theme is written here when you confirm a choice in the theme picker (`T`), and loaded before the program starts.
 
