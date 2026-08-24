@@ -18,7 +18,7 @@ src/
 ├── config/          # persisted preferences (~/.config/cais/config.yaml)
 ├── highlight/       # read-only YAML highlighting for the Files page
 ├── banner/          # the "cais" figlet ASCII banner, gradient-tinted from the active theme
-└── constants/       # layout widths, branding, focusable component list
+└── constants/       # layout widths, branding, version reader
 demo/                # VHS tapes, the recorded gif and screenshots, and their fixture stack
 docs/                # DESIGN.md (why), ROADMAP.md (order), plans/ (what's next, in sequence)
 website/             # this documentation site (Astro / Starlight)
@@ -72,7 +72,7 @@ The "Cais" figlet ASCII art rendered by the About overlay (`a`). The letters are
 
 ### `src/constants` — layout and branding
 
-Layout widths, focusable component ids, branding, and the version reader (`constants.Version()`).
+Layout widths, branding, and the version reader (`constants.Version()`).
 
 ## Two seams worth knowing before you touch anything
 

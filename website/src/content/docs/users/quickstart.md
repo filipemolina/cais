@@ -34,7 +34,7 @@ With no flags, cais auto-detects `compose.yaml`, `compose.yml`, `docker-compose.
 - **`3` Files** — the raw compose file, syntax-highlighted.
 - **`4` Backups** — every stored copy of the compose file and `.env`.
 
-`Tab` moves focus between the list and the details panel. `↑`/`↓` (or `k`/`j`) move the cursor; the details panel follows it.
+Both panels are always active. `↑`/`↓` (or `k`/`j`) move the cursor — moving it selects the row, and the details panel renders the selection. `tab`/`shift+tab` are inert on body pages.
 
 ## 3. Do something
 
@@ -46,9 +46,9 @@ With a group or service selected, the essentials:
 | `t` | Stop |
 | `r` | Restart |
 | `p` | Pull |
-| `l` | Stream logs |
+| `L` | Stream logs |
 | `y` | Copy the service's URL |
-| `h` | Add a healthcheck from the template picker |
+| `H` | Add a healthcheck from the template picker |
 | `e` | Edit the service's YAML inline |
 | `E` | Open the whole compose file in `$EDITOR` |
 | `v` | Open the `.env` editor |

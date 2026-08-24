@@ -34,27 +34,26 @@ func FitBox(s lipgloss.Style, w, h int) lipgloss.Style {
 	return s
 }
 
-// PanelBg is the background tier a body panel renders on: tier 4 when focused,
-// tier 3 otherwise. Focus lifts the whole panel rather than adding a border, so
-// the panel's box stays the same size either way.
-func PanelBg(isFocused bool) color.Color {
-	if isFocused {
-		return appstyles.Active.BackgroundElevated
-	}
-
-	return appstyles.Active.BackgroundPanel
+// PanelBg is the background tier a body panel renders on. Both body panels are
+// always active now that focus is gone, so they share the elevated tier (what
+// the previously "focused" panel used to get). Focus used to lift the whole
+// panel rather than adding a border, so the panel's box stayed the same size
+// either way - that lift is now the steady state.
+func PanelBg() color.Color {
+	return appstyles.Active.BackgroundElevated
 }
 
 // ListRowBg is the background a list row renders on. The active row is lifted
-// to the surface tier; every other row sits flush on its panel's tier. Rows
-// need an explicit background (rather than inheriting the panel's) because each
-// row is rendered and sealed on its own - see appstyles.FillBackground.
-func ListRowBg(isActive bool, isParentFocused bool) color.Color {
+// to the surface tier; every other row sits flush on the panel's elevated
+// tier. Rows need an explicit background (rather than inheriting the panel's)
+// because each row is rendered and sealed on its own - see
+// appstyles.FillBackground.
+func ListRowBg(isActive bool) color.Color {
 	if isActive {
 		return appstyles.Active.ModalBg
 	}
 
-	return PanelBg(isParentFocused)
+	return PanelBg()
 }
 
 // BarColumn renders the nav's ▌ indicator once per line of content, so the

@@ -210,38 +210,67 @@ brackets are declared in `src/keys`; the digits are matched by key code in
 are - and the footer's `1-N` hint is derived from that same list, so a new tab
 extends both instead of drifting from them.
 
+**Focus management between the body panels was removed.** The left (groups /
+services list) and right (details) panels used to be two focus stops: `tab` /
+`shift+tab` moved a focus cursor between them, and the docker verbs (`restart`,
+`pull`, `remove`, `logs`, `healthcheck`, `boot`, `edit`) were hidden until the
+details panel held focus. That abstraction was introduced in July 2026 on the
+theory that the two panels were independent surfaces. It is now reversed: the
+two panels are two views of *one* selection. The list cursor drives the
+selection automatically - moving the cursor selects the row - and both panels
+render that same selected group or service, so there is no second thing to
+focus. With the selection shared, the focus cursor was a fiction: a verb was
+never about "which panel", only about "which row is selected", and the row is
+always the one under the cursor. The verbs now fire straight from the list
+selection on either screen, and `constants.FocusableComponents` no longer holds
+the body panels. `tab` / `shift+tab` are no longer used to move between body
+panels; they remain only inside overlays and the inline YAML editor, where they
+are ordinary text-editing keys.
+
 **`esc` is "back", as a ladder of claims.** Strongest first: a modal closes
-itself; a filter being typed owns the keyboard and esc abandons it; a focused
-list holding an applied filter keeps esc, because esc is the only way back to
-the full rows - the list says so through `KeepsEsc()`, asked via
-`AppModel.escKept()` the same way `OwnsKeyboard()` is asked, because the
-answer has to be right on the keystroke that changes it. What remains is the
-details panel, where esc returns focus to the list. When a filter stands on an
-*unfocused* list, esc moves focus to the list first and clears the filter on
-the next press, so the user is never stranded in a filtered list with no
-advertised way out. The footer offers `esc back` in the details contexts only:
-everywhere else the key is either spoken for or does nothing, and the bar does
-not advertise inert keys.
+itself; a filter being typed owns the keyboard and esc abandons it; an applied
+filter on the list keeps esc, because esc is the only way back to the full rows
+- the list says so through `KeepsEsc()`, asked via `AppModel.escKept()` the same
+way `OwnsKeyboard()` is asked, because the answer has to be right on the
+keystroke that changes it. With no panel left to return focus to, what remains
+is the selection itself: esc clears the active filter first, then — if an error
+banner is showing — dismisses it, then clears the
+current selection (deselecting the group or service so the details panel
+returns to its empty state), and does nothing further once both are already
+clear. The footer offers `esc back` in those contexts only: everywhere else the
+key is either spoken for or does nothing, and the bar does not advertise inert
+keys.
 
 `tab` still does nothing while a filter is being typed: the filter input owns
 the keyboard, and `enter`/`esc` are the only ways out of it. Making `tab`
 apply-and-move would resurrect the one-key-two-jobs collision the list keymap
 work removed, so inert it stays.
 
-Because the nav takes no focus, `constants.FocusableComponents` holds only the
-two body panels, and `Tab`/`Shift+Tab` alternate between them. Component ids are
-part of the focus protocol (a component compares its id against
-`cmds.SetFocusMsg`), so they are *not* positions in the focus cycle — the nav is
-id 0 but is absent from the cycle. `ChangeFocus` derives the cycle position from
-the currently focused id so the two cannot disagree.
-
 **Every page in `apptypes.PageTitles` needs an entry in `AppModel.pages`.** The
-map drives rendering, the layout broadcast and the focus cycle. A page listed in
-the nav but missing from the map renders an empty body; `View` guards that case
+map drives rendering and the layout broadcast. A page listed in the
+nav but missing from the map renders an empty body; `View` guards that case
 by always setting `AltScreen`, because returning the zero `tea.View` drops the
 terminal out of the alternate screen and the app looks like it crashed while
 still running. Pages that aren't implemented yet get a
 `placeholderpanel.New`.
+
+**The unified keymap.** Because the two panels share one selection, the docker
+verbs are the same on both screens and resolve through the same bindings in
+`src/keys` - `components.dockerActionFor` maps the key to the verb regardless of
+which screen is active. The group screen (Home) and the service screen
+(Services) share `s` start, `t` stop, `r` restart, `p` pull, `x` remove and `L`
+logs. `H` (healthcheck) and `B` (boot) are Services-only. The screens differ only in their
+screen-specific keys: the group screen has `e` edit group membership, `R` rename group, `n` new
+group, `d` delete group and `A` adopt/release the ungrouped row (the reserved
+row only); the service screen has `e` edit service (YAML), `E` edit the compose
+file, `y` copy the service's URL, `H` healthcheck, `B` boot (cycle restart policy), `n` new service and `d` delete service. Both
+screens share `/` filter, `g`/`G` first/last row and `esc`. `l` / `h` are *not*
+docker verbs - they are vim-style list pagination (next/previous page of rows)
+and live on the list keymap, not the panel tier. `space` and `enter` no longer
+start anything; start is `s`. Rename is its own binding — `R` renames a group (Home only) — and is not folded into `e`. The global keys
+(`1`-`N` pages, `]`/`[` next/prev page, `?` help, `q` quit, `a` about, `T`
+theme, `u` usage, `v` env, `ctrl+c` force quit) are unchanged, as are the
+overlay and inline-editor keys.
 
 ### Where keybindings live
 
@@ -307,12 +336,12 @@ The tiers:
 
 | Tier | Keys | Rule |
 | --- | --- | --- |
-| Global | digits, `[` / `]`, `?`, `a` (about), `esc` (back), `tab` / `shift+tab`, `q` | Same meaning everywhere, never contextual — but they yield to whatever owns the keyboard (see the esc ladder under *Navigation and focus*) |
+| Global | digits, `[` / `]`, `?`, `a` (about), `esc` (back), `q` | Same meaning everywhere, never contextual — but they yield to whatever owns the keyboard (see the esc ladder under *Navigation and focus*) |
 | Force quit | `ctrl+c` | Yields to nothing, checked before the modal handoff |
-| Panel | lowercase letters (`s t r p x l e n d h`) | Act on the focused panel's selection; one verb, one key, on every panel |
+| Panel | `s t r p x L` (+ `H` `B` on Services) | Act on the list selection; one verb, one key. `s t r p x L` are shared by both panels; `H` (healthcheck) and `B` (boot) are Services-only. Screen-specific keys differ (see *Navigation and focus*): groups add `e`/`R`/`n`/`d`/`A`, services add `e`/`E`/`y`/`H`/`B`/`n`/`d` |
 | Destructive | `x`, `d` | Always through `ConfirmModal`; never dispatched straight from a panel |
 | Overlay | `esc` cancel, `enter` confirm, `y` / `n`, plus overlay-local letters | The overlay owns the keyboard while it is open |
-| List | cursor keys, `g` / `G`, `/` | The list's own, and the only keys `list.KeyMap` is allowed to claim |
+| List | cursor keys, `g` / `G`, `/`, `l` / `h` (page) | The list's own, and the only keys `list.KeyMap` is allowed to claim |
 
 **There is no prefix key**, and this is deliberate. Prefixes (tmux `ctrl+b`,
 zellij `ctrl+p`) exist because those programs host another program that owns the
@@ -359,8 +388,8 @@ Two consequences worth keeping:
 - **The footer follows the filter.** The lists broadcast
   `cmds.SetListFilterStateMsg` on the transition, so filtering advertises only
   the keys that end it, and an applied filter turns the `/` slot into the `esc`
-  that clears it. Otherwise the bar would go on offering `n`, `d` and `space`
-  while all three were letters — the drift `src/keys` exists to prevent.
+   that clears it. Otherwise the bar would go on offering `n` and `d`
+   while both were letters — the drift `src/keys` exists to prevent.
   `esc` is also the reason the list keeps a key the app otherwise owns: without
   it an applied filter has no way out.
 
@@ -470,7 +499,7 @@ that holds the same YAML fragment the external editor uses. `ctrl+s` saves
 through `utils.ApplyServiceFragment`, `ctrl+o` opens the same fragment in
 `$VISUAL`/`$EDITOR` for when the panel is too cramped, and `esc` cancels —
 confirming first if the buffer has changed. The editor owns the keyboard
-while it is open, so the docker action keys (`s`, `t`, `r`, `p`, `x`, `l`)
+while it is open, so the docker action keys (`s`, `t`, `r`, `p`, `x`)
 are plain text then. `E` still opens the whole compose file in `$EDITOR`,
 which is the only way to touch top-level keys (`name:`, `volumes:`, …).
 
@@ -801,7 +830,7 @@ ignorant of hyperlinks as every other row it draws.
 
 ### A healthcheck template is a correctness claim, so the catalog stays small
 
-`h` on the Services details panel opens `HealthcheckPickerModal`, listing
+`H` on the Services details panel opens `HealthcheckPickerModal`, listing
 `utils.TemplatesFor(image)` — templates whose `Matches` substrings hit the
 service's image first, the generic HTTP fallback always last and never
 filtered out. Each row is table data (`utils.HealthcheckCatalog`), not
@@ -821,9 +850,9 @@ covers every key, because "is the field visible" already answers "should this
 keystroke type into it." Cursor movement calls `list.CursorUp`/`CursorDown`
 directly rather than forwarding keys to `list.Update`, specifically so
 bubbles' default list keymap (`h`/`l`/`b`/`u`/`f`/…) never intercepts a
-keystroke the port field needs as ordinary typing — the picker's own `h` for
-"healthcheck" would otherwise collide with the list's paging binding of the
-same letter.
+keystroke the port field needs as ordinary typing — the picker's own `H` for
+"healthcheck" is a distinct key from the list's `h` paging binding, so the two
+no longer collide on the same letter.
 
 `utils.ApplyHealthcheck` inserts or replaces the `healthcheck:` mapping
 directly under the service's value node — the same read-modify-write shape
@@ -893,13 +922,12 @@ to report, a panel has no footer at all.
 
 **The group panel advertises no keys of its own.** It used to pin `Press s to
 start.` here whenever a selected group had nothing running. `s` is
-`keys.Details.Start`, which only the details panel matches, so the hint was
-dead text in the state the page opens in — the groups list has focus, and
-there a group starts with `space` (`keys.List.Select`). A panel-local hint
-has to re-derive which of the two keys is live from which component has
-focus; `keys.Active` already does that from one place, and the footer bar
-renders it. So the hint went the way the action chip rows went, and for a
-version of the same reason.
+`keys.Details.Start`, which starts the selected group from the list, so the
+hint duplicated what the footer already advertises through `keys.Active`; a
+panel-local hint would have to re-derive the live keys from the screen state,
+which `keys.Active` already does from one place, and the footer bar renders
+it. So the hint went the way the action chip rows went, and for a version of
+the same reason.
 
 **It is pinned by one layout, not by each panel's arithmetic.**
 `PanelBodyWithFooter` takes a panel's content and its footer and pads between

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 
@@ -106,7 +107,6 @@ func TestHelpOverlayRendersTheCatalog(t *testing.T) {
 	for _, want := range []string{
 		"Keyboard shortcuts",
 		"Pages", "List", "Details", "Editor", "Overlays", "Global",
-		"space  start",
 		"alt+g/s/f",
 		"Compose files",
 		"compose.yml",
@@ -115,5 +115,11 @@ func TestHelpOverlayRendersTheCatalog(t *testing.T) {
 		if !strings.Contains(overlay, want) {
 			t.Errorf("help overlay does not mention %q", want)
 		}
+	}
+
+	// Keys pad to the widest key in their scope, so the start row is "s"
+	// followed by alignment spaces - assert the shape, not the spacing.
+	if !regexp.MustCompile(`\bs +start`).MatchString(overlay) {
+		t.Error(`help overlay does not mention "s  start"`)
 	}
 }

@@ -2,8 +2,6 @@ package model
 
 import (
 	"testing"
-
-	"github.com/filipemolina/cais/src/constants"
 )
 
 // Esc dismisses a foreground error banner - the errors that stay until the
@@ -41,47 +39,45 @@ func TestEscDismissesAPollErrorBanner(t *testing.T) {
 	}
 }
 
-// Esc dismisses the banner before it backs out of the details panel - the
-// same one-key-one-job ladder a filtered list clears on. The first esc clears
-// the banner and leaves focus where it was; the second esc navigates back.
-func TestEscDismissesTheBannerBeforeNavigatingBack(t *testing.T) {
+// Esc dismisses the banner before it deselects the current group - the same
+// one-key-one-job ladder a filtered list clears on. The first esc clears the
+// banner; the second esc deselects the group (there is no panel to return
+// focus to anymore).
+func TestEscDismissesTheBannerBeforeDeselecting(t *testing.T) {
 	m := withGroupsLoaded(t)
-	m.focusedComponent = constants.COMPONENT_BODY_DETAILS
+	m.selection.groupName = "core"
 	m.lastError = "boom"
 
-	// First esc: banner goes, focus stays on the details panel.
+	// First esc: banner goes, selection stays.
 	m = updateForTest(t, m, keyPress(teaKeyEsc()))
 	if m.lastError != "" {
 		t.Errorf("first esc did not dismiss the banner: %q", m.lastError)
 	}
-	if m.focusedComponent != constants.COMPONENT_BODY_DETAILS {
-		t.Errorf("first esc moved focus to %d, want to stay on details (%d)",
-			m.focusedComponent, constants.COMPONENT_BODY_DETAILS)
+	if m.selection.groupName != "core" {
+		t.Errorf("first esc deslected the group: %q", m.selection.groupName)
 	}
 
-	// Second esc: no banner in the way, so esc backs out to the list.
+	// Second esc: no banner in the way, so esc deselects the group.
 	m = updateForTest(t, m, keyPress(teaKeyEsc()))
-	if m.focusedComponent != constants.COMPONENT_BODY_LIST {
-		t.Errorf("second esc did not back out to the list: focus = %d, want %d",
-			m.focusedComponent, constants.COMPONENT_BODY_LIST)
+	if m.selection.groupName != "" {
+		t.Errorf("second esc did not deselect the group: %q", m.selection.groupName)
 	}
 }
 
-// Esc with no banner and focus already on the list does nothing - the banner
-// rung is skipped, and the back-to-list rung is a no-op on the list. This is
-// the baseline that proves the banner rung is what changed, not the back rung.
-func TestEscOnTheListWithNoBannerDoesNothing(t *testing.T) {
+// Esc with no banner and no selection does nothing - the banner rung is
+// skipped, and the deselect rung is a no-op with nothing selected. This is the
+// baseline that proves the banner rung is what changed, not the deselect rung.
+func TestEscWithNoBannerAndNoSelectionDoesNothing(t *testing.T) {
 	m := withGroupsLoaded(t)
-	// withGroupsLoaded starts on the list.
-	if m.focusedComponent != constants.COMPONENT_BODY_LIST {
-		t.Fatalf("precondition: focus = %d, want the list (%d)",
-			m.focusedComponent, constants.COMPONENT_BODY_LIST)
-	}
+	// withGroupsLoaded starts with no selection.
+	m.selection.groupName = ""
 
 	m = updateForTest(t, m, keyPress(teaKeyEsc()))
 
-	if m.focusedComponent != constants.COMPONENT_BODY_LIST {
-		t.Errorf("esc moved focus off the list with no banner: focus = %d",
-			m.focusedComponent)
+	if m.selection.groupName != "" {
+		t.Errorf("esc selected a group with nothing to deselect: %q", m.selection.groupName)
+	}
+	if m.lastError != "" {
+		t.Errorf("esc surfaced a banner: %q", m.lastError)
 	}
 }

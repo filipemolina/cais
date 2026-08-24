@@ -136,7 +136,7 @@ func (m Model) renderHeader(contentWidth int) string {
 // the same selection language the env/file rows use.
 func (m Model) renderRow(idx int, entry cmds.EnvEntry, contentWidth int) string {
 	isSelected := idx == m.selectedIdx
-	rowBg := chrome.ListRowBg(isSelected, true)
+	rowBg := chrome.ListRowBg(isSelected)
 
 	var rowContent string
 	switch entry.Source {

@@ -19,7 +19,7 @@ func errorContent(message string) string {
 
 func (m Model) View() tea.View {
 	// Always the focused tier: see the note on the model.
-	bg := chrome.PanelBg(true)
+	bg := chrome.PanelBg()
 
 	bodyWidth := max(1, chrome.PanelBodyWidth(m.panelWidth))
 	bodyAvail := max(1, chrome.PanelBodyHeight(m.panelHeight))
@@ -66,6 +66,6 @@ func (m Model) View() tea.View {
 			Render(m.filePath)
 	}
 
-	screen := chrome.PanelFrame(title, titleRight, true, m.panelWidth, m.panelHeight, body)
+	screen := chrome.PanelFrame(title, titleRight, m.panelWidth, m.panelHeight, body)
 	return tea.NewView(screen)
 }

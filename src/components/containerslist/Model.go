@@ -7,9 +7,7 @@ import (
 )
 
 type Model struct {
-	list        list.Model
-	isFocused   bool
-	componentId int
+	list list.Model
 }
 
 func (m Model) Init() tea.Cmd {
@@ -32,7 +30,6 @@ func New(containers []apptypes.ContainerListItem, width int, height int) tea.Mod
 	servicesList.Paginator.InactiveDot = " ○ "
 
 	return Model{
-		list:        servicesList,
-		componentId: 1,
+		list: servicesList,
 	}
 }

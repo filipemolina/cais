@@ -378,10 +378,8 @@ func TestRigDeleteServiceRefusedOnDanglingDependsOn(t *testing.T) {
 
 	r.Send(keyPress('2')) // Services page
 	// Wait for the details panel's own render, not just the list's - the
-	// list can paint before SetFocusMsg has landed on it (see
-	// TestRigAddService/TestRigDeleteService, which sync on the details
-	// panel for the same reason), and a 'd' sent before focus lands is
-	// dropped rather than queued.
+	// list can paint first (see TestRigAddService/TestRigDeleteService,
+	// which sync on the details panel for the same reason).
 	if !r.WaitFor("PROPERTY", 3*time.Second) {
 		t.Fatalf("services list never rendered. Output:\n%s", r.Output())
 	}

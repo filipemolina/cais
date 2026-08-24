@@ -40,13 +40,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			finalCmds = append(finalCmds, cmd)
 		}
 
-	case cmds.SetFocusMsg:
-		if int(msg) == m.componentId {
-			m.isFocused = true
-		} else {
-			m.isFocused = false
-		}
-
 	case cmds.SetSelectedGroupMsg:
 		m.selectedGroup = string(msg)
 
@@ -67,7 +60,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.KeyPressMsg:
-		if !m.isFocused || m.selectedGroup == "" {
+		// Both body panels are always active now, so the panel answers every
+		// key for the selected group.
+		if m.selectedGroup == "" {
 			break
 		}
 

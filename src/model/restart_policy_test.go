@@ -6,8 +6,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	tea "charm.land/bubbletea/v2"
 )
 
 // TestRigRestartPolicyCycle drives B end to end: Tab to focus the details
@@ -29,12 +27,10 @@ func TestRigRestartPolicyCycle(t *testing.T) {
 	if !r.WaitFor("PROPERTY", 3*time.Second) {
 		t.Fatalf("did not switch to the Services page. Output:\n%s", r.Output())
 	}
-	r.Send(keyPress(tea.KeyTab))
-	// The footer's degradation ladder sheds B before h at this terminal
-	// width (Boot is the rightmost verb), so healthcheck_test.go's proof of
-	// focus - h healthcheck staying lit - doubles as this test's too.
-	if !r.WaitFor("h healthcheck", 3*time.Second) {
-		t.Fatalf("details panel never took focus (h not advertised). Output:\n%s", r.Output())
+	// Both body panels are always active, so no focus step is needed; the
+	// selected service's verbs - including B boot - are advertised immediately.
+	if !r.WaitFor("B boot", 3*time.Second) {
+		t.Fatalf("boot verb not advertised for the selected service. Output:\n%s", r.Output())
 	}
 
 	r.Send(letterKey('B'))

@@ -110,7 +110,7 @@ func (m Model) containerForService(serviceName string) (apptypes.DockerContainer
 // last block of the body, which pins it to the bottom of the panel.
 func (m Model) View() tea.View {
 	body := m.renderBody()
-	screen := chrome.PanelFrame("Details", m.titlePill(), m.isFocused, m.panelWidth, m.panelHeight, body)
+	screen := chrome.PanelFrame("Details", m.titlePill(), m.panelWidth, m.panelHeight, body)
 
 	return tea.NewView(screen)
 }
@@ -145,7 +145,7 @@ func (m Model) runningCount(members []types.ServiceConfig) int {
 func (m Model) renderBody() string {
 	bodyWidth := max(1, chrome.PanelBodyWidth(m.panelWidth))
 	bodyAvail := max(1, chrome.PanelBodyHeight(m.panelHeight))
-	bg := chrome.PanelBg(m.isFocused)
+	bg := chrome.PanelBg()
 
 	// No groups exist anywhere yet -> onboarding. With the reserved
 	// ungrouped row in knownGroups, this state only happens when the

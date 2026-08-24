@@ -45,14 +45,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			finalCmds = append(finalCmds, cmd)
 		}
 
-	case cmds.SetFocusMsg:
-		if int(msg) == m.componentId {
-			m.isFocused = true
-		} else {
-			m.isFocused = false
-		}
-		m.syncEditorFocus()
-
 	case cmds.SetSelectedServiceMsg:
 		service := types.ServiceConfig(msg)
 		// If the service changes while editing, abandon the editor. The
@@ -150,7 +142,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		finalCmds = append(finalCmds, editorCmd)
 
 	case tea.KeyPressMsg:
-		if !m.isFocused || m.service == nil {
+		// Both body panels are always active now, so the panel answers every
+		// key for the selected service (the list owns the keyboard only while
+		// a filter is being typed, which this panel never does).
+		if m.service == nil {
 			break
 		}
 
@@ -396,19 +391,6 @@ func (m Model) exitEditMode() (Model, tea.Cmd) {
 	m.validationError = ""
 
 	return m, cmds.SetEditingState(false)
-}
-
-// syncEditorFocus keeps the textarea focus in sync with the panel focus.
-func (m *Model) syncEditorFocus() {
-	if !m.editing {
-		return
-	}
-
-	if m.isFocused {
-		m.editor.Focus()
-	} else {
-		m.editor.Blur()
-	}
 }
 
 // resizeEditor constrains the textarea to the panel body. It is called on

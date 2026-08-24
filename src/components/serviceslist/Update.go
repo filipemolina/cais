@@ -136,27 +136,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		// The inner list still gets the key below - that is where the filter
 		// input lives - but neither quick action fires while it is being
-		// typed into. Same guard as groupslist.Model.Update.
-		if !m.isFocused || m.OwnsKeyboard() {
+		// typed into. Both body panels are always active now, so the panel
+		// answers every key (the details panel handles the docker verbs).
+		if m.OwnsKeyboard() {
 			break
 		}
 
 		switch {
-		case key.Matches(msg, keys.List.Select):
-			// Space/Enter starts the selected item (quick action).
-			// Selection happens automatically on cursor movement.
-			if m.activeService != "" {
-				finalCmds = append(finalCmds, cmds.RequestDockerAction("start", m.activeService, false))
-			}
-
-		case key.Matches(msg, keys.Details.Stop):
-			// t stops the selected item, the other half of the quick-action
-			// pair - parity with groupslist.Model.Update, so the two lists
-			// behave the same without a Tab to the details panel.
-			if m.activeService != "" {
-				finalCmds = append(finalCmds, cmds.RequestDockerAction("stop", m.activeService, false))
-			}
-
 		case key.Matches(msg, keys.List.Delete):
 			// d deletes the service's whole entry from the compose file -
 			// same key, same "delete the highlighted thing" meaning as the
@@ -196,35 +182,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			finalCmds = append(finalCmds, m.updateServiceStatuses())
 		}
 
-	case cmds.SetFocusMsg:
-		if int(msg) == m.componentId {
-			m.isFocused = true
-			m.listDelegate.isParentFocused = true
-			m.list.SetDelegate(m.listDelegate)
-		} else {
-			m.isFocused = false
-			m.listDelegate.isParentFocused = false
-			m.list.SetDelegate(m.listDelegate)
-		}
 	}
 
-	if m.isFocused {
-		// Track cursor before the list processes the key, so we can detect
-		// movement and auto-select the item under it.
-		previousIndex := m.list.Index()
+	// Both body panels are always active now, so the inner list always
+	// receives the keystroke. Track cursor before the list processes the key,
+	// so we can detect movement and auto-select the item under it.
+	previousIndex := m.list.Index()
 
-		var cmd tea.Cmd
-		m.list, cmd = m.list.Update(msg)
-		finalCmds = append(finalCmds, cmd)
+	var cmd tea.Cmd
+	m.list, cmd = m.list.Update(msg)
+	finalCmds = append(finalCmds, cmd)
 
-		// Auto-select: if the cursor moved, select the item under it.
-		if m.list.Index() != previousIndex {
-			if item := m.list.SelectedItem(); item != nil {
-				if service, ok := item.(apptypes.ServiceListItem); ok {
-					m.activeService = service.Service.Name
-					m.syncActiveIndex()
-					finalCmds = append(finalCmds, cmds.SetSelectedService(service.Service))
-				}
+	// Auto-select: if the cursor moved, select the item under it.
+	if m.list.Index() != previousIndex {
+		if item := m.list.SelectedItem(); item != nil {
+			if service, ok := item.(apptypes.ServiceListItem); ok {
+				m.activeService = service.Service.Name
+				m.syncActiveIndex()
+				finalCmds = append(finalCmds, cmds.SetSelectedService(service.Service))
 			}
 		}
 	}

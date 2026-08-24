@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/filipemolina/cais/src/cmds"
-	"github.com/filipemolina/cais/src/constants"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/compose-spec/compose-go/v2/types"
@@ -43,7 +42,6 @@ func requestedAction(t *testing.T, cmd tea.Cmd) cmds.RunDockerActionMsg {
 // --file threading exists to prevent.
 func TestServiceDetailsPanelRequestsTheActionRatherThanRunningIt(t *testing.T) {
 	panel := New(&types.ServiceConfig{Name: "web"}, "10.0.0.5")
-	panel, _ = panel.Update(cmds.SetFocusMsg(constants.COMPONENT_BODY_DETAILS))
 
 	_, cmd := panel.Update(keyPress('s'))
 

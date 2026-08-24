@@ -6,7 +6,6 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
-	"github.com/filipemolina/cais/src/constants"
 )
 
 // entryIn finds binding's entry in scope, failing the test if it is absent.
@@ -41,10 +40,10 @@ func scopeTitled(t *testing.T, catalog []Scope, title string) Scope {
 // regression names the row it broke.
 func TestCatalogAvailability(t *testing.T) {
 	t.Run("groups list with groups", func(t *testing.T) {
-		catalog := Catalog(Context{Page: "Home", Focused: constants.COMPONENT_BODY_LIST})
+		catalog := Catalog(Context{Page: "Home"})
 
 		listScope := scopeTitled(t, catalog, "List")
-		for _, binding := range []key.Binding{List.Select, List.New, List.Edit, List.Delete, List.Rename, List.Filter, List.Navigate, List.GoToStart, List.GoToEnd} {
+		for _, binding := range []key.Binding{List.New, List.Filter, List.Navigate, List.GoToStart, List.GoToEnd} {
 			if !entryIn(t, listScope, binding).Available {
 				t.Errorf("%q should be available on a populated groups list", binding.Help().Key)
 			}
@@ -53,20 +52,33 @@ func TestCatalogAvailability(t *testing.T) {
 		if entryIn(t, listScope, List.ClearFilter).Available {
 			t.Error("esc clear filter should be dimmed with no filter applied")
 		}
+		// Edit/Delete need a selection, which the list does not have here.
+		for _, binding := range []key.Binding{List.Edit, List.Delete} {
+			if entryIn(t, listScope, binding).Available {
+				t.Errorf("%q should be dimmed with no selection", binding.Help().Key)
+			}
+		}
 
-		// The details keys need a subject, and the list has focus.
+		// The details keys need a selected subject.
 		details := scopeTitled(t, catalog, "Details")
 		if entryIn(t, details, Details.Start).Available {
-			t.Error("s start should be dimmed while the list has focus")
+			t.Error("s start should be dimmed with no selection")
 		}
 
 		global := scopeTitled(t, catalog, "Global")
+		// Back is only live with a selection or an applied filter.
 		if entryIn(t, global, Global.Back).Available {
-			t.Error("esc back should be dimmed while the list has focus")
+			t.Error("esc back should be dimmed with no selection and no filter")
 		}
-		for _, binding := range []key.Binding{Global.NextPanel, Global.PrevPanel, Global.Quit, Global.ForceQuit, Global.Help, Global.About, Global.Theme} {
+		for _, binding := range []key.Binding{Global.Quit, Global.ForceQuit, Global.Help, Global.About, Global.Theme} {
 			if !entryIn(t, global, binding).Available {
 				t.Errorf("%q should be available everywhere", binding.Help().Key)
+			}
+		}
+		// Tab is dead on body pages now.
+		for _, binding := range []key.Binding{Global.NextPanel, Global.PrevPanel} {
+			if entryIn(t, global, binding).Available {
+				t.Errorf("%q should be dimmed on body pages", binding.Help().Key)
 			}
 		}
 
@@ -77,7 +89,7 @@ func TestCatalogAvailability(t *testing.T) {
 	})
 
 	t.Run("group details with a group selected", func(t *testing.T) {
-		catalog := Catalog(Context{Page: "Home", Focused: constants.COMPONENT_BODY_DETAILS, Selected: true})
+		catalog := Catalog(Context{Page: "Home", Selected: true})
 
 		details := scopeTitled(t, catalog, "Details")
 		for _, binding := range []key.Binding{Details.Start, Details.Stop, Details.Restart, Details.Pull, Details.Remove, Details.Logs} {
@@ -85,19 +97,31 @@ func TestCatalogAvailability(t *testing.T) {
 				t.Errorf("%q should be available with a group selected", binding.Help().Key)
 			}
 		}
-		// EditService/EditFile only exist on the services panel.
-		if entryIn(t, details, Details.EditService).Available {
-			t.Error("e edit should be dimmed on the group panel")
+		// Healthcheck, Boot, EditFile and CopyURL are service-only and must
+		// be dimmed on the group panel. (EditService shares the "e edit"
+		// binding with List.Edit, so sameBinding reports it available
+		// wherever "e" is - that is expected.)
+		for _, binding := range []key.Binding{Details.Healthcheck, Details.Boot, Details.EditFile, Details.CopyURL} {
+			if entryIn(t, details, binding).Available {
+				t.Error("service-only verb should be dimmed on the group panel")
+			}
+		}
+
+		listScope := scopeTitled(t, catalog, "List")
+		for _, binding := range []key.Binding{List.Edit, List.New, List.Delete} {
+			if !entryIn(t, listScope, binding).Available {
+				t.Errorf("%q should be available with a group selected", binding.Help().Key)
+			}
 		}
 
 		global := scopeTitled(t, catalog, "Global")
 		if !entryIn(t, global, Global.Back).Available {
-			t.Error("esc back should be available on the details panel")
+			t.Error("esc back should be available with a selection")
 		}
 	})
 
 	t.Run("a filter stands on the list", func(t *testing.T) {
-		catalog := Catalog(Context{Page: "Home", Focused: constants.COMPONENT_BODY_LIST, Filter: list.FilterApplied})
+		catalog := Catalog(Context{Page: "Home", Filter: list.FilterApplied})
 
 		listScope := scopeTitled(t, catalog, "List")
 		if !entryIn(t, listScope, List.ClearFilter).Available {
@@ -106,16 +130,21 @@ func TestCatalogAvailability(t *testing.T) {
 		if entryIn(t, listScope, List.Filter).Available {
 			t.Error("/ filter should be dimmed while a filter is applied")
 		}
+		// Back is claimed by the filter's clear slot, not the deselect slot.
+		global := scopeTitled(t, catalog, "Global")
+		if entryIn(t, global, Global.Back).Available {
+			t.Error("esc back should be dimmed while a filter holds the esc slot")
+		}
 	})
 
 	t.Run("an empty list suppresses what needs a row", func(t *testing.T) {
-		catalog := Catalog(Context{Page: "Home", Focused: constants.COMPONENT_BODY_LIST, ListEmpty: true})
+		catalog := Catalog(Context{Page: "Home", ListEmpty: true})
 
 		listScope := scopeTitled(t, catalog, "List")
 		if !entryIn(t, listScope, List.New).Available {
 			t.Error("n new should be available on an empty list - it makes the first group")
 		}
-		for _, binding := range []key.Binding{List.Select, List.Edit, List.Delete, List.Rename, List.Filter} {
+		for _, binding := range []key.Binding{List.Edit, List.Delete, List.Filter} {
 			if entryIn(t, listScope, binding).Available {
 				t.Errorf("%q should be dimmed on an empty list", binding.Help().Key)
 			}
@@ -123,7 +152,7 @@ func TestCatalogAvailability(t *testing.T) {
 	})
 
 	t.Run("service details while inline editing dims Global panel keys", func(t *testing.T) {
-		catalog := Catalog(Context{Page: "Services", Focused: constants.COMPONENT_BODY_DETAILS, Editing: true, Selected: true})
+		catalog := Catalog(Context{Page: "Services", Editing: true, Selected: true})
 
 		global := scopeTitled(t, catalog, "Global")
 		for _, binding := range []key.Binding{Global.NextPanel, Global.PrevPanel} {
@@ -143,13 +172,24 @@ func TestCatalogAvailability(t *testing.T) {
 				t.Errorf("%q should be available while editing", binding.Help().Key)
 			}
 		}
+		// Save and OpenEditor are shared with Details; they should also be lit.
+		for _, binding := range []key.Binding{Details.Save, Details.OpenEditor} {
+			if !entryIn(t, editor, binding).Available {
+				t.Errorf("%q should be available while editing", binding.Help().Key)
+			}
+		}
+		// The docker verbs are not live while editing.
+		details := scopeTitled(t, catalog, "Details")
+		if entryIn(t, details, Details.Start).Available {
+			t.Error("s start should be dimmed while editing")
+		}
 	})
 }
 
 // TestEditorKeysAreLiveOnlyWhileEditing asserts the Editor scope's entries are
 // available while editing and dimmed otherwise.
 func TestEditorKeysAreLiveOnlyWhileEditing(t *testing.T) {
-	editingCtx := Context{Page: "Services", Focused: constants.COMPONENT_BODY_DETAILS, Editing: true}
+	editingCtx := Context{Page: "Services", Editing: true}
 	catalog := Catalog(editingCtx)
 
 	editor := scopeTitled(t, catalog, "Editor")
@@ -170,7 +210,7 @@ func TestEditorKeysAreLiveOnlyWhileEditing(t *testing.T) {
 	// making a separate availability claim.
 
 	// Without editing, all Editor scope entries are dimmed.
-	notEditingCtx := Context{Page: "Services", Focused: constants.COMPONENT_BODY_DETAILS, Selected: true}
+	notEditingCtx := Context{Page: "Services", Selected: true}
 	catalog = Catalog(notEditingCtx)
 
 	editor = scopeTitled(t, catalog, "Editor")
@@ -184,7 +224,7 @@ func TestEditorKeysAreLiveOnlyWhileEditing(t *testing.T) {
 // The alt chords are the aliases the footer has no room for; the overlay is
 // where they are advertised, derived from the labels.
 func TestCatalogListsTheChordAliases(t *testing.T) {
-	catalog := Catalog(Context{Page: "Home", Focused: constants.COMPONENT_BODY_LIST})
+	catalog := Catalog(Context{Page: "Home"})
 
 	pages := scopeTitled(t, catalog, "Pages")
 
@@ -212,7 +252,7 @@ func TestCatalogListsTheChordAliases(t *testing.T) {
 // the row is derived, release once a real ungrouped profile backs it. The
 // other face is dimmed, and neither is offered on a real group.
 func TestUngroupedAdoptReleaseAvailability(t *testing.T) {
-	derived := Catalog(Context{Page: "Home", Focused: constants.COMPONENT_BODY_LIST, ReadOnlyGroup: true})
+	derived := Catalog(Context{Page: "Home", Selected: true, ReadOnlyGroup: true})
 	listScope := scopeTitled(t, derived, "List")
 	if !entryIn(t, listScope, List.AdoptUngrouped).Available {
 		t.Error("A adopt should be available on the derived ungrouped row")
@@ -221,7 +261,7 @@ func TestUngroupedAdoptReleaseAvailability(t *testing.T) {
 		t.Error("A release should be dimmed while the row is derived")
 	}
 
-	materialized := Catalog(Context{Page: "Home", Focused: constants.COMPONENT_BODY_LIST, ReadOnlyGroup: true, UngroupedMaterialized: true})
+	materialized := Catalog(Context{Page: "Home", Selected: true, ReadOnlyGroup: true, UngroupedMaterialized: true})
 	listScope = scopeTitled(t, materialized, "List")
 	if !entryIn(t, listScope, List.ReleaseUngrouped).Available {
 		t.Error("A release should be available on the materialized ungrouped row")
@@ -230,7 +270,7 @@ func TestUngroupedAdoptReleaseAvailability(t *testing.T) {
 		t.Error("A adopt should be dimmed while the row is materialized")
 	}
 
-	realGroup := Catalog(Context{Page: "Home", Focused: constants.COMPONENT_BODY_LIST})
+	realGroup := Catalog(Context{Page: "Home", Selected: true})
 	listScope = scopeTitled(t, realGroup, "List")
 	if entryIn(t, listScope, List.AdoptUngrouped).Available {
 		t.Error("A adopt should be dimmed on a real group")
@@ -243,10 +283,10 @@ func TestUngroupedAdoptReleaseAvailability(t *testing.T) {
 // A binding identity is keystrokes plus help text: the overlay's dimming is
 // only as good as this comparison.
 func TestSameBinding(t *testing.T) {
-	if !sameBinding(List.Select, List.Select) {
+	if !sameBinding(List.Delete, List.Delete) {
 		t.Error("a binding should equal itself")
 	}
-	if sameBinding(List.Select, List.Delete) {
+	if sameBinding(List.Delete, List.Filter) {
 		t.Error("different bindings should not compare equal")
 	}
 	// ClearFilter and Cancel share esc but say different things.

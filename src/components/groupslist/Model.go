@@ -15,8 +15,6 @@ type Model struct {
 	// position IS the selection now (auto-select on navigation), so a stored
 	// row number would highlight whichever group moved into that row.
 	activeGroup string
-	isFocused   bool
-	componentId int
 	stats       cmds.SetHomeStatsMsg
 	hasStats    bool
 	panelWidth  int
@@ -37,11 +35,11 @@ func (m Model) OwnsKeyboard() bool {
 }
 
 // KeepsEsc reports whether the list needs esc for itself: an applied filter
-// is cleared by esc alone, and the key only reaches the list while the list
-// is focused. AppModel's "back" checks this before it takes focus away - see
-// model.AppModel.escKept.
+// is cleared by esc alone. Both body panels are always active now, so the
+// list keeps esc whenever a filter is applied - AppModel's "back" checks this
+// before it clears a selection.
 func (m Model) KeepsEsc() bool {
-	return m.isFocused && m.list.FilterState() == list.FilterApplied
+	return m.list.FilterState() == list.FilterApplied
 }
 
 // FilterState exposes how much of the keyboard the list has taken, so
@@ -84,7 +82,6 @@ func New(groups []string, width int, height int) tea.Model {
 	model := Model{
 		list:         servicesList,
 		listDelegate: listDelegate,
-		componentId:  1,
 	}
 
 	return model

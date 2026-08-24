@@ -7,7 +7,6 @@ import (
 
 	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/cmds"
-	"github.com/filipemolina/cais/src/constants"
 	"github.com/filipemolina/cais/src/utils"
 
 	tea "charm.land/bubbletea/v2"
@@ -57,36 +56,17 @@ func activePageFrom(msgs []tea.Msg) string {
 	return ""
 }
 
-// focusedComponentFrom returns the component requested by a SetFocusMsg.
-func focusedComponentFrom(msgs []tea.Msg) (int, bool) {
-	for _, msg := range msgs {
-		if component, ok := msg.(cmds.SetFocusMsg); ok {
-			return int(component), true
-		}
-	}
-
-	return 0, false
-}
-
-// Init activates the first page, and page activation owns focus assignment.
-// This guarantees the focus message is delivered after there is an active
-// page to receive it, rather than racing the initial SetActivePageMsg.
-func TestInitialPageActivationFocusesLeftPanel(t *testing.T) {
+// Init activates the first page. Page activation no longer assigns focus - both
+// body panels are always active - so the only thing to assert is that the page
+// is the one requested and no focus message is sent.
+func TestInitialPageActivation(t *testing.T) {
 	m := GetInitialModel(utils.ComposeSource{})
 
-	updated, cmd := m.Update(cmds.SetActivePageMsg(apptypes.PageTitles[0]))
+	updated, _ := m.Update(cmds.SetActivePageMsg(apptypes.PageTitles[0]))
 	m = updated.(AppModel)
 
-	if got, want := m.focusedComponent, constants.COMPONENT_BODY_LIST; got != want {
-		t.Fatalf("startup focus: got %d, want %d", got, want)
-	}
-
-	got, ok := focusedComponentFrom(collect(cmd))
-	if !ok {
-		t.Fatal("initial page activation did not send a focus message")
-	}
-	if want := constants.COMPONENT_BODY_LIST; got != want {
-		t.Errorf("initial page focus: got %d, want %d", got, want)
+	if m.activePage != apptypes.PageTitles[0] {
+		t.Fatalf("startup page: got %q, want %q", m.activePage, apptypes.PageTitles[0])
 	}
 }
 
@@ -103,31 +83,18 @@ func TestAltLetterSwitchesPage(t *testing.T) {
 
 			m := applyLayout(drive(startup(120, 40), cmds.SetActivePageMsg(from)))
 
-			// Leave the current page with its details panel focused. A page
-			// shortcut must reset that state for the page it opens.
-			rightPanel := constants.COMPONENT_BODY_DETAILS
-			m = drive(m, collect(m.ChangeFocus(&rightPanel))...)
-
 			updated, cmd := m.Update(altKey(letter))
 			m = updated.(AppModel)
-			if got := activePageFrom(collect(cmd)); got != page {
+			msgs := collect(cmd)
+			if got := activePageFrom(msgs); got != page {
 				t.Errorf("alt+%c from %q switched to %q, want %q", letter, from, got, page)
 			}
 
-			// The keyboard command queues SetActivePageMsg. Process it as the
-			// Bubble Tea runtime would, then inspect the command it returns.
-			updated, pageCmd := m.Update(cmds.SetActivePageMsg(page))
-			m = updated.(AppModel)
-
-			if got, want := m.focusedComponent, constants.COMPONENT_BODY_LIST; got != want {
-				t.Errorf("alt+%c page focus: got %d, want %d", letter, got, want)
-			}
-
-			got, ok := focusedComponentFrom(collect(pageCmd))
-			if !ok {
-				t.Errorf("alt+%c page switch did not send a focus message", letter)
-			} else if want := constants.COMPONENT_BODY_LIST; got != want {
-				t.Errorf("alt+%c page focus message: got %d, want %d", letter, got, want)
+			// The chord queues SetActivePageMsg; process it as the Bubble Tea
+			// runtime would, then confirm the page is active.
+			m = drive(m, msgs...)
+			if m.activePage != page {
+				t.Errorf("alt+%c left the app on %q, want %q", letter, m.activePage, page)
 			}
 		})
 	}
@@ -222,24 +189,16 @@ func TestBracketsStepThroughPages(t *testing.T) {
 	}
 }
 
-func TestPageChangeResetsFocusToLeftPanel(t *testing.T) {
+// A page switch keeps the same selection model: it does not need to reset a
+// focus that no longer exists.
+func TestPageChangeKeepsTheAppConsistent(t *testing.T) {
 	m := applyLayout(startup(120, 40))
-	rightPanel := constants.COMPONENT_BODY_DETAILS
-	m = drive(m, collect(m.ChangeFocus(&rightPanel))...)
 
-	updated, cmd := m.Update(cmds.SetActivePageMsg("Services"))
+	updated, _ := m.Update(cmds.SetActivePageMsg("Services"))
 	m = updated.(AppModel)
 
-	if got, want := m.focusedComponent, constants.COMPONENT_BODY_LIST; got != want {
-		t.Fatalf("page switch focus: got %d, want %d", got, want)
-	}
-
-	got, ok := focusedComponentFrom(collect(cmd))
-	if !ok {
-		t.Fatal("page switch did not send a focus message")
-	}
-	if want := constants.COMPONENT_BODY_LIST; got != want {
-		t.Errorf("page switch focus message: got %d, want %d", got, want)
+	if m.activePage != "Services" {
+		t.Fatalf("page switch: got %q, want Services", m.activePage)
 	}
 }
 
@@ -299,45 +258,6 @@ func TestPageKeysAreInertWhileAModalIsOpen(t *testing.T) {
 				t.Errorf("%v navigated to %q while a modal was open", stroke, got)
 			}
 		})
-	}
-}
-
-// The nav is out of the focus cycle, so Tab must alternate between the two body
-// panels and never land on the menu.
-func TestTabCyclesOnlyTheBodyPanels(t *testing.T) {
-	m := applyLayout(startup(120, 40))
-
-	if got, want := m.focusedComponent, constants.COMPONENT_BODY_LIST; got != want {
-		t.Fatalf("startup focus: got %d, want %d", got, want)
-	}
-
-	seen := map[int]bool{m.focusedComponent: true}
-	for range 6 {
-		m.ChangeFocus(nil)
-		seen[m.focusedComponent] = true
-
-		if m.focusedComponent == constants.COMPONENT_MAIN_MENU {
-			t.Fatal("Tab landed on the main menu, which is not focusable")
-		}
-	}
-
-	for _, id := range constants.FocusableComponents {
-		if !seen[id] {
-			t.Errorf("Tab never reached focusable component %d", id)
-		}
-	}
-}
-
-func TestShiftTabWrapsBackwards(t *testing.T) {
-	m := applyLayout(startup(120, 40))
-	back := -1
-
-	// From the first focusable component, Shift+Tab wraps to the last.
-	m.ChangeFocus(&back)
-
-	order := constants.FocusableComponents
-	if got, want := m.focusedComponent, order[len(order)-1]; got != want {
-		t.Errorf("Shift+Tab from the first component: got %d, want %d", got, want)
 	}
 }
 

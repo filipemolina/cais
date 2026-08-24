@@ -3,15 +3,13 @@ package keybindingbar
 import (
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
-	"github.com/filipemolina/cais/src/constants"
 )
 
-// KeybindingBar is a single-line footer that shows the current page, the
-// focused component, and the keys available in that context. It listens for
-// SetFocusMsg and SetActivePageMsg to track state — no direct coupling to
-// the AppModel.
+// KeybindingBar is a single-line footer that shows the current page and the
+// keys available in that context. Both body panels are always active now, so
+// it no longer tracks a focused component — it listens for SetActivePageMsg to
+// track state, with no direct coupling to the AppModel.
 type Model struct {
-	focusedComponent  int
 	activePage        string
 	terminalWidth     int
 	selectedGroup     string
@@ -41,7 +39,6 @@ func (m Model) Init() tea.Cmd { return nil }
 // New builds the footer keybinding bar.
 func New() tea.Model {
 	return Model{
-		focusedComponent:  constants.COMPONENT_BODY_LIST,
 		activePage:        "Home",
 		groupsListEmpty:   true,
 		servicesListEmpty: true,

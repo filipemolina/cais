@@ -16,8 +16,8 @@ import (
 const sourceColWidth = 8
 
 func (m Model) View() tea.View {
-	// Always the focused tier: see the note on the model.
-	bg := chrome.PanelBg(true)
+	// Both body panels share the elevated tier now that focus is gone.
+	bg := chrome.PanelBg()
 
 	bodyWidth := max(1, chrome.PanelBodyWidth(m.panelWidth))
 	bodyAvail := max(1, chrome.PanelBodyHeight(m.panelHeight))
@@ -53,7 +53,7 @@ func (m Model) View() tea.View {
 			Render(fmt.Sprintf("%d version%s", len(m.entries), plural(len(m.entries))))
 	}
 
-	screen := chrome.PanelFrame("Backups", titleRight, true, m.panelWidth, m.panelHeight, body)
+	screen := chrome.PanelFrame("Backups", titleRight, m.panelWidth, m.panelHeight, body)
 	return tea.NewView(screen)
 }
 
@@ -110,7 +110,7 @@ func (m Model) renderListHeader(width int) string {
 
 func (m Model) renderRow(idx int, entry utils.BackupEntry, width int) string {
 	isSelected := idx == m.selectedIdx
-	rowBg := chrome.ListRowBg(isSelected, true)
+	rowBg := chrome.ListRowBg(isSelected)
 
 	ts := entry.Timestamp.UTC().Format("2006-01-02 15:04")
 	src := entry.Source

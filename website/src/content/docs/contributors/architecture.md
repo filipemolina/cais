@@ -25,7 +25,7 @@ Shared data types: list items (`ServiceListItem`, `GroupListItem`), `DockerConta
 
 ### 4. App State — `src/model`
 
-`AppModel` is the app: its `Init`/`Update`/`View`, and the message-routing that owns every screen. It holds navigation, config, selection, the pages map, focus, modals, and pending actions. It is the only place that reads the terminal dimensions — components size themselves from a broadcast box and never derive width or height from `WindowSizeMsg`.
+`AppModel` is the app: its `Init`/`Update`/`View`, and the message-routing that owns every screen. It holds navigation, config, selection, the pages map, modals, and pending actions. It is the only place that reads the terminal dimensions — components size themselves from a broadcast box and never derive width or height from `WindowSizeMsg`.
 
 ### 5. Configuration — `src/config`
 

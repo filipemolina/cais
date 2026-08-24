@@ -15,8 +15,6 @@ type Model struct {
 	// position IS the selection now (auto-select on navigation), so a stored
 	// row number would highlight whichever service moved into that row.
 	activeService string
-	isFocused     bool
-	componentId   int
 	fileName      string
 	project       *types.Project
 	panelWidth    int
@@ -40,7 +38,7 @@ func (m Model) OwnsKeyboard() bool {
 // KeepsEsc reports whether the list needs esc for itself. Same rule as the
 // groups list - see groupslist.Model.KeepsEsc.
 func (m Model) KeepsEsc() bool {
-	return m.isFocused && m.list.FilterState() == list.FilterApplied
+	return m.list.FilterState() == list.FilterApplied
 }
 
 // FilterState exposes how much of the keyboard the list has taken. Same rule
@@ -51,9 +49,7 @@ func (m Model) FilterState() list.FilterState {
 
 // New builds the services list.
 func New(services []types.ServiceConfig, width int, height int) tea.Model {
-	model := Model{
-		componentId: 1,
-	}
+	model := Model{}
 
 	items := model.buildItems(services)
 

@@ -223,8 +223,8 @@ func EmptyCard(width, availHeight int, bg color.Color, title, body, key, hint st
 
 // PanelFrame renders the title chrome shared by DetailsPanel and
 // GroupDetailsPanel, filling exactly the width x height box the panel was
-// given. The 3-tier background system handles focus: tier 3 (panel) when
-// unfocused, tier 4 (elevated) when focused.
+// given. Both body panels are always active now that focus is gone, so they
+// share the elevated background tier.
 //
 // `titleRight` is an optional accessory pinned to the right end of the title
 // row - the group status pill uses it. A blank row separates the title row
@@ -236,8 +236,8 @@ func EmptyCard(width, availHeight int, bg color.Color, title, body, key, hint st
 // The chip itself is appstyles.NormalTitle; the MarginLeft(2) here is the
 // frame's own left gutter, matching the 2 columns the bubbles list TitleBar
 // adds inside the list wrappers - see appstyles.NormalTitle.
-func PanelFrame(title string, titleRight string, isFocused bool, width int, height int, body string) string {
-	bg := PanelBg(isFocused)
+func PanelFrame(title string, titleRight string, width int, height int, body string) string {
+	bg := PanelBg()
 
 	style := FitBox(WrapperStyle.Background(bg), width, height)
 	titleRow := appstyles.NormalTitle().MarginLeft(2).Render(title)

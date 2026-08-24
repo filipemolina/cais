@@ -9,7 +9,6 @@ import (
 	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/cmds"
 	"github.com/filipemolina/cais/src/components/confirmmodal"
-	"github.com/filipemolina/cais/src/constants"
 	"github.com/filipemolina/cais/src/keys"
 )
 
@@ -160,22 +159,13 @@ func TestApplyingTheFilterHandsTheKeyboardBack(t *testing.T) {
 	}
 }
 
-// n creates a group from either panel on Home. This fixes the onboarding issue
-// where the empty state says "press n" but the key only works on one panel.
+// n creates a group from either panel on Home. Both body panels are always
+// active now, so the key works regardless of which panel the cursor is in.
 func TestNWorksFromEitherPanel(t *testing.T) {
 	m := applyLayout(startup(120, 40))
 	m = drive(m, cmds.SetGroupsListMsg{{Name: "core"}, {Name: "media"}})
 
-	// Switch focus to the details panel.
-	rightPanel := constants.COMPONENT_BODY_DETAILS
-	m = drive(m, collect(m.ChangeFocus(&rightPanel))...)
-
-	if m.focusedComponent != constants.COMPONENT_BODY_DETAILS {
-		t.Fatalf("precondition: focus = %d, want details (%d)",
-			m.focusedComponent, constants.COMPONENT_BODY_DETAILS)
-	}
-
-	// Press n from the details panel.
+	// Press n without any focus dance - the list selection is enough.
 	_, cmd := m.Update(letter('n'))
 
 	var opened bool
@@ -185,7 +175,7 @@ func TestNWorksFromEitherPanel(t *testing.T) {
 		}
 	}
 	if !opened {
-		t.Error("n did not open the create group modal from the details panel")
+		t.Error("n did not open the create group modal")
 	}
 }
 

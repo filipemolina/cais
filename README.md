@@ -47,7 +47,7 @@ limits, beside live memory, CPU, network and disk I/O for the running container.
 a link to the live service. Ctrl-click it, or copy it with `y`.
 The app never opens a browser itself.
 
-**A healthcheck in one keypress.** `h` on a selected service opens a picker of
+**A healthcheck in one keypress.** `H` on a selected service opens a picker of
 templates: Postgres, MariaDB, Redis and nginx, each using a probe tool that
 ships in the image it targets, plus a generic HTTP fallback. Enter writes a
 validated `healthcheck:` block straight into the compose file.
@@ -83,7 +83,7 @@ Compose.
 
 ![The inline YAML editor open on a service, with live validation](./demo/screenshot-editor.png)
 
-**Logs without leaving.** `l` streams `docker compose logs -f` for a service or
+**Logs without leaving.** `L` streams `docker compose logs -f` for a service or
 a whole group in an overlay, with follow mode and scrollback.
 
 ![Streaming logs for a service](./demo/screenshot-logs.png)
@@ -161,25 +161,29 @@ one.
 | Key | Action |
 | --- | --- |
 | `1` `2` `3` `4` | Groups / Services / Files / Backups (`[` and `]` step through them) |
-| `↑` `↓` `k` `j` | Move the cursor; the details panel follows it |
-| `Tab` | Move focus between the list and the details panel |
+| `↑` `↓` `k` `j` | Move the cursor; the details panel follows the selection |
 | `s` `t` `r` `p` `x` | Start · Stop · Restart · Pull · Remove (`x` confirms first) |
-| `l` | Stream logs for the service, or for every service in the group |
+| `L` | Stream logs for the service, or for every service in the group |
+| `H` | Add a healthcheck from the template picker (Services only) |
 | `y` | Copy a service's URL (when it publishes one) |
-| `h` | Add a healthcheck from the template picker |
-| `e` | Edit: a service's YAML inline, or a group's membership |
+| `e` | Edit: a service's YAML inline, or a group's membership (`R` renames a group) |
 | `E` | Open the whole compose file in `$EDITOR` (the `.env` file, from the env modal opened with `v`) |
 | `v` | Open the `.env` editor: the variable table, a key editor, and a raw file editor, in one modal |
 | `n` | New: a group on the Groups page, a service on the Services page (name and image, then the inline editor opens on it), a variable from the env modal opened with `v` |
-| `R` `d` | Rename group · Delete: the group on the Groups page, or the service's whole entry in the compose file on the Services page (both confirm first) |
-| `B` | Cycle the service's restart policy: none → `on-failure` → `unless-stopped` → `always`, written straight into the compose file |
+| `d` | Delete: the group on the Groups page, or the service's whole entry in the compose file on the Services page (both confirm first) |
+| `B` | Boot: cycle the service's restart policy (boot persistence): none → `on-failure` → `unless-stopped` → `always`, written straight into the compose file (Services only) |
 | `A` | Adopt or release the `ungrouped` row: writes (or removes) `profiles: [ungrouped]` on every untagged service, confirm-guarded |
 | `/` | Filter the list by name |
+| `l` `h` | List pagination: next / previous page of rows (vim-style) |
 | `u` | Docker disk and memory usage overlay |
 | `T` `?` `a` `q` | Themes · Help · About · Quit |
 
 Start/Stop/Restart/Pull/Remove run `docker compose` underneath, scoped to every
 service in the group on the Groups page, to one service on the Services page.
+Start is `s`; `space` and `enter` no longer start anything, and rename is `R`
+(a group is renamed with `R`, not `e`). The same verbs fire from the list selection on both the Groups and
+Services pages — there is no separate focus step between the list and the
+details panel.
 
 ## Status
 

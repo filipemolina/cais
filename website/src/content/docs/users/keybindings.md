@@ -20,8 +20,8 @@ Work anywhere that no overlay owns the keyboard.
 | `1`–`4` | Switch page (Groups / Services / Files / Backups) |
 | `[` `]` | Previous / next page |
 | `alt+g` `alt+s` `alt+f` `alt+b` | Page aliases (letter derived from the tab label) |
-| `tab` / `shift+tab` | Move focus between the list and the details panel |
-| `esc` | Back — a ladder of claims: closes a modal, abandons a filter being typed, clears an applied filter, then returns focus from the details panel to the list |
+| `tab` / `shift+tab` | Inert on body pages; used only inside overlays (next field) and the inline YAML editor (indent / outdent) |
+| `esc` | Back — a ladder of claims: closes a modal, abandons a filter being typed, clears an applied filter, dismisses the error banner, then clears the current selection (deselect) |
 | `?` | Help overlay |
 | `a` | About overlay |
 | `T` | Theme picker (live preview; `Enter` applies and persists, `Esc` restores) |
@@ -36,9 +36,8 @@ Act on the body's left panel — the groups list and the services list.
 
 | Key | Action |
 | --- | --- |
-| `↑` `↓` `k` `j` | Move the cursor |
-| `space` / `enter` | Select (start the selected item) |
-| `t` | Stop the highlighted item — the quick-action pair to `space`/`enter`, no `Tab` to the details panel required |
+| `↑` `↓` `k` `j` | Move the cursor — moving it selects the row, so the docker verbs act on it directly |
+| `t` | Stop the selected item — no panel focus needed; the list cursor is the selection |
 | `n` | New — a group on the Groups page, a service on the Services page |
 | `e` | Edit — a group's membership on the Groups page |
 | `d` | Delete (confirm-guarded) — a group on the Groups page, a service's whole compose entry on the Services page |
@@ -62,9 +61,9 @@ Act on whatever the body's right panel is showing. The first six are shared verb
 | `r` | Restart |
 | `p` | Pull |
 | `x` | Remove (confirm-guarded) |
-| `l` | Stream logs — the service, or every service in the group |
+| `L` | Stream logs — the service, or every service in the group |
 | `y` | Copy the service's URL (when it publishes one) — service panel only |
-| `h` | Add a healthcheck from the template picker — service panel only |
+| `H` | Add a healthcheck from the template picker — service panel only (does nothing on Home) |
 | `e` | Edit the service's YAML inline — service panel only |
 | `E` | Open the whole compose file in `$EDITOR` — service panel only |
 | `B` | Cycle the service's restart policy — none → `on-failure` → `unless-stopped` → `always`, written into the compose file; service panel only |

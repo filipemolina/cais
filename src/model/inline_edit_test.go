@@ -11,7 +11,6 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/filipemolina/cais/src/cmds"
 	"github.com/filipemolina/cais/src/components/detailspanel"
-	"github.com/filipemolina/cais/src/constants"
 	"gopkg.in/yaml.v3"
 )
 
@@ -188,9 +187,8 @@ func editingWeb(t *testing.T, fragment string) AppModel {
 	updated, cmd := m.Update(cmds.SetActivePageMsg("Services"))
 	m = drive(updated, collect(cmd)...)
 
-	// Focus the details panel and select web so the editor has a subject.
-	details := constants.COMPONENT_BODY_DETAILS
-	m = drive(m, collect(m.ChangeFocus(&details))...)
+	// Select web so the editor has a subject. Both panels are always active
+	// now, so no focus dance is needed.
 	m = drive(m, cmds.SetSelectedServiceMsg(types.ServiceConfig{Name: "web"}))
 
 	// Enter edit mode.
@@ -317,8 +315,6 @@ func TestEnterOutsideEditModeIsUnchanged(t *testing.T) {
 	updated, cmd := m.Update(cmds.SetActivePageMsg("Services"))
 	m = drive(updated, collect(cmd)...)
 
-	details := constants.COMPONENT_BODY_DETAILS
-	m = drive(m, collect(m.ChangeFocus(&details))...)
 	m = drive(m, cmds.SetSelectedServiceMsg(types.ServiceConfig{Name: "web"}))
 
 	before := m
@@ -402,8 +398,6 @@ func TestPasteOutsideEditModeIsInert(t *testing.T) {
 	updated, cmd := m.Update(cmds.SetActivePageMsg("Services"))
 	m = drive(updated, collect(cmd)...)
 
-	details := constants.COMPONENT_BODY_DETAILS
-	m = drive(m, collect(m.ChangeFocus(&details))...)
 	m = drive(m, cmds.SetSelectedServiceMsg(types.ServiceConfig{Name: "web"}))
 
 	updated, cmd = m.Update(tea.PasteMsg{Content: "  ports:\n    - \"8080:80\"\n"})
@@ -560,28 +554,17 @@ func TestBackspaceAtColumnZeroStillMergesLines(t *testing.T) {
 	}
 }
 
-func TestIndentKeysDoNotSwitchPanelsWhileEditing(t *testing.T) {
+func TestIndentKeysDoNotLeaveEditMode(t *testing.T) {
 	m := editingWeb(t, "web:\n  image: nginx\n")
-	focusedBefore := m.focusedComponent
 
 	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = drive(updated.(AppModel), collect(cmd)...)
 
-	if m.focusedComponent != focusedBefore {
-		t.Fatalf("tab moved focus from %d to %d while editing", focusedBefore, m.focusedComponent)
+	// Tab indents the line; it must not drop the editor or the selection.
+	if !m.inlineEditing {
+		t.Fatal("tab left inline edit mode")
 	}
-}
-
-func TestTabStillSwitchesPanelsOutsideTheEditor(t *testing.T) {
-	m := inlineEditProject(t)
-	updated, cmd := m.Update(cmds.SetActivePageMsg("Services"))
-	m = drive(updated, collect(cmd)...)
-	focusedBefore := m.focusedComponent
-
-	updated, cmd = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
-	m = drive(updated.(AppModel), collect(cmd)...)
-
-	if m.focusedComponent == focusedBefore {
-		t.Fatal("tab should still move focus when the editor is not open")
+	if m.selection.serviceName != "web" {
+		t.Errorf("tab changed the selection: %q", m.selection.serviceName)
 	}
 }

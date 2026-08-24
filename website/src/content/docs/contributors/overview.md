@@ -37,7 +37,7 @@ flowchart TB
 
 - **[Architecture](/contributors/architecture/)** — the seven layers in depth, and how they communicate.
 - **[Project structure](/contributors/project-structure/)** — the `src/` tree with per-package responsibilities.
-- **[Core concepts](/contributors/core-concepts/)** — the mental model: message passing, the AppModel, focus, the esc ladder.
+- **[Core concepts](/contributors/core-concepts/)** — the mental model: message passing, the AppModel, the esc ladder.
 - **[Keybinding system](/contributors/keybinding-system/)** — the single source of truth design.
 - **[Theme system](/contributors/theme-system/)** — how the 13 themes are built from base colors.
 - **[Backup system](/contributors/backup-system/)** — the write-safety architecture.

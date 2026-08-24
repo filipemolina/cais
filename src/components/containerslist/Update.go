@@ -33,22 +33,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		cmd := m.list.SetItems(containersList)
 		finalCmds = append(finalCmds, cmd)
-
-	case cmds.SetFocusMsg:
-		if int(msg) == m.componentId {
-			m.isFocused = true
-			m.list.SetDelegate(containersListCustomDelegate{isParentFocused: true})
-		} else {
-			m.isFocused = false
-			m.list.SetDelegate(containersListCustomDelegate{isParentFocused: false})
-		}
 	}
 
-	if m.isFocused {
-		var cmd tea.Cmd
-		m.list, cmd = m.list.Update(msg)
-		finalCmds = append(finalCmds, cmd)
-	}
+	// Both body panels are always active now that focus is gone, so the inner
+	// list always receives the keystroke.
+	var cmd tea.Cmd
+	m.list, cmd = m.list.Update(msg)
+	finalCmds = append(finalCmds, cmd)
 
 	return m, tea.Batch(finalCmds...)
 }

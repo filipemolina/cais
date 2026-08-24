@@ -19,7 +19,7 @@ Each theme is built by `appstyles.newTheme` from a handful of base colors — `A
 
 `Lighten` is additive (+10/+20/+31 per channel at the standard deltas) and `Darken` is multiplicative (×0.96/×0.92/×0.88). For a dark theme this is a fixed climb independent of the base; for a light theme the steps shrink as the base approaches white.
 
-The consequence for imported color schemes: **set `Panel` to that scheme's deepest background tier** (crust / bg_dim / bg0_hard / sumiInk0 / bg_dark), so the +8% tier (`BackgroundPanel`) lands back on the scheme's signature background. `Modal` must clear `BackgroundElevated` by ≥14 per channel or the modal disappears into the focused panel.
+The consequence for imported color schemes: **set `Panel` to that scheme's deepest background tier** (crust / bg_dim / bg0_hard / sumiInk0 / bg_dark), so the +8% tier (`BackgroundPanel`) lands back on the scheme's signature background. `Modal` must clear `BackgroundElevated` by ≥14 per channel or the modal disappears into the body panels, which render on that same elevated tier.
 
 ## The one deliberate exception
 
@@ -35,11 +35,11 @@ Sections are separated by background color rather than by borders. The tiers are
 | --- | --- | --- |
 | 1 | terminal default | outside the app — never drawn on |
 | 2 | `BackgroundContent` | the frame: header, footer, gutter |
-| 3 | `BackgroundPanel` | the body panels |
-| 4 | `BackgroundElevated` | the focused panel |
+| 3 | `BackgroundPanel` | no painted surface — the mid tier survives as spacing between the frame and the panels |
+| 4 | `BackgroundElevated` | the body panels — both, always (see below) |
 | — | `ModalBg` | modals, and an active list row — its own register, not derived from the panel tiers |
 
-Focus is shown by lifting a panel from tier 3 to tier 4, not by a heavier border, so a panel's box is the same size whether or not it is focused. Use `components.panelBg(isFocused)` rather than repeating that choice.
+Both body panels render at tier 4 permanently. The lift that used to mark the focused panel outlived focus itself: with the focus cursor gone there is no second state for a panel to be in, so the old lifted look became the steady state. `chrome.PanelBg()` is the one place that choice lives.
 
 One surface runs the other way: `BackgroundRecessed` sits *below* the panel tier — it is the theme's un-raised `PanelBg` — and is used for insets like the empty-state cards, which read as cut into the panel rather than raised off it.
 
@@ -47,7 +47,7 @@ One surface runs the other way: `BackgroundRecessed` sits *below* the panel tier
 
 A terminal's SGR reset clears the background until the next SGR, and lipgloss closes each styled run with a reset — so any unstyled text later on the same line renders on the terminal's own color. Two rules follow:
 
-1. **Anything that draws text needs an explicit background**, including buttons, cards, and list rows. Components that sit inside a panel take that panel's tier as a parameter instead of picking a tint of their own, so they stay flush when focus lifts the panel.
+1. **Anything that draws text needs an explicit background**, including buttons, cards, and list rows. Components that sit inside a panel take that panel's tier as a parameter instead of picking a tint of their own, so they stay flush with their panel's tier.
 2. **Seal innermost-first.** Each tier seals its own region, then the next tier out seals what is left. The outermost seal is the tier-2 pass in `AppModel.View`.
 
 `appstyles.HasBackgroundBleed` is the matching assertion, and `src/model/background_test.go` applies it to fully rendered frames across both pages and their empty, populated, narrow, and error-banner states — once per registered theme, via a `forEachTheme` helper that sets `appstyles.Active` and restores it after.

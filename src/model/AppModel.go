@@ -19,7 +19,6 @@ import (
 	"github.com/filipemolina/cais/src/components/mainmenu"
 	"github.com/filipemolina/cais/src/components/serviceslist"
 	"github.com/filipemolina/cais/src/config"
-	"github.com/filipemolina/cais/src/constants"
 	"github.com/filipemolina/cais/src/utils"
 )
 
@@ -75,7 +74,6 @@ type AppModel struct {
 	pages            map[string][]tea.Model
 	activePage       string
 	components       Components
-	focusedComponent int
 	lastError        string
 	// lastErrorFromPoll records whether the banner is showing an error from
 	// the background container poll, so the next successful poll can clear
@@ -108,47 +106,6 @@ type AppModel struct {
 	// mouseResize tracks a drag on the divider between the two body panels.
 	mouseDragging bool
 	mouseDragX    int
-}
-
-// ChangeFocus moves focus through constants.FocusableComponents and returns the
-// command that tells the components which of them is now focused.
-//
-// Pass nil to advance (Tab), or -1 to go back (Shift+Tab). Any other value is
-// treated as a component id to focus directly, and is ignored if that component
-// is not focusable.
-//
-// The cycle position is derived from m.focusedComponent rather than tracked
-// separately, so the two can never disagree. They are not the same number: the
-// nav is component 0 but is not in the cycle, so the ids are not the cycle
-// indices.
-func (m *AppModel) ChangeFocus(index *int) tea.Cmd {
-	order := constants.FocusableComponents
-	if len(order) == 0 {
-		return nil
-	}
-
-	// A component id that is not in the cycle (or an unset one) reads as
-	// position 0, so the first Tab lands on the first focusable component.
-	cursor := max(0, slices.Index(order, m.focusedComponent))
-
-	switch {
-	case index == nil:
-		cursor = (cursor + 1) % len(order)
-
-	case *index == -1:
-		cursor = (cursor - 1 + len(order)) % len(order)
-
-	default:
-		if !slices.Contains(order, *index) {
-			return nil
-		}
-		cursor = slices.Index(order, *index)
-	}
-
-	m.focusedComponent = order[cursor]
-	focused := m.focusedComponent
-
-	return func() tea.Msg { return cmds.SetFocusMsg(focused) }
 }
 
 // allGroupNames returns every distinct group referenced by any service
@@ -409,9 +366,5 @@ func GetInitialModel(source utils.ComposeSource) AppModel {
 			KeybindingBar: keybindingbar.New(),
 		},
 		pages: pages,
-		// Page activation sends this focus to the active page's components.
-		// Keeping the model in the same initial state makes the first Tab move
-		// to the details panel rather than appearing to do nothing.
-		focusedComponent: constants.COMPONENT_BODY_LIST,
 	}
 }

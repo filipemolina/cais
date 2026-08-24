@@ -44,7 +44,6 @@ func TestTheListFillsThePanelHeight(t *testing.T) {
 			cmds.SetBodyLayoutMsg{LeftWidth: 40, Height: panelHeight},
 			groupNames(12),
 			cmds.SetHomeStatsMsg{Groups: 12, Services: 17, Running: 6},
-			cmds.SetFocusMsg(1),
 		} {
 			model, _ = model.Update(msg)
 		}

@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/filipemolina/cais/src/cmds"
-	"github.com/filipemolina/cais/src/constants"
 
 	tea "charm.land/bubbletea/v2"
 )
@@ -42,7 +41,6 @@ func requestedAction(t *testing.T, cmd tea.Cmd) cmds.RunDockerActionMsg {
 // --file threading exists to prevent.
 func TestGroupDetailsPanelRequestsTheActionRatherThanRunningIt(t *testing.T) {
 	panel := New()
-	panel, _ = panel.Update(cmds.SetFocusMsg(constants.COMPONENT_BODY_DETAILS))
 	panel, _ = panel.Update(cmds.SetSelectedGroupMsg("backend"))
 
 	_, cmd := panel.Update(keyPress('t'))

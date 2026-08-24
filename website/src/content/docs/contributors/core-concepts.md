@@ -1,6 +1,6 @@
 ---
 title: Core Concepts
-description: The mental model — message passing, the AppModel, focus, the esc ladder, and the layout contract.
+description: The mental model — message passing, the AppModel, the esc ladder, and the layout contract.
 ---
 
 # Core Concepts
@@ -16,16 +16,16 @@ The two patterns that structure the flow:
 
 ## The AppModel
 
-`AppModel` is the app: navigation, config, selection, the pages map, focus, modals, and pending actions. Two things it owns exclusively:
+`AppModel` is the app: navigation, config, selection, the pages map, modals, and pending actions. Two things it owns exclusively:
 
 - **The terminal dimensions.** `AppModel` is the only place that reads `WindowSizeMsg`. Components size themselves from the broadcast box (`calculateBodyLayout` → `cmds.SetBodyLayoutMsg`) and never derive width or height from `WindowSizeMsg` — that message only reaches the components of the page that is active when it arrives, so a page that was not active during a resize would render at width 0.
 - **Container-status refreshes.** A successful config load queues a foreground refresh; `cmds.RefreshContainersTick` re-schedules a five-second poll for the life of the app. Background results update status without clearing an unrelated error.
 
-## Focus
+## Selection, not focus
 
-`constants.FocusableComponents` holds only the two body panels; `Tab`/`Shift+Tab` alternate between them. The nav is id 0 but is **not** focusable — pages are switched with digits, and the nav never takes focus.
+There is no focus cursor between the body panels. Both panels are always active: the list cursor *is* the selection — moving the cursor selects the row, and the details panel renders it. Docker verbs fire directly on the selected row, so there is no "select then act" step and no panel to switch to. `tab`/`shift+tab` are inert on body pages; they survive only inside overlays (next field) and the inline YAML editor (indent/outdent), where the editor owns the keyboard.
 
-Component ids are part of the focus protocol (a component compares its id against `cmds.SetFocusMsg`), so they are *not* positions in the focus cycle. `ChangeFocus` derives the cycle position from the currently focused id so the two cannot disagree.
+The page and the selection state alone decide which bindings are live — `keys.Active(ctx)` reads the page and whether anything is selected, and returns the bindings to advertise. Components match the same bindings from `src/keys`, so the footer, the `?` overlay, and the handlers cannot disagree.
 
 ## The esc ladder
 
@@ -33,10 +33,11 @@ Component ids are part of the focus protocol (a component compares its id agains
 
 1. A modal closes itself.
 2. A filter being typed owns the keyboard — esc abandons it.
-3. A focused list holding an applied filter keeps esc, because esc is the only way back to the full rows.
-4. What remains is the details panel, where esc returns focus to the list.
+3. A list holding an applied filter keeps esc, because esc is the only way to clear it and return to the full rows.
+4. The error banner is dismissed.
+5. What remains is the selection, where esc clears it (deselect).
 
-When a filter stands on an *unfocused* list, esc moves focus to the list first and clears the filter on the next press — the user is never stranded in a filtered list with no advertised way out. The footer offers `esc back` in the details contexts only.
+`esc` does not move focus between panels — there is no panel focus to move. The footer offers `esc back` only when something can be backed out of (a modal, a filter, an error, or a selection).
 
 The ladder is implemented as an interface (`OwnsKeyboard()`, `KeepsEsc()`), not a broadcast, because the answer has to be right on the very keystroke that changes it.
 
@@ -61,7 +62,7 @@ flowchart TB
         Right["Details panel<br/>(header + tables + stats)"]
     end
     subgraph Footer["Footer — KeybindingBar (sheds hints on narrow) · compose file · global keys"]
-        Hints["s start · t stop · l logs · …"]
+        Hints["s start · t stop · L logs · …"]
         Global["? help  q quit"]
     end
 
@@ -74,7 +75,7 @@ flowchart TB
 
 ## Pages
 
-Every page in `apptypes.PageTitles` needs an entry in `AppModel.pages`. The map drives rendering, the layout broadcast, and the focus cycle. A page listed in the nav but missing from the map renders an empty body; `View` guards that case by always setting `AltScreen`, because returning the zero `tea.View` drops the terminal out of the alternate screen and the app looks like it crashed while still running.
+Every page in `apptypes.PageTitles` needs an entry in `AppModel.pages`. The map drives rendering and the layout broadcast. A page listed in the nav but missing from the map renders an empty body; `View` guards that case by always setting `AltScreen`, because returning the zero `tea.View` drops the terminal out of the alternate screen and the app looks like it crashed while still running.
 
 ## The groups-first principle
 

@@ -59,9 +59,9 @@ Every action cais takes maps to something you could have typed. It just replaces
 | Task | On the command line | In cais |
 | --- | --- | :---: |
 | Start every service in the `media` group | `docker compose up -d jellyfin sonarr radarr …` | `s` |
-| Tail logs for one service | `docker compose logs -f jellyfin` | `l` |
+| Tail logs for one service | `docker compose logs -f jellyfin` | `L` |
 | Restart one service | `docker compose restart jellyfin` | `r` |
-| Add a healthcheck to Postgres | edit `compose.yml` by hand | `h`, pick a template |
+| Add a healthcheck to Postgres | edit `compose.yml` by hand | `H`, pick a template |
 | Undo a bad edit | `git diff && git checkout compose.yml` *(in a repo)* | `4`, `enter` |
 | See a running service's URL | `docker compose ps` + guess | look at the `Web` row |
 | Copy that URL | mouse-select and copy | `y` |
@@ -95,9 +95,9 @@ Every write is snapshotted into `.cais/backups/` first. Tab `4` lists every stor
 
 ### And a handful of smaller things that add up
 
-- **A healthcheck in one keypress.** `h` opens a template picker — Postgres, MariaDB, Redis, nginx, plus a generic HTTP fallback — and writes a validated `healthcheck:` block straight into the compose file.
+- **A healthcheck in one keypress.** `H` opens a template picker — Postgres, MariaDB, Redis, nginx, plus a generic HTTP fallback — and writes a validated `healthcheck:` block straight into the compose file.
 - **New services without leaving the terminal.** `n` on the Services page asks for a name and an image reference, then writes a minimal `image:` fragment into the compose file and opens the inline editor on it — ports, volumes and everything else go in the same YAML you would have hand-written, with live validation the whole way.
-- **Logs without leaving.** `l` streams `docker compose logs -f` for one service or a whole group, with follow mode and scrollback.
+- **Logs without leaving.** `L` streams `docker compose logs -f` for one service or a whole group, with follow mode and scrollback.
 - **`.env` beside your compose file, in one keypress.** `v` opens a modal with the variable table, a key editor, and the raw file editor in one surface. Variables are masked by default.
 - **Fourteen themes**, previewed live as you move the cursor.
 

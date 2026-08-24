@@ -11,7 +11,6 @@ import (
 	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/cmds"
 	"github.com/filipemolina/cais/src/components/chrome"
-	"github.com/filipemolina/cais/src/constants"
 	"github.com/filipemolina/cais/src/keys"
 )
 
@@ -26,11 +25,9 @@ func joinHints(hints []chrome.KeyHint) string {
 	return strings.Join(parts, " · ")
 }
 
-// TestFooterHints pins the footer to what it advertised before the bindings
-// moved into src/keys. Every expectation here was transcribed from the
-// hand-written table this method used to hold: the point of the refactor was
-// that the footer keeps saying exactly the same thing while the source of the
-// truth changes underneath it.
+// TestFooterHints pins the footer to what keys.Active advertises per page and
+// selection state. Both body panels are always active, so the page plus whether
+// a subject is selected is the whole context - there is no focus dimension.
 func TestFooterHints(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -39,89 +36,80 @@ func TestFooterHints(t *testing.T) {
 	}{
 		{
 			name:  "groups list with groups",
-			model: Model{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST},
-			want:  "space start · t stop · n new · e edit · d delete · R rename · / filter · ↑/↓ navigate · tab next",
+			model: Model{activePage: "Home"},
+			want:  "n new · / filter · ↑/↓ navigate",
 		},
 		{
 			// The reserved ungrouped row is read-only: the docker verbs stay,
 			// the list-management verbs leave the footer, and the row's own
 			// 'A' verb (adopt, while the row is derived) takes their place.
 			name:  "groups list with the ungrouped row selected",
-			model: Model{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST, selectedGroup: apptypes.UngroupedGroup},
-			want:  "space start · t stop · n new · A adopt · / filter · ↑/↓ navigate · tab next",
+			model: Model{activePage: "Home", selectedGroup: apptypes.UngroupedGroup},
+			want:  "s start · t stop · r restart · p pull · x remove · L logs · e edit · R rename · n new · d delete · A adopt · / filter · ↑/↓ navigate · esc back",
 		},
 		{
 			// Once a real ungrouped profile backs the row, 'A' releases it.
 			name:  "groups list with the materialized ungrouped row selected",
-			model: Model{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST, selectedGroup: apptypes.UngroupedGroup, ungroupedMaterialized: true},
-			want:  "space start · t stop · n new · A release · / filter · ↑/↓ navigate · tab next",
+			model: Model{activePage: "Home", selectedGroup: apptypes.UngroupedGroup, ungroupedMaterialized: true},
+			want:  "s start · t stop · r restart · p pull · x remove · L logs · e edit · R rename · n new · d delete · A release · / filter · ↑/↓ navigate · esc back",
 		},
 		{
 			// The list has the keyboard: every other key is a letter.
 			name:  "groups list while a filter is being typed",
-			model: Model{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST, filterState: list.Filtering},
+			model: Model{activePage: "Home", filterState: list.Filtering},
 			want:  "enter apply · esc cancel",
 		},
 		{
-			// The filter slot becomes the way out of the filter.
+			// The filter slot becomes the way out of the filter - and takes
+			// over the esc slot, since one key shows one row.
 			name:  "groups list with a filter applied",
-			model: Model{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST, filterState: list.FilterApplied},
-			want:  "space start · t stop · n new · e edit · d delete · R rename · esc clear filter · ↑/↓ navigate · tab next",
+			model: Model{activePage: "Home", filterState: list.FilterApplied},
+			want:  "n new · esc clear filter · ↑/↓ navigate",
 		},
 		{
 			name:  "groups list while empty",
-			model: Model{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_LIST, groupsListEmpty: true},
-			want:  "n new · ↑/↓ navigate · tab next",
+			model: Model{activePage: "Home", groupsListEmpty: true},
+			want:  "n new · ↑/↓ navigate",
 		},
 		{
-			name:  "group details with nothing selected",
-			model: Model{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_DETAILS},
-			want:  "n new · esc back · tab next",
-		},
-		{
-			name:  "group details with a group selected",
-			model: Model{activePage: "Home", focusedComponent: constants.COMPONENT_BODY_DETAILS, selectedGroup: "core"},
-			want:  "n new · s start · t stop · r restart · p pull · x remove · l logs · esc back · tab next",
+			name:  "groups list with a group selected",
+			model: Model{activePage: "Home", selectedGroup: "core"},
+			want:  "s start · t stop · r restart · p pull · x remove · L logs · e edit · R rename · n new · d delete · / filter · ↑/↓ navigate · esc back",
 		},
 		{
 			name:  "services list with services",
-			model: Model{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_LIST},
-			want:  "space start · t stop · d delete · / filter · ↑/↓ navigate · tab next",
+			model: Model{activePage: "Services"},
+			want:  "n new · / filter · ↑/↓ navigate",
 		},
 		{
 			name:  "services list while a filter is being typed",
-			model: Model{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_LIST, filterState: list.Filtering},
+			model: Model{activePage: "Services", filterState: list.Filtering},
 			want:  "enter apply · esc cancel",
 		},
 		{
 			name:  "services list while empty",
-			model: Model{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_LIST, servicesListEmpty: true},
-			want:  "↑/↓ navigate · tab next",
+			model: Model{activePage: "Services", servicesListEmpty: true},
+			want:  "n new · ↑/↓ navigate",
 		},
 		{
-			name:  "service details with nothing selected",
-			model: Model{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_DETAILS},
-			want:  "esc back · tab next",
-		},
-		{
-			name:  "service details with a service selected",
-			model: Model{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_DETAILS, selectedService: true},
-			want:  "s start · t stop · r restart · p pull · x remove · l logs · y copy url · h healthcheck · B boot · e edit · E file · esc back · tab next",
+			name:  "services list with a service selected",
+			model: Model{activePage: "Services", selectedService: true},
+			want:  "s start · t stop · r restart · p pull · x remove · L logs · H healthcheck · B boot · e edit · E file · y copy url · n new · d delete · / filter · ↑/↓ navigate · esc back",
 		},
 		{
 			name:  "service details while inline editing",
-			model: Model{activePage: "Services", focusedComponent: constants.COMPONENT_BODY_DETAILS, selectedService: true, editing: true},
+			model: Model{activePage: "Services", selectedService: true, editing: true},
 			want:  "ctrl+s save · ctrl+o editor · tab indent · shift+tab outdent · esc back",
 		},
 		{
 			name:  "the files page offers edit, browse and scroll",
-			model: Model{activePage: "Compose Files", focusedComponent: constants.COMPONENT_BODY_LIST},
+			model: Model{activePage: "Compose Files"},
 			want:  "E file · b browse · ↑/↓ scroll",
 		},
 		{
-			name:  "an unknown page still offers the focus ring",
-			model: Model{activePage: "Nowhere", focusedComponent: constants.COMPONENT_BODY_LIST},
-			want:  "tab next",
+			name:  "an unknown page still offers a way back",
+			model: Model{activePage: "Nowhere"},
+			want:  "esc back",
 		},
 	}
 
@@ -328,9 +316,9 @@ func TestFooterKeepsHelpAndQuitAtEveryWidth(t *testing.T) {
 }
 
 // The order is declared in keys.Priority and is deliberately not the display
-// order. `1-3 page` goes first because the nav bar prints the digits already;
-// tab and the arrows next because they are what a user tries unprompted; the
-// page's own verbs last, rightmost first.
+// order. `1-4 page` goes first because the nav bar prints the digits already;
+// the arrows next because they are what a user tries unprompted; the page's
+// own verbs last, rightmost first.
 func TestFooterShedsInPriorityOrder(t *testing.T) {
 	// Widths descend, so each step may only ever lose hints.
 	previous := map[string]bool{}
@@ -341,8 +329,8 @@ func TestFooterShedsInPriorityOrder(t *testing.T) {
 
 		present := map[string]bool{}
 		for _, hint := range []string{
-			"1-3 page", "tab next", "↑/↓ navigate",
-			"/ filter", "R rename", "d delete", "e edit", "n new", "space start",
+			"1-4 page", "↑/↓ navigate",
+			"/ filter", "n new",
 		} {
 			present[hint] = strings.Contains(bar, hint)
 		}
@@ -358,14 +346,9 @@ func TestFooterShedsInPriorityOrder(t *testing.T) {
 		// Each pair is (shed earlier, shed later): the left one must never
 		// outlive the right one.
 		for _, pair := range [][2]string{
-			{"1-3 page", "tab next"},
-			{"tab next", "↑/↓ navigate"},
+			{"1-4 page", "↑/↓ navigate"},
 			{"↑/↓ navigate", "/ filter"},
-			{"/ filter", "R rename"},
-			{"R rename", "d delete"},
-			{"d delete", "e edit"},
-			{"e edit", "n new"},
-			{"n new", "space start"},
+			{"/ filter", "n new"},
 		} {
 			if present[pair[0]] && !present[pair[1]] {
 				t.Errorf("at width %d %q survived while %q was shed, which inverts the drop order:\n%s",
@@ -384,7 +367,7 @@ func TestFooterShedsWholeHints(t *testing.T) {
 	for width := 200; width >= 24; width-- {
 		bar := ansi.Strip(barAt(t, width))
 
-		for _, hint := range []string{"space start", "n new", "e edit", "d delete", "R rename", "↑/↓ navigate", "tab next"} {
+		for _, hint := range []string{"n new", "/ filter", "↑/↓ navigate"} {
 			key, desc, _ := strings.Cut(hint, " ")
 
 			// The key without its word means the word was cut off mid-hint.

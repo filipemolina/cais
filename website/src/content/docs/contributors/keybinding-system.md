@@ -36,8 +36,8 @@ flowchart LR
 
 | Group | What it holds |
 | --- | --- |
-| `GlobalKeys` | Work anywhere no overlay owns the keyboard: page digits, `[`/`]`, `tab`/`shift+tab`, `esc`, `?`, `a`, `T`, `u`, `v`, `q`, `ctrl+c` |
-| `ListKeys` | The body's left panel: navigate, select, new, edit, delete, rename, filter |
+| `GlobalKeys` | Work anywhere no overlay owns the keyboard: page digits, `[`/`]`, `esc`, `?`, `a`, `T`, `u`, `v`, `q`, `ctrl+c` — `tab`/`shift+tab` are declared here but inert on body pages (used only inside overlays and the inline YAML editor) |
+| `ListKeys` | The body's left panel: navigate, new, edit, delete, rename, filter — selection itself is automatic (the list cursor is the selection) |
 | `DetailsKeys` | The body's right panel: start, stop, restart, pull, remove, logs, edit, copy URL, healthcheck, save, open editor |
 | `EditorKeys` | Inside the inline YAML editor: new line, indent, outdent |
 | `FilesKeys` | The Files page: scroll, browse |
@@ -46,7 +46,7 @@ flowchart LR
 
 ## `keys.Active` — what is live right now
 
-`Active(ctx Context)` takes the page, the focused component, whether the list is empty, whether anything is selected, whether the editor is open, whether an action is pending, and the list's filter state — and returns the bindings the user can press right now, in display order.
+`Active(ctx Context)` takes the page, whether the list is empty, whether anything is selected, whether the editor is open, whether an action is pending, and the list's filter state — and returns the bindings the user can press right now, in display order.
 
 It returns a *filtered slice* rather than calling `SetEnabled` on the bindings it wants to hide. `key.Binding.Enabled` gates matching as well as help, and these are package-level values shared with the components: disabling one to tidy the footer would stop the key working everywhere.
 
@@ -64,7 +64,7 @@ The footer bar sheds whole hints in a declared priority order rather than wrappi
 
 ## The lists do not get to keep `list.DefaultKeyMap`
 
-A bubbles `list.Model` installs `list.DefaultKeyMap()`, which is written for a list that *is* the whole program. It binds `d` and `f` to next-page, `h`, `b`, and `u` to previous-page, and takes `q`, `esc`, and `?` for itself. Both body lists hand every key to the inner list while focused, *after* matching their own — so those keys did two jobs at once: `d` opened the delete-group confirm **and** paged the list out from under it.
+A bubbles `list.Model` installs `list.DefaultKeyMap()`, which is written for a list that *is* the whole program. It binds `d` and `f` to next-page, `h`, `b`, and `u` to previous-page, and takes `q`, `esc`, and `?` for itself. Both body lists hand every key to the inner list while active, *after* matching their own — so those keys did two jobs at once: `d` opened the delete-group confirm **and** paged the list out from under it.
 
 So the lists install `keys.ListKeyMap()` instead. It keeps only what the list alone can answer — cursor movement, `g`/`G`, and `/` — and leaves every key the app owns bound to nothing. `components.TestDeleteKeyDoesNotAlsoPageTheList` and `TestPanelLettersDoNotPageTheList` fail against the default map.
 

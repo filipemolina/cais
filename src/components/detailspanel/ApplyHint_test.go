@@ -134,7 +134,6 @@ func TestDockerActionClearsTheApplyHint(t *testing.T) {
 	svc := types.ServiceConfig{Name: "db", Image: "postgres:16"}
 	m := Model{
 		service:     &svc,
-		isFocused:   true,
 		panelWidth:  100,
 		panelHeight: 30,
 		containers:  []apptypes.DockerContainer{{Service: "db", State: "running"}},

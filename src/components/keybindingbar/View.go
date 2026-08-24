@@ -29,7 +29,6 @@ func (m Model) bindingsFor() []key.Binding {
 
 	return keys.Active(keys.Context{
 		Page:                  m.activePage,
-		Focused:               m.focusedComponent,
 		ListEmpty:             listEmpty,
 		Selected:              selected,
 		ReadOnlyGroup:         m.selectedGroup == apptypes.UngroupedGroup,

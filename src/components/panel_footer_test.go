@@ -12,7 +12,6 @@ import (
 	"github.com/filipemolina/cais/src/components/chrome"
 	"github.com/filipemolina/cais/src/components/detailspanel"
 	"github.com/filipemolina/cais/src/components/groupdetailspanel"
-	"github.com/filipemolina/cais/src/constants"
 )
 
 // focusedDetailsPanel builds a detailspanel.Model sized and focused through
@@ -24,7 +23,6 @@ func focusedDetailsPanel(service types.ServiceConfig, width, height int, extra .
 	m := detailspanel.New(&service, "10.0.0.5")
 	msgs := append([]tea.Msg{
 		cmds.SetBodyLayoutMsg{LeftWidth: 40, RightWidth: width, Height: height},
-		cmds.SetFocusMsg(constants.COMPONENT_BODY_DETAILS),
 	}, extra...)
 
 	for _, msg := range msgs {
@@ -45,7 +43,6 @@ func focusedGroupDetailsPanel(services []types.ServiceConfig, selectedGroup stri
 		cmds.SetServicesListMsg(services),
 		cmds.SetSelectedGroupMsg(selectedGroup),
 		cmds.SetBodyLayoutMsg{LeftWidth: 40, RightWidth: width, Height: height},
-		cmds.SetFocusMsg(constants.COMPONENT_BODY_DETAILS),
 	}, extra...)
 
 	for _, msg := range msgs {

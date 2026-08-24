@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/filipemolina/cais/src/cmds"
-	"github.com/filipemolina/cais/src/constants"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/compose-spec/compose-go/v2/types"
@@ -54,18 +53,16 @@ func composeProject(t *testing.T, contents string) string {
 	return dir
 }
 
-// The keypress half of the feature: E on a focused details panel asks for
-// the editor. Driven through the model rather than the rig, because the two
-// halves meet at this message and this half needs no timing at all.
+// The keypress half of the feature: E asks for the editor - both panels are
+// always active, so no focus dance precedes it. Driven through the model
+// rather than the rig, because the two halves meet at this message and this
+// half needs no timing at all.
 func TestPressingEAsksForTheEditor(t *testing.T) {
 	m := drive(applyLayout(startup(120, 40)), cmds.SetActivePageMsg("Services"))
 	m = drive(m,
 		cmds.SetServicesListMsg([]types.ServiceConfig{{Name: "web"}}),
 		cmds.SetSelectedServiceMsg(types.ServiceConfig{Name: "web"}),
 	)
-
-	details := constants.COMPONENT_BODY_DETAILS
-	m = drive(m, collect(m.ChangeFocus(&details))...)
 
 	_, cmd := m.Update(tea.KeyPressMsg{Code: 'E', Text: "E", Mod: tea.ModShift})
 

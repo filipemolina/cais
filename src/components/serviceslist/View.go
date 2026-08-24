@@ -18,8 +18,7 @@ import (
  */
 
 type servicesListCustomDelegate struct {
-	isParentFocused bool
-	activeIndex     int
+	activeIndex int
 }
 
 func (d servicesListCustomDelegate) Height() int                             { return 4 }
@@ -44,7 +43,7 @@ func (d servicesListCustomDelegate) Render(w io.Writer, m list.Model, index int,
 		titleColor = appstyles.Active.TextMuted
 	}
 
-	rowBg := chrome.ListRowBg(isActive, d.isParentFocused)
+	rowBg := chrome.ListRowBg(isActive)
 
 	// The row's left edge is the same solid bar the nav uses for its active
 	// tab ("▌"), so list rows and the nav agree on thickness. State is carried
@@ -53,7 +52,7 @@ func (d servicesListCustomDelegate) Render(w io.Writer, m list.Model, index int,
 
 	if isActive {
 		barColor = appstyles.Active.Accent
-	} else if isSelected && d.isParentFocused {
+	} else if isSelected {
 		barColor = appstyles.Active.TextPrimary
 	}
 
@@ -64,7 +63,7 @@ func (d servicesListCustomDelegate) Render(w io.Writer, m list.Model, index int,
 
 	// The title style only bolds the active row; the selected row's bold comes
 	// from the wrapper, which is why it is applied here rather than in the title.
-	if isSelected && d.isParentFocused && !isActive {
+	if isSelected && !isActive {
 		wrapperStyle = wrapperStyle.Bold(true)
 	}
 
@@ -98,7 +97,7 @@ func (m Model) View() tea.View {
 	// Same 3-tier treatment as the groups list: focus lifts the panel from
 	// tier 3 to tier 4 rather than adding a border, so the panel's box stays
 	// the same size whether or not it is focused.
-	bg := chrome.PanelBg(m.isFocused)
+	bg := chrome.PanelBg()
 
 	wrapper := chrome.FitBox(chrome.ListWrapperStyle.Background(bg), m.panelWidth, m.panelHeight)
 

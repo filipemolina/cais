@@ -11,9 +11,9 @@ import (
 )
 
 // TestRigHealthcheckInsertion drives the whole flow end to end
-// (docs/plans/healthcheck-insertion.md): Tab to focus the details panel, h
-// opens the picker, Enter on the first (image-matched) template writes the
-// healthcheck into the compose file and closes the modal.
+// (docs/plans/healthcheck-insertion.md): H opens the picker, Enter on the
+// first (image-matched) template writes the healthcheck into the compose
+// file and closes the modal.
 func TestRigHealthcheckInsertion(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "compose.yaml"), []byte(healthcheckFixture), 0o644); err != nil {
@@ -33,12 +33,14 @@ func TestRigHealthcheckInsertion(t *testing.T) {
 	if !r.WaitFor("PROPERTY", 3*time.Second) {
 		t.Fatalf("did not switch to the Services page. Output:\n%s", r.Output())
 	}
-	r.Send(keyPress(tea.KeyTab)) // focus the details panel
-	if !r.WaitFor("h healthcheck", 3*time.Second) {
-		t.Fatalf("details panel never took focus (h not advertised). Output:\n%s", r.Output())
+	// Both body panels are always active, so no focus step is needed; the
+	// selected service's verbs - including H healthcheck - are advertised
+	// immediately.
+	if !r.WaitFor("H healthcheck", 3*time.Second) {
+		t.Fatalf("healthcheck verb not advertised for the selected service. Output:\n%s", r.Output())
 	}
 
-	r.Send(letterKey('h'))
+	r.Send(tea.KeyPressMsg{Code: 'h', Text: "H", Mod: tea.ModShift})
 	// Both substrings render in the same frame; one WaitFor covers both.
 	if !r.WaitFor("Add healthcheck", 3*time.Second) {
 		t.Fatalf("healthcheck picker did not open. Output:\n%s", r.Output())

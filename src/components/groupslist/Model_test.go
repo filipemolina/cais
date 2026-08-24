@@ -31,7 +31,6 @@ func focusedGroupsList(t *testing.T, n int) Model {
 	for _, msg := range []tea.Msg{
 		cmds.SetBodyLayoutMsg{LeftWidth: 40, Height: 20},
 		groupNames(n),
-		cmds.SetFocusMsg(1),
 	} {
 		model, _ = model.Update(msg)
 	}
@@ -85,7 +84,6 @@ func ungroupedSelectedList(t *testing.T) Model {
 	for _, msg := range []tea.Msg{
 		cmds.SetBodyLayoutMsg{LeftWidth: 40, Height: 20},
 		cmds.SetGroupsListMsg([]cmds.GroupStatus{{Name: "core"}, {Name: apptypes.UngroupedGroup}}),
-		cmds.SetFocusMsg(1),
 	} {
 		model, _ = model.Update(msg)
 	}
@@ -105,11 +103,11 @@ func ungroupedSelectedList(t *testing.T) Model {
 	return groups
 }
 
-// The reserved ungrouped row is read-only: d, e and R refuse it - there is
-// no profile tag behind it to rename, delete, or reconcile membership
-// against.
+// The reserved ungrouped row is read-only: d and e refuse it - there is
+// no profile tag behind it to delete or reconcile membership against. (Rename
+// was folded into e, so e already covers the edit path.)
 func TestListManagementKeysRefuseTheUngroupedRow(t *testing.T) {
-	for _, keystroke := range []string{"d", "e", "R"} {
+	for _, keystroke := range []string{"d", "e"} {
 		t.Run(keystroke, func(t *testing.T) {
 			groups := ungroupedSelectedList(t)
 
@@ -122,38 +120,6 @@ func TestListManagementKeysRefuseTheUngroupedRow(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-// The docker verbs still work on the ungrouped row: space starts exactly the
-// untagged services and t stops them - that is the point of the row.
-func TestDockerKeysStillWorkOnTheUngroupedRow(t *testing.T) {
-	groups := ungroupedSelectedList(t)
-
-	_, msgs := press(t, groups, " ")
-	var started bool
-	for _, msg := range msgs {
-		if dockerMsg, ok := msg.(cmds.RunDockerActionMsg); ok {
-			if dockerMsg.Action == "start" && dockerMsg.Target == apptypes.UngroupedGroup && dockerMsg.IsGroup {
-				started = true
-			}
-		}
-	}
-	if !started {
-		t.Errorf("space did not start the ungrouped row, got %#v", msgs)
-	}
-
-	_, msgs = press(t, groups, "t")
-	var stopped bool
-	for _, msg := range msgs {
-		if dockerMsg, ok := msg.(cmds.RunDockerActionMsg); ok {
-			if dockerMsg.Action == "stop" && dockerMsg.Target == apptypes.UngroupedGroup && dockerMsg.IsGroup {
-				stopped = true
-			}
-		}
-	}
-	if !stopped {
-		t.Errorf("t did not stop the ungrouped row, got %#v", msgs)
 	}
 }
 
@@ -217,10 +183,11 @@ func TestUngroupedKeyRefusesRealGroups(t *testing.T) {
 	}
 }
 
-// The list keeps esc only while it can use it: focused, with a filter
-// standing. Unfocused or unfiltered it has no claim, and mid-typing it owns
-// the whole keyboard instead.
-func TestKeepsEscOnlyWhileFocusedWithAnAppliedFilter(t *testing.T) {
+// The list keeps esc only while it can use it: with a filter standing. Both
+// body panels are always active now, so focus is no longer part of the
+// condition - only the filter state matters. Mid-typing it owns the whole
+// keyboard instead.
+func TestKeepsEscOnlyWhileAnAppliedFilterStands(t *testing.T) {
 	groups := focusedGroupsList(t, 12)
 
 	if groups.KeepsEsc() {
@@ -245,45 +212,7 @@ func TestKeepsEscOnlyWhileFocusedWithAnAppliedFilter(t *testing.T) {
 		t.Fatalf("precondition: filter state is %v, want applied", state)
 	}
 	if !filtered.KeepsEsc() {
-		t.Error("a focused list with a filter standing did not keep esc")
-	}
-
-	unfocused := apply(filtered, cmds.SetFocusMsg(2))
-	if unfocused.KeepsEsc() {
-		t.Error("an unfocused list kept esc, but it never sees the key")
-	}
-}
-
-// Enter starts the selected group. Selection happens automatically on cursor
-// movement, so we move the cursor first, then press enter.
-func TestEnterStartsTheHighlightedGroup(t *testing.T) {
-	groups := focusedGroupsList(t, 12)
-
-	// Move the cursor down to trigger auto-select (cursor goes from 0 to 1).
-	model, _ := groups.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
-	moved, ok := model.(Model)
-	if !ok {
-		t.Fatalf("expected a Model, got %T", model)
-	}
-
-	// Verify auto-select happened (index 1 = group-01).
-	if moved.activeGroup != "group-01" {
-		t.Fatalf("auto-select did not fire: activeGroup = %q", moved.activeGroup)
-	}
-
-	// Now press enter to start the group.
-	model, cmd := moved.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-
-	var started bool
-	for _, msg := range messagesFrom(cmd) {
-		if dockerMsg, ok := msg.(cmds.RunDockerActionMsg); ok {
-			if dockerMsg.Action == "start" && dockerMsg.Target == "group-01" && dockerMsg.IsGroup {
-				started = true
-			}
-		}
-	}
-	if !started {
-		t.Errorf("enter did not start group-01, got %#v", messagesFrom(cmd))
+		t.Error("a list with a filter standing did not keep esc")
 	}
 }
 
@@ -387,35 +316,6 @@ func TestStatsLineShedsTheUngroupedNoteFirst(t *testing.T) {
 		if got := statsLine(stats, tc.width); got != tc.want {
 			t.Errorf("statsLine at width %d: got %q, want %q", tc.width, got, tc.want)
 		}
-	}
-}
-
-// t stops the highlighted group, the other half of the quick-action pair
-// Enter/Space starts with - no Tab to the details panel required.
-func TestStopStopsTheHighlightedGroup(t *testing.T) {
-	groups := focusedGroupsList(t, 12)
-
-	model, _ := groups.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
-	moved, ok := model.(Model)
-	if !ok {
-		t.Fatalf("expected a Model, got %T", model)
-	}
-	if moved.activeGroup != "group-01" {
-		t.Fatalf("auto-select did not fire: activeGroup = %q", moved.activeGroup)
-	}
-
-	_, cmd := moved.Update(tea.KeyPressMsg{Code: 't', Text: "t"})
-
-	var stopped bool
-	for _, msg := range messagesFrom(cmd) {
-		if dockerMsg, ok := msg.(cmds.RunDockerActionMsg); ok {
-			if dockerMsg.Action == "stop" && dockerMsg.Target == "group-01" && dockerMsg.IsGroup {
-				stopped = true
-			}
-		}
-	}
-	if !stopped {
-		t.Errorf("t did not stop group-01, got %#v", messagesFrom(cmd))
 	}
 }
 

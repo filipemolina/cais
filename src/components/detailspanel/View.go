@@ -32,10 +32,10 @@ func (m Model) View() tea.View {
 	bodyAvail := max(1, chrome.PanelBodyHeight(m.panelHeight))
 
 	if m.service == nil {
-		body := chrome.EmptyCard(bodyWidth, bodyAvail, chrome.PanelBg(m.isFocused), "Select a service",
+		body := chrome.EmptyCard(bodyWidth, bodyAvail, chrome.PanelBg(), "Select a service",
 			"Pick a service from the list to see its details.",
 			"↑/↓", "to browse")
-		screen := chrome.PanelFrame("Details", "", m.isFocused, m.panelWidth, m.panelHeight, body)
+		screen := chrome.PanelFrame("Details", "", m.panelWidth, m.panelHeight, body)
 		return tea.NewView(screen)
 	}
 
@@ -49,11 +49,11 @@ func (m Model) View() tea.View {
 		validation := m.validationPill()
 		right := lipgloss.JoinHorizontal(lipgloss.Left, serviceName+"  ", validation)
 
-		screen := chrome.PanelFrame("Edit service", right, m.isFocused, m.panelWidth, m.panelHeight, body)
+		screen := chrome.PanelFrame("Edit service", right, m.panelWidth, m.panelHeight, body)
 		return tea.NewView(screen)
 	}
 
-	bg := chrome.PanelBg(m.isFocused)
+	bg := chrome.PanelBg()
 
 	parts := []string{m.renderServiceHeader(bodyWidth)}
 	if tables := m.renderTables(bodyWidth); tables != "" {
@@ -90,7 +90,7 @@ func (m Model) View() tea.View {
 	body := chrome.PanelBodyWithFooter(bodyWidth, bodyAvail, bg,
 		lipgloss.JoinVertical(lipgloss.Left, parts...), footer)
 
-	screen := chrome.PanelFrame("Details", m.titlePill(), m.isFocused, m.panelWidth, m.panelHeight, body)
+	screen := chrome.PanelFrame("Details", m.titlePill(), m.panelWidth, m.panelHeight, body)
 	return tea.NewView(screen)
 }
 
@@ -531,7 +531,7 @@ func (m Model) renderTables(width int) string {
 // renderEditor renders the textarea with the editor key hints below it. The
 // live YAML validation status is shown in the panel title row instead.
 func (m Model) renderEditor(bodyWidth, bodyAvail int) string {
-	bg := chrome.PanelBg(m.isFocused)
+	bg := chrome.PanelBg()
 	editorView := m.editor.View()
 
 	// The textarea has no explicit background; seal it to the panel tier so
@@ -574,7 +574,7 @@ func (m Model) validationPill() string {
 
 // renderEditorHints renders the editor key hints below the textarea.
 func (m Model) renderEditorHints(width int) string {
-	bg := chrome.PanelBg(m.isFocused)
+	bg := chrome.PanelBg()
 
 	hints := chrome.RenderKeyHints([]chrome.KeyHint{
 		chrome.HintFor(keys.Details.Save),

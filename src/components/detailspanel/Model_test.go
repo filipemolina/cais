@@ -13,7 +13,6 @@ import (
 func focusedDetails(service types.ServiceConfig) Model {
 	m := New(&service, "10.0.0.5").(Model)
 	m = m.applySize().(Model)
-	m.isFocused = true
 	return m
 }
 
@@ -97,7 +96,6 @@ func TestDetailsPanelEEntersEditMode(t *testing.T) {
 func TestDetailsPanelEditModeSwallowsActionKeys(t *testing.T) {
 	m := focusedDetails(types.ServiceConfig{Name: "web"})
 	m, _ = m.enterEditMode([]byte("web:\n  image: nginx\n"))
-	m.isFocused = true
 
 	for _, letter := range []rune{'s', 't', 'r', 'p', 'x', 'l'} {
 		updated, _ := m.Update(tea.KeyPressMsg{Code: letter, Text: string(letter)})
@@ -116,7 +114,6 @@ func TestDetailsPanelEditModeSwallowsActionKeys(t *testing.T) {
 func TestDetailsPanelCtrlSSaves(t *testing.T) {
 	m := focusedDetails(types.ServiceConfig{Name: "web"})
 	m, _ = m.enterEditMode([]byte("web:\n  image: nginx\n"))
-	m.isFocused = true
 
 	updated, cmd := m.Update(tea.KeyPressMsg{Code: 's', Text: "ctrl+s", Mod: tea.ModCtrl})
 	m = updated.(Model)
@@ -133,7 +130,6 @@ func TestDetailsPanelCtrlSSaves(t *testing.T) {
 func TestDetailsPanelEscCancelsWithoutChanges(t *testing.T) {
 	m := focusedDetails(types.ServiceConfig{Name: "web"})
 	m, _ = m.enterEditMode([]byte("web:\n  image: nginx\n"))
-	m.isFocused = true
 
 	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc, Text: "esc"})
 	m = updated.(Model)
@@ -150,7 +146,6 @@ func TestDetailsPanelEscCancelsWithoutChanges(t *testing.T) {
 func TestDetailsPanelEscWithChangesOpensConfirm(t *testing.T) {
 	m := focusedDetails(types.ServiceConfig{Name: "web"})
 	m, _ = m.enterEditMode([]byte("web:\n  image: nginx\n"))
-	m.isFocused = true
 
 	// Type an extra space into the editor so the value differs.
 	m.editor.SetValue(m.editor.Value() + " ")
@@ -170,7 +165,6 @@ func TestDetailsPanelEscWithChangesOpensConfirm(t *testing.T) {
 func TestDetailsPanelCtrlOOpensExternalEditor(t *testing.T) {
 	m := focusedDetails(types.ServiceConfig{Name: "web"})
 	m, _ = m.enterEditMode([]byte("web:\n  image: nginx\n"))
-	m.isFocused = true
 
 	updated, cmd := m.Update(tea.KeyPressMsg{Code: 'o', Text: "ctrl+o", Mod: tea.ModCtrl})
 	m = updated.(Model)

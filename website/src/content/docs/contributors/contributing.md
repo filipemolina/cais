@@ -28,7 +28,7 @@ src/
 ├── config/          # persisted preferences (~/.config/cais/config.yaml)
 ├── highlight/       # read-only YAML highlighting for the Files page
 ├── banner/          # the "cais" figlet ASCII banner, gradient-tinted from the active theme
-└── constants/       # layout widths, branding, focusable component list
+└── constants/       # layout widths, branding, version reader
 demo/                # VHS tapes, the recorded gif and screenshots, and their fixture stack
 docs/                # DESIGN.md (why), ROADMAP.md (order), plans/ (what's next, in sequence)
 website/             # this documentation site (Astro / Starlight)

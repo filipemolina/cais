@@ -15,11 +15,9 @@ import (
 // row (both panel widths plus the gutter). It is not split into a list and
 // a details pane - that is a later-phase extension to browse multiple
 // compose files.
-// The panel is the only component on its page, so it is always focused:
-// there is no second panel for Tab to move to, and tracking SetFocusMsg
-// would let Tab strand focus on a component id that does not exist here,
-// blurring the one panel the page has. Always-focused also means the E key
-// and scrolling always work, matching what the footer advertises.
+// The panel is the only component on its page, so it is always active:
+// there is no second panel competing for the keyboard, so the E key and
+// scrolling always work, matching what the footer advertises.
 type Model struct {
 	viewport    viewport.Model
 	filePath    string

@@ -9,7 +9,7 @@ sidebar:
 
 cais has four pages, switched with the digit keys `1`–`4` (or `[`/`]` to step through them). Each page is a two-pane layout — a list on the left, details on the right — except Files and Backups, which are single panels.
 
-`Tab`/`Shift+Tab` moves focus between the list and the details panel. `↑`/`↓` (or `k`/`j`) move the cursor; the details panel follows it. `/` filters the focused list by name.
+Both panels are always active; the list cursor is the selection. `↑`/`↓` (or `k`/`j`) move the cursor and select the row, and the details panel renders it. `/` filters the list by name. `tab`/`shift+tab` are inert on body pages.
 
 ## 1 · Groups
 
@@ -19,7 +19,7 @@ The home page operates on **groups of services** — a group being a Compose `pr
 
 - The **groups list** shows every derived group with a status header.
 - The **group details** panel shows a header card with a status pill, a running/stopped/services summary, and the member-services table (status dot, name, image, state, health, uptime, ports).
-- With a group selected: `s` starts every service in the group, `t` stops, `r` restarts, `p` pulls, `x` removes (confirm-guarded), `l` tails all their logs. `space`/`enter` (start) and `t` (stop) also work straight from the list, no `Tab` to the details panel required.
+- With a group selected: `s` starts every service in the group, `t` stops, `r` restarts, `p` pulls, `x` removes (confirm-guarded), `L` tails all their logs. The list cursor is the selection, so these fire directly on the highlighted row — no panel focus needed.
 - `n` creates a new group (pick a name, then check which services belong to it). `e` edits a group's membership. `R` renames, `d` deletes (confirm-guarded).
 - Services with no `profiles:` tag appear in a reserved **`ungrouped`** row at the bottom of the list — every untagged service, selectable and actionable like any other group. The name is reserved on both counts: you cannot create or rename a group to `ungrouped`, and the row itself is read-only (no `e`, `R` or `d`), because its membership is derived from the file rather than chosen. Nothing is written to your compose file to make it appear.
 - `A` on the `ungrouped` row **adopts** it: cais writes `profiles: [ungrouped]` onto every service that has no profile, so the grouping survives outside cais. `A` again **releases** it and takes the tag back off. Both are confirm-guarded, and the file is backed up first — the Backups page can restore it.
@@ -34,17 +34,17 @@ The Services page is the counterpart to Home for single-service operations.
 
 ![The Services page: one service's configuration side by side with its live runtime stats](/screenshot-service.png)
 
-- The **services list** shows every compose service with status and memory summary per row. `space`/`enter` starts the highlighted service and `t` stops it, straight from the list; `d` opens a confirm to delete its whole entry from the compose file (refused if another service still names it in `depends_on:`).
+- The **services list** shows every compose service with status and memory summary per row. The list cursor is the selection, so `s`/`t`/`r`/`p`/`x` act on the highlighted service straight from the list; `d` opens a confirm to delete its whole entry from the compose file (refused if another service still names it in `depends_on:`).
 - The **service details** panel shows a header card (name, image, status line with coloured dot, state, health, uptime) and a compact PROPERTY | VALUE table of the service's compose configuration: ports, a live **web** hyperlink to the service's resolved URL, container name, restart policy, networks, volumes, healthcheck, `depends_on`, pull policy, PUID/PGID, memory limits, and label count.
 - When the service has a running container, a live runtime stats table joins it: memory usage + percentage, CPU, network I/O, disk I/O, PIDs, uptime.
-- With a service selected: `s`/`t`/`r`/`p`/`x` act on that one service, `l` streams its logs, `y` copies its URL, `h` opens the healthcheck template picker, and `B` cycles its restart policy — none → `on-failure` → `unless-stopped` → `always`, written straight into the compose file.
+- With a service selected: `s`/`t`/`r`/`p`/`x` act on that one service, `L` streams its logs, `y` copies its URL, `H` opens the healthcheck template picker, and `B` cycles its restart policy — none → `on-failure` → `unless-stopped` → `always`, written straight into the compose file.
 - `e` opens the service's own YAML fragment in an inline editor (real YAML, not a form — every Compose field is reachable). It validates as you type, auto-indents on Enter, indents with `tab`/`shift+tab`, and refuses to write a fragment that would not parse as Compose. `ctrl+s` saves, `ctrl+o` opens the same fragment in `$EDITOR`, `esc` cancels.
 
 ![The inline YAML editor open on a service, with live validation](/screenshot-editor.png)
 
 - `n` adds a new service: a small modal asks for a name and an image reference (with live validation on both), then writes a minimal `image:` fragment into the compose file and opens the inline editor on it — so ports, volumes and everything else land in the same YAML you would have hand-written.
 - `E` opens the whole compose file in `$EDITOR` — the only way to touch top-level keys (`name:`, `volumes:`, …).
-- `l` streams logs — live output in a scrollable overlay with follow mode.
+- `L` streams logs — live output in a scrollable overlay with follow mode.
 
 ![Streaming logs for a service](/screenshot-logs.png)
 

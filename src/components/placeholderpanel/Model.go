@@ -42,10 +42,10 @@ func (m Model) View() tea.View {
 	// state instead of repeating the name.
 	//
 	// Not focusable, so it always renders on the unfocused panel tier.
-	body := chrome.EmptyCard(bodyWidth, bodyAvail, chrome.PanelBg(false),
+	body := chrome.EmptyCard(bodyWidth, bodyAvail, chrome.PanelBg(),
 		"Not built yet", m.message, "", "")
 
-	return tea.NewView(chrome.PanelFrame(m.title, "", false, m.panelWidth, m.panelHeight, body))
+	return tea.NewView(chrome.PanelFrame(m.title, "", m.panelWidth, m.panelHeight, body))
 }
 
 // New returns a page body that says the page is not built yet.

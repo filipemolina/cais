@@ -277,7 +277,6 @@ type filterStater interface {
 func (m AppModel) helpContext() keys.Context {
 	ctx := keys.Context{
 		Page:          m.activePage,
-		Focused:       m.focusedComponent,
 		Editing:       m.inlineEditing,
 		PendingAction: m.pendingAction != nil,
 	}
@@ -464,14 +463,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Global.EditEnv):
 			finalCmds = append(finalCmds, cmds.OpenEnvModal())
 
-		case key.Matches(msg, keys.Global.NextPanel):
-			tabCmd := m.ChangeFocus(nil)
-			finalCmds = append(finalCmds, tabCmd)
-
-		case key.Matches(msg, keys.Global.PrevPanel):
-			idx := int(-1)
-			tabCmd := m.ChangeFocus(&idx)
-			finalCmds = append(finalCmds, tabCmd)
+		// Tab and shift+tab no longer cycle body-panel focus: both body
+		// panels are always active, so a verb key acts on the selected
+		// group/service regardless of which panel the cursor is in.
 
 		// esc is "back": out of the details panel, to the list, and off an
 		// error banner. Everything with a stronger claim on esc has already
@@ -484,14 +478,25 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// banner; this is the manual dismissal for the errors that stay until
 		// the next successful foreground operation.
 		case key.Matches(msg, keys.Global.Back):
+			// esc is "back". A modal closes itself above; a filter being
+			// typed owns the keyboard above; a focused list holding an applied
+			// filter keeps esc (escKept) and clears it itself. So by here, esc
+			// either clears the current selection (deselect group/service) or
+			// does nothing. The inline editor owns esc while it is open, so the
+			// selection is not cleared here.
 			if m.lastError != "" && !m.escKept() {
 				m.lastError = ""
 				m.lastErrorFromPoll = false
 				break
 			}
-			if !m.escKept() && m.focusedComponent != constants.COMPONENT_BODY_LIST {
-				leftPanel := constants.COMPONENT_BODY_LIST
-				finalCmds = append(finalCmds, m.ChangeFocus(&leftPanel))
+			if !m.escKept() && !m.inlineEditing {
+				if m.activePage == "Home" && m.selection.groupName != "" {
+					m.selection.groupName = ""
+					finalCmds = append(finalCmds, cmds.SetSelectedGroup(""))
+				} else if m.activePage == "Services" && m.selection.serviceName != "" {
+					m.selection.serviceName = ""
+					finalCmds = append(finalCmds, cmds.SetSelectedService(types.ServiceConfig{}))
+				}
 			}
 
 		// n creates a group from either panel on Home, and adds a service from
@@ -526,8 +531,6 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Each page starts at its primary (left) panel. Set activePage first so
 		// the deferred focus message is routed to the page we just opened,
 		// rather than the one we left.
-		leftPanel := constants.COMPONENT_BODY_LIST
-		finalCmds = append(finalCmds, m.ChangeFocus(&leftPanel))
 
 		// Refresh container state, and re-sync services/groups, so the
 		// newly active page's components have data to show even if they
@@ -777,11 +780,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// message as the fragment instead, so the panel adopts both
 		// atomically - see cmds.EditService.go.
 		m.selection.serviceName = msg.ServiceName
-		detailsPanel := constants.COMPONENT_BODY_DETAILS
 		newService := types.ServiceConfig{Name: msg.ServiceName, Image: msg.Image}
 		finalCmds = append(finalCmds,
 			cmds.GetConfig(m.config.source),
-			m.ChangeFocus(&detailsPanel),
 			func() tea.Msg {
 				return cmds.InlineEditReadyMsg{
 					ServiceName: msg.ServiceName,

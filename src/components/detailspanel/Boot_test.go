@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/filipemolina/cais/src/cmds"
-	"github.com/filipemolina/cais/src/constants"
 
 	"github.com/compose-spec/compose-go/v2/types"
 )
@@ -14,7 +13,6 @@ import (
 // DockerAction_test.go pins for start/stop/restart/pull/remove.
 func TestBootKeyRequestsARestartPolicyCycle(t *testing.T) {
 	panel := New(&types.ServiceConfig{Name: "web"}, "10.0.0.5")
-	panel, _ = panel.Update(cmds.SetFocusMsg(constants.COMPONENT_BODY_DETAILS))
 
 	_, cmd := panel.Update(keyPress('B'))
 
@@ -36,7 +34,6 @@ func TestBootKeyClearsTheApplyHint(t *testing.T) {
 	svc := types.ServiceConfig{Name: "web"}
 	panel := Model{
 		service:     &svc,
-		isFocused:   true,
 		panelWidth:  100,
 		panelHeight: 30,
 		applyHint:   "running: press s to apply",

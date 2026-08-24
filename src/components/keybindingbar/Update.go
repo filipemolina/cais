@@ -11,9 +11,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.terminalWidth = msg.Width
 
-	case cmds.SetFocusMsg:
-		m.focusedComponent = int(msg)
-
 	case cmds.SetActivePageMsg:
 		m.activePage = string(msg)
 

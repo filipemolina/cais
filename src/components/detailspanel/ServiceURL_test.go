@@ -72,7 +72,6 @@ func TestCopyURLKeySetsTheStatusMessage(t *testing.T) {
 	m := Model{
 		service:     &svc,
 		host:        "192.168.1.10",
-		isFocused:   true,
 		panelWidth:  100,
 		panelHeight: 30,
 	}
@@ -91,7 +90,7 @@ func TestCopyURLKeySetsTheStatusMessage(t *testing.T) {
 // y on a service with no URL does nothing - there is nothing to copy.
 func TestCopyURLKeyDoesNothingWithoutAURL(t *testing.T) {
 	svc := types.ServiceConfig{Name: "web", Image: "nginx:alpine"}
-	m := Model{service: &svc, isFocused: true, panelWidth: 100, panelHeight: 30}
+	m := Model{service: &svc, panelWidth: 100, panelHeight: 30}
 
 	updated, cmd := m.Update(keyPress('y'))
 	got := updated.(Model)

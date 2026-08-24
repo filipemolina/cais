@@ -25,7 +25,6 @@ import (
 	"charm.land/bubbles/v2/list"
 
 	"github.com/filipemolina/cais/src/apptypes"
-	"github.com/filipemolina/cais/src/constants"
 )
 
 // GlobalKeys work anywhere that no overlay owns the keyboard.
@@ -71,22 +70,23 @@ type GlobalKeys struct {
 }
 
 // ListKeys act on the body's left panel: the groups list and the services
-// list. New, Edit, Delete and Rename only mean something on the groups
-// list, which is the only list whose contents the app can modify. The
-// services list is read-only; its services are created by editing the
-// compose file.
+// list. New, Edit and Delete only mean something on the groups list, which is
+// the only list whose contents the app can modify. The services list is
+// read-only; its services are created by editing the compose file.
 //
-// Filter, ClearFilter, GoToStart and GoToEnd belong to the bubbles list
-// rather than to a handler here, and are declared anyway so the footer and
-// the help overlay advertise them from the same place as everything else.
-// See ListKeyMap.
+// Filter, ClearFilter, GoToStart and GoToEnd belong to the bubbles list rather
+// than to a handler here, and are declared anyway so the footer and the help
+// overlay advertise them from the same place as everything else. See
+// ListKeyMap.
 type ListKeys struct {
 	Navigate key.Binding
-	Select   key.Binding
 	New      key.Binding
 	Edit     key.Binding
 	Delete   key.Binding
-	Rename   key.Binding
+	// R renames the highlighted group. Uppercase so it does not collide with
+	// the details panel's lowercase r (restart); the same shape as E next to e
+	// on the services panel.
+	Rename key.Binding
 	// A on the reserved ungrouped row toggles its materialization: adopt
 	// writes profiles: [ungrouped] onto every profile-less service, release
 	// removes it. One key, two faces - the footer shows the state-appropriate
@@ -125,7 +125,7 @@ type DetailsKeys struct {
 	Healthcheck key.Binding
 	// Boot cycles the service's restart: policy (no -> on-failure ->
 	// unless-stopped -> always -> no). Uppercase, alongside Healthcheck's
-	// lowercase h, to leave b free for Files.Browse - the same shape as
+	// uppercase H, to leave b free for Files.Browse - the same shape as
 	// EditFile's E next to EditService's e.
 	Boot key.Binding
 }
@@ -195,17 +195,10 @@ var List = ListKeys{
 	// Matched by the bubbles list itself; declared here so the footer can
 	// advertise it from the same place as everything else.
 	Navigate: key.NewBinding(key.WithHelp("↑/↓", "navigate")),
-	// Enter is an alias for space: same verb, same binding, so every panel
-	// matches either. The help advertises space alone - the alias is for the
-	// muscle memory that expects enter to choose, not another key to learn.
-	Select: key.NewBinding(key.WithKeys("space", "enter"), key.WithHelp("space", "start")),
-	New:    key.NewBinding(key.WithKeys("n"), key.WithHelp("n", "new")),
-	Edit:   key.NewBinding(key.WithKeys("e"), key.WithHelp("e", "edit")),
-	Delete: key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "delete")),
-	// R on the groups list renames the highlighted group. Uppercase so it
-	// does not collide with the details panel's lowercase r (restart); the
-	// same shape as E next to e on the services panel.
-	Rename: key.NewBinding(key.WithKeys("R"), key.WithHelp("R", "rename")),
+	New:      key.NewBinding(key.WithKeys("n"), key.WithHelp("n", "new")),
+	Edit:     key.NewBinding(key.WithKeys("e"), key.WithHelp("e", "edit")),
+	Delete:   key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "delete")),
+	Rename:   key.NewBinding(key.WithKeys("R"), key.WithHelp("R", "rename")),
 	// A is uppercase so it does not collide with Global.About's lowercase a.
 	// The ungrouped row is the only place either binding is offered; the
 	// footer picks adopt or release from Context.UngroupedMaterialized.
@@ -229,7 +222,7 @@ var Details = DetailsKeys{
 	Restart:     key.NewBinding(key.WithKeys("r"), key.WithHelp("r", "restart")),
 	Pull:        key.NewBinding(key.WithKeys("p"), key.WithHelp("p", "pull")),
 	Remove:      key.NewBinding(key.WithKeys("x"), key.WithHelp("x", "remove")),
-	Logs:        key.NewBinding(key.WithKeys("l"), key.WithHelp("l", "logs")),
+	Logs:        key.NewBinding(key.WithKeys("L"), key.WithHelp("L", "logs")),
 	EditService: key.NewBinding(key.WithKeys("e"), key.WithHelp("e", "edit")),
 	EditFile:    key.NewBinding(key.WithKeys("E"), key.WithHelp("E", "file")),
 	Save:        key.NewBinding(key.WithKeys("ctrl+s"), key.WithHelp("ctrl+s", "save")),
@@ -238,11 +231,11 @@ var Details = DetailsKeys{
 	// exclusively while it is open, the same double life n already lives
 	// (List.New / Overlay.No).
 	CopyURL: key.NewBinding(key.WithKeys("y"), key.WithHelp("y", "copy url")),
-	// l (logs) and h (health) sit naturally together in this scope. Both
+	// L (logs) and H (health) sit naturally together in this scope. Both
 	// letters are reused for pagination on the body lists (see ListKeyMap) -
 	// no collision, since a list and a details panel are never focused at
 	// once.
-	Healthcheck: key.NewBinding(key.WithKeys("h"), key.WithHelp("h", "healthcheck")),
+	Healthcheck: key.NewBinding(key.WithKeys("H"), key.WithHelp("H", "healthcheck")),
 	Boot:        key.NewBinding(key.WithKeys("B"), key.WithHelp("B", "boot")),
 }
 
@@ -347,8 +340,9 @@ func ListKeyMap() list.KeyMap {
 // Context is what the footer knows about the screen: enough to decide which
 // bindings are live, and nothing more.
 type Context struct {
-	Page      string
-	Focused   int
+	Page string
+	// ListEmpty reports whether the body list has any rows to act on. An
+	// empty list offers no selection-dependent verbs.
 	ListEmpty bool
 	// Selected reports whether the panel has a subject to act on - a chosen
 	// group on Home, a chosen service on Services. Without one, the action
@@ -376,32 +370,6 @@ type Context struct {
 	Filter list.FilterState
 }
 
-// listKeys are the left panel's keys in the order the footer shows them, with
-// the filter slot resolved: while a filter is being typed the list has the
-// keyboard and nothing else is pressable, and once one is applied the slot
-// becomes the esc that clears it - a key that would otherwise go unmentioned.
-func listKeys(ctx Context, own ...key.Binding) []key.Binding {
-	if ctx.Filter == list.Filtering {
-		return []key.Binding{List.ApplyFilter, List.CancelFilter}
-	}
-
-	bindings := make([]key.Binding, 0, len(own)+4)
-	if !ctx.ListEmpty {
-		bindings = append(bindings, List.Select)
-	}
-	bindings = append(bindings, own...)
-
-	switch {
-	case ctx.Filter == list.FilterApplied:
-		bindings = append(bindings, List.ClearFilter)
-	case !ctx.ListEmpty:
-		// Nothing to filter in an empty list.
-		bindings = append(bindings, List.Filter)
-	}
-
-	return append(bindings, List.Navigate, Global.NextPanel)
-}
-
 // Active returns the bindings the user can press right now, in the order they
 // should be shown.
 //
@@ -409,92 +377,89 @@ func listKeys(ctx Context, own ...key.Binding) []key.Binding {
 // key.Binding.Enabled gates matching as well as help, and these bindings are
 // package-level values shared with the components, so disabling one to tidy the
 // footer would stop the key working everywhere.
+//
+// Selection is automatic on cursor move, so there is no left/right panel focus
+// abstraction: the page and the selection state alone decide the bindings. Tab
+// is dead on body pages - overlays and the editor handle their own tab.
 func Active(ctx Context) []key.Binding {
+	// While a docker action is pending, every action key is disabled and a
+	// spinner is shown; the only thing to offer is a way back.
+	if ctx.PendingAction {
+		return []key.Binding{Global.Back}
+	}
+
+	// A filtering list owns the keyboard like a modal does: confirm or
+	// abandon are the only keys that work, so they are the only ones shown.
+	if ctx.Filter == list.Filtering {
+		return []key.Binding{List.ApplyFilter, List.CancelFilter}
+	}
+
+	// The inline editor owns the keyboard too; its keys replace everything
+	// else on the page.
+	if ctx.Editing {
+		return []key.Binding{
+			Details.Save, Details.OpenEditor,
+			Editor.Indent, Editor.Outdent,
+			Global.Back,
+		}
+	}
+
 	switch ctx.Page {
-	case "Home":
-		switch ctx.Focused {
-		case constants.COMPONENT_BODY_LIST:
-			// New is offered even with no groups - it is how the first one gets
-			// made - but Stop, Edit, Delete and Rename need something to act on.
-			own := []key.Binding{List.New}
-			if !ctx.ListEmpty {
-				// Stop leads, next to Select's quick start: the pair of quick
-				// docker actions the list offers without a Tab to the details
-				// panel, ahead of the list-management verbs.
-				own = append([]key.Binding{Details.Stop}, own...)
-				if ctx.ReadOnlyGroup {
-					// The reserved row's only list verb is the adopt/release
-					// toggle; which face it shows depends on whether a real
-					// ungrouped profile backs the row.
-					if ctx.UngroupedMaterialized {
-						own = append(own, List.ReleaseUngrouped)
-					} else {
-						own = append(own, List.AdoptUngrouped)
-					}
+	case "Home", "Services":
+		var bindings []key.Binding
+		if ctx.Selected {
+			// The subject's docker verbs and the list-management verbs, in
+			// the order the footer reads them. s starts the selected group
+			// or service directly - there is no separate "select" key.
+			bindings = append(bindings,
+				Details.Start, Details.Stop, Details.Restart,
+				Details.Pull, Details.Remove, Details.Logs)
+			if ctx.Page == "Services" {
+				// Only a single service has a healthcheck to set, a restart
+				// policy to cycle, a URL to copy or a compose definition of
+				// its own to edit - none of them apply to a group.
+				bindings = append(bindings, Details.Healthcheck, Details.Boot,
+					Details.EditService, Details.EditFile, Details.CopyURL)
+			} else {
+				bindings = append(bindings, List.Edit, List.Rename)
+			}
+			bindings = append(bindings, List.New, List.Delete)
+			if ctx.ReadOnlyGroup {
+				// The reserved ungrouped row's only list verb is the
+				// adopt/release toggle; which face it shows depends on
+				// whether a real ungrouped profile backs the row.
+				if ctx.UngroupedMaterialized {
+					bindings = append(bindings, List.ReleaseUngrouped)
 				} else {
-					own = append(own, List.Edit, List.Delete, List.Rename)
+					bindings = append(bindings, List.AdoptUngrouped)
 				}
 			}
-
-			return listKeys(ctx, own...)
-
-		case constants.COMPONENT_BODY_DETAILS:
-			if !ctx.Selected {
-				return []key.Binding{List.New, Global.Back, Global.NextPanel}
-			}
-
-			// While an action is pending, disable action keys.
-			if ctx.PendingAction {
-				return []key.Binding{Global.Back, Global.NextPanel}
-			}
-
-			return []key.Binding{
-				List.New,
-				Details.Start, Details.Stop, Details.Restart,
-				Details.Pull, Details.Remove, Details.Logs,
-				Global.Back, Global.NextPanel,
-			}
+		} else {
+			// New is offered even with no groups - it is how the first one
+			// gets made.
+			bindings = append(bindings, List.New)
 		}
 
-	case "Services":
-		switch ctx.Focused {
-		case constants.COMPONENT_BODY_LIST:
-			// The services list offers the same pair the groups list does:
-			// Stop next to Select's quick start, ahead of Delete - no Tab to
-			// the details panel required for any of the three. New and Edit
-			// stay off this list: a new service is a bigger flow than a
-			// group tag (see cmds.OpenAddServiceModal, bound globally by
-			// List.New), and there is no per-field edit here to widen -
-			// EditService already means "open the inline YAML editor",
-			// which needs the details panel's textarea, not a list row.
-			var own []key.Binding
-			if !ctx.ListEmpty {
-				own = append(own, Details.Stop, List.Delete)
-			}
-
-			return listKeys(ctx, own...)
-
-		case constants.COMPONENT_BODY_DETAILS:
-			if ctx.Editing {
-				return []key.Binding{
-					Details.Save, Details.OpenEditor,
-					Editor.Indent, Editor.Outdent,
-					Global.Back,
-				}
-			}
-
-			if !ctx.Selected {
-				return []key.Binding{Global.Back, Global.NextPanel}
-			}
-
-			return []key.Binding{
-				Details.Start, Details.Stop, Details.Restart,
-				Details.Pull, Details.Remove, Details.Logs,
-				Details.CopyURL, Details.Healthcheck, Details.Boot,
-				Details.EditService, Details.EditFile,
-				Global.Back, Global.NextPanel,
-			}
+		// The filter slot: once a filter stands, esc clears it - which also
+		// takes over the back slot below, since one key shows one row.
+		switch {
+		case ctx.Filter == list.FilterApplied:
+			bindings = append(bindings, List.ClearFilter)
+		case !ctx.ListEmpty:
+			// Nothing to filter in an empty list.
+			bindings = append(bindings, List.Filter)
 		}
+
+		bindings = append(bindings, List.Navigate)
+
+		// Back is the esc ladder's second rung: deselect. It is only live
+		// when something is selected and the filter has not already claimed
+		// esc for itself.
+		if ctx.Selected && ctx.Filter != list.FilterApplied {
+			bindings = append(bindings, Global.Back)
+		}
+
+		return bindings
 
 	// The Files page has one always-focused panel, so the same keys apply
 	// regardless of which component id Tab last touched.
@@ -508,12 +473,12 @@ func Active(ctx Context) []key.Binding {
 	case "Backups":
 		return []key.Binding{
 			Backup.Restore,
-			Global.Back, Global.NextPanel,
+			Global.Back,
 			Backup.Navigate,
 		}
 	}
 
-	return []key.Binding{Global.NextPanel}
+	return []key.Binding{Global.Back}
 }
 
 // Globals are the always-available keys the footer pins to its right-hand side,
@@ -627,7 +592,7 @@ func Catalog(ctx Context) []Scope {
 		{
 			Title: "List",
 			Entries: append(
-				entries(List.Select, List.New, List.Edit, List.Delete, List.Rename, List.AdoptUngrouped, List.ReleaseUngrouped, List.Filter, List.ClearFilter, List.Navigate),
+				entries(List.New, List.Edit, List.Rename, List.Delete, List.AdoptUngrouped, List.ReleaseUngrouped, List.Filter, List.ClearFilter, List.Navigate),
 				Entry{Binding: List.GoToStart, Available: listNavigable},
 				Entry{Binding: List.GoToEnd, Available: listNavigable},
 			),
@@ -698,6 +663,7 @@ func Catalog(ctx Context) []Scope {
 // whether or not the footer has room to advertise them.
 func pressableNow(ctx Context) []key.Binding {
 	live := append(Active(ctx), Globals()...)
+
 	live = append(live, Global.ForceQuit, Global.PrevPage, Global.NextPage, Global.About, Global.Theme, Global.Usage)
 
 	// shift+tab is tab's twin: live wherever tab is, with no footer slot of

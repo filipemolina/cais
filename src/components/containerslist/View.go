@@ -18,7 +18,6 @@ import (
  */
 
 type containersListCustomDelegate struct {
-	isParentFocused bool
 }
 
 func (d containersListCustomDelegate) Height() int                             { return 4 }
@@ -41,7 +40,7 @@ func (d containersListCustomDelegate) Render(w io.Writer, m list.Model, index in
 	// by color alone: accent = cursor row, primary = selected, muted = default.
 	barColor := appstyles.Active.TextMuted
 
-	if isSelected && d.isParentFocused {
+	if isSelected {
 		barColor = appstyles.Active.Accent
 	} else if isActive {
 		barColor = appstyles.Active.TextPrimary
@@ -53,19 +52,19 @@ func (d containersListCustomDelegate) Render(w io.Writer, m list.Model, index in
 
 	// The selected row lifts to the modal surface; the bar must share that
 	// background so the row renders as one solid strip, as the old border did.
-	if isSelected && d.isParentFocused {
+	if isSelected {
 		wrapperStyle = wrapperStyle.Background(appstyles.Active.ModalBg)
 	}
 
 	titleStyle := lipgloss.NewStyle().Bold(true).Width(m.Width() - 1)
 
 	var barBg color.Color
-	if isSelected && d.isParentFocused {
+	if isSelected {
 		barBg = appstyles.Active.ModalBg
 	}
 
 	title := titleStyle.Render(item.Title())
-	description := item.Description(isSelected && d.isParentFocused)
+	description := item.Description(isSelected)
 
 	content := wrapperStyle.Render(lipgloss.JoinVertical(lipgloss.Left, title, description))
 
@@ -81,12 +80,12 @@ func (m Model) View() tea.View {
 	wrapper := lipgloss.NewStyle().
 		Padding(1, 2, 2, 2)
 
-	if m.isFocused {
-		wrapper = wrapper.
-			BorderStyle(lipgloss.RoundedBorder()).
-			BorderForeground(appstyles.Active.Accent).
-			Padding(0, 1, 1, 1)
-	}
+	// Both body panels are always active now that focus is gone, so the
+	// selected-row border is always drawn (the previously "focused" look).
+	wrapper = wrapper.
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(appstyles.Active.Accent).
+		Padding(0, 1, 1, 1)
 
 	// The title chip is restyled here, on a copy, rather than in the
 	// constructor - see appstyles.NormalTitle for why.

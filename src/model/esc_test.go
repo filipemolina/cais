@@ -6,7 +6,6 @@ import (
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"github.com/filipemolina/cais/src/cmds"
-	"github.com/filipemolina/cais/src/constants"
 )
 
 // escKey is the escape key as a terminal delivers it.
@@ -41,97 +40,59 @@ func clearedFilter(msgs []tea.Msg) bool {
 	return false
 }
 
-// The first constraint from the list keymap work: a focused list holding an
-// applied filter keeps esc - it is the only way back to the full rows - and
-// global "back" has to yield rather than strand the filter on an unfocused
-// panel.
-func TestEscClearsAnAppliedFilterBeforeItMovesFocus(t *testing.T) {
+// A list holding an applied filter keeps esc - it is the only way back to the
+// full rows - so esc clears the filter rather than touching the selection.
+func TestEscClearsAnAppliedFilter(t *testing.T) {
 	m := withFilterApplied(t, homeWithGroups(t))
-
-	if got := m.focusedComponent; got != constants.COMPONENT_BODY_LIST {
-		t.Fatalf("precondition: expected the list focused, got %d", got)
-	}
 
 	updated, cmd := m.Update(escKey())
 	m = updated.(AppModel)
 
-	if got := m.focusedComponent; got != constants.COMPONENT_BODY_LIST {
-		t.Errorf("esc moved focus to component %d instead of clearing the filter", got)
-	}
 	if !clearedFilter(collect(cmd)) {
 		t.Error("esc did not clear the applied filter")
 	}
+	// No focus to move, and the selection is untouched.
+	if m.selection.groupName != "" {
+		t.Error("esc cleared the filter but also changed the selection")
+	}
 }
 
-// What is left once the stronger claims have had theirs: the details panel.
-// esc there is "back to the list".
-func TestEscOnTheDetailsPanelReturnsFocusToTheList(t *testing.T) {
+// With a group selected and no banner or filter in the way, esc deselects the
+// current group - the "back" rung of the ladder now that there is no panel to
+// return focus to.
+func TestEscOnASelectedGroupDeselectsIt(t *testing.T) {
 	m := homeWithGroups(t)
-
-	rightPanel := constants.COMPONENT_BODY_DETAILS
-	m = drive(m, collect(m.ChangeFocus(&rightPanel))...)
-
-	if got := m.focusedComponent; got != rightPanel {
-		t.Fatalf("precondition: expected the details panel focused, got %d", got)
-	}
+	m.selection.groupName = "core"
 
 	updated, cmd := m.Update(escKey())
 	m = updated.(AppModel)
 
-	if got, want := m.focusedComponent, constants.COMPONENT_BODY_LIST; got != want {
-		t.Errorf("esc left focus on component %d, want %d", got, want)
+	if m.selection.groupName != "" {
+		t.Errorf("esc did not deselect the group: selection = %q", m.selection.groupName)
 	}
-
-	got, ok := focusedComponentFrom(collect(cmd))
-	if !ok {
-		t.Error("esc sent no focus message")
-	} else if want := constants.COMPONENT_BODY_LIST; got != want {
-		t.Errorf("esc focused component %d, want %d", got, want)
+	for _, msg := range collect(cmd) {
+		if _, ok := msg.(cmds.SetSelectedGroupMsg); ok {
+			return
+		}
 	}
+	t.Error("esc did not broadcast the deselection")
 }
 
-// The ladder when a filter stands on a list that is not focused: esc cannot
-// reach the filter, so it takes focus back to the list first; the next esc
-// clears it.
-func TestEscMovesFocusBeforeItClearsAnUnfocusedListsFilter(t *testing.T) {
-	m := withFilterApplied(t, homeWithGroups(t))
-
-	rightPanel := constants.COMPONENT_BODY_DETAILS
-	m = drive(m, collect(m.ChangeFocus(&rightPanel))...)
-
-	updated, cmd := m.Update(escKey())
-	msgs := collect(cmd)
-
-	if got, want := updated.(AppModel).focusedComponent, constants.COMPONENT_BODY_LIST; got != want {
-		t.Errorf("first esc: focus got %d, want %d (the filter stands)", got, want)
-	}
-	if clearedFilter(msgs) {
-		t.Error("first esc cleared a filter on a list it could not reach")
-	}
-
-	// Drive the messages the esc produced - the runtime would deliver them,
-	// and the focus one is what lets the list see the next esc at all.
-	m = drive(updated, msgs...)
-
-	updated, cmd = m.Update(escKey())
-	m = updated.(AppModel)
-
-	if !clearedFilter(collect(cmd)) {
-		t.Error("second esc did not clear the focused list's filter")
-	}
-}
-
-// On an unfiltered list there is no details panel to come back from and no
-// filter to clear, so esc is nobody's key.
+// On an unfiltered list with no selection, esc is nobody's key: it produces no
+// filter state change and no deselection.
 func TestEscOnAnUnfilteredListDoesNothing(t *testing.T) {
 	m := homeWithGroups(t)
+	m.selection.groupName = ""
 
 	_, cmd := m.Update(escKey())
 
 	for _, msg := range collect(cmd) {
 		switch msg.(type) {
-		case cmds.SetFocusMsg, cmds.SetListFilterStateMsg:
+		case cmds.SetListFilterStateMsg:
 			t.Errorf("esc on an unfiltered list produced %T", msg)
 		}
+	}
+	if m.selection.groupName != "" {
+		t.Error("esc changed the selection on an unfiltered list")
 	}
 }

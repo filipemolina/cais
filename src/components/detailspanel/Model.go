@@ -11,11 +11,9 @@ import (
 )
 
 type Model struct {
-	service     *types.ServiceConfig
-	panelWidth  int
+	service    *types.ServiceConfig
+	panelWidth int
 	panelHeight int
-	isFocused   bool
-	componentId int
 
 	// editing is true while the inline YAML editor is open.
 	editing bool
@@ -82,9 +80,8 @@ func (m Model) OwnsKeyboard() bool {
 
 func New(service *types.ServiceConfig, host string) tea.Model {
 	return Model{
-		service:     service,
-		host:        host,
-		componentId: 2,
-		spinner:     chrome.NewSpinner(),
+		service: service,
+		host:    host,
+		spinner: chrome.NewSpinner(),
 	}
 }

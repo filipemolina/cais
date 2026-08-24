@@ -243,7 +243,18 @@ between `v0.4.0` and `v0.5.0`.
   a direct dependency now. The workflow's path filter also gains its own
   file, so a broken workflow can report its own repair rather than waiting
   for an unrelated docs edit. The tag discontinuity above is written down in
-  the same release. A patch: no new surface, nothing removed.
+   the same release. A patch: no new surface, nothing removed.
+
+- **`v0.6.0`** (2026-08-24) removes panel focus management and unifies the
+  keyboard scheme. The two body panels are two views of one selection — the
+  list cursor selects automatically, so the `tab`/`shift+tab` focus cursor
+  between them (and the verb-hiding it required) is gone, and every group/service
+  verb now fires from the list selection on either screen. The shared docker
+  verbs (`s t r p x L`) fire from the list selection on both screens; `H`
+  (healthcheck) and `B` (boot) are Services-only. The keymap is
+  unified: `s` starts, `L`/`H` move logs and healthcheck to shift, `e` edits
+  (and `R` renames a group), and `space`/`enter` no longer start. A minor bump: it is a
+  breaking change to keybindings.
 
 ### Done, and kept for the record
 
@@ -308,7 +319,7 @@ by the generic row renderer and corrupted - the one sharp edge in the plan,
 pinned by a width-sweep test. Phase 2 (reverse-proxy labels - traefik,
 gethomepage, tsdproxy) is not scheduled.
 
-`healthcheck-insertion.md` is done: `h` on the Services details panel opens
+`healthcheck-insertion.md` is done: `H` on the Services details panel opens
 `HealthcheckPickerModal`, listing `utils.TemplatesFor(image)` -
 image-matched templates (Postgres, MariaDB, Redis, nginx - each using a probe
 tool that ships in the real image) before the generic HTTP fallback, whose

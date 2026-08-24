@@ -15,8 +15,6 @@ type Model struct {
 	containers    []apptypes.DockerContainer
 	panelWidth    int
 	panelHeight   int
-	isFocused     bool
-	componentId   int
 	pendingAction *chrome.PendingAction
 	spinner       spinner.Model
 }
@@ -27,7 +25,6 @@ func (m Model) Init() tea.Cmd {
 
 func New() tea.Model {
 	return Model{
-		componentId: 2,
-		spinner:     chrome.NewSpinner(),
+		spinner: chrome.NewSpinner(),
 	}
 }

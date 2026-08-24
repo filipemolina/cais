@@ -19,8 +19,7 @@ import (
  */
 
 type GroupsListCustomDelegate struct {
-	isParentFocused bool
-	activeIndex     int
+	activeIndex int
 }
 
 // Height must agree with the rows Render actually emits: one title line
@@ -53,7 +52,7 @@ func (d GroupsListCustomDelegate) Render(w io.Writer, m list.Model, index int, l
 		titleColor = appstyles.Active.TextMuted
 	}
 
-	rowBg := chrome.ListRowBg(isActive, d.isParentFocused)
+	rowBg := chrome.ListRowBg(isActive)
 
 	// The row's left edge is the same solid bar the nav uses for its active
 	// tab ("▌"), so list rows and the nav agree on thickness. State is carried
@@ -62,7 +61,7 @@ func (d GroupsListCustomDelegate) Render(w io.Writer, m list.Model, index int, l
 
 	if isActive {
 		barColor = appstyles.Active.Accent
-	} else if isSelected && d.isParentFocused {
+	} else if isSelected {
 		barColor = appstyles.Active.TextPrimary
 	}
 
@@ -73,7 +72,7 @@ func (d GroupsListCustomDelegate) Render(w io.Writer, m list.Model, index int, l
 
 	// The title style only bolds the active row; the selected row's bold comes
 	// from the wrapper, which is why it is applied here rather than in the title.
-	if isSelected && d.isParentFocused && !isActive {
+	if isSelected && !isActive {
 		wrapperStyle = wrapperStyle.Bold(true)
 	}
 
@@ -194,7 +193,7 @@ func (m Model) View() tea.View {
 	// 3-tier background system: tier 3 (panel) when unfocused,
 	// tier 4 (elevated) when focused. The focus state is shown by the
 	// background lifting, not by a border.
-	bg := chrome.PanelBg(m.isFocused)
+	bg := chrome.PanelBg()
 
 	// The panel fills exactly the box AppModel handed it, so the tier-3
 	// background covers the full body region and both panels are the same
