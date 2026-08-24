@@ -42,27 +42,32 @@ func TestCatalogAvailability(t *testing.T) {
 	t.Run("groups list with groups", func(t *testing.T) {
 		catalog := Catalog(Context{Page: "Home"})
 
-		listScope := scopeTitled(t, catalog, "List")
+		groups := scopeTitled(t, catalog, "Groups")
 		for _, binding := range []key.Binding{List.New, List.Filter, List.Navigate, List.GoToStart, List.GoToEnd} {
-			if !entryIn(t, listScope, binding).Available {
+			if !entryIn(t, groups, binding).Available {
 				t.Errorf("%q should be available on a populated groups list", binding.Help().Key)
 			}
 		}
 		// No filter stands, so there is nothing to clear.
-		if entryIn(t, listScope, List.ClearFilter).Available {
+		if entryIn(t, groups, List.ClearFilter).Available {
 			t.Error("esc clear filter should be dimmed with no filter applied")
 		}
 		// Edit/Delete need a selection, which the list does not have here.
 		for _, binding := range []key.Binding{List.Edit, List.Delete} {
-			if entryIn(t, listScope, binding).Available {
+			if entryIn(t, groups, binding).Available {
 				t.Errorf("%q should be dimmed with no selection", binding.Help().Key)
 			}
 		}
 
-		// The details keys need a selected subject.
-		details := scopeTitled(t, catalog, "Details")
-		if entryIn(t, details, Details.Start).Available {
+		// The action keys need a selected subject.
+		if entryIn(t, groups, Details.Start).Available {
 			t.Error("s start should be dimmed with no selection")
+		}
+		// The same binding on another page's scope is dimmed because that
+		// page is not the one on screen.
+		services := scopeTitled(t, catalog, "Services")
+		if entryIn(t, services, Details.Start).Available {
+			t.Error("s start should be dimmed in the Services scope while Groups is up")
 		}
 
 		global := scopeTitled(t, catalog, "Global")
@@ -91,26 +96,25 @@ func TestCatalogAvailability(t *testing.T) {
 	t.Run("group details with a group selected", func(t *testing.T) {
 		catalog := Catalog(Context{Page: "Home", Selected: true})
 
-		details := scopeTitled(t, catalog, "Details")
+		groups := scopeTitled(t, catalog, "Groups")
 		for _, binding := range []key.Binding{Details.Start, Details.Stop, Details.Restart, Details.Pull, Details.Remove, Details.Logs} {
-			if !entryIn(t, details, binding).Available {
+			if !entryIn(t, groups, binding).Available {
 				t.Errorf("%q should be available with a group selected", binding.Help().Key)
 			}
 		}
-		// Healthcheck, Boot, EditFile and CopyURL are service-only and must
-		// be dimmed on the group panel. (EditService shares the "e edit"
-		// binding with List.Edit, so sameBinding reports it available
-		// wherever "e" is - that is expected.)
-		for _, binding := range []key.Binding{Details.Healthcheck, Details.Boot, Details.EditFile, Details.CopyURL} {
-			if entryIn(t, details, binding).Available {
-				t.Error("service-only verb should be dimmed on the group panel")
+		for _, binding := range []key.Binding{List.Edit, List.New, List.Delete} {
+			if !entryIn(t, groups, binding).Available {
+				t.Errorf("%q should be available with a group selected", binding.Help().Key)
 			}
 		}
 
-		listScope := scopeTitled(t, catalog, "List")
-		for _, binding := range []key.Binding{List.Edit, List.New, List.Delete} {
-			if !entryIn(t, listScope, binding).Available {
-				t.Errorf("%q should be available with a group selected", binding.Help().Key)
+		// Healthcheck, Boot, EditFile and CopyURL are service-only, so they
+		// live in the Services scope - dimmed here because the Groups page
+		// is the one on screen.
+		services := scopeTitled(t, catalog, "Services")
+		for _, binding := range []key.Binding{Details.Healthcheck, Details.Boot, Details.EditFile, Details.CopyURL} {
+			if entryIn(t, services, binding).Available {
+				t.Errorf("service-only verb %q should be dimmed while Groups is up", binding.Help().Key)
 			}
 		}
 
@@ -123,11 +127,11 @@ func TestCatalogAvailability(t *testing.T) {
 	t.Run("a filter stands on the list", func(t *testing.T) {
 		catalog := Catalog(Context{Page: "Home", Filter: list.FilterApplied})
 
-		listScope := scopeTitled(t, catalog, "List")
-		if !entryIn(t, listScope, List.ClearFilter).Available {
+		groups := scopeTitled(t, catalog, "Groups")
+		if !entryIn(t, groups, List.ClearFilter).Available {
 			t.Error("esc clear filter should be available with a filter applied")
 		}
-		if entryIn(t, listScope, List.Filter).Available {
+		if entryIn(t, groups, List.Filter).Available {
 			t.Error("/ filter should be dimmed while a filter is applied")
 		}
 		// Back is claimed by the filter's clear slot, not the deselect slot.
@@ -140,12 +144,12 @@ func TestCatalogAvailability(t *testing.T) {
 	t.Run("an empty list suppresses what needs a row", func(t *testing.T) {
 		catalog := Catalog(Context{Page: "Home", ListEmpty: true})
 
-		listScope := scopeTitled(t, catalog, "List")
-		if !entryIn(t, listScope, List.New).Available {
+		groups := scopeTitled(t, catalog, "Groups")
+		if !entryIn(t, groups, List.New).Available {
 			t.Error("n new should be available on an empty list - it makes the first group")
 		}
 		for _, binding := range []key.Binding{List.Edit, List.Delete, List.Filter} {
-			if entryIn(t, listScope, binding).Available {
+			if entryIn(t, groups, binding).Available {
 				t.Errorf("%q should be dimmed on an empty list", binding.Help().Key)
 			}
 		}
@@ -178,10 +182,77 @@ func TestCatalogAvailability(t *testing.T) {
 				t.Errorf("%q should be available while editing", binding.Help().Key)
 			}
 		}
-		// The docker verbs are not live while editing.
-		details := scopeTitled(t, catalog, "Details")
-		if entryIn(t, details, Details.Start).Available {
+		// The docker verbs are not live while editing, even on their own page.
+		services := scopeTitled(t, catalog, "Services")
+		if entryIn(t, services, Details.Start).Available {
 			t.Error("s start should be dimmed while editing")
+		}
+	})
+
+	// The page scopes are the whole grouping now: a row is lit only while its
+	// own page is up, so the same binding on a sibling page's scope is dimmed.
+	t.Run("the services page lights its own scope only", func(t *testing.T) {
+		catalog := Catalog(Context{Page: "Services", Selected: true})
+
+		services := scopeTitled(t, catalog, "Services")
+		if !entryIn(t, services, Details.Start).Available {
+			t.Error("s start should be available with a service selected")
+		}
+
+		groups := scopeTitled(t, catalog, "Groups")
+		if entryIn(t, groups, Details.Start).Available {
+			t.Error("s start should be dimmed in the Groups scope while Services is up")
+		}
+
+		files := scopeTitled(t, catalog, "Files")
+		for _, binding := range []key.Binding{Details.EditFile, Files.Browse, Files.Scroll} {
+			if entryIn(t, files, binding).Available {
+				t.Errorf("%q should be dimmed while Services is up", binding.Help().Key)
+			}
+		}
+
+		backups := scopeTitled(t, catalog, "Backups")
+		for _, binding := range []key.Binding{Backup.Restore, Backup.Navigate} {
+			if entryIn(t, backups, binding).Available {
+				t.Errorf("%q should be dimmed while Services is up", binding.Help().Key)
+			}
+		}
+	})
+
+	t.Run("the files page lights its own scope only", func(t *testing.T) {
+		catalog := Catalog(Context{Page: "Compose Files"})
+
+		files := scopeTitled(t, catalog, "Files")
+		for _, binding := range []key.Binding{Details.EditFile, Files.Browse, Files.Scroll} {
+			if !entryIn(t, files, binding).Available {
+				t.Errorf("%q should be available on the Files page", binding.Help().Key)
+			}
+		}
+
+		// The Files page has no list, and it is not the Groups page either.
+		groups := scopeTitled(t, catalog, "Groups")
+		for _, binding := range []key.Binding{List.New, List.Navigate, Details.Start} {
+			if entryIn(t, groups, binding).Available {
+				t.Errorf("%q should be dimmed while Files is up", binding.Help().Key)
+			}
+		}
+	})
+
+	t.Run("the backups page lights its own scope only", func(t *testing.T) {
+		catalog := Catalog(Context{Page: "Backups"})
+
+		backups := scopeTitled(t, catalog, "Backups")
+		for _, binding := range []key.Binding{Backup.Restore, Backup.Navigate} {
+			if !entryIn(t, backups, binding).Available {
+				t.Errorf("%q should be available on the Backups page", binding.Help().Key)
+			}
+		}
+
+		groups := scopeTitled(t, catalog, "Groups")
+		for _, binding := range []key.Binding{List.New, List.Navigate, Details.Start} {
+			if entryIn(t, groups, binding).Available {
+				t.Errorf("%q should be dimmed while Backups is up", binding.Help().Key)
+			}
 		}
 	})
 }
@@ -253,29 +324,29 @@ func TestCatalogListsTheChordAliases(t *testing.T) {
 // other face is dimmed, and neither is offered on a real group.
 func TestUngroupedAdoptReleaseAvailability(t *testing.T) {
 	derived := Catalog(Context{Page: "Home", Selected: true, ReadOnlyGroup: true})
-	listScope := scopeTitled(t, derived, "List")
-	if !entryIn(t, listScope, List.AdoptUngrouped).Available {
+	groups := scopeTitled(t, derived, "Groups")
+	if !entryIn(t, groups, List.AdoptUngrouped).Available {
 		t.Error("A adopt should be available on the derived ungrouped row")
 	}
-	if entryIn(t, listScope, List.ReleaseUngrouped).Available {
+	if entryIn(t, groups, List.ReleaseUngrouped).Available {
 		t.Error("A release should be dimmed while the row is derived")
 	}
 
 	materialized := Catalog(Context{Page: "Home", Selected: true, ReadOnlyGroup: true, UngroupedMaterialized: true})
-	listScope = scopeTitled(t, materialized, "List")
-	if !entryIn(t, listScope, List.ReleaseUngrouped).Available {
+	groups = scopeTitled(t, materialized, "Groups")
+	if !entryIn(t, groups, List.ReleaseUngrouped).Available {
 		t.Error("A release should be available on the materialized ungrouped row")
 	}
-	if entryIn(t, listScope, List.AdoptUngrouped).Available {
+	if entryIn(t, groups, List.AdoptUngrouped).Available {
 		t.Error("A adopt should be dimmed while the row is materialized")
 	}
 
 	realGroup := Catalog(Context{Page: "Home", Selected: true})
-	listScope = scopeTitled(t, realGroup, "List")
-	if entryIn(t, listScope, List.AdoptUngrouped).Available {
+	groups = scopeTitled(t, realGroup, "Groups")
+	if entryIn(t, groups, List.AdoptUngrouped).Available {
 		t.Error("A adopt should be dimmed on a real group")
 	}
-	if entryIn(t, listScope, List.ReleaseUngrouped).Available {
+	if entryIn(t, groups, List.ReleaseUngrouped).Available {
 		t.Error("A release should be dimmed on a real group")
 	}
 }

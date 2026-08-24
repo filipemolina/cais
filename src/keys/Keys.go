@@ -224,7 +224,7 @@ var Details = DetailsKeys{
 	Remove:      key.NewBinding(key.WithKeys("x"), key.WithHelp("x", "remove")),
 	Logs:        key.NewBinding(key.WithKeys("L"), key.WithHelp("L", "logs")),
 	EditService: key.NewBinding(key.WithKeys("e"), key.WithHelp("e", "edit")),
-	EditFile:    key.NewBinding(key.WithKeys("E"), key.WithHelp("E", "file")),
+	EditFile:    key.NewBinding(key.WithKeys("E"), key.WithHelp("E", "open editor")),
 	Save:        key.NewBinding(key.WithKeys("ctrl+s"), key.WithHelp("ctrl+s", "save")),
 	OpenEditor:  key.NewBinding(key.WithKeys("ctrl+o"), key.WithHelp("ctrl+o", "editor")),
 	// Not a collision with Overlay.Yes ("y"/"Y"): a modal owns the keyboard
@@ -548,9 +548,15 @@ func Priority(binding key.Binding) int {
 	return priorityVerb
 }
 
-// Scope is one group of related keys in the help overlay.
+// Scope is one group of related keys in the help overlay. Page names the
+// page the scope's keys apply to when they belong to one page; it is empty
+// for scopes that are not page-specific (Pages, Editor, Env, Overlays,
+// Global). A row in a page scope is lit only while that page is up, so a
+// binding reused across pages (s start, / filter, the arrows) is lit on
+// each page it lives on, never on two pages at once.
 type Scope struct {
 	Title   string
+	Page    string
 	Entries []Entry
 }
 
@@ -564,13 +570,25 @@ type Entry struct {
 // Catalog returns every key in the app, grouped by scope, with availability
 // resolved against ctx. It reads the same bindings the handlers match against
 // - that is the point of the overlay: it cannot drift from the handlers.
+//
+// The page scopes are named after the pages themselves (Groups, Services,
+// Files, Backups), because a page is the only thing that decides which keys
+// apply now: there is no list/details focus to move between. A binding that
+// serves two pages (s start, / filter, the arrows) gets a row on each, lit
+// only on the page that is up. The remaining scopes - Pages, Editor, Env,
+// Overlays, Global - are not page-specific and carry no Page.
 func Catalog(ctx Context) []Scope {
 	live := pressableNow(ctx)
 
-	entries := func(bindings ...key.Binding) []Entry {
+	// A row is pressable when its binding is live and, for a page scope,
+	// when that page is the one on screen.
+	entries := func(page string, bindings ...key.Binding) []Entry {
 		out := make([]Entry, 0, len(bindings))
 		for _, b := range bindings {
-			out = append(out, Entry{Binding: b, Available: containsBinding(live, b)})
+			out = append(out, Entry{
+				Binding:   b,
+				Available: containsBinding(live, b) && (page == "" || page == ctx.Page),
+			})
 		}
 		return out
 	}
@@ -579,32 +597,64 @@ func Catalog(ctx Context) []Scope {
 	// advertises them, so Active never returns them.
 	listNavigable := containsBinding(live, List.Navigate)
 
+	startEnd := func(page string) []Entry {
+		return []Entry{
+			{Binding: List.GoToStart, Available: page == ctx.Page && listNavigable},
+			{Binding: List.GoToEnd, Available: page == ctx.Page && listNavigable},
+		}
+	}
+
 	return []Scope{
 		{
 			Title: "Pages",
 			Entries: append(
-				entries(Global.Page, Global.PrevPage, Global.NextPage),
+				entries("", Global.Page, Global.PrevPage, Global.NextPage),
 				// The alt chords are always live as aliases; one entry lists
 				// them, derived from the labels so it cannot drift either.
 				Entry{Binding: pageChordBinding(), Available: true},
 			),
 		},
 		{
-			Title: "List",
+			Title: apptypes.PageLabel("Home"),
+			Page:  "Home",
 			Entries: append(
-				entries(List.New, List.Edit, List.Rename, List.Delete, List.AdoptUngrouped, List.ReleaseUngrouped, List.Filter, List.ClearFilter, List.Navigate),
-				Entry{Binding: List.GoToStart, Available: listNavigable},
-				Entry{Binding: List.GoToEnd, Available: listNavigable},
+				entries("Home",
+					Details.Start, Details.Stop, Details.Restart,
+					Details.Pull, Details.Remove, Details.Logs,
+					List.New, List.Edit, List.Rename, List.Delete,
+					List.AdoptUngrouped, List.ReleaseUngrouped,
+					List.Filter, List.ClearFilter, List.Navigate,
+				),
+				startEnd("Home")...,
 			),
 		},
 		{
-			Title: "Details",
-			Entries: entries(
-				Details.Start, Details.Stop, Details.Restart,
-				Details.Pull, Details.Remove, Details.Logs,
-				Details.CopyURL, Details.Healthcheck, Details.Boot,
-				Details.EditService, Details.EditFile,
-				Details.Save, Details.OpenEditor,
+			Title: apptypes.PageLabel("Services"),
+			Page:  "Services",
+			Entries: append(
+				entries("Services",
+					Details.Start, Details.Stop, Details.Restart,
+					Details.Pull, Details.Remove, Details.Logs,
+					Details.Healthcheck, Details.Boot,
+					Details.EditService, Details.EditFile, Details.CopyURL,
+					List.New, List.Delete,
+					List.Filter, List.ClearFilter, List.Navigate,
+				),
+				startEnd("Services")...,
+			),
+		},
+		{
+			Title: apptypes.PageLabel("Compose Files"),
+			Page:  "Compose Files",
+			Entries: entries("Compose Files",
+				Details.EditFile, Files.Browse, Files.Scroll,
+			),
+		},
+		{
+			Title: apptypes.PageLabel("Backups"),
+			Page:  "Backups",
+			Entries: entries("Backups",
+				Backup.Restore, Global.Back, Backup.Navigate,
 			),
 		},
 		{
@@ -612,15 +662,9 @@ func Catalog(ctx Context) []Scope {
 			// dimmed everywhere else - which is the overlay saying "these are the
 			// editor's keys" without a sentence of prose.
 			Title: "Editor",
-			Entries: entries(
+			Entries: entries("",
 				Editor.NewLine, Editor.Indent, Editor.Outdent,
 				Details.Save, Details.OpenEditor,
-			),
-		},
-		{
-			Title: "Files",
-			Entries: entries(
-				Details.EditFile, Files.Browse, Files.Scroll,
 			),
 		},
 		{
@@ -629,7 +673,7 @@ func Catalog(ctx Context) []Scope {
 			// verbs reuse the page/editor bindings (one verb is one
 			// binding); reveal (space) and copy (c) are modal-only.
 			Title: "Env",
-			Entries: entries(
+			Entries: entries("",
 				key.NewBinding(key.WithHelp("space", "reveal")),
 				key.NewBinding(key.WithKeys("c"), key.WithHelp("c", "copy")),
 				List.New, List.Edit, List.Delete,
@@ -642,14 +686,14 @@ func Catalog(ctx Context) []Scope {
 			// Overlay keys do nothing on the main screen the overlay was
 			// opened from, so they are dimmed there by construction.
 			Title: "Overlays",
-			Entries: entries(
+			Entries: entries("",
 				Overlay.Submit, Overlay.Cancel, Overlay.Yes, Overlay.No,
 				Overlay.NextField, Overlay.Toggle, Overlay.Follow, Overlay.Navigation,
 			),
 		},
 		{
 			Title: "Global",
-			Entries: entries(
+			Entries: entries("",
 				Global.NextPanel, Global.PrevPanel, Global.Back,
 				Global.Quit, Global.ForceQuit, Global.Help, Global.About,
 				Global.Theme, Global.Usage,
