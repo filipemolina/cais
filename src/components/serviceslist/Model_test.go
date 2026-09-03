@@ -632,3 +632,81 @@ func TestTheStoppedDotMatchesTheStoppedPill(t *testing.T) {
 		}
 	}
 }
+
+// mid delivers one message and deliberately does NOT drain the commands it
+// produced, which is the frame the runtime would render before the follow-up
+// messages arrive. Anything that goes blank for a cycle shows up here and
+// nowhere else.
+func mid(t *testing.T, m Model, msg tea.Msg) Model {
+	t.Helper()
+
+	next, _ := m.Update(msg)
+	updated, ok := next.(Model)
+	if !ok {
+		t.Fatalf("expected a Model, got %T", next)
+	}
+
+	return updated
+}
+
+// Regression test: a refresh must not empty a filtered list, even for the one
+// frame between the rebuild and the filter being re-applied.
+//
+// updateServiceStatuses used to replace every row with list.SetItems, which
+// nils filteredItems and defers the rebuild to a command. The rows were
+// therefore gone for a whole message cycle - long enough to be rendered - so
+// a filtered list flashed "No services." every five seconds.
+func TestARefreshDoesNotBlankAFilteredList(t *testing.T) {
+	model := drive(t, New(servicesOf("alpha", "bravo", "webproxy", "worker"), 80, 24),
+		cmds.SetSelectedServiceMsg(servicesOf("alpha")[0]),
+	)
+
+	filtered, _ := applyFilter(t, model, "w")
+	before := visibleNames(filtered)
+	if len(before) == 0 {
+		t.Fatal("precondition: the filter hid everything")
+	}
+
+	frame := mid(t, filtered, refreshMsg("worker", "webproxy"))
+
+	if got := visibleNames(frame); len(got) != len(before) {
+		t.Errorf("mid-refresh the list shows %v, want %v", got, before)
+	}
+	if got := ansi.Strip(frame.View().Content); strings.Contains(got, "No services") {
+		t.Errorf("mid-refresh the list rendered its empty state:\n%s", got)
+	}
+}
+
+// The in-place refresh still has to deliver the new numbers: the rows the
+// filter is showing are copies, so a status change only reaches the screen
+// once the re-filter lands. A refresh that skipped the re-filter would be
+// silent rather than blank, which is worse.
+func TestARefreshUnderAFilterStillUpdatesTheRows(t *testing.T) {
+	model := drive(t, New(servicesOf("alpha", "webproxy", "worker"), 80, 24),
+		cmds.SetSelectedServiceMsg(servicesOf("alpha")[0]),
+	)
+
+	filtered, _ := applyFilter(t, model, "worker")
+	for _, item := range filtered.list.VisibleItems() {
+		if service, ok := item.(apptypes.ServiceListItem); ok && service.Status == "running" {
+			t.Fatal("precondition: worker is already running")
+		}
+	}
+
+	refreshed, _ := settle(t, filtered, refreshMsg("worker"))
+
+	var found bool
+	for _, item := range refreshed.list.VisibleItems() {
+		service, ok := item.(apptypes.ServiceListItem)
+		if !ok || service.Service.Name != "worker" {
+			continue
+		}
+		found = true
+		if service.Status != "running" {
+			t.Errorf("worker's visible row still reads %q after the refresh", service.Status)
+		}
+	}
+	if !found {
+		t.Fatalf("worker is not among the visible rows: %v", visibleNames(refreshed))
+	}
+}

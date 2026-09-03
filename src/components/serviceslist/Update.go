@@ -149,29 +149,53 @@ func (m *Model) containerMem(serviceName string) (usage, perc string) {
 	return "", ""
 }
 
-// updateServiceStatuses refreshes the status and memory fields on every
-// list item to match the current container state. Called whenever a
+// updateServiceStatuses refreshes the status and memory fields on every list
+// item to match the current container state. Called whenever a
 // GetRunningContainersMsg or GetContainerStatsMsg arrives with fresh data.
-// It returns a tea.Cmd so that any filter re-application triggered by
-// SetItems (required when a filter is active) gets executed by the
-// runtime, keeping the filtered view consistent.
+//
+// It writes each row through list.SetItem rather than replacing the lot with
+// list.SetItems, which matters only when a filter is standing but matters a
+// lot there. SetItems nils filteredItems and hands back a command to rebuild
+// them, so the rows are gone for a whole message cycle - long enough to be
+// rendered, which made a filtered list flash "No services." every five
+// seconds. SetItem leaves filteredItems alone: the rows stay on screen
+// carrying last tick's numbers until the re-filter lands and swaps in this
+// tick's. Stale for one frame beats absent for one frame.
+//
+// Only the last command is kept. Each SetItem returns its own re-filter
+// command, and every one of them would recompute the same thing; the last is
+// the only one that sees every row already written, so it is the only one
+// worth running.
+//
+// This rewrites rows in place - same rows, same order, only their status and
+// memory fields change - which is what makes SetItem applicable at all. A
+// path that adds or removes services cannot use it and must go through
+// setItems; see the SetServicesListMsg case.
 func (m *Model) updateServiceStatuses() tea.Cmd {
-	items := m.list.Items()
-	updated := make([]list.Item, 0, len(items))
+	var refilter tea.Cmd
 
-	for _, item := range items {
+	for i, item := range m.list.Items() {
 		svcItem, ok := item.(apptypes.ServiceListItem)
 		if !ok {
-			updated = append(updated, item)
 			continue
 		}
 
-		svcItem.Status = m.containerStatus(svcItem.Service.Name)
-		svcItem.MemUsage, svcItem.MemPerc = m.containerMem(svcItem.Service.Name)
-		updated = append(updated, svcItem)
+		status := m.containerStatus(svcItem.Service.Name)
+		usage, perc := m.containerMem(svcItem.Service.Name)
+
+		if svcItem.Status == status && svcItem.MemUsage == usage && svcItem.MemPerc == perc {
+			continue
+		}
+
+		svcItem.Status = status
+		svcItem.MemUsage, svcItem.MemPerc = usage, perc
+
+		if cmd := m.list.SetItem(i, svcItem); cmd != nil {
+			refilter = cmd
+		}
 	}
 
-	return m.setItems(updated)
+	return refilter
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

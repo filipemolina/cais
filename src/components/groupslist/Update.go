@@ -78,6 +78,67 @@ func (m *Model) restoreCursor() {
 	m.cursorNeedsRestore = false
 }
 
+// applyGroups puts a freshly derived group list on screen, in place where it
+// can be and wholesale where it cannot.
+//
+// This one message is both the five-second refresh and the reload after the
+// compose file changes. The refresh almost always brings the same groups in
+// the same order with only their running counts moved, and for that case
+// list.SetItem rewrites the rows without disturbing anything else. Replacing
+// the lot with list.SetItems would nil filteredItems and defer the rebuild to
+// a command, leaving a standing filter with no rows for a whole message cycle
+// - long enough to be rendered, which made a filtered list flash "No groups."
+// every five seconds. See serviceslist.Model.updateServiceStatuses for the
+// same treatment on the other panel.
+//
+// A reload that adds, removes or reorders groups cannot be expressed as
+// in-place writes, so it goes through setItems and accepts the blank cycle;
+// restoreCursor is what puts the cursor back afterwards.
+func (m *Model) applyGroups(groups []list.Item) tea.Cmd {
+	if !m.sameGroupsInOrder(groups) {
+		return m.setItems(groups)
+	}
+
+	var refilter tea.Cmd
+
+	for i, item := range groups {
+		if item == m.list.Items()[i] {
+			continue
+		}
+
+		if cmd := m.list.SetItem(i, item); cmd != nil {
+			refilter = cmd
+		}
+	}
+
+	return refilter
+}
+
+// sameGroupsInOrder reports whether the incoming groups are the ones already
+// on the list, in the same positions - which is what makes an in-place
+// rewrite equivalent to a replacement. Only the names are compared: the
+// counts are exactly what a refresh is expected to change.
+func (m *Model) sameGroupsInOrder(groups []list.Item) bool {
+	current := m.list.Items()
+	if len(current) != len(groups) {
+		return false
+	}
+
+	for i, item := range groups {
+		incoming, ok := item.(apptypes.GroupListItem)
+		if !ok {
+			return false
+		}
+
+		existing, ok := current[i].(apptypes.GroupListItem)
+		if !ok || existing.Name != incoming.Name {
+			return false
+		}
+	}
+
+	return true
+}
+
 // resizeList sizes the inner list to the space left inside the panel box
 // after the wrapper padding and the stats footer. Called whenever either the
 // box or the footer changes.
@@ -173,7 +234,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			groupsList = append(groupsList, newGroup)
 		}
 
-		cmd := m.setItems(groupsList)
+		cmd := m.applyGroups(groupsList)
 		finalCmds = append(finalCmds, cmd)
 		m.syncActiveIndex()
 	}

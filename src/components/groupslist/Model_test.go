@@ -2,6 +2,7 @@ package groupslist
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -688,5 +689,90 @@ func TestTheGroupStatusBarNamesTheStandingFilter(t *testing.T) {
 
 	if got := ansi.Strip(cleared.View().Content); strings.Contains(got, "filtered") {
 		t.Errorf("the status bar outlived the filter:\n%s", got)
+	}
+}
+
+// groupRefresh is what the five-second tick delivers: the same groups, with
+// their running counts re-derived.
+func groupRefresh(running ...int) cmds.SetGroupsListMsg {
+	names := []string{"core", "media", "monitoring"}
+	statuses := make([]cmds.GroupStatus, 0, len(names))
+	for i, name := range names {
+		count := 0
+		if i < len(running) {
+			count = running[i]
+		}
+		statuses = append(statuses, cmds.GroupStatus{Name: name, Running: count, Total: 2})
+	}
+
+	return cmds.SetGroupsListMsg(statuses)
+}
+
+// mid delivers one message without draining the commands it produced - the
+// frame the runtime would render before the follow-ups arrive. See the twin
+// helper in serviceslist.
+func mid(t *testing.T, m Model, msg tea.Msg) Model {
+	t.Helper()
+
+	next, _ := m.Update(msg)
+	updated, ok := next.(Model)
+	if !ok {
+		t.Fatalf("expected a Model, got %T", next)
+	}
+
+	return updated
+}
+
+// Regression test: the refresh must not empty a filtered groups list, even
+// for the one frame between the rebuild and the filter being re-applied. See
+// serviceslist.TestARefreshDoesNotBlankAFilteredList for the mechanism.
+func TestAGroupRefreshDoesNotBlankAFilteredList(t *testing.T) {
+	filtered, _ := filteredGroups(t, "m", "core", "media", "monitoring")
+
+	before := visibleNames(filtered)
+	if len(before) == 0 {
+		t.Fatal("precondition: the filter hid everything")
+	}
+
+	frame := mid(t, filtered, groupRefresh(1, 2, 0))
+
+	if got := visibleNames(frame); len(got) != len(before) {
+		t.Errorf("mid-refresh the list shows %v, want %v", got, before)
+	}
+	if got := ansi.Strip(frame.View().Content); strings.Contains(got, "No groups") {
+		t.Errorf("mid-refresh the list rendered its empty state:\n%s", got)
+	}
+}
+
+// The in-place path is only valid while the groups are the same ones in the
+// same order. A reload that adds a group has to fall back to replacing the
+// list wholesale - and still land the new group, keep the filter, and keep
+// the selection.
+func TestAReloadThatChangesTheGroupsStillRebuilds(t *testing.T) {
+	filtered, _ := filteredGroups(t, "m", "core", "media", "monitoring")
+
+	if filtered.activeGroup != "media" {
+		t.Fatalf("precondition: activeGroup = %q, want media", filtered.activeGroup)
+	}
+
+	reloaded, _ := settle(t, filtered, cmds.SetGroupsListMsg([]cmds.GroupStatus{
+		{Name: "core", Running: 1, Total: 2},
+		{Name: "mail", Running: 0, Total: 1},
+		{Name: "media", Running: 2, Total: 2},
+		{Name: "monitoring", Running: 0, Total: 1},
+	}))
+
+	visible := visibleNames(reloaded)
+	if !slices.Contains(visible, "mail") {
+		t.Errorf("the new group never arrived: %v", visible)
+	}
+	if reloaded.list.FilterState() != list.FilterApplied {
+		t.Errorf("the reload dropped the filter: %v", reloaded.list.FilterState())
+	}
+	if got := reloaded.activeGroup; got != "media" {
+		t.Errorf("the reload moved the selection to %q, want media", got)
+	}
+	if got := visible[reloaded.list.Index()]; got != "media" {
+		t.Errorf("the cursor sits on %q, want media", got)
 	}
 }
