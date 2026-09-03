@@ -23,6 +23,7 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
+	"charm.land/bubbles/v2/viewport"
 
 	"github.com/filipemolina/cais/src/apptypes"
 )
@@ -334,6 +335,79 @@ func ListKeyMap() list.KeyMap {
 		CloseFullHelp: unbound,
 		Quit:          unbound,
 		ForceQuit:     unbound,
+	}
+}
+
+// ModalListKeyMap is the keymap every modal that embeds a bubbles list
+// installs, replacing list.DefaultKeyMap.
+//
+// Same reasoning as ListKeyMap, one step further out. A modal owns the whole
+// keyboard while it is open, so the app's verbs are not competing for keys
+// here - but the default map still claims q, esc, ?, /, h, l, b, u, f, d, g,
+// G, tab and shift+tab, none of which a picker declared. A key handled but
+// never advertised is the failure this package exists to prevent, and an
+// undeclared key is worse in a modal than on a page: the modal's own keys are
+// the only ones the user was told about.
+//
+// Filter is deliberately unbound rather than switched off with
+// SetFilteringEnabled. Every one of these modals hides its title row, and the
+// filter input renders into that row, so a live filter would take keystrokes
+// with nothing on screen to show for them. Unbinding the key is the whole fix
+// and it avoids list.updatePagination's row-budget trap - see the note on
+// healthcheckpickermodal.New.
+//
+// What stays is what a picker actually needs: move the cursor, page a list
+// longer than the modal, and jump to either end. Cancel and submit never
+// reach the list at all; the modal matches them first.
+func ModalListKeyMap() list.KeyMap {
+	unbound := key.NewBinding()
+
+	return list.KeyMap{
+		CursorUp:   key.NewBinding(key.WithKeys("up", "k"), key.WithHelp("↑/k", "up")),
+		CursorDown: key.NewBinding(key.WithKeys("down", "j"), key.WithHelp("↓/j", "down")),
+		PrevPage:   key.NewBinding(key.WithKeys("left", "h", "pgup"), key.WithHelp("←/h/pgup", "prev page")),
+		NextPage:   key.NewBinding(key.WithKeys("right", "l", "pgdown"), key.WithHelp("→/l/pgdn", "next page")),
+		GoToStart:  List.GoToStart,
+		GoToEnd:    List.GoToEnd,
+
+		// The modal owns esc and enter, and matches both before the list is
+		// ever reached. Leaving these bound would give the list a second,
+		// invisible claim on the two keys the modal advertises.
+		Filter:               unbound,
+		ClearFilter:          unbound,
+		CancelWhileFiltering: unbound,
+		AcceptWhileFiltering: unbound,
+
+		ShowFullHelp:  unbound,
+		CloseFullHelp: unbound,
+		Quit:          unbound,
+		ForceQuit:     unbound,
+	}
+}
+
+// ReadOnlyViewportKeyMap is the keymap every read-only scrolling viewer
+// installs on its viewport, replacing viewport.DefaultKeyMap.
+//
+// The default map claims f, b, u, d, h, l, k and j - the same collisions that
+// forced the list keymap work. f is the sharpest: it is PageDown by default
+// and Overlay.Follow in the logs modal, so the two would answer the same key
+// with the modal winning by the accident of matching first.
+//
+// A read-only viewer has no use for horizontal scrolling or vim-style
+// half-pages, so the letter keys go and the arrows, pgup/pgdn and the ctrl
+// half-pages remain.
+func ReadOnlyViewportKeyMap() viewport.KeyMap {
+	unbound := key.NewBinding()
+
+	return viewport.KeyMap{
+		PageDown:     key.NewBinding(key.WithKeys("pgdown"), key.WithHelp("pgdn", "page down")),
+		PageUp:       key.NewBinding(key.WithKeys("pgup"), key.WithHelp("pgup", "page up")),
+		HalfPageUp:   key.NewBinding(key.WithKeys("ctrl+u"), key.WithHelp("ctrl+u", "½ page up")),
+		HalfPageDown: key.NewBinding(key.WithKeys("ctrl+d"), key.WithHelp("ctrl+d", "½ page down")),
+		Up:           key.NewBinding(key.WithKeys("up", "k"), key.WithHelp("↑/k", "up")),
+		Down:         key.NewBinding(key.WithKeys("down", "j"), key.WithHelp("↓/j", "down")),
+		Left:         unbound,
+		Right:        unbound,
 	}
 }
 

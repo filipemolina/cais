@@ -11,6 +11,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/filipemolina/cais/src/components/chrome"
+	"github.com/filipemolina/cais/src/keys"
 	"github.com/filipemolina/cais/src/utils"
 )
 
@@ -62,6 +63,7 @@ func New(serviceName string, svc types.ServiceConfig, termHeight int) tea.Model 
 
 	visible := chrome.ModalListHeight(len(items), termHeight)
 	cl := list.New(items, templateDelegate{}, 40, visible)
+	cl.KeyMap = keys.ModalListKeyMap()
 	// Filtering disabled first: list.updatePagination's row budget reserves
 	// a title/filter-input row whenever showFilter && filteringEnabled,
 	// regardless of showTitle, and SetFilteringEnabled alone does not

@@ -8,6 +8,7 @@ import (
 	"github.com/filipemolina/cais/src/appstyles"
 	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/components/chrome"
+	"github.com/filipemolina/cais/src/keys"
 )
 
 // Model is the theme picker: a list of registered themes with live preview
@@ -54,6 +55,7 @@ func New(termHeight int) tea.Model {
 	visible := chrome.ModalListHeight(len(items), termHeight)
 
 	picker := list.New(items, themePickerDelegate{}, 40, visible)
+	picker.KeyMap = keys.ModalListKeyMap()
 	picker.SetShowTitle(false)
 	picker.SetShowHelp(false)
 	picker.SetShowStatusBar(false)

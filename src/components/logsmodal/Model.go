@@ -6,6 +6,7 @@ import (
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/keys"
 	"github.com/filipemolina/cais/src/utils"
 )
 
@@ -32,6 +33,10 @@ func (m Model) Init() tea.Cmd {
 // returns a model that just displays the error.
 func New(target string, isGroup bool, composeFile string, members []string, termWidth, termHeight int) (tea.Model, tea.Cmd) {
 	vp := viewport.New()
+	// f is Overlay.Follow here and PageDown in the viewport's default map,
+	// so the two answered the same key with this modal winning only by
+	// matching first. The shared read-only map has no letter keys at all.
+	vp.KeyMap = keys.ReadOnlyViewportKeyMap()
 
 	m := Model{
 		viewport: vp,

@@ -357,7 +357,7 @@ its own keys**. It builds that line from the same bindings, through
 `components.renderKeyHints`, so a modal's help and the footer read alike; pass a
 lighter description color when the modal sits on a lighter surface than the bar.
 
-#### The lists do not get to keep `list.DefaultKeyMap`
+#### No child component keeps its library default keymap
 
 A bubbles `list.Model` installs `list.DefaultKeyMap()`, which is written for a
 list that *is* the whole program. It binds `d` and `f` to next-page, `h`, `b` and
@@ -370,6 +370,49 @@ So the lists install `keys.ListKeyMap()` instead. It keeps only what the list
 alone can answer — cursor movement, `g`/`G`, and `/` — and leaves every key the
 app owns bound to nothing. `components.TestDeleteKeyDoesNotAlsoPageTheList` and
 `TestPanelLettersDoNotPageTheList` fail against the default map.
+
+The same trap is not the lists' alone, so the rule is general:
+
+> A component may forward keys to a child only if that child's keymap was
+> explicitly constructed. No component ships a child carrying
+> `list.DefaultKeyMap()` or `viewport.DefaultKeyMap()`.
+
+Note what the rule does *not* say. Forwarding is not the defect — the body
+lists forward every key to the inner list and are the best-behaved code in
+the app, because `keys.ListKeyMap()` makes "unmatched" impossible by
+construction. There are two honest ways to keep key handling intentional:
+enumerate the keys at the call site, or forward everything to a child whose
+keymap is an exhaustive allowlist. The second is arguably the safer of the
+two, since the allowlist is declared once and the footer renders from that
+same declaration. What is never acceptable is forwarding into a map the app
+did not write.
+
+Three constructors satisfy the rule, and a component picks by what it is
+rather than by which package it lives in:
+
+| Constructor | For |
+| --- | --- |
+| `keys.ListKeyMap()` | a body list, which competes with the app's verbs and needs `/` |
+| `keys.ModalListKeyMap()` | a list inside a modal, which owns the keyboard and has no filter |
+| `keys.ReadOnlyViewportKeyMap()` | any read-only scrolling viewer |
+
+A modal owning the keyboard makes the collisions milder, not absent: the
+blast radius there is an undeclared key rather than a verb firing twice. The
+theme picker answered `/` with a filter whose input row is hidden, so the
+keystrokes went somewhere the user could not see. `ModalListKeyMap` unbinds
+`Filter` rather than calling `SetFilteringEnabled(false)`, which sidesteps
+`list.updatePagination`'s row-budget trap — see the note on
+`healthcheckpickermodal.New` for what that trap costs.
+
+The sharpest single case was `f`: `Overlay.Follow` in the logs modal and
+`PageDown` in the viewport default, with the modal winning only by the
+accident of matching first.
+
+`keys.TestNoComponentShipsALibraryDefaultKeyMap` walks the component tree and
+fails on a `list.New` or `viewport.New` whose result never gets a keymap. It
+is a source-level check rather than a per-package one because the keymaps sit
+on unexported fields: a per-package test would have to be remembered for
+every new component, which is the discipline the rule exists to replace.
 
 **A list being filtered is an overlay.** While a filter is being typed the
 keystrokes are text: `n` is not "new group", `q` is not "quit". The list says so

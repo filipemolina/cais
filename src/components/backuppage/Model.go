@@ -1,10 +1,10 @@
 package backuppage
 
 import (
-	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"github.com/filipemolina/cais/src/components/chrome"
+	"github.com/filipemolina/cais/src/keys"
 	"github.com/filipemolina/cais/src/utils"
 )
 
@@ -35,32 +35,15 @@ func (m Model) Init() tea.Cmd { return nil }
 // issues GetBackups, whose result fills it via BackupListMsg.
 func New() tea.Model {
 	vp := viewport.New()
-	// The preview is read-only; strip the letter keys so scrolling is arrows
-	// and pgup/pgdn only, the same choice composefilepanel makes.
-	vp.KeyMap = previewViewportKeyMap()
+	// The preview is read-only, so it takes the shared read-only map. Note
+	// that no key reaches it today: Update routes every key press into
+	// handleKey, which never falls through. That is fixed with the rest of
+	// this page - see docs/plans/backups-rework.md.
+	vp.KeyMap = keys.ReadOnlyViewportKeyMap()
 
 	return Model{
 		previewVP: vp,
 		loading:   true,
-	}
-}
-
-// previewViewportKeyMap returns a viewport keymap with the letter keys
-// stripped, so k/j/↑/↓ navigation stays with the list and the preview only
-// scrolls when it has focus-worthy overflow. The list owns the arrow keys;
-// the preview's own Up/Down keys mirror them so a long copy still scrolls.
-func previewViewportKeyMap() viewport.KeyMap {
-	unbound := key.NewBinding()
-
-	return viewport.KeyMap{
-		PageDown:     key.NewBinding(key.WithKeys("pgdown"), key.WithHelp("pgdn", "page down")),
-		PageUp:       key.NewBinding(key.WithKeys("pgup"), key.WithHelp("pgup", "page up")),
-		HalfPageUp:   key.NewBinding(key.WithKeys("ctrl+u"), key.WithHelp("ctrl+u", "½ page up")),
-		HalfPageDown: key.NewBinding(key.WithKeys("ctrl+d"), key.WithHelp("ctrl+d", "½ page down")),
-		Up:           key.NewBinding(key.WithKeys("up", "k"), key.WithHelp("↑/k", "up")),
-		Down:         key.NewBinding(key.WithKeys("down", "j"), key.WithHelp("↓/j", "down")),
-		Left:         unbound,
-		Right:        unbound,
 	}
 }
 

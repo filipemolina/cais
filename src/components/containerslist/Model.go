@@ -4,6 +4,7 @@ import (
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"github.com/filipemolina/cais/src/apptypes"
+	"github.com/filipemolina/cais/src/keys"
 )
 
 type Model struct {
@@ -22,6 +23,7 @@ func New(containers []apptypes.ContainerListItem, width int, height int) tea.Mod
 	}
 
 	servicesList := list.New(items, containersListCustomDelegate{}, width, height)
+	servicesList.KeyMap = keys.ListKeyMap()
 	servicesList.SetShowHelp(false)
 	servicesList.SetShowStatusBar(false)
 

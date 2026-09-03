@@ -5,6 +5,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/components/chrome"
+	"github.com/filipemolina/cais/src/keys"
 )
 
 type Model struct {
@@ -40,6 +41,7 @@ func New(dir string, fileNames []string, activeName string, termHeight int) tea.
 	visible := chrome.ModalListHeight(len(items), termHeight)
 
 	picker := list.New(items, composeFilePickerDelegate{}, 40, visible)
+	picker.KeyMap = keys.ModalListKeyMap()
 	picker.SetShowTitle(false)
 	picker.SetShowHelp(false)
 	picker.SetShowStatusBar(false)

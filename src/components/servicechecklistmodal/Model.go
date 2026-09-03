@@ -5,6 +5,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/components/chrome"
+	"github.com/filipemolina/cais/src/keys"
 )
 
 type Model struct {
@@ -55,6 +56,7 @@ func checklist(serviceNames []string, preselected map[string]bool, termHeight in
 	visible := chrome.ModalListHeight(len(items), termHeight)
 
 	cl := list.New(items, serviceChecklistDelegate{}, 40, visible)
+	cl.KeyMap = keys.ModalListKeyMap()
 	cl.SetShowTitle(false)
 	cl.SetShowHelp(false)
 	cl.SetShowStatusBar(false)

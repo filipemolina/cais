@@ -94,7 +94,7 @@ func TestFooterHints(t *testing.T) {
 		{
 			name:  "services list with a service selected",
 			model: Model{activePage: "Services", selectedService: true},
-			want:  "s start · t stop · r restart · p pull · x remove · L logs · H healthcheck · B boot · e edit · E file · y copy url · n new · d delete · / filter · ↑/↓ navigate · esc back",
+			want:  "s start · t stop · r restart · p pull · x remove · L logs · H healthcheck · B boot · e edit · E open editor · y copy url · n new · d delete · / filter · ↑/↓ navigate · esc back",
 		},
 		{
 			name:  "service details while inline editing",
@@ -104,7 +104,7 @@ func TestFooterHints(t *testing.T) {
 		{
 			name:  "the files page offers edit, browse and scroll",
 			model: Model{activePage: "Compose Files"},
-			want:  "E file · b browse · ↑/↓ scroll",
+			want:  "E open editor · b browse · ↑/↓ scroll",
 		},
 		{
 			name:  "an unknown page still offers a way back",

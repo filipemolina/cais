@@ -1,9 +1,9 @@
 package composefilepanel
 
 import (
-	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
+	"github.com/filipemolina/cais/src/keys"
 )
 
 // ComposeFilePanel replaces the PlaceholderPanel on the Files page. The
@@ -30,30 +30,10 @@ type Model struct {
 
 func (m Model) Init() tea.Cmd { return nil }
 
-// composeFileViewportKeyMap returns a viewport keymap with the letter keys
-// stripped. The viewport's DefaultKeyMap claims f, b, u, d, h, l, k, j -
-// the same collisions that forced the list keymap work. A read-only file
-// viewer has no use for horizontal scrolling or vim-style half-pages, so
-// the letter keys are unbound and only the arrows and pgup/pgdn remain.
-func composeFileViewportKeyMap() viewport.KeyMap {
-	unbound := key.NewBinding()
-
-	return viewport.KeyMap{
-		PageDown:     key.NewBinding(key.WithKeys("pgdown"), key.WithHelp("pgdn", "page down")),
-		PageUp:       key.NewBinding(key.WithKeys("pgup"), key.WithHelp("pgup", "page up")),
-		HalfPageUp:   key.NewBinding(key.WithKeys("ctrl+u"), key.WithHelp("ctrl+u", "½ page up")),
-		HalfPageDown: key.NewBinding(key.WithKeys("ctrl+d"), key.WithHelp("ctrl+d", "½ page down")),
-		Up:           key.NewBinding(key.WithKeys("up", "k"), key.WithHelp("↑/k", "up")),
-		Down:         key.NewBinding(key.WithKeys("down", "j"), key.WithHelp("↓/j", "down")),
-		Left:         unbound,
-		Right:        unbound,
-	}
-}
-
 // New builds the read-only file viewer for the Files page.
 func New() tea.Model {
 	vp := viewport.New()
-	vp.KeyMap = composeFileViewportKeyMap()
+	vp.KeyMap = keys.ReadOnlyViewportKeyMap()
 
 	return Model{
 		viewport: vp,
