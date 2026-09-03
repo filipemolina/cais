@@ -12,24 +12,46 @@ import (
 )
 
 // syncActiveIndex points the delegate at the row holding activeService, or
-// at no row at all when it isn't in the list.
+// at no row at all when it isn't on screen.
 //
 // It runs on both the list and the selection changing, because the two
 // arrive as separate messages and tea.Batch makes no promise about their
 // order. Re-deriving from the name on each means the pair converges on the
 // right row whichever lands first.
+//
+// It walks VisibleItems, not Items: the delegate is handed the index of the
+// row it is drawing, and list.populatedView numbers those against the
+// visible slice. Under a filter the two disagree, and scanning the whole
+// slice put the highlight on the wrong row - or, for a name that filtered
+// out to a position past the end of the visible list, on no row at all.
 func (m *Model) syncActiveIndex() {
 	active := -1
 
-	for i, item := range m.list.Items() {
+	for i, item := range m.list.VisibleItems() {
 		if service, ok := item.(apptypes.ServiceListItem); ok && service.Service.Name == m.activeService {
 			active = i
 			break
 		}
 	}
 
+	if active == m.listDelegate.activeIndex {
+		return
+	}
+
 	m.listDelegate.activeIndex = active
 	m.list.SetDelegate(m.listDelegate)
+}
+
+// cursorService returns the service the cursor is sitting on, in the list's
+// own visible space, and whether there is one at all. An empty filter result
+// has no row under the cursor and reports false.
+func cursorService(l list.Model) (types.ServiceConfig, bool) {
+	item, ok := l.SelectedItem().(apptypes.ServiceListItem)
+	if !ok {
+		return types.ServiceConfig{}, false
+	}
+
+	return item.Service, true
 }
 
 // resizeList sizes the inner list to the space left inside the panel box
@@ -185,24 +207,38 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// Both body panels are always active now, so the inner list always
-	// receives the keystroke. Track cursor before the list processes the key,
-	// so we can detect movement and auto-select the item under it.
-	previousIndex := m.list.Index()
+	// receives the keystroke. Note which service the cursor is on before the
+	// list processes the message, so the row changing underneath it can be
+	// told apart from the selection being set from outside.
+	previousService, _ := cursorService(m.list)
 
 	var cmd tea.Cmd
 	m.list, cmd = m.list.Update(msg)
 	finalCmds = append(finalCmds, cmd)
 
-	// Auto-select: if the cursor moved, select the item under it.
-	if m.list.Index() != previousIndex {
-		if item := m.list.SelectedItem(); item != nil {
-			if service, ok := item.(apptypes.ServiceListItem); ok {
-				m.activeService = service.Service.Name
-				m.syncActiveIndex()
-				finalCmds = append(finalCmds, cmds.SetSelectedService(service.Service))
-			}
-		}
+	// Auto-select: if a different service is under the cursor now, select it.
+	//
+	// The test is the service's identity, not list.Index(). Filtering moves
+	// rows out from under a cursor that never moves - applying a filter sends
+	// the cursor to the top, so a cursor already at the top keeps the same
+	// index while row 0 becomes an entirely different service. Comparing
+	// indexes missed that and left the details panel showing a service the
+	// filter had just hidden. Identity also covers the list being reordered
+	// or reloaded under a stationary cursor.
+	//
+	// A selection arriving from AppModel (SetSelectedServiceMsg, handled
+	// above) does not move the cursor, so previousService already matches and
+	// nothing is echoed back.
+	if service, ok := cursorService(m.list); ok && service.Name != previousService.Name {
+		m.activeService = service.Name
+		finalCmds = append(finalCmds, cmds.SetSelectedService(service))
 	}
+
+	// Which rows are visible can change without the selection changing - a
+	// filter keystroke, or a stats poll re-applying the filter - and the
+	// delegate's index is relative to those rows. Re-point it on every
+	// message rather than only on the two that used to be enough.
+	m.syncActiveIndex()
 
 	if state := m.list.FilterState(); state != filterStateBefore {
 		finalCmds = append(finalCmds, cmds.SetListFilterState(state))

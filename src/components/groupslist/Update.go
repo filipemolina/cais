@@ -11,20 +11,41 @@ import (
 )
 
 // syncActiveIndex points the delegate at the row holding activeGroup, or at
-// no row at all when it isn't in the list. Runs on both the list and the
+// no row at all when it isn't on screen. Runs on both the list and the
 // selection changing, since they arrive as unordered separate messages.
+//
+// It walks VisibleItems, not Items: the delegate is handed the index of the
+// row it is drawing, and list.populatedView numbers those against the
+// visible slice. Under a filter the two disagree - see the same note on
+// serviceslist.Model.syncActiveIndex.
 func (m *Model) syncActiveIndex() {
 	active := -1
 
-	for i, item := range m.list.Items() {
+	for i, item := range m.list.VisibleItems() {
 		if group, ok := item.(apptypes.GroupListItem); ok && group.Name == m.activeGroup {
 			active = i
 			break
 		}
 	}
 
+	if active == m.listDelegate.activeIndex {
+		return
+	}
+
 	m.listDelegate.activeIndex = active
 	m.list.SetDelegate(m.listDelegate)
+}
+
+// cursorGroup returns the name of the group the cursor is sitting on, in the
+// list's own visible space, and whether there is one at all. An empty filter
+// result has no row under the cursor and reports false.
+func cursorGroup(l list.Model) (string, bool) {
+	item, ok := l.SelectedItem().(apptypes.GroupListItem)
+	if !ok {
+		return "", false
+	}
+
+	return item.Name, true
 }
 
 // resizeList sizes the inner list to the space left inside the panel box
@@ -128,24 +149,26 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// Both body panels are always active now, so the inner list always
-	// receives the keystroke. Track cursor before the list processes the key,
-	// so we can detect movement and auto-select the item under it.
-	previousIndex := m.list.Index()
+	// receives the keystroke. Note which group the cursor is on before the
+	// list processes the message, so the row changing underneath it can be
+	// told apart from the selection being set from outside.
+	previousGroup, _ := cursorGroup(m.list)
 
 	var cmd tea.Cmd
 	m.list, cmd = m.list.Update(msg)
 	finalCmds = append(finalCmds, cmd)
 
-	// Auto-select: if the cursor moved, select the item under it.
-	if m.list.Index() != previousIndex {
-		if item := m.list.SelectedItem(); item != nil {
-			if group, ok := item.(apptypes.GroupListItem); ok {
-				m.activeGroup = group.Name
-				m.syncActiveIndex()
-				finalCmds = append(finalCmds, cmds.SetSelectedGroup(group.Name))
-			}
-		}
+	// Auto-select: if a different group is under the cursor now, select it.
+	// The test is identity rather than list.Index() - see the fuller note on
+	// serviceslist.Model.Update for why an index comparison misses filtering.
+	if group, ok := cursorGroup(m.list); ok && group != previousGroup {
+		m.activeGroup = group
+		finalCmds = append(finalCmds, cmds.SetSelectedGroup(group))
 	}
+
+	// Which rows are visible can change without the selection changing, and
+	// the delegate's index is relative to those rows.
+	m.syncActiveIndex()
 
 	if state := m.list.FilterState(); state != filterStateBefore {
 		finalCmds = append(finalCmds, cmds.SetListFilterState(state))

@@ -224,3 +224,211 @@ func TestFilterSurvivesStatsPolling(t *testing.T) {
 		t.Error("stats polling did not produce a FilterMatchesMsg; the SetItems cmd for re-applying the filter was not returned")
 	}
 }
+
+// settle feeds messages through the list and then keeps feeding back whatever
+// the resulting commands produced, the way the Bubble Tea runtime does.
+//
+// `drive` above throws commands away, which is enough for most of these tests
+// but hides everything downstream of list.FilterMatchesMsg - the message that
+// actually populates the filtered rows. Anything asserting on behaviour under
+// a filter has to go through here instead. Selections are pulled out of the
+// loop and returned rather than fed back, so a test can see what the list
+// asked AppModel to select.
+func settle(t *testing.T, model Model, msgs ...tea.Msg) (Model, []types.ServiceConfig) {
+	t.Helper()
+
+	var selected []types.ServiceConfig
+
+	queue := append([]tea.Msg{}, msgs...)
+	for range 200 {
+		if len(queue) == 0 {
+			break
+		}
+
+		msg := queue[0]
+		queue = queue[1:]
+
+		next, cmd := model.Update(msg)
+		updated, ok := next.(Model)
+		if !ok {
+			t.Fatalf("expected a Model, got %T", next)
+		}
+		model = updated
+
+		for _, produced := range messagesFrom(cmd) {
+			if produced == nil {
+				continue
+			}
+			if pick, ok := produced.(cmds.SetSelectedServiceMsg); ok {
+				selected = append(selected, types.ServiceConfig(pick))
+				continue
+			}
+			queue = append(queue, produced)
+		}
+	}
+
+	return model, selected
+}
+
+// visibleNames is what the list is actually showing, in order.
+func visibleNames(m Model) []string {
+	names := make([]string, 0, len(m.list.VisibleItems()))
+	for _, item := range m.list.VisibleItems() {
+		if service, ok := item.(apptypes.ServiceListItem); ok {
+			names = append(names, service.Service.Name)
+		}
+	}
+
+	return names
+}
+
+// applyFilter types term into the list's filter and accepts it.
+func applyFilter(t *testing.T, m Model, term string) (Model, []types.ServiceConfig) {
+	t.Helper()
+
+	msgs := []tea.Msg{tea.KeyPressMsg{Code: '/', Text: "/"}}
+	for _, r := range term {
+		msgs = append(msgs, tea.KeyPressMsg{Code: r, Text: string(r)})
+	}
+	msgs = append(msgs, tea.KeyPressMsg{Code: tea.KeyEnter})
+
+	return settle(t, m, msgs...)
+}
+
+// Regression test: applying a filter while the cursor is already on the first
+// row left the details panel showing a service the filter had just hidden.
+//
+// The selection used to be published only when list.Index() changed, and
+// accepting a filter sends the cursor to the top - so a cursor already at the
+// top kept index 0 while row 0 became a different service entirely, and no
+// SetSelectedServiceMsg was ever sent.
+func TestFilterSelectsTheRowItPutsUnderTheCursor(t *testing.T) {
+	model := drive(t, New(servicesOf("api", "cache", "db", "web"), 80, 24),
+		cmds.SetSelectedServiceMsg(servicesOf("api")[0]),
+	)
+
+	if got := model.list.Index(); got != 0 {
+		t.Fatalf("precondition: cursor is at %d, want 0", got)
+	}
+
+	filtered, selected := applyFilter(t, model, "web")
+
+	if got := visibleNames(filtered); len(got) == 0 || got[0] != "web" {
+		t.Fatalf("precondition: filtered rows are %v, want web first", got)
+	}
+	if got := filtered.activeService; got != "web" {
+		t.Errorf("activeService = %q, want %q", got, "web")
+	}
+	if len(selected) == 0 {
+		t.Fatal("no SetSelectedServiceMsg was published; the details panel keeps the pre-filter service")
+	}
+	if got := selected[len(selected)-1].Name; got != "web" {
+		t.Errorf("last published selection = %q, want %q", got, "web")
+	}
+}
+
+// Regression test: the delegate's activeIndex is an index into the rows being
+// drawn, and list.populatedView numbers those against VisibleItems. Deriving
+// it from the full Items slice put the highlight on the wrong row under a
+// filter, or past the end of the visible rows and so on no row at all.
+func TestActiveIndexIsRelativeToTheVisibleRows(t *testing.T) {
+	model := drive(t, New(servicesOf("api", "cache", "db", "web", "worker"), 80, 24),
+		cmds.SetSelectedServiceMsg(servicesOf("api")[0]),
+	)
+
+	filtered, _ := applyFilter(t, model, "work")
+
+	visible := visibleNames(filtered)
+	if len(visible) == 0 {
+		t.Fatal("precondition: the filter hid everything")
+	}
+
+	active := filtered.listDelegate.activeIndex
+	if active < 0 || active >= len(visible) {
+		t.Fatalf("activeIndex = %d, outside the %d visible rows %v",
+			active, len(visible), visible)
+	}
+	if got := visible[active]; got != filtered.activeService {
+		t.Errorf("activeIndex %d points at %q, but the selected service is %q",
+			active, got, filtered.activeService)
+	}
+}
+
+// Regression test: clearing the filter puts every row back, and the row under
+// the cursor is once again what the details panel must be showing.
+func TestClearingTheFilterResyncsTheSelection(t *testing.T) {
+	model := drive(t, New(servicesOf("api", "cache", "db", "web", "worker"), 80, 24),
+		cmds.SetSelectedServiceMsg(servicesOf("api")[0]),
+	)
+
+	filtered, _ := applyFilter(t, model, "work")
+	if filtered.activeService != "worker" {
+		t.Fatalf("precondition: activeService = %q, want worker", filtered.activeService)
+	}
+
+	cleared, selected := settle(t, filtered, tea.KeyPressMsg{Code: tea.KeyEsc})
+
+	if got := cleared.list.FilterState(); got != list.Unfiltered {
+		t.Fatalf("filter state = %v, want Unfiltered", got)
+	}
+
+	visible := visibleNames(cleared)
+	under := visible[cleared.list.Index()]
+
+	if cleared.activeService != under {
+		t.Errorf("activeService = %q, but the cursor is on %q", cleared.activeService, under)
+	}
+	if len(selected) > 0 && selected[len(selected)-1].Name != under {
+		t.Errorf("last published selection = %q, but the cursor is on %q",
+			selected[len(selected)-1].Name, under)
+	}
+
+	active := cleared.listDelegate.activeIndex
+	if active < 0 || active >= len(visible) || visible[active] != cleared.activeService {
+		t.Errorf("activeIndex = %d does not point at %q in %v",
+			active, cleared.activeService, visible)
+	}
+}
+
+// A selection set by AppModel (after a config reload, say) must not be
+// overridden by the row the cursor happens to be resting on. The cursor did
+// not move, so the list has nothing new to report.
+func TestExternalSelectionIsNotEchoedBack(t *testing.T) {
+	model := drive(t, New(servicesOf("api", "cache", "db", "web"), 80, 24))
+
+	updated, selected := settle(t, model,
+		cmds.SetSelectedServiceMsg(servicesOf("db")[0]),
+	)
+
+	if got := updated.activeService; got != "db" {
+		t.Errorf("activeService = %q, want db", got)
+	}
+	if len(selected) != 0 {
+		t.Errorf("published %d selections, want none: AppModel's choice was echoed back", len(selected))
+	}
+}
+
+// A config reload replaces every item. The list must stay silent about it:
+// AppModel restores the selection after a reload, and a list that published
+// whatever landed on row 0 would race that restore.
+//
+// This works because Update reads the cursor after its own switch has already
+// applied SetServicesListMsg, so the rebuild is not something the identity
+// check can see. Pinned here because moving that read earlier would be a
+// subtle and hard-to-trace regression.
+func TestReloadingTheListPublishesNothing(t *testing.T) {
+	model := drive(t, New(servicesOf("api", "cache", "db"), 80, 24),
+		cmds.SetSelectedServiceMsg(servicesOf("db")[0]),
+	)
+
+	updated, selected := settle(t, model,
+		cmds.SetServicesListMsg(servicesOf("api", "cache", "db", "web")),
+	)
+
+	if len(selected) != 0 {
+		t.Errorf("reload published %d selections (%v), want none", len(selected), selected)
+	}
+	if got := updated.activeService; got != "db" {
+		t.Errorf("activeService = %q after a reload, want db", got)
+	}
+}

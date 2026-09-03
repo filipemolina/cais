@@ -469,3 +469,161 @@ func TestCursorMovementUpAutoSelects(t *testing.T) {
 		t.Errorf("after k: activeGroup = %q, want group-01", movedUp.activeGroup)
 	}
 }
+
+// settle feeds messages through the list and then keeps feeding back whatever
+// the resulting commands produced, the way the Bubble Tea runtime does. It is
+// the only way to assert on behaviour under a filter: the filtered rows are
+// populated by list.FilterMatchesMsg, which arrives as a command. Selections
+// are pulled out of the loop and returned rather than fed back, so a test can
+// see what the list asked AppModel to select.
+func settle(t *testing.T, model Model, msgs ...tea.Msg) (Model, []string) {
+	t.Helper()
+
+	var selected []string
+
+	queue := append([]tea.Msg{}, msgs...)
+	for range 200 {
+		if len(queue) == 0 {
+			break
+		}
+
+		msg := queue[0]
+		queue = queue[1:]
+
+		next, cmd := model.Update(msg)
+		updated, ok := next.(Model)
+		if !ok {
+			t.Fatalf("expected a Model, got %T", next)
+		}
+		model = updated
+
+		for _, produced := range messagesFrom(cmd) {
+			if produced == nil {
+				continue
+			}
+			if pick, ok := produced.(cmds.SetSelectedGroupMsg); ok {
+				selected = append(selected, string(pick))
+				continue
+			}
+			queue = append(queue, produced)
+		}
+	}
+
+	return model, selected
+}
+
+// visibleNames is what the list is actually showing, in order.
+func visibleNames(m Model) []string {
+	names := make([]string, 0, len(m.list.VisibleItems()))
+	for _, item := range m.list.VisibleItems() {
+		if group, ok := item.(apptypes.GroupListItem); ok {
+			names = append(names, group.Name)
+		}
+	}
+
+	return names
+}
+
+// filteredGroups is a groups list narrowed to the groups matching term.
+func filteredGroups(t *testing.T, term string, names ...string) (Model, []string) {
+	t.Helper()
+
+	statuses := make([]cmds.GroupStatus, 0, len(names))
+	for _, name := range names {
+		statuses = append(statuses, cmds.GroupStatus{Name: name})
+	}
+
+	var model tea.Model = New(nil, 40, 20)
+	for _, msg := range []tea.Msg{
+		cmds.SetBodyLayoutMsg{LeftWidth: 40, Height: 20},
+		cmds.SetGroupsListMsg(statuses),
+		cmds.SetSelectedGroupMsg(names[0]),
+	} {
+		model, _ = model.Update(msg)
+	}
+
+	groups, ok := model.(Model)
+	if !ok {
+		t.Fatalf("expected a Model, got %T", model)
+	}
+
+	msgs := []tea.Msg{tea.KeyPressMsg{Code: '/', Text: "/"}}
+	for _, r := range term {
+		msgs = append(msgs, tea.KeyPressMsg{Code: r, Text: string(r)})
+	}
+	msgs = append(msgs, tea.KeyPressMsg{Code: tea.KeyEnter})
+
+	return settle(t, groups, msgs...)
+}
+
+// Regression test: applying a filter while the cursor is already on the first
+// row left the group details panel showing a group the filter had just
+// hidden. The selection used to be published only when list.Index() changed,
+// and accepting a filter sends the cursor to the top - so a cursor already at
+// the top kept index 0 while row 0 became a different group entirely.
+func TestFilterSelectsTheGroupItPutsUnderTheCursor(t *testing.T) {
+	filtered, selected := filteredGroups(t, "media", "core", "media", "tools")
+
+	if got := visibleNames(filtered); len(got) == 0 || got[0] != "media" {
+		t.Fatalf("precondition: filtered rows are %v, want media first", got)
+	}
+	if got := filtered.activeGroup; got != "media" {
+		t.Errorf("activeGroup = %q, want %q", got, "media")
+	}
+	if len(selected) == 0 {
+		t.Fatal("no SetSelectedGroupMsg was published; the details panel keeps the pre-filter group")
+	}
+	if got := selected[len(selected)-1]; got != "media" {
+		t.Errorf("last published selection = %q, want %q", got, "media")
+	}
+}
+
+// Regression test: the delegate's activeIndex is an index into the rows being
+// drawn, which list.populatedView numbers against VisibleItems. Deriving it
+// from the full Items slice put the highlight on the wrong row under a
+// filter, or past the end of the visible rows and so on no row at all.
+func TestGroupActiveIndexIsRelativeToTheVisibleRows(t *testing.T) {
+	filtered, _ := filteredGroups(t, "media", "core", "media", "tools")
+
+	visible := visibleNames(filtered)
+	if len(visible) == 0 {
+		t.Fatal("precondition: the filter hid everything")
+	}
+
+	active := filtered.listDelegate.activeIndex
+	if active < 0 || active >= len(visible) {
+		t.Fatalf("activeIndex = %d, outside the %d visible rows %v",
+			active, len(visible), visible)
+	}
+	if got := visible[active]; got != filtered.activeGroup {
+		t.Errorf("activeIndex %d points at %q, but the selected group is %q",
+			active, got, filtered.activeGroup)
+	}
+}
+
+// A selection set by AppModel must not be overridden by the row the cursor
+// happens to be resting on. The cursor did not move, so the list has nothing
+// new to report.
+func TestExternalGroupSelectionIsNotEchoedBack(t *testing.T) {
+	var model tea.Model = New(nil, 40, 20)
+	for _, msg := range []tea.Msg{
+		cmds.SetBodyLayoutMsg{LeftWidth: 40, Height: 20},
+		cmds.SetGroupsListMsg([]cmds.GroupStatus{{Name: "core"}, {Name: "media"}, {Name: "tools"}}),
+	} {
+		model, _ = model.Update(msg)
+	}
+
+	groups, ok := model.(Model)
+	if !ok {
+		t.Fatalf("expected a Model, got %T", model)
+	}
+
+	updated, selected := settle(t, groups, cmds.SetSelectedGroupMsg("tools"))
+
+	if got := updated.activeGroup; got != "tools" {
+		t.Errorf("activeGroup = %q, want tools", got)
+	}
+	if len(selected) != 0 {
+		t.Errorf("published %d selections, want none: AppModel's choice was echoed back", len(selected))
+	}
+}
