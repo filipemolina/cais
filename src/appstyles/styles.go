@@ -10,11 +10,6 @@ import "charm.land/lipgloss/v2"
 // package init. NormalTitle used to be exactly that kind of frozen var; the
 // comment stayed to explain why it no longer is.
 
-// DocStyle is an empty style kept only for its frame size (Padding/Border),
-// which does not depend on color - see ContainersList.go's WindowSizeMsg
-// handling.
-var DocStyle = lipgloss.NewStyle()
-
 // NormalTitle is THE accent title chip: bold ink derived from the theme
 // accent on an accent background, with one space of padding on each side.
 // Every title - the Details/GroupDetails frames, the Services, Groups and

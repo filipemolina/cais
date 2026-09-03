@@ -4,7 +4,6 @@ import (
 	"os"
 	"slices"
 
-	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/filipemolina/cais/src/apptypes"
@@ -48,8 +47,7 @@ type configModel struct {
 }
 
 type containersModel struct {
-	runningContainers []list.Item
-	runningCount      int
+	runningCount int
 }
 
 // selectionModel remembers what the user had selected, by name, so a config
@@ -67,14 +65,14 @@ type Components struct {
 }
 
 type AppModel struct {
-	navigation       navigationModel
-	config           configModel
-	containers       containersModel
-	selection        selectionModel
-	pages            map[string][]tea.Model
-	activePage       string
-	components       Components
-	lastError        string
+	navigation navigationModel
+	config     configModel
+	containers containersModel
+	selection  selectionModel
+	pages      map[string][]tea.Model
+	activePage string
+	components Components
+	lastError  string
 	// lastErrorFromPoll records whether the banner is showing an error from
 	// the background container poll, so the next successful poll can clear
 	// it without touching errors from other sources (e.g. a failed action).
@@ -353,9 +351,6 @@ func GetInitialModel(source utils.ComposeSource) AppModel {
 	}
 
 	return AppModel{
-		containers: containersModel{
-			runningContainers: []list.Item{},
-		},
 		config: configModel{
 			source:         source,
 			configFileName: "",

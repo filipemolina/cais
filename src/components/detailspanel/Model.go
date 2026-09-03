@@ -11,8 +11,8 @@ import (
 )
 
 type Model struct {
-	service    *types.ServiceConfig
-	panelWidth int
+	service     *types.ServiceConfig
+	panelWidth  int
 	panelHeight int
 
 	// editing is true while the inline YAML editor is open.
