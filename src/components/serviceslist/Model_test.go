@@ -1,6 +1,7 @@
 package serviceslist
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -708,5 +709,92 @@ func TestARefreshUnderAFilterStillUpdatesTheRows(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("worker is not among the visible rows: %v", visibleNames(refreshed))
+	}
+}
+
+// Regression test: a service is not stopped just because docker has not
+// answered yet.
+//
+// containerStatus returned "" both for "this service has no container" and
+// for "nobody has looked yet", and the row painted "" the same red as
+// stopped - so arriving on the Services page showed a page of red dots for
+// the second before the first poll landed, and kept showing them for good
+// when docker was unreachable.
+func TestARowIsNotStoppedUntilDockerHasAnswered(t *testing.T) {
+	model := drive(t, New(servicesOf("alpha", "bravo"), 40, 24))
+
+	for _, item := range model.list.Items() {
+		service, ok := item.(apptypes.ServiceListItem)
+		if !ok {
+			continue
+		}
+		if service.Status != "" {
+			t.Errorf("%s reads %q before any poll, want unknown", service.Service.Name, service.Status)
+		}
+	}
+
+	unknown := model.View().Content
+
+	// Docker answers: alpha is up, bravo has no container at all. Both are
+	// now known, and bravo is genuinely stopped.
+	answered := drive(t, model,
+		cmds.GetRunningContainersMsg{Containers: []apptypes.DockerContainer{
+			{Service: "alpha", State: "running"},
+		}},
+	)
+
+	for _, item := range answered.list.Items() {
+		service, ok := item.(apptypes.ServiceListItem)
+		if !ok {
+			continue
+		}
+		want := "stopped"
+		if service.Service.Name == "alpha" {
+			want = "running"
+		}
+		if service.Status != want {
+			t.Errorf("%s reads %q after the poll, want %q", service.Service.Name, service.Status, want)
+		}
+	}
+
+	if answered.View().Content == unknown {
+		t.Error("the rows render identically before and after docker answered")
+	}
+}
+
+// A failed poll leaves the answer unknown rather than asserting everything is
+// stopped: cais cannot see docker, which is not the same as docker being idle.
+func TestAFailedPollLeavesTheRowsUnknown(t *testing.T) {
+	model := drive(t, New(servicesOf("alpha"), 40, 24),
+		cmds.GetRunningContainersMsg{Err: errors.New("docker daemon is not running")},
+	)
+
+	for _, item := range model.list.Items() {
+		if service, ok := item.(apptypes.ServiceListItem); ok && service.Status != "" {
+			t.Errorf("%s reads %q after a failed poll, want unknown", service.Service.Name, service.Status)
+		}
+	}
+}
+
+// The three states must not collapse into two on screen: unknown, running and
+// stopped each get their own colour.
+func TestTheStatusDotHasThreeDistinctStates(t *testing.T) {
+	row := func(msgs ...tea.Msg) string {
+		return drive(t, New(servicesOf("alpha"), 40, 24), msgs...).View().Content
+	}
+
+	unknown := row()
+	running := row(cmds.GetRunningContainersMsg{Containers: []apptypes.DockerContainer{
+		{Service: "alpha", State: "running"},
+	}})
+	stopped := row(cmds.GetRunningContainersMsg{Containers: []apptypes.DockerContainer{
+		{Service: "alpha", State: "exited"},
+	}})
+
+	if unknown == running || unknown == stopped || running == stopped {
+		t.Error("unknown, running and stopped do not all render differently")
+	}
+	if ansi.Strip(unknown) != ansi.Strip(running) || ansi.Strip(running) != ansi.Strip(stopped) {
+		t.Error("the three states differ in more than colour; the glyph should be the same for all")
 	}
 }

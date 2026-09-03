@@ -68,18 +68,22 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	}
 
 	switch {
-	case key.Matches(msg, keys.List.Navigate):
-		switch {
-		case key.Matches(msg, key.NewBinding(key.WithKeys("up", "k"))):
-			if m.selectedIdx > 0 {
-				m.selectedIdx--
-				return m, m.loadPreviewCmd(m.entries[m.selectedIdx])
-			}
-		case key.Matches(msg, key.NewBinding(key.WithKeys("down", "j"))):
-			if m.selectedIdx < len(m.entries)-1 {
-				m.selectedIdx++
-				return m, m.loadPreviewCmd(m.entries[m.selectedIdx])
-			}
+	// Matched against real keys rather than keys.Backup.Navigate, which is a
+	// help-only binding: it carries a label for the footer and no keys at
+	// all, so key.Matches against it can never be true. This page hand-rolls
+	// its list instead of embedding a bubbles one, so nothing else was
+	// moving the cursor and up/down/j/k did nothing at all.
+	case key.Matches(msg, key.NewBinding(key.WithKeys("up", "k"))):
+		if m.selectedIdx > 0 {
+			m.selectedIdx--
+			return m, m.loadPreviewCmd(m.entries[m.selectedIdx])
+		}
+		return m, nil
+
+	case key.Matches(msg, key.NewBinding(key.WithKeys("down", "j"))):
+		if m.selectedIdx < len(m.entries)-1 {
+			m.selectedIdx++
+			return m, m.loadPreviewCmd(m.entries[m.selectedIdx])
 		}
 		return m, nil
 

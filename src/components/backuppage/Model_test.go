@@ -250,3 +250,122 @@ func collectMsg(msg tea.Msg) []tea.Msg {
 
 // flatten is a tiny alias used above for readability.
 func flatten(msgs []tea.Msg) []tea.Msg { return msgs }
+
+// loadedPage is the Backups page showing three copies, cursor on the first.
+func loadedPage(t *testing.T) Model {
+	t.Helper()
+
+	_, compose, env := seedBackups(t)
+
+	composeBackups, err := utils.ListBackups(compose)
+	if err != nil {
+		t.Fatalf("ListBackups(compose): %v", err)
+	}
+	envBackups, err := utils.ListBackups(env)
+	if err != nil {
+		t.Fatalf("ListBackups(env): %v", err)
+	}
+
+	merged := append(append([]utils.BackupEntry{}, composeBackups...), envBackups...)
+
+	updated, _ := New().Update(cmds.BackupListMsg{Entries: merged})
+	m, ok := updated.(Model)
+	if !ok {
+		t.Fatalf("expected a Model, got %T", updated)
+	}
+	if len(m.entries) < 3 {
+		t.Fatalf("precondition: %d entries, want at least 3", len(m.entries))
+	}
+	if m.selectedIdx != 0 {
+		t.Fatalf("precondition: cursor starts at %d, want 0", m.selectedIdx)
+	}
+
+	return m
+}
+
+func pressKey(t *testing.T, m Model, msg tea.KeyPressMsg) Model {
+	t.Helper()
+
+	updated, _ := m.Update(msg)
+	next, ok := updated.(Model)
+	if !ok {
+		t.Fatalf("expected a Model, got %T", updated)
+	}
+
+	return next
+}
+
+// Regression test: up/down and j/k move the cursor through the copies.
+//
+// The navigation case used to be guarded by keys.List.Navigate, which is a
+// help-only binding - a label for the footer, declared with WithHelp and no
+// WithKeys at all. key.Matches against a binding with no keys is always
+// false, so the whole case was unreachable and the arrows did nothing. The
+// page hand-rolls its list rather than embedding a bubbles one, so nothing
+// else was moving the cursor either.
+func TestTheBackupListNavigates(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		down, up tea.KeyPressMsg
+	}{
+		{"arrows", tea.KeyPressMsg{Code: tea.KeyDown}, tea.KeyPressMsg{Code: tea.KeyUp}},
+		{"jk", tea.KeyPressMsg{Code: 'j', Text: "j"}, tea.KeyPressMsg{Code: 'k', Text: "k"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m := loadedPage(t)
+
+			if m = pressKey(t, m, tc.down); m.selectedIdx != 1 {
+				t.Fatalf("after one down the cursor is at %d, want 1", m.selectedIdx)
+			}
+			if m = pressKey(t, m, tc.down); m.selectedIdx != 2 {
+				t.Fatalf("after two down the cursor is at %d, want 2", m.selectedIdx)
+			}
+			if m = pressKey(t, m, tc.up); m.selectedIdx != 1 {
+				t.Fatalf("after up the cursor is at %d, want 1", m.selectedIdx)
+			}
+		})
+	}
+}
+
+// The cursor stops at both ends rather than wrapping or running off.
+func TestTheBackupListStopsAtBothEnds(t *testing.T) {
+	m := loadedPage(t)
+
+	for range len(m.entries) + 3 {
+		m = pressKey(t, m, tea.KeyPressMsg{Code: tea.KeyDown})
+	}
+	if got, want := m.selectedIdx, len(m.entries)-1; got != want {
+		t.Errorf("holding down left the cursor at %d, want %d", got, want)
+	}
+
+	for range len(m.entries) + 3 {
+		m = pressKey(t, m, tea.KeyPressMsg{Code: tea.KeyUp})
+	}
+	if m.selectedIdx != 0 {
+		t.Errorf("holding up left the cursor at %d, want 0", m.selectedIdx)
+	}
+}
+
+// Moving the cursor loads that copy into the preview - the reason navigation
+// exists on this page at all.
+func TestMovingTheBackupCursorLoadsThePreview(t *testing.T) {
+	m := loadedPage(t)
+
+	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
+	m = updated.(Model)
+
+	if cmd == nil {
+		t.Fatal("moving the cursor issued no command, so the preview never reloads")
+	}
+
+	msg, ok := cmd().(backupPreviewMsg)
+	if !ok {
+		t.Fatalf("the command produced %T, want a backupPreviewMsg", cmd())
+	}
+	if msg.Err != nil {
+		t.Fatalf("preview load failed: %v", msg.Err)
+	}
+	if want := m.entries[m.selectedIdx].Source; msg.Source != want {
+		t.Errorf("the preview loaded %q, but the cursor is on a %q copy", msg.Source, want)
+	}
+}

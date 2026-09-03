@@ -121,9 +121,18 @@ func (m *Model) buildItems(services []types.ServiceConfig) []list.Item {
 	return items
 }
 
-// containerStatus returns "running", "stopped", or "" depending on whether a
-// live container exists for the given compose service name.
+// containerStatus returns "running", "stopped", or "" for a compose service,
+// where "" means unknown rather than absent.
+//
+// A service with no container of its own is stopped, but only once docker has
+// been asked - before that every service looks container-less and reporting
+// them all stopped is a guess dressed up as a fact. containersKnown is what
+// tells the two apart.
 func (m *Model) containerStatus(serviceName string) string {
+	if !m.containersKnown {
+		return ""
+	}
+
 	for _, c := range m.containers {
 		if c.Service == serviceName {
 			if c.State == "running" {
@@ -132,7 +141,8 @@ func (m *Model) containerStatus(serviceName string) string {
 			return "stopped"
 		}
 	}
-	return ""
+
+	return "stopped"
 }
 
 // containerMem returns docker's raw memory usage and percentage for the
@@ -251,6 +261,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cmds.GetRunningContainersMsg:
 		if msg.Err == nil {
 			m.containers = msg.Containers
+			m.containersKnown = true
 			finalCmds = append(finalCmds, m.updateServiceStatuses())
 		}
 
@@ -260,6 +271,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// column stays correct even when the memory column empties.
 		if msg.Containers != nil {
 			m.containers = msg.Containers
+			m.containersKnown = true
 			finalCmds = append(finalCmds, m.updateServiceStatuses())
 		}
 

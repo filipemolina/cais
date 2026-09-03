@@ -22,6 +22,13 @@ type Model struct {
 	// containers is the latest known container list, used to derive the
 	// RUNNING/STOPPED status shown on each service row.
 	containers []apptypes.DockerContainer
+	// containersKnown records that docker has answered at least once, which
+	// is what separates "this service has no container" from "nobody has
+	// looked yet". Without it every row claimed to be stopped for the second
+	// or so before the first poll landed, and a page full of red dots on
+	// arrival is a false alarm. It stays false while docker is unreachable,
+	// which is the honest answer there too.
+	containersKnown bool
 	// cursorNeedsRestore records that the rows were replaced under a standing
 	// filter, so the cursor has to be put back on activeService once they
 	// return. See Model.restoreCursor.

@@ -138,8 +138,8 @@ func (m Model) View() tea.View {
 }
 
 // statusDot returns the styled status glyph for a service row: a solid circle,
-// StatusRunning when the service's container is running and StatusError when
-// it is not.
+// StatusRunning when the service's container is running, StatusError when it
+// is not, and dim while the answer is still unknown.
 //
 // StatusError rather than StatusStopped, which is what a dot elsewhere in the
 // app uses, because at the size of a single glyph the grey did not carry.
@@ -151,15 +151,25 @@ func (m Model) View() tea.View {
 // panel it opens agree on what stopped looks like. Both are theme tokens and
 // follow the active theme.
 //
-// "Not running" folds together a stopped container and no container at all,
-// which is the reading ServiceListItem.StatusPill and the details panel's own
-// status line already take: from the row's point of view a service with
-// nothing behind it is not running. The dot is rendered on the row background
-// so it stays legible across selection and focus states.
+// "Not running" folds together a stopped container and no container at all -
+// from the row's point of view a service with nothing behind it is not
+// running - but only once docker has actually been asked; Model.containerStatus
+// is what keeps that distinct from the third state. The dot is rendered on the
+// row background so it stays legible across selection and focus states.
 func statusDot(item apptypes.ServiceListItem, rowBg color.Color) string {
-	dotColor := appstyles.Active.StatusError
-	if item.Status == "running" {
+	var dotColor color.Color
+
+	switch item.Status {
+	case "running":
 		dotColor = appstyles.Active.StatusRunning
+	case "stopped":
+		dotColor = appstyles.Active.StatusError
+	default:
+		// Unknown: docker has not answered yet, or cannot be reached. Dim
+		// rather than red, because a page of red dots on arrival reads as a
+		// page of dead services rather than as a page of unanswered
+		// questions. See Model.containersKnown.
+		dotColor = appstyles.Active.TextDim
 	}
 
 	return lipgloss.NewStyle().
