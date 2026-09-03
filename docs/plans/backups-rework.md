@@ -168,16 +168,31 @@ come from.
   the version rows. Its own component, not a reuse of `groupslist`: the rows
   are two-line source/timestamp/sha entries, not `list.Item`s, and it needs
   no filter.
-- `src/components/backupdiffpanel` — owns the viewport and the rendered
-  diff.
+- `src/components/backuppreviewpanel` — owns the viewport, the read of the
+  selected copy, and later its diff rendering. Named for the job it keeps
+  across every phase (show the selected copy) rather than for the coloring
+  Phase 5 adds, so no rename is needed later.
 
 Selection moves between them the way Home already does it: the list emits
-`SetSelectedBackupMsg` on cursor move, AppModel holds it, both panels render
-from it. The list stops reading `.bak` bytes itself; the diff panel (or
-AppModel) does.
+`SetSelectedBackupMsg` on cursor move and AppModel broadcasts it to the
+active page's components, so the two panels never hold a reference to each
+other. AppModel needs no state of its own for this — restore already carries
+the source and name it acts on. The list stops reading `.bak` bytes; the
+preview panel does, since it owns the viewport they land in.
+
+Reads are tagged with the path they were issued for, so one that finishes
+after the cursor has moved on is discarded rather than painting one copy's
+bytes under another copy's header.
 
 No behavior change beyond the layout in this phase. Land it green, with the
 existing tests ported, before anything else moves.
+
+One trap for the ported tests: the model-level helper `drive` applies
+messages but never runs the commands they produce, and this page is now a
+four-message chain (activate → GetBackups → BackupListMsg → the list
+publishes → the preview reads). A test that stops after the first message
+renders zero-width panels and asserts nothing. `settle` in
+`src/model/backup_test.go` runs the chain the way the runtime does.
 
 ## Phase 2 — Make the list a real viewport
 

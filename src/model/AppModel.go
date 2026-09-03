@@ -8,7 +8,8 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/cmds"
-	"github.com/filipemolina/cais/src/components/backuppage"
+	"github.com/filipemolina/cais/src/components/backuppreviewpanel"
+	"github.com/filipemolina/cais/src/components/backupslist"
 	"github.com/filipemolina/cais/src/components/chrome"
 	"github.com/filipemolina/cais/src/components/composefilepanel"
 	"github.com/filipemolina/cais/src/components/detailspanel"
@@ -347,7 +348,8 @@ func GetInitialModel(source utils.ComposeSource) AppModel {
 	}
 
 	pages["Backups"] = []tea.Model{
-		backuppage.New(),
+		backupslist.New(),
+		backuppreviewpanel.New(),
 	}
 
 	return AppModel{

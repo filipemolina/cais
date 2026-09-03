@@ -243,3 +243,86 @@ func TestBackupsPageRendersTitle(t *testing.T) {
 		t.Errorf("Backups page does not render its title:\n%s", frame)
 	}
 }
+
+// The Backups page is two panels, not one. Before the split it was a single
+// component that drew both columns inside one frame, which meant the body
+// gutter, the per-panel sizing and the draggable split all had to be
+// reimplemented inside it. Rendering both titles is the cheapest proof that
+// AppModel.pages holds two entries and renderBody laid them out.
+//
+// The window size is not optional here: without it the panels are zero-width
+// and every assertion about their contents passes vacuously.
+func TestBackupsPageRendersTwoPanels(t *testing.T) {
+	m := withComposeLoaded(t)
+	m = drive(m, tea.WindowSizeMsg{Width: 120, Height: 40})
+	m = drive(m, cmds.SetActivePageMsg("Backups"))
+
+	frame := ansi.Strip(m.View().Content)
+	for _, title := range []string{"Backups", "Preview"} {
+		if !strings.Contains(frame, title) {
+			t.Errorf("the Backups page does not render the %q panel:\n%s", title, frame)
+		}
+	}
+}
+
+// settle runs the model forward the way the Bubble Tea runtime does: execute
+// whatever a message produced, feed the results back, and repeat until the
+// model stops asking for anything.
+//
+// drive alone is not enough for the Backups page. Activating it issues
+// GetBackups, whose BackupListMsg makes the list publish a selection, whose
+// SetSelectedBackupMsg makes the preview issue a read - a four-message chain
+// where drive stops after the first. The iteration cap keeps a repeating
+// command (a poll, a spinner tick) from spinning here forever.
+func settle(t *testing.T, m AppModel, msgs ...tea.Msg) AppModel {
+	t.Helper()
+
+	queue := append([]tea.Msg{}, msgs...)
+
+	for range 50 {
+		if len(queue) == 0 {
+			return m
+		}
+
+		msg := queue[0]
+		queue = queue[1:]
+
+		updated, cmd := m.Update(msg)
+		m = updated.(AppModel)
+		queue = append(queue, collect(cmd)...)
+	}
+
+	t.Fatal("the model never settled: a command kept producing messages")
+	return m
+}
+
+// Selecting a version in the list reaches the preview panel. The two are
+// siblings under AppModel with no reference to each other, so the only thing
+// holding the page together is that SetSelectedBackupMsg is broadcast to the
+// active page's components. If the list stops publishing, the preview sits
+// on its empty state forever and nothing else fails.
+func TestSelectingABackupReachesThePreview(t *testing.T) {
+	m := withComposeLoaded(t)
+
+	// A write to the compose file leaves a copy in the store to select.
+	if err := utils.SnapshotFile(m.config.configFileName); err != nil {
+		t.Fatalf("seeding a backup: %v", err)
+	}
+
+	m = settle(t, m,
+		tea.WindowSizeMsg{Width: 120, Height: 40},
+		cmds.SetActivePageMsg("Backups"),
+	)
+
+	frame := ansi.Strip(m.View().Content)
+
+	// The preview names the copy it is showing as "<source> · <sha8>" in its
+	// title. The list writes the same sha as "sha8 <sha8>", so the separator
+	// is what makes this the preview's line and not a row of the list.
+	if !strings.Contains(frame, "compose · ") {
+		t.Errorf("the preview never received a selection from the list:\n%s", frame)
+	}
+	if strings.Contains(frame, "Nothing selected") {
+		t.Errorf("the preview is still showing its empty state:\n%s", frame)
+	}
+}

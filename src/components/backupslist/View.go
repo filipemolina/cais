@@ -1,4 +1,4 @@
-package backuppage
+package backupslist
 
 import (
 	"fmt"
@@ -11,12 +11,11 @@ import (
 	"github.com/filipemolina/cais/src/utils"
 )
 
-// sourceLabel renders the short source tag shown on each row, e.g. "compose"
-// or ".env", capped to a fixed width so the columns line up.
+// sourceColWidth caps the source tag shown on each row, e.g. "compose" or
+// ".env", so the columns line up.
 const sourceColWidth = 8
 
 func (m Model) View() tea.View {
-	// Both body panels share the elevated tier now that focus is gone.
 	bg := chrome.PanelBg()
 
 	bodyWidth := max(1, chrome.PanelBodyWidth(m.panelWidth))
@@ -43,7 +42,7 @@ func (m Model) View() tea.View {
 			"", "")
 
 	default:
-		body = m.renderSplit(bodyWidth, bodyAvail, bg)
+		body = m.renderList(bodyWidth, bodyAvail, bg)
 	}
 
 	titleRight := ""
@@ -64,19 +63,13 @@ func plural(n int) string {
 	return "s"
 }
 
-// renderSplit lays the list and the preview side by side, filling the panel
-// body the way a two-column panel does. The list is a fixed-width column on
-// the left; the preview viewport fills the rest.
-func (m Model) renderSplit(bodyWidth, bodyAvail int, bg color.Color) string {
-	listCol := m.renderList(m.listWidth, bodyAvail, bg)
-	previewCol := m.renderPreview(m.previewWidth, bodyAvail, bg)
-
-	return lipgloss.JoinHorizontal(lipgloss.Top, listCol, previewCol)
-}
-
 // renderList renders the version rows: source, UTC timestamp, and SHA-8. The
 // selected row is lifted to the surface tier with an accent bar down its left
 // edge, the same selection language the env/file rows use.
+//
+// Every entry is rendered and the panel body clips what does not fit, so a
+// cursor past the visible rows goes off-screen. That is fixed in the next
+// phase - see docs/plans/backups-rework.md.
 func (m Model) renderList(width int, avail int, bg color.Color) string {
 	if width < 1 {
 		width = 1
@@ -144,31 +137,4 @@ func (m Model) renderRow(idx int, entry utils.BackupEntry, width int) string {
 
 	full := lipgloss.JoinHorizontal(lipgloss.Left, bar, row)
 	return appstyles.FillBackground(rowBg, full)
-}
-
-// renderPreview renders the selected copy's content in a viewport, with a
-// short header naming the source and SHA-8.
-func (m Model) renderPreview(width int, avail int, bg color.Color) string {
-	if width < 1 {
-		width = 1
-	}
-
-	header := ""
-	if sel := m.selectedIdx; sel >= 0 && sel < len(m.entries) {
-		e := m.entries[sel]
-		header = lipgloss.NewStyle().
-			Foreground(appstyles.Active.TextDim).
-			Background(bg).
-			Width(width).
-			Render(fmt.Sprintf("preview · %s · %s", e.Source, e.SHA8))
-	}
-
-	vp := m.previewVP.View()
-	vp = appstyles.FillBackground(bg, vp)
-
-	// Clip the viewport to the available height below the header row.
-	availForVP := max(0, avail-1)
-	vp = lipgloss.NewStyle().MaxHeight(availForVP).Render(vp)
-
-	return lipgloss.JoinVertical(lipgloss.Left, header, vp)
 }
