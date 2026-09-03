@@ -517,3 +517,85 @@ func TestTheStatusBarNamesTheStandingFilter(t *testing.T) {
 		t.Errorf("the status bar outlived the filter:\n%s", got)
 	}
 }
+
+// Every service row carries a status dot, in the same place the groups list
+// puts its group dot. Unlike a group's, a service's is never hidden: a
+// service either runs or it does not, and an absent dot would read as an
+// absent answer rather than as "stopped".
+func TestEveryServiceRowCarriesAStatusDot(t *testing.T) {
+	model := drive(t, New(servicesOf("alpha", "bravo"), 40, 24),
+		cmds.SetSelectedServiceMsg(servicesOf("alpha")[0]),
+		cmds.GetRunningContainersMsg{Containers: []apptypes.DockerContainer{
+			{Service: "alpha", State: "running"},
+			{Service: "bravo", State: "exited"},
+		}},
+	)
+
+	view := ansi.Strip(model.View().Content)
+
+	var titleRows []string
+	for _, line := range strings.Split(view, "\n") {
+		if strings.Contains(line, "alpha") || strings.Contains(line, "bravo") {
+			titleRows = append(titleRows, strings.TrimRight(line, " "))
+		}
+	}
+	if len(titleRows) != 2 {
+		t.Fatalf("expected two service rows, got %d:\n%s", len(titleRows), view)
+	}
+
+	for _, row := range titleRows {
+		if !strings.HasSuffix(row, "●") {
+			t.Errorf("row %q does not end in a status dot", row)
+		}
+	}
+}
+
+// The dot's colour is the whole point of it: running and stopped must not
+// render the same. Compared on the styled output, since ansi.Strip is exactly
+// what would hide a mistake here.
+func TestTheStatusDotColoursRunningAndStoppedDifferently(t *testing.T) {
+	rows := func(state string) string {
+		m := drive(t, New(servicesOf("alpha"), 40, 24),
+			cmds.SetSelectedServiceMsg(servicesOf("alpha")[0]),
+			cmds.GetRunningContainersMsg{Containers: []apptypes.DockerContainer{
+				{Service: "alpha", State: state},
+			}},
+		)
+
+		return m.View().Content
+	}
+
+	running, stopped := rows("running"), rows("exited")
+
+	if running == stopped {
+		t.Error("a running service and a stopped one render identically")
+	}
+	if ansi.Strip(running) != ansi.Strip(stopped) {
+		t.Error("running and stopped differ in more than colour; the dot glyph should be the same for both")
+	}
+}
+
+// A name too long for the row yields the dot's column rather than pushing it
+// off: the dot is the fact the row exists to carry.
+func TestALongServiceNameYieldsToTheDot(t *testing.T) {
+	model := drive(t, New(servicesOf("a-very-long-service-name-that-will-not-fit"), 40, 24))
+
+	view := ansi.Strip(model.View().Content)
+
+	var row string
+	for _, line := range strings.Split(view, "\n") {
+		if strings.Contains(line, "a-very-long") {
+			row = strings.TrimRight(line, " ")
+			break
+		}
+	}
+	if row == "" {
+		t.Fatalf("no service row rendered:\n%s", view)
+	}
+	if !strings.HasSuffix(row, "●") {
+		t.Errorf("the long name pushed the dot off the row: %q", row)
+	}
+	if !strings.Contains(row, "…") {
+		t.Errorf("the long name was not truncated: %q", row)
+	}
+}

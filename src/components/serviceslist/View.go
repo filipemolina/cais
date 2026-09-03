@@ -67,16 +67,37 @@ func (d servicesListCustomDelegate) Render(w io.Writer, m list.Model, index int,
 		wrapperStyle = wrapperStyle.Bold(true)
 	}
 
+	// The status dot rides the far right of the title line, the same place
+	// the groups list puts its group dot, so the two panels read as one.
+	//
+	// It is always drawn, which is where it parts company with the groups
+	// list: a group has a third, partly-running state and hides its dot when
+	// nothing in it runs, but a service either runs or it does not and a
+	// missing dot would be indistinguishable from a missing answer. Same
+	// glyph and colors as the details panel's status line and the group
+	// member table's dot column.
+	dot := statusDot(item, rowBg)
+
+	// The wrapper's Width includes its Padding(1), so the content area is two
+	// columns narrower than the wrapper. The title and the dot share that
+	// content area on one line: the title yields the dot's column and is
+	// truncated with an ellipsis when it does not fit, so the dot always
+	// shows even at the cost of a shortened name.
+	contentWidth := max(0, (m.Width()-1)-2)
+	titleWidth := max(0, contentWidth-lipgloss.Width(dot))
+
 	titleStyle := lipgloss.NewStyle().
 		Bold(isActive).
 		Foreground(titleColor).
 		Background(rowBg).
-		Width(m.Width() - 1)
+		Width(titleWidth)
 
-	title := titleStyle.Render(item.Title())
+	title := titleStyle.Render(chrome.Truncate(item.Title(), titleWidth))
+
+	titleRow := lipgloss.JoinHorizontal(lipgloss.Left, title, dot)
 	description := item.Description(isActive)
 
-	content := wrapperStyle.Render(lipgloss.JoinVertical(lipgloss.Left, title, description))
+	content := wrapperStyle.Render(lipgloss.JoinVertical(lipgloss.Left, titleRow, description))
 
 	// The bar spans the row's full height, one ▌ per line, rather than a sliver
 	// at the top - the nav's single-line bar stretched to the row's height.
@@ -116,4 +137,25 @@ func (m Model) View() tea.View {
 	// what the list itself left bare.
 	v := tea.NewView(wrapper.Render(appstyles.FillBackground(bg, l.View())))
 	return v
+}
+
+// statusDot returns the styled status glyph for a service row: the same solid
+// circle the details panel and the group member table use, green when the
+// service's container is running and the stopped color otherwise.
+//
+// "Otherwise" folds together a stopped container and no container at all,
+// which is the reading ServiceListItem.StatusPill and the details panel's own
+// status line already take: from the row's point of view a service with
+// nothing behind it is not running. The dot is rendered on the row background
+// so it stays legible across selection and focus states.
+func statusDot(item apptypes.ServiceListItem, rowBg color.Color) string {
+	dotColor := appstyles.Active.StatusStopped
+	if item.Status == "running" {
+		dotColor = appstyles.Active.StatusRunning
+	}
+
+	return lipgloss.NewStyle().
+		Foreground(dotColor).
+		Background(rowBg).
+		Render("●")
 }
