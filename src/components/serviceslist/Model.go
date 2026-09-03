@@ -22,6 +22,10 @@ type Model struct {
 	// containers is the latest known container list, used to derive the
 	// RUNNING/STOPPED status shown on each service row.
 	containers []apptypes.DockerContainer
+	// cursorNeedsRestore records that the rows were replaced under a standing
+	// filter, so the cursor has to be put back on activeService once they
+	// return. See Model.restoreCursor.
+	cursorNeedsRestore bool
 }
 
 func (m Model) Init() tea.Cmd {
@@ -58,7 +62,10 @@ func New(services []types.ServiceConfig, width int, height int) tea.Model {
 	listDelegate := servicesListCustomDelegate{activeIndex: -1}
 	servicesList := list.New(items, listDelegate, width, height)
 	servicesList.SetShowHelp(false)
+	// Off until a filter is applied, when it becomes the only thing on screen
+	// naming the term - see Model.Update.
 	servicesList.SetShowStatusBar(false)
+	servicesList.SetStatusBarItemName("service", "services")
 	// See keys.ListKeyMap: the default map's letter aliases for paging collide
 	// with the panel verbs.
 	servicesList.KeyMap = keys.ListKeyMap()

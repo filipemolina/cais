@@ -48,6 +48,36 @@ func cursorGroup(l list.Model) (string, bool) {
 	return item.Name, true
 }
 
+// setItems replaces the list's rows, noting that the cursor will need putting
+// back afterwards when a filter is standing. See restoreCursor.
+func (m *Model) setItems(items []list.Item) tea.Cmd {
+	if m.list.FilterState() != list.Unfiltered {
+		m.cursorNeedsRestore = true
+	}
+
+	return m.list.SetItems(items)
+}
+
+// restoreCursor puts the cursor back on activeGroup once the filtered rows
+// return after a rebuild - see the fuller note on
+// serviceslist.Model.restoreCursor. The groups list rebuilds on the same
+// five-second tick, since a group's running count changes with its
+// containers.
+func (m *Model) restoreCursor() {
+	if !m.cursorNeedsRestore || len(m.list.VisibleItems()) == 0 {
+		return
+	}
+
+	for i, item := range m.list.VisibleItems() {
+		if group, ok := item.(apptypes.GroupListItem); ok && group.Name == m.activeGroup {
+			m.list.Select(i)
+			break
+		}
+	}
+
+	m.cursorNeedsRestore = false
+}
+
 // resizeList sizes the inner list to the space left inside the panel box
 // after the wrapper padding and the stats footer. Called whenever either the
 // box or the footer changes.
@@ -143,7 +173,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			groupsList = append(groupsList, newGroup)
 		}
 
-		cmd := m.list.SetItems(groupsList)
+		cmd := m.setItems(groupsList)
 		finalCmds = append(finalCmds, cmd)
 		m.syncActiveIndex()
 	}
@@ -158,20 +188,37 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.list, cmd = m.list.Update(msg)
 	finalCmds = append(finalCmds, cmd)
 
+	// bubbles draws the filter input only while it is being typed, so once a
+	// filter is accepted nothing on screen says the list is still filtered.
+	// Its status bar does - see serviceslist.Model.Update. Toggled here,
+	// before anything reads the cursor, because turning it on costs the list
+	// a row and so re-runs its pagination.
+	filterState := m.list.FilterState()
+	if filterState != filterStateBefore {
+		m.list.SetShowStatusBar(filterState == list.FilterApplied)
+	}
+
 	// Auto-select: if a different group is under the cursor now, select it.
 	// The test is identity rather than list.Index() - see the fuller note on
 	// serviceslist.Model.Update for why an index comparison misses filtering.
-	if group, ok := cursorGroup(m.list); ok && group != previousGroup {
-		m.activeGroup = group
-		finalCmds = append(finalCmds, cmds.SetSelectedGroup(group))
+	// Suspended across a rebuild under a filter - see the note on
+	// serviceslist.Model.Update. Every unfiltered path is untouched, since
+	// nothing sets the flag there.
+	if !m.cursorNeedsRestore {
+		if group, ok := cursorGroup(m.list); ok && group != previousGroup {
+			m.activeGroup = group
+			finalCmds = append(finalCmds, cmds.SetSelectedGroup(group))
+		}
 	}
+
+	m.restoreCursor()
 
 	// Which rows are visible can change without the selection changing, and
 	// the delegate's index is relative to those rows.
 	m.syncActiveIndex()
 
-	if state := m.list.FilterState(); state != filterStateBefore {
-		finalCmds = append(finalCmds, cmds.SetListFilterState(state))
+	if filterState != filterStateBefore {
+		finalCmds = append(finalCmds, cmds.SetListFilterState(filterState))
 	}
 
 	return m, tea.Batch(finalCmds...)

@@ -19,6 +19,10 @@ type Model struct {
 	hasStats    bool
 	panelWidth  int
 	panelHeight int
+	// cursorNeedsRestore records that the rows were replaced under a standing
+	// filter, so the cursor has to be put back on activeGroup once they
+	// return. See Model.restoreCursor.
+	cursorNeedsRestore bool
 }
 
 func (m Model) Init() tea.Cmd {
@@ -70,7 +74,10 @@ func New(groups []string, width int, height int) tea.Model {
 	listDelegate := GroupsListCustomDelegate{activeIndex: -1}
 	servicesList := list.New(items, listDelegate, width, height)
 	servicesList.SetShowHelp(false)
+	// Off until a filter is applied, when it becomes the only thing on screen
+	// naming the term - see Model.Update.
 	servicesList.SetShowStatusBar(false)
+	servicesList.SetStatusBarItemName("group", "groups")
 	// Without this the list keeps list.DefaultKeyMap, which claims d, f, l, h,
 	// b, u, q, esc and ? - keys this app spends elsewhere. See keys.ListKeyMap.
 	servicesList.KeyMap = keys.ListKeyMap()

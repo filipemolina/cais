@@ -2,11 +2,13 @@ package groupslist
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/cmds"
 )
@@ -625,5 +627,66 @@ func TestExternalGroupSelectionIsNotEchoedBack(t *testing.T) {
 	}
 	if len(selected) != 0 {
 		t.Errorf("published %d selections, want none: AppModel's choice was echoed back", len(selected))
+	}
+}
+
+// Regression test: the five-second refresh rebuilds the groups list (a
+// group's running count changes with its containers) and must not walk the
+// cursor back to the first match of a standing filter. See
+// serviceslist.TestARefreshLeavesTheFilteredCursorAlone for the mechanism.
+func TestAGroupRefreshLeavesTheFilteredCursorAlone(t *testing.T) {
+	filtered, _ := filteredGroups(t, "m", "core", "media", "monitoring")
+	moved, _ := settle(t, filtered, tea.KeyPressMsg{Code: tea.KeyDown})
+
+	wantIndex, wantGroup := moved.list.Index(), moved.activeGroup
+	if wantIndex == 0 {
+		t.Fatalf("precondition: the cursor never left the first row (visible %v)", visibleNames(moved))
+	}
+
+	refresh := cmds.SetGroupsListMsg([]cmds.GroupStatus{
+		{Name: "core", Running: 1, Total: 2},
+		{Name: "media", Running: 2, Total: 2},
+		{Name: "monitoring", Running: 0, Total: 1},
+	})
+
+	refreshed := moved
+	for i := range 3 {
+		var selected []string
+		refreshed, selected = settle(t, refreshed, refresh)
+
+		if got := refreshed.list.Index(); got != wantIndex {
+			t.Fatalf("refresh %d moved the cursor to %d, want %d", i+1, got, wantIndex)
+		}
+		if got := refreshed.activeGroup; got != wantGroup {
+			t.Fatalf("refresh %d changed the selection to %q, want %q", i+1, got, wantGroup)
+		}
+		if len(selected) != 0 {
+			t.Fatalf("refresh %d published %v, want nothing", i+1, selected)
+		}
+	}
+
+	visible := visibleNames(refreshed)
+	active := refreshed.listDelegate.activeIndex
+	if active < 0 || active >= len(visible) || visible[active] != wantGroup {
+		t.Errorf("activeIndex = %d does not point at %q in %v", active, wantGroup, visible)
+	}
+}
+
+// The status bar is the only thing on screen naming the filter once it has
+// been accepted, so it is shown for exactly as long as a filter is standing.
+func TestTheGroupStatusBarNamesTheStandingFilter(t *testing.T) {
+	filtered, _ := filteredGroups(t, "m", "core", "media", "monitoring")
+
+	view := ansi.Strip(filtered.View().Content)
+	for _, want := range []string{`“m”`, "2 groups", "1 filtered"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("the status bar does not mention %q:\n%s", want, view)
+		}
+	}
+
+	cleared, _ := settle(t, filtered, tea.KeyPressMsg{Code: tea.KeyEsc})
+
+	if got := ansi.Strip(cleared.View().Content); strings.Contains(got, "filtered") {
+		t.Errorf("the status bar outlived the filter:\n%s", got)
 	}
 }

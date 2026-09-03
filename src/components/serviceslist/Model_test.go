@@ -1,9 +1,11 @@
 package serviceslist
 
 import (
+	"strings"
 	"testing"
 
 	"charm.land/bubbles/v2/list"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/cmds"
@@ -430,5 +432,88 @@ func TestReloadingTheListPublishesNothing(t *testing.T) {
 	}
 	if got := updated.activeService; got != "db" {
 		t.Errorf("activeService = %q after a reload, want db", got)
+	}
+}
+
+// refreshMsg is what the five-second container poll delivers.
+func refreshMsg(names ...string) cmds.GetRunningContainersMsg {
+	containers := make([]apptypes.DockerContainer, 0, len(names))
+	for _, name := range names {
+		containers = append(containers, apptypes.DockerContainer{Service: name, State: "running"})
+	}
+
+	return cmds.GetRunningContainersMsg{Containers: containers}
+}
+
+// Regression test: the container refresh must not walk the cursor back to the
+// first match of a standing filter.
+//
+// list.SetItems blanks the filtered rows and re-applies the filter a message
+// later; while they are blank the list clamps its cursor into an empty range,
+// so every five seconds the selection jumped back to the top of the filter.
+func TestARefreshLeavesTheFilteredCursorAlone(t *testing.T) {
+	model := drive(t, New(servicesOf("alpha", "bravo", "webproxy", "worker"), 80, 24),
+		cmds.SetSelectedServiceMsg(servicesOf("alpha")[0]),
+	)
+
+	filtered, _ := applyFilter(t, model, "w")
+	moved, _ := settle(t, filtered, tea.KeyPressMsg{Code: tea.KeyDown})
+
+	wantIndex, wantService := moved.list.Index(), moved.activeService
+	if wantIndex == 0 {
+		t.Fatalf("precondition: the cursor never left the first row (visible %v)", visibleNames(moved))
+	}
+
+	// Three ticks, because the flag that survives the blank window has to be
+	// cleared each time or only the first refresh would be safe.
+	refreshed := moved
+	for i := range 3 {
+		var selected []types.ServiceConfig
+		refreshed, selected = settle(t, refreshed, refreshMsg("worker", "webproxy"))
+
+		if got := refreshed.list.Index(); got != wantIndex {
+			t.Fatalf("refresh %d moved the cursor to %d, want %d", i+1, got, wantIndex)
+		}
+		if got := refreshed.activeService; got != wantService {
+			t.Fatalf("refresh %d changed the selection to %q, want %q", i+1, got, wantService)
+		}
+		if len(selected) != 0 {
+			t.Fatalf("refresh %d published %d selections, want none", i+1, len(selected))
+		}
+	}
+
+	// The rows are still filtered, and the highlight still points at the
+	// selected row within them.
+	visible := visibleNames(refreshed)
+	active := refreshed.listDelegate.activeIndex
+	if active < 0 || active >= len(visible) || visible[active] != wantService {
+		t.Errorf("activeIndex = %d does not point at %q in %v", active, wantService, visible)
+	}
+}
+
+// The status bar is the only thing on screen naming the filter once it has
+// been accepted, so it is shown for exactly as long as a filter is standing.
+func TestTheStatusBarNamesTheStandingFilter(t *testing.T) {
+	model := drive(t, New(servicesOf("alpha", "bravo", "webproxy", "worker"), 80, 24),
+		cmds.SetSelectedServiceMsg(servicesOf("alpha")[0]),
+	)
+
+	if got := ansi.Strip(model.View().Content); strings.Contains(got, "filtered") {
+		t.Errorf("an unfiltered list is showing a status bar:\n%s", got)
+	}
+
+	filtered, _ := applyFilter(t, model, "w")
+
+	view := ansi.Strip(filtered.View().Content)
+	for _, want := range []string{`“w”`, "2 services", "2 filtered"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("the status bar does not mention %q:\n%s", want, view)
+		}
+	}
+
+	cleared, _ := settle(t, filtered, tea.KeyPressMsg{Code: tea.KeyEsc})
+
+	if got := ansi.Strip(cleared.View().Content); strings.Contains(got, "filtered") {
+		t.Errorf("the status bar outlived the filter:\n%s", got)
 	}
 }

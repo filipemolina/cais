@@ -54,6 +54,41 @@ func cursorService(l list.Model) (types.ServiceConfig, bool) {
 	return item.Service, true
 }
 
+// setItems replaces the list's rows, noting that the cursor will need putting
+// back afterwards when a filter is standing. See restoreCursor.
+func (m *Model) setItems(items []list.Item) tea.Cmd {
+	if m.list.FilterState() != list.Unfiltered {
+		m.cursorNeedsRestore = true
+	}
+
+	return m.list.SetItems(items)
+}
+
+// restoreCursor puts the cursor back on activeService once the filtered rows
+// return after a rebuild.
+//
+// list.SetItems blanks filteredItems and only re-applies the filter a message
+// later, so for one cycle a filtered list has no visible rows at all. The
+// list clamps its cursor into that empty range as it goes past
+// (list.handleBrowsing's closing clamp against maxCursorIndex), which walked
+// the selection back to the first match every time the five-second container
+// refresh landed on a filtered list. The rows come back intact; only the
+// cursor is lost, so it is put back by name.
+func (m *Model) restoreCursor() {
+	if !m.cursorNeedsRestore || len(m.list.VisibleItems()) == 0 {
+		return
+	}
+
+	for i, item := range m.list.VisibleItems() {
+		if service, ok := item.(apptypes.ServiceListItem); ok && service.Service.Name == m.activeService {
+			m.list.Select(i)
+			break
+		}
+	}
+
+	m.cursorNeedsRestore = false
+}
+
 // resizeList sizes the inner list to the space left inside the panel box
 // after the wrapper padding.
 func (m *Model) resizeList() {
@@ -136,7 +171,7 @@ func (m *Model) updateServiceStatuses() tea.Cmd {
 		updated = append(updated, svcItem)
 	}
 
-	return m.list.SetItems(updated)
+	return m.setItems(updated)
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -185,7 +220,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cmds.SetServicesListMsg:
 		servicesList := m.buildItems(msg)
 
-		cmd := m.list.SetItems(servicesList)
+		cmd := m.setItems(servicesList)
 		finalCmds = append(finalCmds, cmd)
 		m.syncActiveIndex()
 
@@ -216,6 +251,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.list, cmd = m.list.Update(msg)
 	finalCmds = append(finalCmds, cmd)
 
+	// bubbles draws the filter input only while it is being typed, so once a
+	// filter is accepted nothing on screen says the list is still filtered.
+	// Its status bar does - the term, the match count and how many rows are
+	// hidden - so it is shown for exactly as long as a filter is standing.
+	// Toggled here, before anything reads the cursor, because turning it on
+	// costs the list a row and so re-runs its pagination.
+	filterState := m.list.FilterState()
+	if filterState != filterStateBefore {
+		m.list.SetShowStatusBar(filterState == list.FilterApplied)
+	}
+
 	// Auto-select: if a different service is under the cursor now, select it.
 	//
 	// The test is the service's identity, not list.Index(). Filtering moves
@@ -229,10 +275,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// A selection arriving from AppModel (SetSelectedServiceMsg, handled
 	// above) does not move the cursor, so previousService already matches and
 	// nothing is echoed back.
-	if service, ok := cursorService(m.list); ok && service.Name != previousService.Name {
-		m.activeService = service.Name
-		finalCmds = append(finalCmds, cmds.SetSelectedService(service))
+	// Suspended across a rebuild under a filter: the rows are blank for a
+	// cycle and then come back, which is not the user moving anywhere. Left
+	// running, it read the blank-then-back as navigation and published the
+	// first match on every refresh. Every unfiltered path is untouched, since
+	// nothing sets the flag there.
+	if !m.cursorNeedsRestore {
+		if service, ok := cursorService(m.list); ok && service.Name != previousService.Name {
+			m.activeService = service.Name
+			finalCmds = append(finalCmds, cmds.SetSelectedService(service))
+		}
 	}
+
+	m.restoreCursor()
 
 	// Which rows are visible can change without the selection changing - a
 	// filter keystroke, or a stats poll re-applying the filter - and the
@@ -240,8 +295,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// message rather than only on the two that used to be enough.
 	m.syncActiveIndex()
 
-	if state := m.list.FilterState(); state != filterStateBefore {
-		finalCmds = append(finalCmds, cmds.SetListFilterState(state))
+	if filterState != filterStateBefore {
+		finalCmds = append(finalCmds, cmds.SetListFilterState(filterState))
 	}
 
 	return m, tea.Batch(finalCmds...)

@@ -228,6 +228,10 @@ func (m Model) View() tea.View {
 		// constructor - see appstyles.NormalTitle for why.
 		l := m.list
 		l.Styles.Title = appstyles.NormalTitle()
+		// Only ever on screen while a filter is standing - see Update.
+		l.Styles.StatusBar = appstyles.FilterStatus()
+		l.Styles.StatusBarFilterCount = lipgloss.NewStyle().Foreground(appstyles.Active.TextMuted)
+		l.Styles.DividerDot = lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).SetString(" • ")
 		sections = append(sections, l.View())
 	}
 

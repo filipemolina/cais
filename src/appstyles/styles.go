@@ -32,3 +32,18 @@ func NormalTitle() lipgloss.Style {
 		Background(Active.Accent).
 		Padding(0, 1)
 }
+
+// FilterStatus styles a bubbles list's status bar, which the lists show only
+// while a filter is standing - it is the only thing on screen that names the
+// term once the filter has been accepted (bubbles draws the filter input
+// while it is being typed and nothing after that; see list.titleView).
+//
+// Like NormalTitle it is a function rather than a var, so it reads the live
+// theme rather than whichever one happened to be active at package init. The
+// bottom padding is bubbles' own default and is what separates the bar from
+// the first row; the left padding lines it up with the title chip's gutter.
+func FilterStatus() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(Active.TextMuted).
+		Padding(0, 0, 1, 2)
+}
