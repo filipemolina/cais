@@ -73,9 +73,7 @@ func (d servicesListCustomDelegate) Render(w io.Writer, m list.Model, index int,
 	// It is always drawn, which is where it parts company with the groups
 	// list: a group has a third, partly-running state and hides its dot when
 	// nothing in it runs, but a service either runs or it does not and a
-	// missing dot would be indistinguishable from a missing answer. Same
-	// glyph and colors as the details panel's status line and the group
-	// member table's dot column.
+	// missing dot would be indistinguishable from a missing answer.
 	dot := statusDot(item, rowBg)
 
 	// The wrapper's Width includes its Padding(1), so the content area is two
@@ -139,17 +137,27 @@ func (m Model) View() tea.View {
 	return v
 }
 
-// statusDot returns the styled status glyph for a service row: the same solid
-// circle the details panel and the group member table use, green when the
-// service's container is running and the stopped color otherwise.
+// statusDot returns the styled status glyph for a service row: a solid circle,
+// StatusRunning when the service's container is running and StatusError when
+// it is not.
 //
-// "Otherwise" folds together a stopped container and no container at all,
+// StatusError rather than StatusStopped, which is what a dot elsewhere in the
+// app uses, because at the size of a single glyph the grey did not carry.
+// StatusStopped is a desaturated blue-grey a shade off the muted body text, so
+// against StatusRunning's green the pair read as "coloured" and "not
+// coloured" rather than as two states - and on a list where most rows are one
+// or the other, that is the whole job. StatusError is the fill the STOPPED
+// pill already uses (detailspanel and groupdetailspanel), so the row and the
+// panel it opens agree on what stopped looks like. Both are theme tokens and
+// follow the active theme.
+//
+// "Not running" folds together a stopped container and no container at all,
 // which is the reading ServiceListItem.StatusPill and the details panel's own
 // status line already take: from the row's point of view a service with
 // nothing behind it is not running. The dot is rendered on the row background
 // so it stays legible across selection and focus states.
 func statusDot(item apptypes.ServiceListItem, rowBg color.Color) string {
-	dotColor := appstyles.Active.StatusStopped
+	dotColor := appstyles.Active.StatusError
 	if item.Status == "running" {
 		dotColor = appstyles.Active.StatusRunning
 	}

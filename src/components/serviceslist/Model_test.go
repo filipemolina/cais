@@ -5,7 +5,11 @@ import (
 	"testing"
 
 	"charm.land/bubbles/v2/list"
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
+
+	"github.com/filipemolina/cais/src/appstyles"
+	"github.com/filipemolina/cais/src/components/chrome"
 
 	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/cmds"
@@ -597,5 +601,34 @@ func TestALongServiceNameYieldsToTheDot(t *testing.T) {
 	}
 	if !strings.Contains(row, "…") {
 		t.Errorf("the long name was not truncated: %q", row)
+	}
+}
+
+// The stopped dot uses the same theme token as the STOPPED pill, so a row and
+// the panel it opens agree on what stopped looks like - and so it follows the
+// user's theme. Pinned because the obvious token to reach for is
+// StatusStopped, which is the grey this was changed away from.
+func TestTheStoppedDotMatchesTheStoppedPill(t *testing.T) {
+	t.Cleanup(func() { appstyles.SetTheme(appstyles.DefaultTheme) })
+
+	for theme := range appstyles.Themes {
+		if !appstyles.SetTheme(theme) {
+			t.Fatalf("theme %q is in the registry but SetTheme rejected it", theme)
+		}
+
+		model := drive(t, New(servicesOf("alpha"), 40, 24),
+			cmds.GetRunningContainersMsg{Containers: []apptypes.DockerContainer{
+				{Service: "alpha", State: "exited"},
+			}},
+		)
+
+		want := lipgloss.NewStyle().
+			Foreground(appstyles.Active.StatusError).
+			Background(chrome.ListRowBg(false)).
+			Render("●")
+
+		if got := model.View().Content; !strings.Contains(got, want) {
+			t.Errorf("theme %q: the stopped dot is not the STOPPED pill's colour", theme)
+		}
 	}
 }
