@@ -11,7 +11,9 @@ import (
 )
 
 func (m Model) View() tea.View {
-	bg := chrome.PanelBg()
+	// The panel's whole tier moves with focus, frame included, rather than a
+	// heavier border appearing - see chrome.PanelBgFor.
+	bg := chrome.PanelBgFor(m.focused)
 
 	bodyWidth := max(1, chrome.PanelBodyWidth(m.panelWidth))
 	bodyAvail := max(1, chrome.PanelBodyHeight(m.panelHeight))
@@ -41,7 +43,7 @@ func (m Model) View() tea.View {
 			Render(fmt.Sprintf("%s · %s", m.entry.File, m.entry.SHA8))
 	}
 
-	screen := chrome.PanelFrame("Preview", titleRight, m.panelWidth, m.panelHeight, body)
+	screen := chrome.PanelFrameOn("Preview", titleRight, m.panelWidth, m.panelHeight, bg, body)
 	return tea.NewView(screen)
 }
 

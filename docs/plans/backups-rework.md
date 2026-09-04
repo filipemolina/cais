@@ -2,15 +2,15 @@
 
 ## Status
 
-Phases 0-2 have landed. **Phase 3 is next.**
+Phases 0-3 have landed. **Phase 4 is next.**
 
 | Phase | Commit | |
 | --- | --- | --- |
 | 0 — the keymap rule | `88c00b2`, `ef22549` | done |
 | 1 — split into two panels | `0ada178` | done |
 | 2 — scroll the list | `8926ae1`, `074c0ad`, `c3f5c2b` | done |
-| 3 — focus | | **next** |
-| 4 — the diff engine | | |
+| 3 — focus | `e8d5bcc` | done |
+| 4 — the diff engine | | **next** |
 | 5 — render the diff | | |
 
 Two corrections landed on top of Phase 2 that this plan did not call for,
@@ -27,9 +27,65 @@ both from review rather than from the plan:
   `Source` kept its job. The sha left the list for the preview's title, and
   the column header went with it.
 
-Of the four defects in *Problem* below, 2 and 4 are fixed. 1 (no keyboard
-scrolling of the preview) and 3 (the footer advertising an inert `esc`) are
-Phase 3's.
+All four defects in *Problem* below are now fixed: 2 and 4 in Phase 2, and 1
+(no keyboard scrolling of the preview) and 3 (the footer advertising an inert
+`esc`) in Phase 3.
+
+The version list was then moved onto the bubbles list, before Phase 4, so all
+three body lists are set up the same way. It landed in the same commit. It had hand-rolled its own cursor,
+windowing and paging since Phase 1, on two justifications that did not survive
+checking:
+
+- *"the rows are two-line entries, not `list.Item`s"* (Phase 1). The services
+  list renders 4-line rows through a custom delegate, and `074c0ad` had already
+  made the backups rows match it exactly.
+- *the 39ms benchmark* (Phase 2). It measured a `viewport.Model` holding the
+  whole rendered list. The bubbles list renders `items[start:end]` - one page -
+  which is the same windowing Phase 2 hand-rolled.
+
+What that bought: filtering (`/`, on the file, the timestamp *and* the sha,
+none of which the rows all show), pagination, `h`/`l`/`←`/`→` paging, and one
+keymap - `keys.ListKeyMap` - across all three lists, which is the rule Phase 0
+exists to enforce. `ensureCursorVisible`, `rowOffset`, `visibleRows`, `pageBy`
+and `halfPage` are gone with their tests. Two behaviour changes came with it:
+the list pages rather than scrolls a row at a time, matching the other two, and
+`ctrl+u`/`ctrl+d` no longer page the list, since `list.KeyMap` has no half-page
+binding (the preview keeps them).
+
+Phase 3 landed as written, with three things worth recording:
+
+- **The focus flag went into `apptypes`, not into either panel.** Four
+  packages have to agree on it — `AppModel` owns it, `cmds` carries it, `keys`
+  reads it for the arrow hint, both panels route by it — so
+  `apptypes.BackupsFocus` is the shared vocabulary. `chrome` could not hold it:
+  `chrome` imports `keys`, so `keys` cannot import `chrome`.
+- **`PanelBgFor` needed `PanelFrameOn` beside it.** The plan called for the
+  background helper but `PanelFrame` fetched its own `PanelBg()`, so the lift
+  would have reached the body and not the frame around it. Same for the list's
+  rows, which take the panel's tier as a parameter now
+  (`chrome.ListRowBgOn`) rather than assuming the elevated one — DESIGN.md's
+  standing rule for anything drawn inside a panel.
+- **The bubbles list needs two pagination passes after `SetItems`.**
+  `list.updatePagination` sizes a page against a height it has taken the
+  paginator's row out of, but `list.paginationView` measures a bare line until
+  it knows there is more than one page - so the first pass after rows arrive
+  fits one row too many and the next pass silently disagrees. The panel drew
+  four rows a page while focused and three the moment anything touched the
+  delegate. `backupslist.setItems` re-runs it. The groups and services lists
+  get their second pass by accident, from the `SetDelegate` inside
+  `syncActiveIndex`, which only fires when the active row actually moved.
+- **Unhighlighted preview text had no foreground.** An .env copy is shown raw
+  so a restore's exact bytes are on screen, but "raw" was being taken to mean
+  uncoloured too: the text carried no SGR and fell back to the terminal's own
+  default foreground, which is pale grey on a light theme's pale panel. This
+  predated the phase - it was visible on the merged page as well - and is
+  fixed with `backuppreviewpanel.plainText`.
+- **The rig's screen decoder was missing `CSI G` and `CSI X`.** The end-to-end
+  test drove the renderer into column-absolute deltas that
+  `src/model/screen_test_util.go` silently mistracked, reconstructing a
+  plausible but wrong screen. The decoder now handles CHA, ECH and CUB, with
+  cases in `TestScreenDecoder`. It still cannot place the confirm modal's
+  frame, so that one assertion matches the raw stream and says why.
 
 ## Problem
 
@@ -408,6 +464,30 @@ different cause.
 viewport approach in Phase 2 looked obviously right and measured 39ms per
 cursor move at the store's ceiling. Phase 5 renders diff lines per frame and
 is the next place this could bite.
+
+**`AppModel.pages` is a map, so every copy of the model shares its
+components.** A test that renders the pre-action model *after* driving the
+action renders the post-action state, and a "did this change the frame?"
+assertion passes vacuously. Capture the before-frame first. This has now cost
+time twice: once on a frame comparison, and once on a test that filtered a list
+two earlier statements had already left mid-filter. If a test drives the same
+`m` down two paths, the second path starts where the first ended.
+
+**A test that feeds commands back cannot wait on them.** A list's filter input
+returns a cursor-blink command that sleeps for the blink interval and then asks
+to be run again, so a settle loop that runs every command is an infinite loop
+paced at half a second a lap. Both settle helpers now abandon a command that
+has not answered in 50ms. Related: **filter keystrokes have to be settled one
+at a time.** bubbles narrows the rows through a command, so queueing the whole
+term ahead of the first match lands `enter` on a list that has matched nothing,
+and bubbles drops an accepted filter with no matches back to unfiltered.
+
+**The rig's screen decoder is not a terminal.** It covers the sequences the
+renderer has been *observed* to emit, and a frame it cannot place comes back
+as a plausible-looking screen with the wrong content — not as an error. When a
+`WaitFor` fails and the screen dump looks garbled or is missing something the
+app plainly drew, check `r.Output()` for the raw bytes before believing the
+app is at fault.
 
 ## Order and why
 

@@ -22,9 +22,15 @@ func (m Model) bindingsFor() []key.Binding {
 	listEmpty := m.groupsListEmpty
 	selected := m.selectedGroup != ""
 
-	if m.activePage == "Services" {
+	switch m.activePage {
+	case "Services":
 		listEmpty = m.servicesListEmpty
 		selected = m.selectedService
+	case "Backups":
+		// The version list has no "selected" beyond its cursor, so only
+		// emptiness matters here - it is what decides whether / is offered.
+		listEmpty = m.backupsListEmpty
+		selected = false
 	}
 
 	return keys.Active(keys.Context{
@@ -36,6 +42,7 @@ func (m Model) bindingsFor() []key.Binding {
 		Editing:               m.editing,
 		PendingAction:         m.pendingAction,
 		Filter:                m.filterState,
+		BackupsFocus:          m.backupsFocus,
 	})
 }
 

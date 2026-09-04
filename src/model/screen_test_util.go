@@ -13,11 +13,19 @@ import (
 // delta stream, so waiters can ask "is this substring on screen right now?"
 // instead of "did it ever appear in the byte history?".
 //
-// Supported sequences (everything the renderer emits with the rig's setup):
+// Supported sequences (everything the renderer has been observed to emit with
+// the rig's setup). G and X were added after a frame that only changed a
+// panel's background colour made the renderer switch to column-absolute deltas
+// the decoder silently mistracked, leaving a plausible-looking but wrong screen
+// - so a rig assertion that fails with a garbled screen dump is worth checking
+// against this list before it is believed.
 //
 //	ESC [ H            cursor home (1,1)
 //	ESC [ r ; c H      cursor to row r, col c (1-based)
 //	ESC [ n C          cursor forward n (default 1)
+//	ESC [ n D          cursor back n (default 1)
+//	ESC [ n G          cursor to column n on this row (1-based, CHA)
+//	ESC [ n X          erase n cells from the cursor, cursor unmoved (ECH)
 //	ESC [ K            erase to end of line
 //	ESC [ 1 K          erase start of line
 //	ESC [ 2 J          erase entire screen (cursor home)
@@ -67,6 +75,26 @@ func (s *screen) newline() {
 }
 func (s *screen) move(r, c int) { s.curR, s.curC = r, c }
 func (s *screen) forward(n int) { s.curC += n }
+
+func (s *screen) back(n int) { s.curC = max(0, s.curC-n) }
+
+// column is CHA: an absolute move within the current row, leaving the row
+// alone. The renderer reaches for it instead of a full ESC [ r ; c H whenever
+// it is repainting a run partway along a line it is already on.
+func (s *screen) column(c int) { s.curC = max(0, c) }
+
+// eraseChars is ECH: blank n cells from the cursor without moving it, which is
+// how the renderer clears a run it is about to skip rather than overwrite. It
+// is not ESC [ K - that always runs to the end of the line, and taking one for
+// the other repaints cells the renderer meant to leave alone.
+func (s *screen) eraseChars(n int) {
+	row := s.rows[s.curR]
+	for c := s.curC; c < s.curC+n && c < len(row); c++ {
+		if c >= 0 {
+			row[c] = ' '
+		}
+	}
+}
 
 func (s *screen) eraseLine(mode int) {
 	row := s.rows[s.curR]
@@ -260,6 +288,12 @@ func (s *screen) applyCSI(params []int, final byte) {
 		s.move(r, c)
 	case 'C':
 		s.forward(get(0, 1))
+	case 'D':
+		s.back(get(0, 1))
+	case 'G':
+		s.column(get(0, 1) - 1)
+	case 'X':
+		s.eraseChars(get(0, 1))
 	case 'K':
 		s.eraseLine(get(0, 0))
 	case 'J':

@@ -259,17 +259,29 @@ var Files = FilesKeys{
 // requesting a restore of the selected copy. Reveal/copy/edit live in the env
 // modal, not here.
 type BackupKeys struct {
-	// Navigate is help-only, like Files.Scroll: the list owns navigation.
+	// Navigate is help-only, like Files.Scroll: the list owns navigation. It
+	// is what the arrows do while the list holds focus.
 	Navigate key.Binding
-	// Restore writes the selected .bak back over the live file. enter or r;
-	// r is chosen so it never collides with the service panel's lowercase r
-	// (restart) - the Backups page is the only context this binding is live.
+	// Scroll is Navigate's other face: with the preview focused the same
+	// arrows drive the file, not the cursor. Two bindings rather than one
+	// relabelled binding, because the footer shows whichever is live and a
+	// binding is a fact about a key, not a mutable label.
+	Scroll key.Binding
+	// Restore writes the selected .bak back over the live file. r alone:
+	// enter was dropped because it is too easy to hit by reflex while
+	// navigating, for an action that overwrites a live file. r is chosen so it
+	// never collides with the service panel's lowercase r (restart) - the
+	// Backups page is the only context this binding is live.
+	//
+	// It stays live whichever panel holds focus: focus moves the arrows, not
+	// the selection, and the selection is what a restore acts on.
 	Restore key.Binding
 }
 
 var Backup = BackupKeys{
 	Navigate: key.NewBinding(key.WithHelp("↑/↓", "navigate")),
-	Restore:  key.NewBinding(key.WithKeys("enter", "r"), key.WithHelp("r", "restore")),
+	Scroll:   key.NewBinding(key.WithHelp("↑/↓", "scroll")),
+	Restore:  key.NewBinding(key.WithKeys("r"), key.WithHelp("r", "restore")),
 }
 
 // EnvKeys act on the Env page's key/value table. Reveal, Copy and RawEdit
@@ -286,8 +298,9 @@ var Overlay = OverlayKeys{
 	Navigation: key.NewBinding(key.WithKeys("up", "down", "k", "j"), key.WithHelp("↑/↓", "navigate")),
 }
 
-// ListKeyMap is the keymap the two body lists install on their inner bubbles
-// list, replacing list.DefaultKeyMap.
+// ListKeyMap is the keymap the three body lists - groups, services and the
+// Backups version list - install on their inner bubbles list, replacing
+// list.DefaultKeyMap.
 //
 // The default map is written for a list that is the whole program, so it claims
 // keys this app spends elsewhere: d and f page forward while d deletes a group,
@@ -442,6 +455,12 @@ type Context struct {
 	// list.Unfiltered, so a caller that has no list to report about gets the
 	// ordinary keys.
 	Filter list.FilterState
+	// BackupsFocus is which half of the Backups page the arrows are driving.
+	// It decides only what the arrow hint says - navigate or scroll - since
+	// restore is live on either half. Meaningless on every other page, whose
+	// panels have no focus to hold; its zero value is the list, which is where
+	// the page opens.
+	BackupsFocus apptypes.BackupsFocus
 }
 
 // Active returns the bindings the user can press right now, in the order they
@@ -540,16 +559,34 @@ func Active(ctx Context) []key.Binding {
 	case "Compose Files":
 		return []key.Binding{Details.EditFile, Files.Browse, Files.Scroll}
 
-	// The Backups page has one always-focused list, so the same keys apply
-	// regardless of which component id Tab last touched. It is a single
-	// panel (the version list + preview), so most verbs are help-only: the
-	// list navigates itself, and only restore is an action verb here.
+	// Backups is the one page with two focus stops, so tab is live here and
+	// nowhere else on a body page. Restore is its only action verb - the two
+	// panels navigate and scroll themselves - and which of those the arrows
+	// are doing is the only thing focus changes about the bar.
+	//
+	// The filter slot works exactly as it does on Home and Services, because
+	// the version list is the same bubbles list: once a filter stands, esc
+	// clears it and takes the row the filter key had. esc is offered for that
+	// and nothing else here - there is no selection on this page to clear, so
+	// with no filter standing the key is inert and the bar stays quiet about
+	// it.
 	case "Backups":
-		return []key.Binding{
-			Backup.Restore,
-			Global.Back,
-			Backup.Navigate,
+		arrows := Backup.Navigate
+		if ctx.BackupsFocus == apptypes.BackupsPreview {
+			arrows = Backup.Scroll
 		}
+
+		bindings := []key.Binding{Backup.Restore}
+
+		switch {
+		case ctx.Filter == list.FilterApplied:
+			bindings = append(bindings, List.ClearFilter)
+		case !ctx.ListEmpty:
+			// Nothing to filter in an empty store.
+			bindings = append(bindings, List.Filter)
+		}
+
+		return append(bindings, arrows, Global.NextPanel)
 	}
 
 	return []key.Binding{Global.Back}
@@ -605,6 +642,11 @@ func Priority(binding key.Binding) int {
 	}{
 		{Global.Page, priorityDuplicated},
 		{Global.NextPanel, priorityInstinctive},
+		// List.Navigate and Files.Scroll are matched structurally, so the
+		// Backups page's help-only twins (Backup.Navigate, Backup.Scroll) are
+		// ranked by these same two rows - they carry the same keys (none) and
+		// the same help text. Adding rows of their own would be dead entries
+		// this loop never reaches.
 		{List.Navigate, priorityInstinctive},
 		{Files.Scroll, priorityInstinctive},
 		{Global.Back, priorityExit},
@@ -669,6 +711,13 @@ func Catalog(ctx Context) []Scope {
 
 	// g/G live wherever the arrows do - a focused list - but the footer never
 	// advertises them, so Active never returns them.
+	//
+	// This also answers for Backups, whose Backup.Navigate is a distinct
+	// binding carrying the same (empty) keys and the same help text, so
+	// sameBinding cannot tell it from List.Navigate. That is what makes g/G
+	// light on Backups with the list focused and dim with the preview focused,
+	// where Active returns Backup.Scroll instead and g/G belong to the file.
+	// Changing either binding's help text would quietly break it.
 	listNavigable := containsBinding(live, List.Navigate)
 
 	startEnd := func(page string) []Entry {
@@ -727,8 +776,16 @@ func Catalog(ctx Context) []Scope {
 		{
 			Title: apptypes.PageLabel("Backups"),
 			Page:  "Backups",
-			Entries: entries("Backups",
-				Backup.Restore, Global.Back, Backup.Navigate,
+			// Both arrow faces get a row: the overlay is the page's whole
+			// keymap, so it says the arrows navigate the list and scroll the
+			// preview, and dims whichever half is not focused right now.
+			Entries: append(
+				entries("Backups",
+					Backup.Restore,
+					List.Filter, List.ClearFilter,
+					Backup.Navigate, Backup.Scroll,
+				),
+				startEnd("Backups")...,
 			),
 		},
 		{

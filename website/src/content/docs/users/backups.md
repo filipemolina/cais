@@ -26,7 +26,11 @@ Backups live in `.cais/backups/` beside your compose file. Each backup is named 
 
 Tab `4` (Backups) lists every stored copy of the compose file and the `.env`, newest first, with a live preview beside the list — the exact bytes a restore would put back. Compose copies are shown syntax-highlighted; `.env` copies are shown raw.
 
-`enter` or `r` restores the chosen copy over the live file, through a confirm modal. Because the write is atomic, the live file is snapshotted first — **so a restore is itself undoable**: the copy you restored from still sits in the store, and a later restore of the post-restore snapshot brings the file you had back.
+`tab` moves between the list and the preview. Whichever half is lit, the arrows (or `j`/`k`) and `g`/`G` drive it — the cursor through the versions, or the file through the preview. The list pages with `←`/`→`, `h`/`l` or `pgup`/`pgdn`, exactly as the Groups and Services lists do; the preview pages with `pgup`/`pgdn` and `ctrl+u`/`ctrl+d`.
+
+`/` filters the versions — by file name, by date, or by the content hash shown in the preview's header, so you can find one specific copy in a long history. `esc` clears the filter.
+
+`r` restores the chosen copy over the live file, through a confirm modal. It works from either half of the page, because it acts on the selected version rather than on the focused panel. (`enter` used to restore too; it was dropped, being far too easy to hit by reflex while navigating for something that overwrites a live file.) Because the write is atomic, the live file is snapshotted first — **so a restore is itself undoable**: the copy you restored from still sits in the store, and a later restore of the post-restore snapshot brings the file you had back.
 
 A `.env` restore brings the secrets back too, which the confirm makes clear.
 

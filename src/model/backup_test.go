@@ -4,6 +4,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -274,12 +275,19 @@ func TestBackupsPageRendersTwoPanels(t *testing.T) {
 // SetSelectedBackupMsg makes the preview issue a read - a four-message chain
 // where drive stops after the first. The iteration cap keeps a repeating
 // command (a poll, a spinner tick) from spinning here forever.
+//
+// Commands that do not answer within settleDeadline are abandoned rather than
+// waited on. A list's filter input returns a cursor-blink command that sleeps
+// for the blink interval and then asks to be run again, so feeding its
+// messages back is an infinite loop paced at half a second a lap: the cap
+// turns that into a 25-second failure rather than a hang, which is not much
+// better. Nothing asserted here is produced by a command that has to wait.
 func settle(t *testing.T, m AppModel, msgs ...tea.Msg) AppModel {
 	t.Helper()
 
 	queue := append([]tea.Msg{}, msgs...)
 
-	for range 50 {
+	for range 100 {
 		if len(queue) == 0 {
 			return m
 		}
@@ -289,11 +297,41 @@ func settle(t *testing.T, m AppModel, msgs ...tea.Msg) AppModel {
 
 		updated, cmd := m.Update(msg)
 		m = updated.(AppModel)
-		queue = append(queue, collect(cmd)...)
+		queue = append(queue, collectPrompt(cmd)...)
 	}
 
 	t.Fatal("the model never settled: a command kept producing messages")
 	return m
+}
+
+// settleDeadline is how long a command gets to produce its message before
+// settle treats it as a timer and moves on. See settle.
+const settleDeadline = 50 * time.Millisecond
+
+// collectPrompt is collect with a deadline on each command.
+func collectPrompt(cmd tea.Cmd) []tea.Msg {
+	if cmd == nil {
+		return nil
+	}
+
+	done := make(chan tea.Msg, 1)
+	go func() { done <- cmd() }()
+
+	select {
+	case msg := <-done:
+		if batch, ok := msg.(tea.BatchMsg); ok {
+			var out []tea.Msg
+			for _, child := range batch {
+				out = append(out, collectPrompt(child)...)
+			}
+
+			return out
+		}
+
+		return []tea.Msg{msg}
+	case <-time.After(settleDeadline):
+		return nil
+	}
 }
 
 // Selecting a version in the list reaches the preview panel. The two are

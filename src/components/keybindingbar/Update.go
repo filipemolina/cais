@@ -3,6 +3,7 @@ package keybindingbar
 import (
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
+	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/cmds"
 )
 
@@ -50,6 +51,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case cmds.SetUngroupedMaterializedMsg:
 		m.ungroupedMaterialized = bool(msg)
+
+	case cmds.SetBackupsFocusMsg:
+		m.backupsFocus = apptypes.BackupsFocus(msg)
+
+	case cmds.BackupListMsg:
+		m.backupsListEmpty = msg.Err != nil || len(msg.Entries) == 0
 	}
 	return m, nil
 }

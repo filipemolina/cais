@@ -237,8 +237,13 @@ func EmptyCard(width, availHeight int, bg color.Color, title, body, key, hint st
 // frame's own left gutter, matching the 2 columns the bubbles list TitleBar
 // adds inside the list wrappers - see appstyles.NormalTitle.
 func PanelFrame(title string, titleRight string, width int, height int, body string) string {
-	bg := PanelBg()
+	return PanelFrameOn(title, titleRight, width, height, PanelBg(), body)
+}
 
+// PanelFrameOn is PanelFrame on an explicit background tier, for the two
+// Backups panels: focus lifts a whole panel, frame included, so the tier has
+// to reach the frame rather than only the body inside it. See PanelBgFor.
+func PanelFrameOn(title string, titleRight string, width int, height int, bg color.Color, body string) string {
 	style := FitBox(WrapperStyle.Background(bg), width, height)
 	titleRow := appstyles.NormalTitle().MarginLeft(2).Render(title)
 

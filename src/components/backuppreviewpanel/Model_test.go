@@ -7,6 +7,9 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
+	"github.com/filipemolina/cais/src/appstyles"
 	"github.com/filipemolina/cais/src/cmds"
 	"github.com/filipemolina/cais/src/utils"
 )
@@ -173,3 +176,39 @@ func TestThePanelSizesToTheRightHalf(t *testing.T) {
 }
 
 var _ tea.Model = Model{}
+
+// An .env copy is shown raw, but "raw" is about the bytes, not the colour.
+// Text with no SGR of its own lands on the terminal's default foreground,
+// which has nothing to do with the active theme - on a light theme that was
+// pale grey on a pale panel, and the preview was effectively unreadable.
+func TestAnEnvCopyIsRenderedWithAForeground(t *testing.T) {
+	m := selectAndLoad(t, New().(Model), entryFor(t, ".env"))
+
+	sized, _ := m.Update(cmds.SetBodyLayoutMsg{LeftWidth: 60, RightWidth: 60, Height: 30})
+	frame := sized.(Model).View().Content
+
+	// The bytes are still exactly what a restore would write.
+	if !strings.Contains(ansi.Strip(frame), "SECRET=1") {
+		t.Fatalf("the .env preview lost its content:\n%s", ansi.Strip(frame))
+	}
+
+	want := lipgloss.NewStyle().Foreground(appstyles.Active.TextPrimary).Render("SECRET=1")
+	if !strings.Contains(frame, want) {
+		t.Error("the .env preview renders its text with no foreground of its own, so it falls back to the terminal's")
+	}
+}
+
+// The compose path is unchanged: it is syntax highlighted, not flattened to
+// one foreground. This is the negative control for the test above - a fix that
+// styled everything the same way would pass that one and break this.
+func TestAComposeCopyIsStillHighlighted(t *testing.T) {
+	m := selectAndLoad(t, New().(Model), entryFor(t, "compose"))
+
+	sized, _ := m.Update(cmds.SetBodyLayoutMsg{LeftWidth: 60, RightWidth: 60, Height: 30})
+	frame := sized.(Model).View().Content
+
+	keyed := lipgloss.NewStyle().Foreground(appstyles.Active.Accent).Render("services")
+	if !strings.Contains(frame, keyed) {
+		t.Error("the compose preview is no longer syntax highlighted")
+	}
+}

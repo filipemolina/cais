@@ -43,17 +43,48 @@ func PanelBg() color.Color {
 	return appstyles.Active.BackgroundElevated
 }
 
+// PanelBgFor is PanelBg for the two panels that still have focus to show: the
+// Backups list and its preview. The focused one sits on the elevated tier, the
+// unfocused one a tier below, which is the lift DESIGN.md documents - focus
+// changes the tier, never the border, so the box stays the same size either
+// way.
+//
+// It is a second function rather than a parameter on PanelBg because every
+// other panel in the app is always active and has no answer to give: adding
+// the argument there would mean threading a constant `true` through a dozen
+// call sites to say nothing.
+func PanelBgFor(isFocused bool) color.Color {
+	if isFocused {
+		return appstyles.Active.BackgroundElevated
+	}
+
+	return appstyles.Active.BackgroundPanel
+}
+
 // ListRowBg is the background a list row renders on. The active row is lifted
 // to the surface tier; every other row sits flush on the panel's elevated
 // tier. Rows need an explicit background (rather than inheriting the panel's)
 // because each row is rendered and sealed on its own - see
 // appstyles.FillBackground.
 func ListRowBg(isActive bool) color.Color {
+	return ListRowBgOn(isActive, PanelBg())
+}
+
+// ListRowBgOn is ListRowBg for a list inside a panel whose tier moves: the
+// inactive rows have to sit flush on whatever tier the panel is actually on,
+// or an unfocused panel shows its rows floating a tier above their own frame.
+// It is DESIGN.md's rule that a component inside a panel takes that panel's
+// tier as a parameter instead of picking a tint of its own.
+//
+// The active row's ModalBg is unchanged by focus: it is its own register
+// rather than a tint derived from the panel tiers, so it reads as the cursor
+// on either tier.
+func ListRowBgOn(isActive bool, panelBg color.Color) color.Color {
 	if isActive {
 		return appstyles.Active.ModalBg
 	}
 
-	return PanelBg()
+	return panelBg
 }
 
 // BarColumn renders the nav's ▌ indicator once per line of content, so the

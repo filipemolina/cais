@@ -61,6 +61,48 @@ func TestScreenDecoder(t *testing.T) {
 			in:   "\x1b[1;40r\x1b[Hok",
 			want: "ok",
 		},
+		{
+			// CHA: an absolute move within the row the cursor is already on.
+			// The renderer reaches for it when repainting a run partway along
+			// a line, and reading it as anything else silently misplaces every
+			// cell after it.
+			name: "column absolute then write",
+			in:   "\x1b[Habcdef\x1b[3GXY",
+			want: "abXYef",
+		},
+		{
+			name: "column absolute defaults to column 1",
+			in:   "\x1b[Habcdef\x1b[GZ",
+			want: "Zbcdef",
+		},
+		{
+			// ECH blanks n cells and leaves the cursor where it was, which is
+			// what separates it from ESC [ K - that one always runs to the end
+			// of the line.
+			name: "erase characters blanks a run and leaves the tail",
+			in:   "\x1b[Habcdef\x1b[3G\x1b[2X",
+			want: "ab  ef",
+		},
+		{
+			name: "erase characters does not move the cursor",
+			in:   "\x1b[Habcdef\x1b[3G\x1b[2XZ",
+			want: "abZ ef",
+		},
+		{
+			name: "erase characters stops at the end of the row",
+			in:   "\x1b[Habc\x1b[2G\x1b[500X",
+			want: "a",
+		},
+		{
+			name: "cursor back then write",
+			in:   "\x1b[Habcdef\x1b[2DXY",
+			want: "abcdXY",
+		},
+		{
+			name: "cursor back clamps at the left margin",
+			in:   "\x1b[Habc\x1b[99DZ",
+			want: "Zbc",
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

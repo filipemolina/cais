@@ -29,6 +29,11 @@ type Model struct {
 	vp          viewport.Model
 	panelWidth  int
 	panelHeight int
+	// focused is whether the arrows are driving this panel's viewport rather
+	// than the list's cursor. AppModel owns the answer and broadcasts it; this
+	// is the panel's copy. It starts false: the page opens on the list, and
+	// there is nothing here to scroll until the cursor picks a row.
+	focused bool
 }
 
 func (m Model) Init() tea.Cmd { return nil }
@@ -37,10 +42,10 @@ func (m Model) Init() tea.Cmd { return nil }
 // publishes a selection as soon as the store has been read.
 func New() tea.Model {
 	vp := viewport.New()
-	// The preview is read-only, so it takes the shared read-only map. No key
-	// reaches it yet: the panel has no focus to hold, so Update does not
-	// route keys here at all. Focus lands in the next phase - see
-	// docs/plans/backups-rework.md.
+	// The preview is read-only, so it takes the shared read-only map: the
+	// arrows, pgup/pgdn and the ctrl half-pages, with the vim letters and
+	// horizontal scrolling dropped. Update routes keys here only while this
+	// panel holds focus, so the map is live for exactly half the page.
 	vp.KeyMap = keys.ReadOnlyViewportKeyMap()
 
 	return Model{vp: vp}

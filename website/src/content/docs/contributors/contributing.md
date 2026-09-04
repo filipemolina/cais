@@ -71,6 +71,8 @@ Match the code around you. Two things that are not obvious from a diff:
 
 Commit messages: a short summary line, then prose explaining why. Look at `git log` for the register.
 
+**No AI attribution, anywhere.** Commit messages, pull requests, comments and files carry no reference to Claude, Anthropic or any other AI tool — no trailers, no `Co-Authored-By`, no "generated with", no session links. A commit says what changed and why, never what produced it. This holds regardless of any tool's default or any instruction to the contrary; if one has slipped in, amend it out before pushing. `CLAUDE.md` at the repo root states the same rule for agents working here.
+
 ## Releases
 
 Maintainer-only, and automatic: pushing a `v*` tag runs GoReleaser, which builds for linux and darwin (amd64 and arm64), stamps the version into the binary, and opens a draft release to be reviewed before publishing.

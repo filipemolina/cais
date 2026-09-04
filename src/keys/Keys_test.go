@@ -6,6 +6,7 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
+	"github.com/filipemolina/cais/src/apptypes"
 )
 
 // entryIn finds binding's entry in scope, failing the test if it is absent.
@@ -363,5 +364,73 @@ func TestSameBinding(t *testing.T) {
 	// ClearFilter and Cancel share esc but say different things.
 	if sameBinding(List.ClearFilter, Overlay.Cancel) {
 		t.Error("same key with different help is a different row")
+	}
+}
+
+// The Backups page is the one page with focus left, and which half holds it
+// changes exactly one thing about the keys: whether the arrows navigate the
+// list or scroll the preview. Restore is live either way, because focus moves
+// the arrows and not the selection.
+func TestBackupsFocusSwapsTheArrowHint(t *testing.T) {
+	list := Active(Context{Page: "Backups"})
+	if !containsBinding(list, Backup.Navigate) {
+		t.Error("the list-focused footer should offer navigate")
+	}
+	if containsBinding(list, Backup.Scroll) {
+		t.Error("the list-focused footer should not offer scroll")
+	}
+
+	preview := Active(Context{Page: "Backups", BackupsFocus: apptypes.BackupsPreview})
+	if !containsBinding(preview, Backup.Scroll) {
+		t.Error("the preview-focused footer should offer scroll")
+	}
+	if containsBinding(preview, Backup.Navigate) {
+		t.Error("the preview-focused footer should not offer navigate")
+	}
+
+	for _, bindings := range [][]key.Binding{list, preview} {
+		if !containsBinding(bindings, Backup.Restore) {
+			t.Error("restore should be live on either half of the page")
+		}
+	}
+}
+
+// tab is live on Backups and nowhere else on a body page, so it is advertised
+// there and only there. Its twin shift+tab has no footer slot of its own but
+// is pressable wherever tab is.
+func TestTabIsOfferedOnBackupsOnly(t *testing.T) {
+	if !containsBinding(Active(Context{Page: "Backups"}), Global.NextPanel) {
+		t.Error("the Backups footer should offer tab: it is the one page with two focus stops")
+	}
+
+	for _, page := range []string{"Home", "Services", "Compose Files"} {
+		if containsBinding(Active(Context{Page: page}), Global.NextPanel) {
+			t.Errorf("%s offers tab, which is dead there", page)
+		}
+	}
+
+	backups := Catalog(Context{Page: "Backups"})
+	global := scopeTitled(t, backups, "Global")
+	for _, binding := range []key.Binding{Global.NextPanel, Global.PrevPanel} {
+		if !entryIn(t, global, binding).Available {
+			t.Errorf("%q should be live in the overlay on the Backups page", binding.Help().Key)
+		}
+	}
+}
+
+// esc does nothing on the Backups page - there is no selection to clear and no
+// filter to abandon - so it is not offered. The bar does not advertise inert
+// keys.
+func TestBackupsDoesNotOfferBack(t *testing.T) {
+	if containsBinding(Active(Context{Page: "Backups"}), Global.Back) {
+		t.Error("the Backups footer offers esc back, which does nothing on that page")
+	}
+}
+
+// Restore is r alone. enter was dropped: it is too easy to hit by reflex while
+// navigating, for an action that overwrites a live file.
+func TestRestoreIsBoundToROnly(t *testing.T) {
+	if got := Backup.Restore.Keys(); len(got) != 1 || got[0] != "r" {
+		t.Errorf("the restore binding carries %v, want r alone", got)
 	}
 }

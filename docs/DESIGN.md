@@ -223,9 +223,42 @@ focus. With the selection shared, the focus cursor was a fiction: a verb was
 never about "which panel", only about "which row is selected", and the row is
 always the one under the cursor. The verbs now fire straight from the list
 selection on either screen, and `constants.FocusableComponents` no longer holds
-the body panels. `tab` / `shift+tab` are no longer used to move between body
-panels; they remain only inside overlays and the inline YAML editor, where they
-are ordinary text-editing keys.
+the body panels. `tab` / `shift+tab` are no longer used to move between the
+Home and Services body panels; elsewhere they remain ordinary text-editing keys
+inside overlays and the inline YAML editor.
+
+**Backups is the one page that kept focus, and it kept it for the reason the
+others lost it.** Its two panels are not two views of one selection: the left
+is a cursor over the version list, the right is a scrolling view of one stored
+file. Both answer `↑` `↓` `pgup` `pgdn` `ctrl+u` `ctrl+d` `g` `G` `home` `end`,
+and one arrow press has to move one thing — so there is a real second thing to
+focus, and `tab` / `shift+tab` move between them. With exactly two stops, next
+and prev are the same move; both are bound because a user reaching for
+`shift+tab` should not find a dead key.
+
+`AppModel` owns the flag (`backupsFocus`, an `apptypes.BackupsFocus`) and is
+the single handler for `tab`, broadcasting the answer through
+`cmds.SetBackupsFocus`. Two panels each deciding their own focus is how a page
+ends up with both halves lit or neither. Every page switch resets it to the
+list, because the page opens on the panel with the cursor and the preview has
+nothing to scroll until that cursor picks a row.
+
+The version list is a bubbles list, the same as the groups and services lists,
+carrying the same `keys.ListKeyMap`. It filters on the file name, the timestamp
+*and* the SHA-8 - a stored version is identified by all three, and the row
+shows only the first two - which is why `backupItem.FilterValue` joins them
+rather than returning a name the way the other two items do. Its status bar is
+on whether or not a filter stands, which is the other difference: the row that
+reads "5 versions" is the panel's answer to "how much history do I have", and
+the rows alone cannot give it once they paginate.
+
+`r` (restore) stays live whichever half is focused: focus decides what the
+arrows drive, it does not move the selection, and the selection is what a
+restore acts on. This is the same fact the other two pages settled — a verb is
+about which row is selected, never about which panel — and it is why focus here
+is not a revival of the abstraction that was removed. What focus changes is the
+arrows and nothing else, which is also all the footer reports about it
+(`↑/↓ navigate` over the list, `↑/↓ scroll` over the preview).
 
 **`esc` is "back", as a ladder of claims.** Strongest first: a modal closes
 itself; a filter being typed owns the keyboard and esc abandons it; an applied
@@ -337,11 +370,12 @@ The tiers:
 | Tier | Keys | Rule |
 | --- | --- | --- |
 | Global | digits, `[` / `]`, `?`, `a` (about), `esc` (back), `q` | Same meaning everywhere, never contextual — but they yield to whatever owns the keyboard (see the esc ladder under *Navigation and focus*) |
+| Focus | `tab` / `shift+tab` | Live on Backups alone, the one page with two things to drive; inert on every other body page |
 | Force quit | `ctrl+c` | Yields to nothing, checked before the modal handoff |
 | Panel | `s t r p x L` (+ `H` `B` on Services) | Act on the list selection; one verb, one key. `s t r p x L` are shared by both panels; `H` (healthcheck) and `B` (boot) are Services-only. Screen-specific keys differ (see *Navigation and focus*): groups add `e`/`R`/`n`/`d`/`A`, services add `e`/`E`/`y`/`H`/`B`/`n`/`d` |
 | Destructive | `x`, `d` | Always through `ConfirmModal`; never dispatched straight from a panel |
 | Overlay | `esc` cancel, `enter` confirm, `y` / `n`, plus overlay-local letters | The overlay owns the keyboard while it is open |
-| List | cursor keys, `g` / `G`, `/`, `l` / `h` (page) | The list's own, and the only keys `list.KeyMap` is allowed to claim |
+| List | cursor keys, `g` / `G`, `/`, `l` / `h` (page) | The list's own, and the only keys `list.KeyMap` is allowed to claim. All three body lists - groups, services and the Backups version list - install `keys.ListKeyMap`, so the same keys mean the same thing on each |
 
 **There is no prefix key**, and this is deliberate. Prefixes (tmux `ctrl+b`,
 zellij `ctrl+p`) exist because those programs host another program that owns the
@@ -1132,8 +1166,13 @@ are `Theme` fields (`src/appstyles/Theme.go`), read through `appstyles.Active`:
 | —    | `ModalBg`            | modals, and an active list row — its own register, not derived from the panel tiers |
 
 Focus is shown by lifting a panel from tier 3 to tier 4, not by a heavier
-border, so a panel's box is the same size whether or not it is focused. Use
-`components.panelBg(isFocused)` rather than repeating that choice.
+border, so a panel's box is the same size whether or not it is focused. Only
+the two Backups panels still have an answer to give: they call
+`chrome.PanelBgFor(isFocused)` (and `chrome.PanelFrameOn`, so the lift reaches
+the frame and not just the body). Every other panel is always active and calls
+`chrome.PanelBg()`, which is tier 4 unconditionally — adding the argument there
+would mean threading a constant `true` through a dozen call sites to say
+nothing.
 
 One surface runs the other way. `BackgroundRecessed` sits *below* the panel
 tier — it is the theme's un-raised `PanelBg` — and is used for insets like the

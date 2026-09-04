@@ -271,6 +271,13 @@ type filterStater interface {
 	FilterState() list.FilterState
 }
 
+// listEmptier is implemented by a body list that has to answer for its own
+// emptiness. Home and Services are derived from the loaded config below; the
+// backup store is only known to the panel that read it.
+type listEmptier interface {
+	ListEmpty() bool
+}
+
 // helpContext snapshots what the help overlay needs to dim the keys that do
 // nothing right now. A modal freezes the screen it opened from - panels see
 // no keys while one is up - so the snapshot cannot go stale.
@@ -290,6 +297,16 @@ func (m AppModel) helpContext() keys.Context {
 	case "Services":
 		ctx.ListEmpty = m.config.configProject == nil || len(m.config.configProject.Services) == 0
 		ctx.Selected = m.selection.serviceName != ""
+	case "Backups":
+		// Which half the arrows are driving is the only thing focus changes
+		// about this page's keys; restore is live on either half.
+		ctx.BackupsFocus = m.backupsFocus
+		for _, component := range m.pages[m.activePage] {
+			if reporter, ok := component.(listEmptier); ok {
+				ctx.ListEmpty = reporter.ListEmpty()
+				break
+			}
+		}
 	}
 
 	for _, component := range m.pages[m.activePage] {
@@ -463,9 +480,20 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Global.EditEnv):
 			finalCmds = append(finalCmds, cmds.OpenEnvModal())
 
-		// Tab and shift+tab no longer cycle body-panel focus: both body
-		// panels are always active, so a verb key acts on the selected
-		// group/service regardless of which panel the cursor is in.
+		// Tab and shift+tab cycle body-panel focus on Backups, and nowhere
+		// else: Home and Services gave up focus because their two panels are
+		// two views of one selection, while the Backups list and its preview
+		// are a cursor over metadata and a scrolling file - two things to
+		// drive, so two focus stops.
+		//
+		// With exactly two stops, next and prev are the same move, so both
+		// keys land here. Handling them once, up here, keeps a single owner
+		// for tab: two panels each deciding they now hold focus is how a page
+		// ends up with both halves lit or neither.
+		case m.activePage == "Backups" &&
+			(key.Matches(msg, keys.Global.NextPanel) || key.Matches(msg, keys.Global.PrevPanel)):
+			m.backupsFocus = m.backupsFocus.Toggled()
+			finalCmds = append(finalCmds, cmds.SetBackupsFocus(m.backupsFocus))
 
 		// esc is "back": out of the details panel, to the list, and off an
 		// error banner. Everything with a stronger claim on esc has already
@@ -531,6 +559,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Each page starts at its primary (left) panel. Set activePage first so
 		// the deferred focus message is routed to the page we just opened,
 		// rather than the one we left.
+		//
+		// Backups is the only page with a focus stop to reset, and it is reset
+		// on every page switch rather than only on the ones that land here:
+		// leaving the page with the preview lit and coming back to a list that
+		// still thought it was unfocused is a page where the arrows do nothing.
+		m.backupsFocus = apptypes.BackupsList
+		finalCmds = append(finalCmds, cmds.SetBackupsFocus(m.backupsFocus))
 
 		// Refresh container state, and re-sync services/groups, so the
 		// newly active page's components have data to show even if they

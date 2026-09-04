@@ -105,6 +105,15 @@ type AppModel struct {
 	// mouseResize tracks a drag on the divider between the two body panels.
 	mouseDragging bool
 	mouseDragX    int
+	// backupsFocus is which half of the Backups page the arrows are driving.
+	// It is meaningful only while activePage is "Backups" - every other page's
+	// panels gave up focus (docs/DESIGN.md), and this page kept it because its
+	// two halves are a cursor over metadata and a scrolling file rather than
+	// two views of one selection.
+	//
+	// AppModel owns it so tab has a single handler; the panels and the footer
+	// receive it through cmds.SetBackupsFocus.
+	backupsFocus apptypes.BackupsFocus
 }
 
 // allGroupNames returns every distinct group referenced by any service

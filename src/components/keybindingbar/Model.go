@@ -3,6 +3,7 @@ package keybindingbar
 import (
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
+	"github.com/filipemolina/cais/src/apptypes"
 )
 
 // KeybindingBar is a single-line footer that shows the current page and the
@@ -32,6 +33,15 @@ type Model struct {
 	// by a written profile tag rather than derived, so the footer can
 	// advertise the row's 'A' verb (adopt vs release).
 	ungroupedMaterialized bool
+	// backupsListEmpty is whether the backup store has any stored versions,
+	// so the bar can drop the filter key on an empty one. It comes straight
+	// off cmds.BackupListMsg: the bar sees every message, and AppModel does
+	// not track the store's contents.
+	backupsListEmpty bool
+	// backupsFocus is which half of the Backups page the arrows are driving,
+	// so the bar says "navigate" over the list and "scroll" over the preview.
+	// It is the only page with focus left; see apptypes.BackupsFocus.
+	backupsFocus apptypes.BackupsFocus
 }
 
 func (m Model) Init() tea.Cmd { return nil }
@@ -42,5 +52,6 @@ func New() tea.Model {
 		activePage:        "Home",
 		groupsListEmpty:   true,
 		servicesListEmpty: true,
+		backupsListEmpty:  true,
 	}
 }
