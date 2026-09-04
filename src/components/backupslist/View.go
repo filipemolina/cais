@@ -63,13 +63,13 @@ func plural(n int) string {
 	return "s"
 }
 
-// renderList renders the version rows: source, UTC timestamp, and SHA-8. The
-// selected row is lifted to the surface tier with an accent bar down its left
-// edge, the same selection language the env/file rows use.
+// renderList puts the scrolling rows under the pinned column header. The
+// header and its rule stay put while the rows move, so a long history never
+// scrolls its own column labels away.
 //
-// Every entry is rendered and the panel body clips what does not fit, so a
-// cursor past the visible rows goes off-screen. That is fixed in the next
-// phase - see docs/plans/backups-rework.md.
+// The rows themselves live in a viewport rather than being rendered whole and
+// clipped by the body: clipping left a cursor past the visible rows moving
+// with nothing on screen to show for it.
 func (m Model) renderList(width int, avail int, bg color.Color) string {
 	if width < 1 {
 		width = 1
@@ -80,11 +80,17 @@ func (m Model) renderList(width int, avail int, bg color.Color) string {
 		chrome.PanelRule(width),
 	}
 
-	for i, entry := range m.entries {
-		parts = append(parts, m.renderRow(i, entry, width))
+	// Only the rows inside the window are rendered. Rendering the whole
+	// history and letting the body clip is what this phase replaced, and
+	// rendering it into a viewport costs a re-render of every row on every
+	// cursor move - see the note on ensureCursorVisible.
+	end := min(len(m.entries), m.rowOffset+m.visibleRows())
+	for i := m.rowOffset; i < end; i++ {
+		parts = append(parts, m.renderRow(i, m.entries[i], width))
 	}
 
 	content := lipgloss.JoinVertical(lipgloss.Left, parts...)
+
 	return chrome.PanelBodyWithFooter(width, avail, bg, content, "")
 }
 

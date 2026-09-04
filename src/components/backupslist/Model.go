@@ -3,8 +3,20 @@ package backupslist
 import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/components/chrome"
 	"github.com/filipemolina/cais/src/utils"
 )
+
+// rowHeight is how many terminal lines one version row occupies: the
+// source/timestamp line and the sha8 line under it. The cursor is an entry
+// index and the viewport scrolls in lines, so every conversion between the
+// two goes through this rather than through a bare 2.
+const rowHeight = 2
+
+// headerHeight is the column header plus the rule under it. Both are pinned
+// above the scrolling rows, the way a table header stays put, so scrolling a
+// long history never leaves the columns unlabelled.
+const headerHeight = 2
 
 // Model is the Backups page's left panel: a merged, newest-first list of
 // stored versions of the compose file and the .env, each tagged with the
@@ -22,6 +34,11 @@ type Model struct {
 	loadErr     error
 	panelWidth  int
 	panelHeight int
+	// rowOffset is the index of the first row on screen. Before it, the
+	// panel rendered every entry and let the body clip: a cursor past the
+	// visible rows kept moving with nothing on screen to show for it, and
+	// G landed on a row that was guaranteed to be invisible.
+	rowOffset int
 }
 
 func (m Model) Init() tea.Cmd { return nil }
@@ -50,4 +67,59 @@ func (m Model) publishSelection() tea.Cmd {
 		return cmds.ClearSelectedBackup()
 	}
 	return cmds.SetSelectedBackup(entry)
+}
+
+// setSize sizes the panel and pulls the cursor back into view, since a
+// shorter panel can leave it below a fold that just moved up.
+func (m *Model) setSize(width, height int) {
+	m.panelWidth = width
+	m.panelHeight = height
+
+	m.ensureCursorVisible()
+}
+
+// visibleRows is how many whole version rows fit under the pinned header. A
+// partial row at the bottom is not counted: a row is a timestamp line and a
+// sha line, and half of one is not worth scrolling to.
+func (m Model) visibleRows() int {
+	usable := chrome.PanelBodyHeight(m.panelHeight) - headerHeight
+
+	return max(1, usable/rowHeight)
+}
+
+// ensureCursorVisible scrolls the least amount that brings the selected row
+// into view, so moving the cursor one row scrolls one row while a jump to
+// either end scrolls straight there.
+//
+// The window is tracked in whole rows rather than in lines, and only the rows
+// inside it are ever rendered. Rendering the whole history into a viewport
+// and scrolling that was the obvious alternative and is what the first draft
+// of this phase did; it costs a re-render of every row on every cursor move,
+// because the selected row is styled differently from the rest. At the
+// store's ceiling - MaxBackupsPerSource across two sources - that measured
+// 39ms per keystroke, well past a frame. See BenchmarkRenderRowsAtStoreCeiling.
+func (m *Model) ensureCursorVisible() {
+	visible := m.visibleRows()
+
+	// Clamp first: entries can shrink out from under the offset on a reload.
+	maxOffset := max(0, len(m.entries)-visible)
+	m.rowOffset = min(m.rowOffset, maxOffset)
+
+	switch {
+	case m.selectedIdx < m.rowOffset:
+		m.rowOffset = m.selectedIdx
+	case m.selectedIdx >= m.rowOffset+visible:
+		m.rowOffset = m.selectedIdx - visible + 1
+	}
+
+	m.rowOffset = max(0, m.rowOffset)
+}
+
+// moveCursorTo puts the cursor on idx, scrolls it into view, and publishes
+// the new selection.
+func (m *Model) moveCursorTo(idx int) tea.Cmd {
+	m.selectedIdx = idx
+	m.ensureCursorVisible()
+
+	return m.publishSelection()
 }

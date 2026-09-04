@@ -13,8 +13,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// WindowSizeMsg here would leave the panel at width 0 whenever Backups
 	// wasn't the active page at resize time.
 	case cmds.SetBodyLayoutMsg:
-		m.panelWidth = msg.LeftWidth
-		m.panelHeight = msg.Height
+		m.setSize(msg.LeftWidth, msg.Height)
 		return m, nil
 
 	case cmds.BackupListMsg:
@@ -24,13 +23,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.empty = false
 			m.entries = nil
 			m.selectedIdx = 0
+			m.rowOffset = 0
 			return m, cmds.ClearSelectedBackup()
 		}
 		m.entries = msg.Entries
 		m.loading = false
 		m.loadErr = nil
 		m.empty = len(m.entries) == 0
+		// A reload re-lists the store, so the cursor goes back to the newest
+		// copy and the rows scroll back to the top with it.
 		m.selectedIdx = 0
+		m.rowOffset = 0
 		return m, m.publishSelection()
 
 	case tea.KeyPressMsg:
@@ -53,25 +56,21 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	// the cursor.
 	case key.Matches(msg, key.NewBinding(key.WithKeys("up", "k"))):
 		if m.selectedIdx > 0 {
-			m.selectedIdx--
-			return m, m.publishSelection()
+			return m, m.moveCursorTo(m.selectedIdx - 1)
 		}
 		return m, nil
 
 	case key.Matches(msg, key.NewBinding(key.WithKeys("down", "j"))):
 		if m.selectedIdx < len(m.entries)-1 {
-			m.selectedIdx++
-			return m, m.publishSelection()
+			return m, m.moveCursorTo(m.selectedIdx + 1)
 		}
 		return m, nil
 
 	case key.Matches(msg, key.NewBinding(key.WithKeys("home", "g"))):
-		m.selectedIdx = 0
-		return m, m.publishSelection()
+		return m, m.moveCursorTo(0)
 
 	case key.Matches(msg, key.NewBinding(key.WithKeys("end", "G"))):
-		m.selectedIdx = len(m.entries) - 1
-		return m, m.publishSelection()
+		return m, m.moveCursorTo(len(m.entries) - 1)
 
 	case key.Matches(msg, keys.Backup.Restore):
 		entry, ok := m.selected()

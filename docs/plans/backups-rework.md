@@ -194,16 +194,35 @@ publishes → the preview reads). A test that stops after the first message
 renders zero-width panels and asserts nothing. `settle` in
 `src/model/backup_test.go` runs the chain the way the runtime does.
 
-## Phase 2 — Make the list a real viewport
+## Phase 2 — Make the list scroll
 
-Fixes defect 2. The list gets a `viewport.Model` with an explicitly
-constructed keymap, and a cursor-follow: after a selection move, adjust the
-offset so the selected row stays visible. Two lines per row, so the
-arithmetic is in rows, not entries — worth a table test at the boundaries
-(first row, last row, exactly-fits, one-past-fits).
+Fixes defect 2, and it is the one phase that fixes a bug users hit today. It
+is independent of the diff and of focus, and should land on its own.
 
-This is the one phase that fixes a bug users hit today. It is independent of
-the diff and of focus, and should land on its own.
+The list keeps a `rowOffset` and renders only the rows inside the window,
+with a cursor-follow that scrolls the least amount that brings the selected
+row into view. The window is tracked in whole rows, never half of one: a row
+is a timestamp line and a sha line, and scrolling to show half of it is
+worse than not scrolling.
+
+**Not a `viewport.Model`,** which is what this plan first called for. The
+selected row is styled differently from the rest, so a cursor move restyles
+two rows, which means the viewport's content has to be rebuilt on every
+keystroke. At the store's ceiling - `MaxBackupsPerSource` across two sources -
+that measured **39ms per cursor move**, well past a frame and visibly laggy
+on a held key. Rendering only the window costs about 2.5ms for a whole frame
+and, more to the point, does not grow with the history:
+
+| entries | frame |
+| --- | --- |
+| 10 | 1.98ms |
+| 100 | 2.45ms |
+| 1000 | 2.31ms |
+
+`BenchmarkRenderRowsAtStoreCeiling` keeps that honest.
+
+Worth a table test at the boundaries: first row, last row, exactly-fits,
+one-past-fits, and a resize that shrinks the panel under a low cursor.
 
 ## Phase 3 — Focus
 
