@@ -1,5 +1,36 @@
 # Backups Page Rework — Implementation Plan
 
+## Status
+
+Phases 0-2 have landed. **Phase 3 is next.**
+
+| Phase | Commit | |
+| --- | --- | --- |
+| 0 — the keymap rule | `88c00b2`, `ef22549` | done |
+| 1 — split into two panels | `0ada178` | done |
+| 2 — scroll the list | `8926ae1`, `074c0ad`, `c3f5c2b` | done |
+| 3 — focus | | **next** |
+| 4 — the diff engine | | |
+| 5 — render the diff | | |
+
+Two corrections landed on top of Phase 2 that this plan did not call for,
+both from review rather than from the plan:
+
+- `074c0ad` gave the rows the groups/services row language — a state bar
+  carrying colour alone, `Padding(1)`, bold on the cursor row. The bar was
+  previously drawn in the row's own background colour, which made it
+  invisible rather than grey, so this fixed a bug as well as a mismatch.
+- `c3f5c2b` put the live file's own name on each row. `BackupEntry.Source`
+  is a routing key a restore resolves back to a live path, so every compose
+  filename collapses to `"compose"` and `compose.yml` cannot be told from
+  `compose.yaml`. `BackupEntry` gained a `File` field for the basename;
+  `Source` kept its job. The sha left the list for the preview's title, and
+  the column header went with it.
+
+Of the four defects in *Problem* below, 2 and 4 are fixed. 1 (no keyboard
+scrolling of the preview) and 3 (the footer advertising an inert `esc`) are
+Phase 3's.
+
 ## Problem
 
 The Backups page answers "what did this file used to be, and can I have it
@@ -243,13 +274,24 @@ rather than in both panels keeps a single owner for the key, per Phase 0.
 The new focus is broadcast to both panels, which route their own keys by the
 flag:
 
-| Key | List focused | Diff focused |
+| Key | List focused | Preview focused |
 | --- | --- | --- |
 | `↑` `↓` `j` `k` | move cursor | scroll one line |
 | `g` `G`, `home` `end` | first/last entry | top/bottom of file |
 | `pgup` `pgdn` `ctrl+u` `ctrl+d` | page the list | page the file |
 | `r` | restore | restore |
-| `tab` `shift+tab` | → diff | → list |
+| `tab` `shift+tab` | → preview | → list |
+
+**Paging the list is manual arithmetic on `rowOffset`,** not a viewport
+call. Phase 2 deliberately did not give the list a `viewport.Model` (see
+above for the measurements), so there is no `HalfPageDown` to delegate to.
+It is a few lines against `visibleRows()`, and the list already matches
+every key it handles explicitly.
+
+The preview panel does have a real viewport, already carrying
+`keys.ReadOnlyViewportKeyMap()`, so its half of the table is a matter of
+routing keys to `m.vp.Update` when it holds focus - which is also the point
+where the dead code noted in defect 1 finally starts running.
 
 Focus is shown with the documented tier lift: the focused panel sits on
 `BackgroundElevated`, the unfocused on `BackgroundPanel`. `chrome.PanelBg()`
@@ -259,11 +301,14 @@ two panels rather than changing `PanelBg()`'s signature across every
 component.
 
 Also in this phase: drop `Global.Back` from `keys.Active()`'s `"Backups"`
-case (defect 3), drop `enter` from `Backup.Restore`, move the viewport
-keymaps into `src/keys/Keys.go` beside `ListKeyMap()` — CONTRIBUTING
-requires a binding to be declared once, there, or the footer cannot render
-from the same source — and add a scroll hint to the footer modeled on
-`Files.Scroll`. Fix defect 4 while moving the keymap.
+case (defect 3 — `esc` does nothing on this page, and DESIGN.md says the bar
+does not advertise inert keys), drop `enter` from `Backup.Restore` so `r` is
+the only restore key, and add a scroll hint to the footer modelled on
+`Files.Scroll`. `keys.Active` will need a focus dimension to say which half
+the arrows are driving.
+
+The viewport keymaps already moved into `src/keys/Keys.go` in Phase 0, and
+defect 4 went with them, so neither is outstanding.
 
 ## Phase 4 — The diff
 
@@ -284,10 +329,12 @@ Built on `udiff.Lines` plus `udiff.ToUnifiedDiff` with a large context count
 a full-file view). `Spans` is present and empty from day one so Phase 5 fills
 a field rather than changing a signature.
 
-Wiring: the diff needs the **live file's** contents for the matching source
-(`entry.Source` is `"compose"` or `".env"`). The panel deliberately does not
+Wiring: the diff needs the **live file's** contents for the matching source.
+Use `entry.Source` (`"compose"` or `".env"`) for that, not `entry.File`:
+Source is the routing key AppModel already resolves to a live path, which is
+exactly the job here. `File` is for display. The panel deliberately does not
 know which files are loaded — AppModel supplies resolved paths, per the
-request/response split. So live contents ride in on the message rather than
+request/response split — so live contents ride in on the message rather than
 being read by the panel.
 
 Cheap win from the existing store: the `.bak` filename already carries the
@@ -339,6 +386,28 @@ best-effort posture `src/highlight` already takes. Fills `Line.Spans`.
 **Hunks-only view.** The panel shows the whole file. A key to collapse to
 changed hunks with N lines of context is a natural follow-up, not a
 requirement.
+
+## Traps found the hard way
+
+Three things cost real time in phases 0-2 and would cost it again.
+
+**`drive` does not run commands.** The model-level test helper applies
+messages only, and this page is a four-message chain: activate →
+`GetBackups` → `BackupListMsg` → the list publishes → the preview reads. A
+test that stops at the first message renders zero-width panels, so every
+assertion about panel contents passes vacuously — which is how the first
+version of `TestSelectingABackupReachesThePreview` passed against a list
+that published nothing at all. Use `settle` in `src/model/backup_test.go`,
+and negative-control any test that asserts on a rendered frame.
+
+**`withComposeLoaded` sets no terminal size.** Without a `WindowSizeMsg` the
+panels are zero-width and render nothing. Same failure mode as above,
+different cause.
+
+**Benchmark a per-keystroke rebuild before believing it is cheap.** The
+viewport approach in Phase 2 looked obviously right and measured 39ms per
+cursor move at the store's ceiling. Phase 5 renders diff lines per frame and
+is the next place this could bite.
 
 ## Order and why
 
