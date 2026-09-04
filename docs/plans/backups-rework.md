@@ -224,6 +224,13 @@ and, more to the point, does not grow with the history:
 Worth a table test at the boundaries: first row, last row, exactly-fits,
 one-past-fits, and a resize that shrinks the panel under a low cursor.
 
+The rows also adopt the groups/services row language, since they are the
+same kind of thing on the same kind of page: a state bar down the left edge
+carrying state by colour alone (accent for the cursor, muted grey
+otherwise), content set in a wrapper with `Padding(1)`, and the cursor row's
+title in bold. Two content lines inside that padding makes a row four lines
+tall, the same as a services row.
+
 ## Phase 3 — Focus
 
 `AppModel` gains a `backupsFocus` field, valid only while

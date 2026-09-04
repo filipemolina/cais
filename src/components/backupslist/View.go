@@ -94,53 +94,92 @@ func (m Model) renderList(width int, avail int, bg color.Color) string {
 	return chrome.PanelBodyWithFooter(width, avail, bg, content, "")
 }
 
+// renderListHeader labels the two columns. It is indented past the bar
+// column and the row wrapper's left padding so the labels sit over the
+// values they name rather than one or two columns to their left.
 func (m Model) renderListHeader(width int) string {
 	dim := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Bold(true)
 
+	contentWidth := rowContentWidth(width)
+
 	src := dim.Width(sourceColWidth).Render("SOURCE")
-	ts := dim.Width(width - sourceColWidth - 1).Render("UTC TIME")
+	ts := dim.Width(max(0, contentWidth-sourceColWidth)).Render("UTC TIME")
 
 	return lipgloss.JoinHorizontal(lipgloss.Left,
-		lipgloss.NewStyle().Width(1).Render(""),
+		lipgloss.NewStyle().Width(rowIndent).Render(""),
 		src,
 		ts,
 	)
 }
 
+// rowContentWidth is the room a row's text actually gets: the panel body
+// less the bar column and the wrapper's own horizontal padding.
+func rowContentWidth(width int) int {
+	return max(0, (width-1)-2)
+}
+
+// renderRow draws one stored version the way the groups and services lists
+// draw their rows, because it is the same kind of thing on the same kind of
+// page and should read as one visual language: a solid bar down the left
+// edge carrying state by colour alone - accent for the cursor row, muted
+// grey otherwise - over content set in a wrapper with a row of padding on
+// every side.
 func (m Model) renderRow(idx int, entry utils.BackupEntry, width int) string {
 	isSelected := idx == m.selectedIdx
 	rowBg := chrome.ListRowBg(isSelected)
 
-	ts := entry.Timestamp.UTC().Format("2006-01-02 15:04")
-	src := entry.Source
+	// The row's left edge is the same solid bar the nav uses for its active
+	// tab ("▌"), so list rows and the nav agree on thickness. This list has
+	// one cursor and no second "selected" state, so it uses two of the three
+	// colours the other lists carry.
+	barColor := appstyles.Active.TextMuted
+	if isSelected {
+		barColor = appstyles.Active.Accent
+	}
 
-	srcStyle := lipgloss.NewStyle().
+	wrapperStyle := lipgloss.NewStyle().
+		Width(width - 1).
+		Padding(1).
+		Background(rowBg)
+
+	// The wrapper's Width includes its Padding(1), so the content area is two
+	// columns narrower than the wrapper.
+	contentWidth := rowContentWidth(width)
+
+	src := lipgloss.NewStyle().
 		Foreground(appstyles.Active.TextMuted).
 		Background(rowBg).
 		Width(sourceColWidth).
-		Render(chrome.Truncate(src, sourceColWidth))
+		Render(chrome.Truncate(entry.Source, sourceColWidth))
 
-	tsStyle := lipgloss.NewStyle().
+	// The timestamp is this row's title - the thing that names the version -
+	// so it carries the cursor's bold, the way a service name does.
+	ts := lipgloss.NewStyle().
+		Bold(isSelected).
 		Foreground(appstyles.Active.TextPrimary).
 		Background(rowBg).
-		Render(chrome.Truncate(ts, width-sourceColWidth-1))
+		Render(chrome.Truncate(
+			entry.Timestamp.UTC().Format("2006-01-02 15:04"),
+			max(0, contentWidth-sourceColWidth),
+		))
 
-	content := lipgloss.JoinHorizontal(lipgloss.Left, srcStyle, tsStyle)
+	titleRow := lipgloss.JoinHorizontal(lipgloss.Left, src, ts)
 
 	shaHint := lipgloss.NewStyle().
 		Foreground(appstyles.Active.TextDim).
 		Background(rowBg).
-		Width(width - 1).
+		Width(contentWidth).
 		Render("sha8 " + entry.SHA8)
 
-	row := lipgloss.JoinVertical(lipgloss.Left, content, shaHint)
+	content := wrapperStyle.Render(lipgloss.JoinVertical(lipgloss.Left, titleRow, shaHint))
 
-	barColor := rowBg
-	if isSelected {
-		barColor = appstyles.Active.Accent
-	}
-	bar := chrome.BarColumn(barColor, rowBg, row)
+	// The bar spans the row's full height, one ▌ per line, rather than a
+	// sliver at the top - the nav's single-line bar stretched to the row's
+	// height.
+	bar := chrome.BarColumn(barColor, rowBg, content)
 
-	full := lipgloss.JoinHorizontal(lipgloss.Left, bar, row)
-	return appstyles.FillBackground(rowBg, full)
+	// Seal the row against its own background: JoinVertical pads the shorter
+	// line out with unstyled spaces, which would otherwise show the terminal
+	// background through the row.
+	return appstyles.FillBackground(rowBg, lipgloss.JoinHorizontal(lipgloss.Left, bar, content))
 }
