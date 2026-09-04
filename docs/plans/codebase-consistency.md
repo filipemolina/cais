@@ -22,8 +22,9 @@ work builds on.
 | T6 | Make `GetConfigMsg` a defined type | | todo |
 | T7 | Tidy `go.mod` and add the CI gate | | todo |
 | T8 | Delete four dead symbols | | todo |
+| T9 | Remove the deselect concept | | todo |
 
-Tasks T9 and beyond are in *Deferred* and **must not be started** without being told to.
+Tasks T10 and beyond are in *Deferred* and **must not be started** without being told to.
 
 ---
 
@@ -275,13 +276,20 @@ backupslist and model helpers already use."
 # T3 — Fix the footer advertising dead keys
 
 **Why.** `keybindingbar` sets its "a service is selected" flag to `true`
-unconditionally, so it never becomes false when a service is deselected. Deselection is
-sent as a *zero* `ServiceConfig`, not as an absent message. Press `esc` on the Services
-page and the footer keeps offering ten action keys over an empty panel; every one of
-them is then ignored by the details panel.
+unconditionally, so it never becomes false. "Nothing is selected" is sent as a *zero*
+`ServiceConfig`, not as an absent message.
+
+The reachable path is deleting the last service: `configSyncCmds` batches
+`SetServicesList([])` and `SetSelectedService(zero)` together, and `tea.Batch` promises
+no ordering — so whether the footer ends up offering ten action keys over an empty panel
+is a coin flip on every deletion. Every one of those keys is then ignored by the details
+panel.
 
 The group case one line above is already correct — it stores the string, so `""` clears
 it. This makes the service case behave the same way.
+
+**Note:** T9 later deletes this field entirely. This task still earns its place — it is
+two lines, it fixes a live bug now, and it stands on its own if T9 is never done.
 
 ### Step 3.1 — the fix
 
@@ -354,11 +362,13 @@ func driveBar(t *testing.T, m Model, msgs ...tea.Msg) Model {
 	return m
 }
 
-// Deselecting a service has to take its action keys off the footer. The app
-// says "nothing is selected" by sending a zero ServiceConfig rather than by
-// sending nothing, so a handler that treats any SetSelectedServiceMsg as a
-// selection leaves the bar advertising keys the details panel will ignore.
-func TestDeselectingAServiceClearsTheActionKeys(t *testing.T) {
+// Deleting the last service has to take the action keys off the footer.
+//
+// configSyncCmds broadcasts the emptied list and the zero selection in one
+// batch, and tea.Batch promises no ordering between them - so a handler that
+// reads any SetSelectedServiceMsg as a selection leaves the bar advertising
+// verbs the details panel will ignore, on roughly half of all deletions.
+func TestEmptyingTheServicesListClearsTheActionKeys(t *testing.T) {
 	m := New().(Model)
 
 	m = driveBar(t, m,
@@ -371,21 +381,25 @@ func TestDeselectingAServiceClearsTheActionKeys(t *testing.T) {
 		t.Fatal("precondition: a selected service should put the action keys on the bar")
 	}
 
-	m = driveBar(t, m, cmds.SetSelectedServiceMsg(types.ServiceConfig{}))
+	m = driveBar(t, m,
+		cmds.SetServicesListMsg([]types.ServiceConfig{}),
+		cmds.SetSelectedServiceMsg(types.ServiceConfig{}),
+	)
 
 	if hints := hintsOf(t, m); strings.Contains(hints, "start") {
-		t.Errorf("the footer still offers the action keys after deselection: %q", hints)
+		t.Errorf("the action keys survive an emptied services list: %q", hints)
 	}
 }
 ```
 
 This file has been compiled and run against both the broken and the fixed code. With
-the bug present it fails with a 16-hint list; with T3 Step 3.1 applied it passes.
+the bug present it fails; with T3 Step 3.1 applied it passes. It drives the emptied-list
+path rather than the `esc` path on purpose, so it stays valid after T9.
 
 ### Verification
 
 ```
-go test ./src/components/keybindingbar/ -run TestDeselectingAServiceClearsTheActionKeys -count=1 -v
+go test ./src/components/keybindingbar/ -run TestEmptyingTheServicesListClearsTheActionKeys -count=1 -v
 ```
 
 Expected: `PASS`.
@@ -400,20 +414,20 @@ Then the full check from Rule 8.
 ### Commit
 
 ```
-git add -A && git commit -m "fix: clear the footer's action keys when a service is deselected
+git add -A && git commit -m "fix: clear the footer's action keys when the last service goes
 
 The bar set selectedService unconditionally on SetSelectedServiceMsg, so the
-flag could never go false. Deselection is broadcast as a zero ServiceConfig -
-esc on the Services page sends one - so after esc the footer went on offering
-s t r p x L H B e E y over a details panel showing its empty state, and every
-one of those keys was then dropped by the panel.
+flag could never go false. Nothing-selected is broadcast as a zero
+ServiceConfig, and configSyncCmds sends the emptied list and that zero in one
+batch - which promises no ordering. So deleting the last service left the
+footer offering s t r p x L H B e E y over an empty details panel about half
+the time, and every one of those keys was then dropped by the panel.
 
 The group case beside it was already right: it stores the string, so an empty
 one clears. This makes the service case match.
 
 The existing tests missed it because they build Model literals with
-selectedService already set, rather than driving the message in. The new test
-drives it."
+selectedService already set, rather than driving the messages in."
 ```
 
 ---
@@ -877,6 +891,480 @@ directly instead."
 
 ---
 
+# T9 — Remove the deselect concept
+
+**Why.** There is no reason to have nothing selected. `configSyncCmds` already re-selects
+by name after every reload and falls back to index 0 when the name is gone
+(`src/model/Update.go:190-197`), so "something is always selected when the list is not
+empty" is already the invariant everywhere — except one `esc` branch that exists purely
+to break it.
+
+That branch is a leftover. `docs/DESIGN.md` justifies `esc` as "back: out of the details
+panel, to the list", but body-panel focus was removed and there is no details panel you
+are "in" any more, so there is nothing to go back from. The Backups page already works
+the way this task makes Home and Services work.
+
+Removing it deletes a whole state — non-empty list with nothing selected — and collapses
+`keys.Context.Selected` into `!ListEmpty`.
+
+**The empty-list case stays.** An empty compose file still means nothing can be selected.
+`detailspanel`'s "Select a service" card, the zero-broadcasts in `configSyncCmds`, and
+`TestReloadOfAnEmptyProjectClearsTheSelection` are all still correct. Do not touch them.
+
+### Step 9.1 — delete the `esc` deselect branch
+
+File: `src/model/Update.go`
+
+FIND:
+```
+			if !m.escKept() && !m.inlineEditing {
+				if m.activePage == "Home" && m.selection.groupName != "" {
+					m.selection.groupName = ""
+					finalCmds = append(finalCmds, cmds.SetSelectedGroup(""))
+				} else if m.activePage == "Services" && m.selection.serviceName != "" {
+					m.selection.serviceName = ""
+					finalCmds = append(finalCmds, cmds.SetSelectedService(types.ServiceConfig{}))
+				}
+			}
+```
+
+REPLACE WITH:
+```
+```
+
+(Delete those lines entirely.)
+
+If `go build ./...` then reports `types` imported and not used in that file, remove the
+`"github.com/compose-spec/compose-go/v2/types"` import line and nothing else. If it does
+not report that, leave the imports alone.
+
+### Step 9.2 — retire `keys.Context.Selected`
+
+File: `src/keys/Keys.go`
+
+**Edit A — delete the field.**
+
+FIND:
+```
+	// Selected reports whether the panel has a subject to act on - a chosen
+	// group on Home, a chosen service on Services. Without one, the action
+	// keys do nothing and are not offered.
+	Selected bool
+```
+
+REPLACE WITH:
+```
+```
+
+**Edit B — derive it from emptiness instead.**
+
+FIND:
+```
+	case "Home", "Services":
+		var bindings []key.Binding
+		if ctx.Selected {
+```
+
+REPLACE WITH:
+```
+	case "Home", "Services":
+		var bindings []key.Binding
+		// A non-empty list always has a row under the cursor, and that row is
+		// the selection - there is no way to deselect. So "is there a subject
+		// to act on" and "does the list have rows" are the same question, and
+		// asking it once is what stops two callers answering it differently.
+		if !ctx.ListEmpty {
+```
+
+**Edit C — stop advertising `esc` where it does nothing.**
+
+FIND:
+```
+		// Back is the esc ladder's second rung: deselect. It is only live
+		// when something is selected and the filter has not already claimed
+		// esc for itself.
+		if ctx.Selected && ctx.Filter != list.FilterApplied {
+			bindings = append(bindings, Global.Back)
+		}
+
+		return bindings
+```
+
+REPLACE WITH:
+```
+		// No Back rung here any more. esc used to deselect; with the selection
+		// permanent there is nothing left for it to do on this page that the
+		// footer is not already showing - an applied filter takes the slot
+		// above as "esc clear filter", and dismissing an error banner works
+		// but is unadvertised on every page, Files and Backups included. The
+		// bar does not advertise inert keys.
+
+		return bindings
+```
+
+### Step 9.3 — drop the footer's `selectedService` mirror
+
+**This step assumes T3 has already been applied**, because the text it removes is the
+text T3 wrote. If you skipped T3, STOP.
+
+File: `src/components/keybindingbar/Update.go`
+
+FIND:
+```
+	// The zero ServiceConfig is how the app says "nothing is selected" - esc on
+	// the Services page sends exactly that. Setting the flag unconditionally
+	// meant it could never go false, so the footer went on advertising the
+	// action keys over an empty details panel, and every one of them was then
+	// ignored by the panel that had nothing to act on.
+	case cmds.SetSelectedServiceMsg:
+		m.selectedService = msg.Name != ""
+
+```
+
+REPLACE WITH:
+```
+```
+
+File: `src/components/keybindingbar/Model.go`
+
+FIND:
+```
+	selectedService   bool
+```
+
+REPLACE WITH:
+```
+```
+
+File: `src/components/keybindingbar/Update.go`
+
+FIND:
+```
+	case cmds.SetServicesListMsg:
+		m.servicesListEmpty = len(msg) == 0
+		if m.servicesListEmpty {
+			m.selectedService = false
+		}
+```
+
+REPLACE WITH:
+```
+	case cmds.SetServicesListMsg:
+		m.servicesListEmpty = len(msg) == 0
+```
+
+**Keep `selectedGroup`.** It is still needed — `bindingsFor` uses it for the
+`ReadOnlyGroup` check against the ungrouped row. Only `selectedService` goes.
+
+### Step 9.4 — stop passing `Selected`
+
+File: `src/components/keybindingbar/View.go`
+
+FIND:
+```
+	listEmpty := m.groupsListEmpty
+	selected := m.selectedGroup != ""
+
+	switch m.activePage {
+	case "Services":
+		listEmpty = m.servicesListEmpty
+		selected = m.selectedService
+	case "Backups":
+```
+
+REPLACE WITH:
+```
+	listEmpty := m.groupsListEmpty
+
+	switch m.activePage {
+	case "Services":
+		listEmpty = m.servicesListEmpty
+	case "Backups":
+```
+
+Then in the same file remove the two remaining references. FIND:
+```
+		// The version list has no "selected" beyond its cursor, so only
+		// emptiness matters here - it is what decides whether / is offered.
+		listEmpty = m.backupsListEmpty
+		selected = false
+	}
+```
+
+REPLACE WITH:
+```
+		// The version list has no "selected" beyond its cursor, so only
+		// emptiness matters here - it is what decides whether / is offered.
+		listEmpty = m.backupsListEmpty
+	}
+```
+
+FIND:
+```
+		ListEmpty:             listEmpty,
+		Selected:              selected,
+```
+
+REPLACE WITH:
+```
+		ListEmpty:             listEmpty,
+```
+
+File: `src/model/Update.go` — the help overlay's context builder.
+
+FIND:
+```
+	case "Home":
+		ctx.ListEmpty = len(m.listedGroupNames()) == 0
+		ctx.Selected = m.selection.groupName != ""
+		ctx.ReadOnlyGroup = m.selection.groupName == apptypes.UngroupedGroup
+		ctx.UngroupedMaterialized = m.ungroupedMaterialized()
+	case "Services":
+		ctx.ListEmpty = m.config.configProject == nil || len(m.config.configProject.Services) == 0
+		ctx.Selected = m.selection.serviceName != ""
+```
+
+REPLACE WITH:
+```
+	case "Home":
+		ctx.ListEmpty = len(m.listedGroupNames()) == 0
+		ctx.ReadOnlyGroup = m.selection.groupName == apptypes.UngroupedGroup
+		ctx.UngroupedMaterialized = m.ungroupedMaterialized()
+	case "Services":
+		ctx.ListEmpty = m.config.configProject == nil || len(m.config.configProject.Services) == 0
+```
+
+### Step 9.5 — update the tests that encoded the old model
+
+**This whole task was executed once end to end before being written down, so this list
+is complete.** Nine test sites break. Fix all nine; do not add or skip any.
+
+**A. `src/keys/Keys_test.go` — the `Selected` field is gone (7 sites).**
+
+Delete the field from every `Context{…}` literal. Mechanically: remove every occurrence
+of `Selected: true, ` and every occurrence of `, Selected: true`. Nothing else in the
+literals changes. `ListEmpty` defaults to `false`, which now means "populated, so
+something is selected" — the same thing `Selected: true` used to say.
+
+**B. `src/keys/Keys_test.go` — two assertions asserted the abolished state.**
+
+FIND:
+```
+		// Edit/Delete need a selection, which the list does not have here.
+		for _, binding := range []key.Binding{List.Edit, List.Delete} {
+			if entryIn(t, groups, binding).Available {
+				t.Errorf("%q should be dimmed with no selection", binding.Help().Key)
+			}
+		}
+
+		// The action keys need a selected subject.
+		if entryIn(t, groups, Details.Start).Available {
+			t.Error("s start should be dimmed with no selection")
+		}
+```
+
+REPLACE WITH:
+```
+		// Edit/Delete act on the row under the cursor, and a populated list
+		// always has one - there is no way to deselect. The dimmed case is an
+		// empty list, covered in its own subtest below.
+		for _, binding := range []key.Binding{List.Edit, List.Delete} {
+			if !entryIn(t, groups, binding).Available {
+				t.Errorf("%q should be available on a populated list", binding.Help().Key)
+			}
+		}
+
+		// Same for the action keys: the subject is whatever the cursor is on.
+		if !entryIn(t, groups, Details.Start).Available {
+			t.Error("s start should be available on a populated list")
+		}
+```
+
+**C. `src/keys/Keys_test.go` — `esc back` is no longer offered on a body page.**
+
+FIND:
+```
+		global := scopeTitled(t, catalog, "Global")
+		if !entryIn(t, global, Global.Back).Available {
+			t.Error("esc back should be available with a selection")
+		}
+	})
+```
+
+REPLACE WITH:
+```
+		// esc is not offered on a body page any more: there is no deselect
+		// rung for it, and an applied filter takes the slot as "esc clear
+		// filter" when there is one.
+		global := scopeTitled(t, catalog, "Global")
+		if entryIn(t, global, Global.Back).Available {
+			t.Error("esc back should be dimmed on a body page")
+		}
+	})
+```
+
+**D. `src/components/keybindingbar/Model_test.go` — the removed field.**
+
+Replace `Model{activePage: "Services", selectedService: true, editing: true}` with
+`Model{activePage: "Services", editing: true}`, and
+`Model{activePage: "Services", selectedService: true}` with
+`Model{activePage: "Services"}`.
+
+**E. `src/components/keybindingbar/Model_test.go` — expectations that carried `esc back`.**
+
+Remove the trailing `· esc back` from every `want:` string that ends
+` · ↑/↓ navigate · esc back"`. Mechanically: replace ` · ↑/↓ navigate · esc back"` with
+` · ↑/↓ navigate"`. **Leave the two that are not footer-body cases alone** — the inline
+editor case (`ctrl+s save · … · esc back`) and the bare `"esc back"` case still offer it,
+because the editor and the pending-action state still return it.
+
+**F. `src/components/keybindingbar/Model_test.go` — three expectations that now show the
+verbs.** A populated list with nothing selected was the old model; those literals now
+mean "populated, therefore selected", so the verbs appear. Update exactly these three
+`want:` strings:
+
+- the *groups list with groups* case: `"n new · / filter · ↑/↓ navigate"` becomes
+  `"s start · t stop · r restart · p pull · x remove · L logs · e edit · R rename · n new · d delete · / filter · ↑/↓ navigate"`
+- the *groups list with a filter applied* case:
+  `"n new · esc clear filter · ↑/↓ navigate"` becomes
+  `"s start · t stop · r restart · p pull · x remove · L logs · e edit · R rename · n new · d delete · esc clear filter · ↑/↓ navigate"`
+- the *services list with services* case: `"n new · / filter · ↑/↓ navigate"` becomes
+  `"s start · t stop · r restart · p pull · x remove · L logs · H healthcheck · B boot · e edit · E open editor · y copy url · n new · d delete · / filter · ↑/↓ navigate"`
+
+Do **not** touch the two `"n new · ↑/↓ navigate"` cases — those are empty lists, and an
+empty list still offers only `n new`.
+
+**G. `src/model/esc_test.go` — delete the test for the deleted behaviour.**
+
+Delete the whole `TestEscOnASelectedGroupDeselectsIt` function including its doc comment.
+Leave `TestEscClearsAnAppliedFilter` and `TestEscOnAnUnfilteredListDoesNothing` alone.
+Run `gofmt -w src/model/esc_test.go` afterwards — the deletion leaves blank lines that
+`gofmt -l` will otherwise flag.
+
+**H. `src/model/error_banner_test.go` — the second half of the ladder test.**
+
+FIND:
+```
+// Esc dismisses the banner before it deselects the current group - the same
+// one-key-one-job ladder a filtered list clears on. The first esc clears the
+// banner; the second esc deselects the group (there is no panel to return
+// focus to anymore).
+func TestEscDismissesTheBannerBeforeDeselecting(t *testing.T) {
+```
+
+REPLACE WITH:
+```
+// Esc dismisses the banner and leaves the selection alone. Dismissing is the
+// last rung of the ladder now: there is no deselect step under it, because a
+// populated list always has a row under the cursor and that row is the
+// selection. A second esc therefore does nothing.
+func TestEscDismissesTheBannerAndKeepsTheSelection(t *testing.T) {
+```
+
+Then, in the same function, FIND:
+```
+	// Second esc: no banner in the way, so esc deselects the group.
+	m = updateForTest(t, m, keyPress(teaKeyEsc()))
+	if m.selection.groupName != "" {
+		t.Errorf("second esc did not deselect the group: %q", m.selection.groupName)
+	}
+}
+```
+
+REPLACE WITH:
+```
+	// Second esc: nothing left for it to do, and in particular it must not
+	// clear the selection.
+	m = updateForTest(t, m, keyPress(teaKeyEsc()))
+	if m.selection.groupName != "core" {
+		t.Errorf("second esc cleared the selection: %q", m.selection.groupName)
+	}
+}
+```
+
+### Step 9.6 — update the design record
+
+File: `docs/DESIGN.md`
+
+Find the paragraph beginning **`**`esc` is "back", as a ladder of claims.**`** and replace
+the sentence describing deselection. The paragraph currently says esc "clears the active
+filter first, then — if an error banner is showing — dismisses it, then clears the
+current selection (deselecting the group or service so the details panel returns to its
+empty state), and does nothing further once both are already clear."
+
+Replace that sentence with:
+
+```
+clears the active filter first, then — if an error banner is showing — dismisses it, and
+does nothing further. There is no deselect rung: a non-empty list always has a row under
+the cursor and that row is the selection, so there is no state to return to. The footer
+offers `esc` only as `esc clear filter`; dismissing a banner works but is not
+advertised, the same as on Files and Backups.
+```
+
+Do not reword anything else in that paragraph.
+
+### Verification
+
+```
+grep -rn "ctx.Selected\|Selected:" src/keys/ src/components/keybindingbar/ src/model/ | grep -v _test
+```
+
+Expected: **no output.**
+
+```
+grep -rn "selectedService" src/ | grep -v _test
+```
+
+Expected: **no output.**
+
+Then the full check from Rule 8. The whole task was executed once before being written
+down, and it ends green — build, vet, gofmt and the entire suite. If anything fails,
+you have deviated from the steps; STOP and report rather than improvising.
+
+Two existing tests must keep passing **unchanged**. They are the guard that the
+invariant still holds, so do not edit them:
+`TestReloadSelectsTheFirstEntryWithNoPriorSelection` and
+`TestReloadFallsBackWhenTheSelectionIsGone` in `src/model/selection_test.go`.
+
+### Manual check
+
+Build and run the app, then confirm all four by eye:
+
+1. On Home, press `esc` with a group highlighted — the group stays highlighted and the
+   details panel keeps showing it.
+2. The footer no longer shows `esc back` on Home or Services.
+3. `/` then a term then `enter` still shows `esc clear filter`, and `esc` still clears it.
+4. With an empty compose file, the Services page still shows its "Select a service" card
+   and offers only `n new`.
+
+### Commit
+
+```
+git add -A && git commit -m "refactor: remove the deselect concept
+
+Nothing selected was a state only esc could produce. configSyncCmds already
+re-selects by name after every reload and falls back to the first row when the
+name is gone, so a non-empty list always had a selection everywhere except that
+one branch.
+
+The branch was a leftover from focusable body panels: esc was documented as
+back out of the details panel, but there has been no panel to be in since focus
+was removed, so it returned the user to nothing.
+
+With it gone, keys.Context.Selected collapses into !ListEmpty - one fewer field
+for the footer and the help overlay to derive separately, and one of the two
+they were already disagreeing about. The footer stops offering esc back on Home
+and Services, where it would now do nothing; an applied filter still shows esc
+clear filter, and banner dismissal stays unadvertised exactly as it already is
+on Files and Backups.
+
+The empty-list case is untouched: an empty compose file still selects nothing,
+and the panels still render their empty states for it."
+```
+
+---
+
 # DO NOT DO THESE
 
 The audit raised these. They look like findings. **They are not. Leave them alone.**
@@ -919,7 +1407,9 @@ uncontroversial pieces sit next to it and could be shared once that is settled:
 `containerForService` and `renderPendingAction` are byte-identical across the two panels.
 
 **D2 — `keys.Context` has two builders.** `AppModel.helpContext()` derives it from
-state; `keybindingbar` rebuilds it from thirteen mirrored fields. T3 fixes the one place
+state; `keybindingbar` rebuilds it from mirrored fields. T9 removes two of them
+(`Selected` from the context, `selectedService` from the bar), so this is smaller than
+the audit found it, but the shape is unchanged. T3 fixes the one place
 they currently disagree, but not the reason they *can*. The fix is to broadcast the
 resolved `keys.Context` from `AppModel` and delete the mirror — about sixty lines across
 two files, plus moving `keybindingbar`'s tests to drive through `Update` rather than
