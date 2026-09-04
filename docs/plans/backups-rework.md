@@ -2,16 +2,40 @@
 
 ## Status
 
-Phases 0-3 have landed. **Phase 4 is next.**
+Phases 0-3 have landed. **Phase 4 is next.** Nothing is in flight: the working
+tree is clean at `4cb09ec` and the whole suite is green.
 
 | Phase | Commit | |
 | --- | --- | --- |
 | 0 — the keymap rule | `88c00b2`, `ef22549` | done |
 | 1 — split into two panels | `0ada178` | done |
 | 2 — scroll the list | `8926ae1`, `074c0ad`, `c3f5c2b` | done |
-| 3 — focus | `e8d5bcc` | done |
+| 3 — focus, and the bubbles-list conversion | `4cb09ec` | done |
 | 4 — the diff engine | | **next** |
 | 5 — render the diff | | |
+
+### Picking this up cold
+
+Read *Decisions*, then Phase 4 and Phase 5, then *Traps found the hard way* —
+the traps section is the part that will cost you time if you skip it.
+
+The Backups page is `AppModel.pages["Backups"]`: two sibling components,
+`src/components/backupslist` (a bubbles list over `utils.BackupEntry`, owns
+the cursor) and `src/components/backuppreviewpanel` (a viewport over the
+selected copy's bytes, owns the read). They never reference each other; the
+cursor reaches the preview as `cmds.SetSelectedBackupMsg`. `AppModel` owns
+`backupsFocus` and is the single handler for `tab`.
+
+Phase 4 adds the diff and touches neither the list nor focus. It is scoped to
+`backuppreviewpanel` plus a new package for the diff itself, so the seam is
+clean.
+
+**One thing to settle before writing Phase 4 code:** an unrelated
+codebase-wide consistency audit was commissioned right after Phase 3 landed
+(duplication, divergent solutions, overengineering). Its findings may touch the
+preview panel or the highlighter. Check whether that report exists and has been
+acted on before starting, or you may write Phase 4 against code that is about
+to move.
 
 Two corrections landed on top of Phase 2 that this plan did not call for,
 both from review rather than from the plan:
@@ -31,10 +55,10 @@ All four defects in *Problem* below are now fixed: 2 and 4 in Phase 2, and 1
 (no keyboard scrolling of the preview) and 3 (the footer advertising an inert
 `esc`) in Phase 3.
 
-The version list was then moved onto the bubbles list, before Phase 4, so all
-three body lists are set up the same way. It landed in the same commit. It had hand-rolled its own cursor,
-windowing and paging since Phase 1, on two justifications that did not survive
-checking:
+The version list was then moved onto the bubbles list, in the same commit as
+Phase 3, so all three body lists are set up the same way. It had hand-rolled
+its own cursor, windowing and paging since Phase 1, on two justifications that
+did not survive checking:
 
 - *"the rows are two-line entries, not `list.Item`s"* (Phase 1). The services
   list renders 4-line rows through a custom delegate, and `074c0ad` had already
