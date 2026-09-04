@@ -38,7 +38,7 @@ func (m Model) View() tea.View {
 	if m.hasSelection() {
 		titleRight = lipgloss.NewStyle().
 			Foreground(appstyles.Active.TextDim).
-			Render(fmt.Sprintf("%s · %s", m.entry.Source, m.entry.SHA8))
+			Render(fmt.Sprintf("%s · %s", m.entry.File, m.entry.SHA8))
 	}
 
 	screen := chrome.PanelFrame("Preview", titleRight, m.panelWidth, m.panelHeight, body)

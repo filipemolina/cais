@@ -515,3 +515,48 @@ func TestReplaceFileAtomicallyBacksUp(t *testing.T) {
 		t.Errorf("expected no backup for a first-create, got %d", got)
 	}
 }
+
+// ListBackups reports the live file's real name, not the routing tag.
+//
+// Source flattens every compose filename to "compose" because a restore uses
+// it to pick which live path to write back. That makes it useless as a label:
+// compose.yml and compose.yaml are different files that can sit in the same
+// directory with separate histories, and a list showing "compose" for both
+// cannot say which one a copy would be restored over.
+func TestListBackupsReportsTheLiveFileName(t *testing.T) {
+	dir := t.TempDir()
+
+	for _, name := range []string{"compose.yaml", "compose.yml", ".env"} {
+		path := filepath.Join(dir, name)
+		if err := os.WriteFile(path, []byte("first: "+name+"\n"), 0o644); err != nil {
+			t.Fatalf("writing %s: %v", name, err)
+		}
+		if err := SnapshotFile(path); err != nil {
+			t.Fatalf("snapshot %s: %v", name, err)
+		}
+	}
+
+	for _, tc := range []struct {
+		file       string
+		wantSource string
+	}{
+		{"compose.yaml", "compose"},
+		{"compose.yml", "compose"},
+		{".env", ".env"},
+	} {
+		entries, err := ListBackups(filepath.Join(dir, tc.file))
+		if err != nil {
+			t.Fatalf("ListBackups(%s): %v", tc.file, err)
+		}
+		if len(entries) != 1 {
+			t.Fatalf("ListBackups(%s): %d entries, want 1", tc.file, len(entries))
+		}
+
+		if got := entries[0].File; got != tc.file {
+			t.Errorf("File for %s = %q, want %q", tc.file, got, tc.file)
+		}
+		if got := entries[0].Source; got != tc.wantSource {
+			t.Errorf("Source for %s = %q, want %q", tc.file, got, tc.wantSource)
+		}
+	}
+}

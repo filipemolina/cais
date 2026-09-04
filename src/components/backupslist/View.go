@@ -63,22 +63,18 @@ func plural(n int) string {
 	return "s"
 }
 
-// renderList puts the scrolling rows under the pinned column header. The
-// header and its rule stay put while the rows move, so a long history never
-// scrolls its own column labels away.
+// renderList renders the rows inside the scroll window.
 //
-// The rows themselves live in a viewport rather than being rendered whole and
-// clipped by the body: clipping left a cursor past the visible rows moving
-// with nothing on screen to show for it.
+// There is no column header: a row is a filename over a timestamp, stacked,
+// not two columns, so there is nothing for a two-column header to label. The
+// groups and services lists carry no header either, which is the language
+// this list follows.
 func (m Model) renderList(width int, avail int, bg color.Color) string {
 	if width < 1 {
 		width = 1
 	}
 
-	parts := []string{
-		m.renderListHeader(width),
-		chrome.PanelRule(width),
-	}
+	var parts []string
 
 	// Only the rows inside the window are rendered. Rendering the whole
 	// history and letting the body clip is what this phase replaced, and
@@ -94,24 +90,6 @@ func (m Model) renderList(width int, avail int, bg color.Color) string {
 	return chrome.PanelBodyWithFooter(width, avail, bg, content, "")
 }
 
-// renderListHeader labels the two columns. It is indented past the bar
-// column and the row wrapper's left padding so the labels sit over the
-// values they name rather than one or two columns to their left.
-func (m Model) renderListHeader(width int) string {
-	dim := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Bold(true)
-
-	contentWidth := rowContentWidth(width)
-
-	src := dim.Width(sourceColWidth).Render("SOURCE")
-	ts := dim.Width(max(0, contentWidth-sourceColWidth)).Render("UTC TIME")
-
-	return lipgloss.JoinHorizontal(lipgloss.Left,
-		lipgloss.NewStyle().Width(rowIndent).Render(""),
-		src,
-		ts,
-	)
-}
-
 // rowContentWidth is the room a row's text actually gets: the panel body
 // less the bar column and the wrapper's own horizontal padding.
 func rowContentWidth(width int) int {
@@ -124,6 +102,12 @@ func rowContentWidth(width int) int {
 // edge carrying state by colour alone - accent for the cursor row, muted
 // grey otherwise - over content set in a wrapper with a row of padding on
 // every side.
+//
+// The first line is the live file's own name rather than the "compose" /
+// ".env" tag behind it, because compose.yml and compose.yaml are different
+// files and a list that calls both "compose" cannot say which one a copy
+// would be restored over. The sha is not here: it identifies content, which
+// is what the preview panel beside this list is showing.
 func (m Model) renderRow(idx int, entry utils.BackupEntry, width int) string {
 	isSelected := idx == m.selectedIdx
 	rowBg := chrome.ListRowBg(isSelected)
@@ -146,32 +130,27 @@ func (m Model) renderRow(idx int, entry utils.BackupEntry, width int) string {
 	// columns narrower than the wrapper.
 	contentWidth := rowContentWidth(width)
 
-	src := lipgloss.NewStyle().
-		Foreground(appstyles.Active.TextMuted).
-		Background(rowBg).
-		Width(sourceColWidth).
-		Render(chrome.Truncate(entry.Source, sourceColWidth))
-
-	// The timestamp is this row's title - the thing that names the version -
-	// so it carries the cursor's bold, the way a service name does.
-	ts := lipgloss.NewStyle().
+	// The filename is this row's title - the thing that names what would be
+	// restored - so it carries the cursor's bold, the way a service name does.
+	file := lipgloss.NewStyle().
 		Bold(isSelected).
 		Foreground(appstyles.Active.TextPrimary).
 		Background(rowBg).
-		Render(chrome.Truncate(
-			entry.Timestamp.UTC().Format("2006-01-02 15:04"),
-			max(0, contentWidth-sourceColWidth),
-		))
+		Width(contentWidth).
+		Render(chrome.Truncate(entry.File, contentWidth))
 
-	titleRow := lipgloss.JoinHorizontal(lipgloss.Left, src, ts)
-
-	shaHint := lipgloss.NewStyle().
+	// UTC is spelled out on the row now that there is no column header to
+	// say so, because a bare timestamp invites being read as local time.
+	when := lipgloss.NewStyle().
 		Foreground(appstyles.Active.TextDim).
 		Background(rowBg).
 		Width(contentWidth).
-		Render("sha8 " + entry.SHA8)
+		Render(chrome.Truncate(
+			entry.Timestamp.UTC().Format("2006-01-02 15:04")+" UTC",
+			contentWidth,
+		))
 
-	content := wrapperStyle.Render(lipgloss.JoinVertical(lipgloss.Left, titleRow, shaHint))
+	content := wrapperStyle.Render(lipgloss.JoinVertical(lipgloss.Left, file, when))
 
 	// The bar spans the row's full height, one ▌ per line, rather than a
 	// sliver at the top - the nav's single-line bar stretched to the row's

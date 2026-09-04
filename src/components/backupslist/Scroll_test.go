@@ -2,8 +2,11 @@ package backupslist
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/charmbracelet/x/ansi"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/filipemolina/cais/src/cmds"
@@ -176,7 +179,7 @@ func TestARowAtTheFoldIsFullyVisible(t *testing.T) {
 		t.Fatalf("the cursor is on row %d, want the last row of the window (%d)", got, want)
 	}
 
-	usable := chrome.PanelBodyHeight(m.panelHeight) - headerHeight
+	usable := chrome.PanelBodyHeight(m.panelHeight)
 	if rendered := visibleRows * rowHeight; rendered > usable {
 		t.Errorf("the window renders %d lines into %d, so the last row is clipped", rendered, usable)
 	}
@@ -238,5 +241,33 @@ func BenchmarkRenderRowsAtStoreCeiling(b *testing.B) {
 		m.selectedIdx = i % len(m.entries)
 		m.ensureCursorVisible()
 		_ = m.View()
+	}
+}
+
+// A row names the live file it would restore over, and does not carry the
+// sha. Two compose files can sit in one directory with separate histories,
+// so a row that said only "compose" could not tell them apart; the sha
+// identifies content, which is the preview panel's job beside this list.
+func TestARowNamesTheFileAndNotTheSha(t *testing.T) {
+	entries := syntheticEntries(1)
+	entries[0].File = "compose.yml"
+
+	m := New().(Model)
+	sized, _ := m.Update(cmds.SetBodyLayoutMsg{LeftWidth: 60, RightWidth: 60, Height: 24})
+	m = sized.(Model)
+	loaded, _ := m.Update(cmds.BackupListMsg{Entries: entries})
+	m = loaded.(Model)
+
+	frame := ansi.Strip(m.View().Content)
+
+	if !strings.Contains(frame, "compose.yml") {
+		t.Errorf("the row does not name the live file:\n%s", frame)
+	}
+	if strings.Contains(frame, entries[0].SHA8) {
+		t.Errorf("the row still carries the sha %q, which belongs to the preview:\n%s", entries[0].SHA8, frame)
+	}
+	// The timestamp says which zone it is in, now that no column header does.
+	if !strings.Contains(frame, "UTC") {
+		t.Errorf("the row's timestamp does not say it is UTC:\n%s", frame)
 	}
 }

@@ -316,10 +316,10 @@ func TestSelectingABackupReachesThePreview(t *testing.T) {
 
 	frame := ansi.Strip(m.View().Content)
 
-	// The preview names the copy it is showing as "<source> · <sha8>" in its
-	// title. The list writes the same sha as "sha8 <sha8>", so the separator
-	// is what makes this the preview's line and not a row of the list.
-	if !strings.Contains(frame, "compose · ") {
+	// The preview names the copy it is showing as "<file> · <sha8>" in its
+	// title, and it is the only panel that shows a sha at all - the list
+	// rows are a filename over a timestamp.
+	if !strings.Contains(frame, "compose.yaml · ") {
 		t.Errorf("the preview never received a selection from the list:\n%s", frame)
 	}
 	if strings.Contains(frame, "Nothing selected") {

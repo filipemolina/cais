@@ -162,7 +162,15 @@ type BackupEntry struct {
 	// ".env", and ".env" for the .env file. It is derived from the live
 	// file's basename, not from the slug folder, so a merged list can
 	// label each row by what it is.
+	//
+	// It is a routing key, not a name: a restore resolves it back to a live
+	// path, which is why every compose file collapses to one value. Use File
+	// to show the user which file a copy belongs to.
 	Source string
+	// File is the live file's basename - compose.yaml, compose.yml, .env.
+	// Source cannot answer this: it flattens every compose filename to
+	// "compose", and compose.yml and compose.yaml are different files.
+	File string
 	// Name is the .bak filename, e.g. 20260811T091530.ab12cd34.bak.
 	Name string
 	// Timestamp is the UTC write time parsed from the filename prefix.
@@ -201,6 +209,7 @@ func ListBackups(sourceFile string) ([]BackupEntry, error) {
 	}
 
 	label := sourceLabel(sourceFile)
+	base := filepath.Base(sourceFile)
 	var backups []BackupEntry
 	for _, entry := range entries {
 		if entry.IsDir() {
@@ -225,6 +234,7 @@ func ListBackups(sourceFile string) ([]BackupEntry, error) {
 
 		backups = append(backups, BackupEntry{
 			Source:    label,
+			File:      base,
 			Name:      name,
 			Timestamp: ts,
 			SHA8:      sha,

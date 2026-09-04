@@ -8,25 +8,14 @@ import (
 )
 
 // rowHeight is how many terminal lines one version row occupies: the
-// source/timestamp line, the sha8 line under it, and the row of padding
-// above and below them both. It must agree with what renderRow emits - the
+// filename line, the timestamp line under it, and the row of padding above
+// and below them both. It must agree with what renderRow emits - the
 // window budgets this many lines per row when working out how many fit, and
 // a disagreement either clips the last row or leaves dead space under it.
 //
 // Four is the same height a services row has, for the same reason: two
 // content lines inside a wrapper with Padding(1).
 const rowHeight = 4
-
-// rowIndent is how far a row's text sits from the panel's left edge: one
-// column for the state bar, one for the wrapper's left padding. The column
-// header is indented by the same amount so the labels line up with the
-// values.
-const rowIndent = 2
-
-// headerHeight is the column header plus the rule under it. Both are pinned
-// above the scrolling rows, the way a table header stays put, so scrolling a
-// long history never leaves the columns unlabelled.
-const headerHeight = 2
 
 // Model is the Backups page's left panel: a merged, newest-first list of
 // stored versions of the compose file and the .env, each tagged with the
@@ -88,13 +77,11 @@ func (m *Model) setSize(width, height int) {
 	m.ensureCursorVisible()
 }
 
-// visibleRows is how many whole version rows fit under the pinned header. A
-// partial row at the bottom is not counted: a row is a timestamp line and a
-// sha line, and half of one is not worth scrolling to.
+// visibleRows is how many whole version rows fit in the panel body. A
+// partial row at the bottom is not counted: a row is a filename line and a
+// timestamp line, and half of one is not worth scrolling to.
 func (m Model) visibleRows() int {
-	usable := chrome.PanelBodyHeight(m.panelHeight) - headerHeight
-
-	return max(1, usable/rowHeight)
+	return max(1, chrome.PanelBodyHeight(m.panelHeight)/rowHeight)
 }
 
 // ensureCursorVisible scrolls the least amount that brings the selected row
