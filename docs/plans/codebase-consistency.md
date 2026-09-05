@@ -23,18 +23,32 @@ work builds on.
 | T7 | Tidy `go.mod` and add the CI gate | `2dee327` | done |
 | T8 | Delete four dead symbols | `5777fcc` | done |
 | T9 | Remove the deselect concept | `8f6d436` | done |
-| D3 | The env modal gets a real list | `e78ac45` | done |
-| D7 | Every compose write validates before it lands | `4ff4938` | done |
-| D4 | One `afterWrite` tail for every compose write | `e26720f` | done |
-| D1 | One answer to "is this service running" | `449368f` | done |
-| D6 | The member table's columns become an index | `2c6c7b9` | done |
-| D9 | Modals re-fit when the terminal resizes | `e1d888d` | done |
-| D8 | A seam for docker, and a hermetic test suite | `36c2bfc` | done |
-| D2 | One `keys.Context` builder, not two | `e351927` | done |
-| D10 | Page identity becomes a type | `d7762de` | done |
 | D11 | Documentation drift | `cd94f13` | done |
+| D10 | Page identity becomes a type | `d7762de` | done |
+| D2 | One `keys.Context` builder, not two | `e351927` | done |
+| D8 | A seam for docker, and a hermetic test suite | `36c2bfc` | done |
+| D9 | Modals re-fit when the terminal resizes | `e1d888d` | done |
+| D6 | The member table's columns become an index | `2c6c7b9` | done |
+| D1 | One answer to "is this service running" | `449368f` | done |
+| D4 | One `afterWrite` tail for every compose write | `e26720f` | done |
+| D7 | Every compose write validates before it lands | `4ff4938` | done |
+| D3 | The env modal gets a real list | `e78ac45` | done |
+| D5 | Duplicated rendering | | **not started** |
 
-Tasks T10 and beyond are in *Deferred* and **must not be started** without being told to.
+Everything above is done. **D5 is the only item left**, and it is the one the owner chose
+to leave: it consolidates code that currently works, against pixel-exact rendering tests.
+
+Four decisions were the owner's and were taken on 2026-09-05, recorded in each item
+below: D1 (any running container means running), D4 (both omissions were oversights),
+D7 (validate every write), and D3 over D5 as the last piece of work.
+
+**One decision is still open**, raised by D2 rather than by the audit: `SetListFilterState`
+is produced by three list components and read by nothing in production — `keyContext()`
+reads filter state straight off the component through `filterStater`. Its only readers are
+three tests, one of which (`backupslist.TestFilterStateIsBroadcast`) exists purely to
+assert the broadcast happens, and whose stated premise — that the footer "never sees the
+list itself" — is no longer true. Removing it means rewriting those three tests to observe
+differently. It was left in place rather than removed on a guess.
 
 ---
 
@@ -1635,8 +1649,10 @@ replaces the copy of that `min(60, w/2)` clamp each of them carried).
 
 The other two size-carrying modals are deliberately untouched:
 
-- `envmodal` stores `termHeight` and windows nothing with it — that is D3's whole point.
-  A resize handler there would have nothing to resize.
+- ~~`envmodal` stores `termHeight` and windows nothing with it — that is D3's whole point.
+  A resize handler there would have nothing to resize.~~ **Superseded:** D3 gave it a list,
+  and it re-fits with the rest of them now (through `resizeEnvList`, which carries the two
+  extra header rows `chrome.ResizeModalList` does not know about).
 - `groupnamemodal` carries `termHeight` for its second step and does not use it itself.
 
 Both would need the resize handler the day their lists get windowed; neither has a
