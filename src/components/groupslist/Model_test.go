@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
@@ -49,6 +50,17 @@ func focusedGroupsList(t *testing.T, n int) Model {
 	return groups
 }
 
+// cmdDeadline is how long a command gets to produce its message before the
+// tests treat it as a timer and move on.
+//
+// The filter input's cursor blink is the reason. It is a command that sleeps
+// for the blink interval and then asks to be run again, so running it and
+// feeding its message back is a loop paced at half a second a lap. Nothing this
+// package asserts on is produced by a command that has to wait, so abandoning
+// the slow ones costs no coverage and takes the package from ten seconds to
+// under one.
+const cmdDeadline = 50 * time.Millisecond
+
 // messagesFrom flattens what a command produced, walking batches, so a test can
 // assert on a message without caring how it got bundled.
 func messagesFrom(cmd tea.Cmd) []tea.Msg {
@@ -56,7 +68,15 @@ func messagesFrom(cmd tea.Cmd) []tea.Msg {
 		return nil
 	}
 
-	msg := cmd()
+	done := make(chan tea.Msg, 1)
+	go func() { done <- cmd() }()
+
+	var msg tea.Msg
+	select {
+	case msg = <-done:
+	case <-time.After(cmdDeadline):
+		return nil
+	}
 
 	if batch, ok := msg.(tea.BatchMsg); ok {
 		var msgs []tea.Msg
