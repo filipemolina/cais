@@ -23,7 +23,7 @@ work builds on.
 | T7 | Tidy `go.mod` and add the CI gate | `2dee327` | done |
 | T8 | Delete four dead symbols | `5777fcc` | done |
 | T9 | Remove the deselect concept | `8f6d436` | done |
-| D3 | The env modal gets a real list | | done |
+| D3 | The env modal gets a real list | `e78ac45` | done |
 | D7 | Every compose write validates before it lands | `4ff4938` | done |
 | D4 | One `afterWrite` tail for every compose write | `e26720f` | done |
 | D1 | One answer to "is this service running" | `449368f` | done |
