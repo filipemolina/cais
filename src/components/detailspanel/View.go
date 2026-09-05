@@ -17,15 +17,10 @@ import (
 	"github.com/filipemolina/cais/src/utils"
 )
 
-// containerForService returns the first container matching the given compose
-// service name, or a zero-value DockerContainer and false if none exists.
+// containerForService returns the container to describe for this service -
+// a running one where there is one. See apptypes.ContainerForService.
 func (m Model) containerForService(serviceName string) (apptypes.DockerContainer, bool) {
-	for _, c := range m.containers {
-		if c.Service == serviceName {
-			return c, true
-		}
-	}
-	return apptypes.DockerContainer{}, false
+	return apptypes.ContainerForService(m.containers, serviceName)
 }
 
 func (m Model) View() tea.View {
@@ -121,16 +116,10 @@ func (m Model) titlePill() string {
 		Render(label)
 }
 
-// isServiceRunning checks whether a live container exists for the given
-// compose service name and is in the "running" state.
+// isServiceRunning is apptypes.ServiceRunning, which is the app's one answer
+// to the question - there used to be four, and two of them disagreed.
 func (m Model) isServiceRunning(serviceName string) bool {
-	for _, container := range m.containers {
-		if container.Service == serviceName && container.State == "running" {
-			return true
-		}
-	}
-
-	return false
+	return apptypes.ServiceRunning(m.containers, serviceName)
 }
 
 // renderServiceHeader renders the service name, image, and a status line

@@ -23,6 +23,7 @@ work builds on.
 | T7 | Tidy `go.mod` and add the CI gate | `2dee327` | done |
 | T8 | Delete four dead symbols | `5777fcc` | done |
 | T9 | Remove the deselect concept | `8f6d436` | done |
+| D1 | One answer to "is this service running" | | done |
 | D6 | The member table's columns become an index | `2c6c7b9` | done |
 | D9 | Modals re-fit when the terminal resizes | `e1d888d` | done |
 | D8 | A seam for docker, and a hermetic test suite | `36c2bfc` | done |
@@ -1423,6 +1424,23 @@ The audit raised these. They look like findings. **They are not. Leave them alon
 These are real findings from the same audit. They need either a decision or more
 judgement than this plan can encode. **Do not start any of them without being told to.**
 They are recorded here so they are not lost.
+
+**D1 — "Is this service running" is implemented four times and two disagree.**
+*(Done — see the status table. Decision taken by the owner: **any running container means
+running**, one shared helper, all four sites call it. It does not claim cais manages
+replicas, only that it does not lie about them.)* `apptypes.ServiceRunning` and
+`apptypes.ContainerForService` are that helper.
+
+`ContainerForService` prefers a *running* container rather than the first one found, so a
+row's image, uptime and ports describe the live container instead of a stale one that
+happens to come first in docker's output. It still falls back to the first: a stopped
+service has details worth showing.
+
+`serviceslist.containerStatus` keeps its `containersKnown` guard. "Not asked yet" is a
+third state the shared helper deliberately does not model — reporting every service
+stopped before docker has answered is a guess dressed up as a fact.
+
+Original text follows.
 
 **D1 — "Is this service running" is implemented four times and two disagree.** Two sites
 return true if *any* container for the service is running

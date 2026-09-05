@@ -133,13 +133,8 @@ func (m *Model) containerStatus(serviceName string) string {
 		return ""
 	}
 
-	for _, c := range m.containers {
-		if c.Service == serviceName {
-			if c.State == "running" {
-				return "running"
-			}
-			return "stopped"
-		}
+	if apptypes.ServiceRunning(m.containers, serviceName) {
+		return "running"
 	}
 
 	return "stopped"

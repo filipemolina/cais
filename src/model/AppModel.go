@@ -224,11 +224,8 @@ func (m AppModel) groupStatuses() []cmds.GroupStatus {
 		running := 0
 
 		for _, member := range members {
-			for _, c := range m.currentDockerContainers {
-				if c.Service == member && c.State == "running" {
-					running++
-					break
-				}
+			if apptypes.ServiceRunning(m.currentDockerContainers, member) {
+				running++
 			}
 		}
 

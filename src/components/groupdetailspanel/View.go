@@ -83,26 +83,15 @@ func (m Model) knownGroups() []string {
 }
 
 func (m Model) isServiceRunning(serviceName string) bool {
-	for _, container := range m.containers {
-		if container.Service == serviceName {
-			return container.State == "running"
-		}
-	}
-
-	return false
+	return apptypes.ServiceRunning(m.containers, serviceName)
 }
 
-// containerForService finds the live container whose Service label matches
-// the given compose service name. Returns false when the service has no
-// created/running container yet, so the row renders as stopped.
+// containerForService returns the container to describe in this service's row -
+// a running one where there is one. Returns false when the service has no
+// container at all, so the row renders as stopped. See
+// apptypes.ContainerForService.
 func (m Model) containerForService(serviceName string) (apptypes.DockerContainer, bool) {
-	for _, container := range m.containers {
-		if container.Service == serviceName {
-			return container, true
-		}
-	}
-
-	return apptypes.DockerContainer{}, false
+	return apptypes.ContainerForService(m.containers, serviceName)
 }
 
 // View renders the panel body and hands it to renderPanelFrame. The body
