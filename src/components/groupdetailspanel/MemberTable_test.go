@@ -135,9 +135,9 @@ func TestMemberRowCellsDoNotTouch(t *testing.T) {
 		// cell each but three bytes.
 		row := []rune(ansi.Strip(m.renderMemberRow(cols, width, m.services[0])))
 
-		var shown []string
+		var shown []column
 		for _, name := range columnOrder {
-			if cols.get(name) > 0 {
+			if cols[name] > 0 {
 				shown = append(shown, name)
 			}
 		}
@@ -147,7 +147,7 @@ func TestMemberRowCellsDoNotTouch(t *testing.T) {
 		// space is the row's own padding and carries no meaning.
 		at := 0
 		for i, name := range shown {
-			at += cols.get(name)
+			at += cols[name]
 
 			if i == len(shown)-1 || at > len(row) {
 				continue

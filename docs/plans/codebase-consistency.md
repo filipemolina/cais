@@ -23,6 +23,7 @@ work builds on.
 | T7 | Tidy `go.mod` and add the CI gate | `2dee327` | done |
 | T8 | Delete four dead symbols | `5777fcc` | done |
 | T9 | Remove the deselect concept | `8f6d436` | done |
+| D6 | The member table's columns become an index | | done |
 | D9 | Modals re-fit when the terminal resizes | `e1d888d` | done |
 | D8 | A seam for docker, and a hermetic test suite | `36c2bfc` | done |
 | D2 | One `keys.Context` builder, not two | `e351927` | done |
@@ -1490,7 +1491,19 @@ tests.
 
 **D6 — Six hand-synchronised structures behind the group member table**
 (`groupdetailspanel/View.go`), five keyed by bare strings, where a typo compiles into a
-silently missing column.
+silently missing column. *(Done — see the status table.)*
+
+`type column int` with constants, and `tableCols` becomes `[numColumns]int`. The two
+20-line `get`/`set` string switches disappear entirely — they existed only to map a
+string back to a struct field, which is what an index already is. Net −76 lines from the
+file.
+
+`column.String()` was added so failures still name "ports" rather than 6; those strings
+were the whole point of the old keys and the tests format them.
+
+One thing the conversion surfaced: `widestShrinkable` returned `""` for "nothing can
+shrink". As an index that sentinel collides with `colDot`, which is 0, so it returns
+`(column, bool)` now.
 
 **D7 — Two families of compose-file writer.** `ServiceFragment.go` validates by
 reloading through compose-go before writing; `GroupTags.go` does not, on five paths.

@@ -299,22 +299,22 @@ func (m Model) renderMemberRow(cols tableCols, width int, svc types.ServiceConfi
 	// The cell's text and ink per column, walked in columnOrder so the row
 	// cannot drift from the header above it. A dropped column has width 0 and
 	// is skipped, the same as in renderTableHeader.
-	cell := map[string]struct {
+	cell := [numColumns]struct {
 		text string
 		fg   color.Color
 	}{
-		"dot":    {"●", dotColor},
-		"name":   {svc.Name, appstyles.Active.TextPrimary},
-		"image":  {chrome.ShortImage(image, max(1, cols.image-1)), appstyles.Active.TextMuted},
-		"state":  {state, stateColor(state)},
-		"health": {health, chrome.HealthColor(health)},
-		"uptime": {uptime, appstyles.Active.TextDim},
-		"ports":  {ports, appstyles.Active.TextMuted},
+		colDot:    {"●", dotColor},
+		colName:   {svc.Name, appstyles.Active.TextPrimary},
+		colImage:  {chrome.ShortImage(image, max(1, cols[colImage]-1)), appstyles.Active.TextMuted},
+		colState:  {state, stateColor(state)},
+		colHealth: {health, chrome.HealthColor(health)},
+		colUptime: {uptime, appstyles.Active.TextDim},
+		colPorts:  {ports, appstyles.Active.TextMuted},
 	}
 
 	var cells []string
 	for _, name := range columnOrder {
-		w := cols.get(name)
+		w := cols[name]
 		if w == 0 {
 			continue
 		}
@@ -324,7 +324,7 @@ func (m Model) renderMemberRow(cols tableCols, width int, svc types.ServiceConfi
 		// into the next cell - `navidromedeluan/n…` - which reads as one value
 		// rather than two, the same collision the headings had.
 		text := cell[name].text
-		if name != "dot" {
+		if name != colDot {
 			text = chrome.Truncate(text, max(1, w-1))
 		}
 
@@ -345,7 +345,7 @@ func renderTableHeader(cols tableCols, width int) string {
 	// whatever comes next.
 	var cells []string
 	for _, name := range columnOrder {
-		if w := cols.get(name); w > 0 {
+		if w := cols[name]; w > 0 {
 			cells = append(cells, dim.Width(w).Render(heading[name]))
 		}
 	}
@@ -366,26 +366,53 @@ func stateColor(state string) color.Color {
 	return appstyles.Active.StatusStopped
 }
 
+// column names one of the member table's columns. It is an index rather than
+// a string because six structures here are keyed by it - the widths, the
+// display order, the headings, the drop order, and the per-cell text and ink -
+// and a mistyped string key compiled fine and produced a silently missing
+// column. As an index a typo does not have a name to mistype: colPortss is
+// undefined.
+type column int
+
+const (
+	colDot column = iota
+	colName
+	colImage
+	colState
+	colHealth
+	colUptime
+	colPorts
+	numColumns
+)
+
+// String is the column's name in test failures and error messages. It exists
+// because these used to *be* these strings, and a failure that names "ports"
+// is worth more than one that names 6.
+func (c column) String() string {
+	return [numColumns]string{
+		colDot: "dot", colName: "name", colImage: "image", colState: "state",
+		colHealth: "health", colUptime: "uptime", colPorts: "ports",
+	}[c]
+}
+
 // tableCols holds the per-column widths for the member table. A width of 0
 // means the column was dropped for want of room - see computeCols - and both
 // the header and the rows skip it rather than rendering an empty cell.
-type tableCols struct {
-	dot, name, image, state, health, uptime, ports int
-}
+type tableCols [numColumns]int
 
 // columnOrder is the left-to-right order of the table's columns. The header,
 // the rows and the width arithmetic all walk it, so a column cannot be added
 // to one of them and forgotten in another.
-var columnOrder = []string{"dot", "name", "image", "state", "health", "uptime", "ports"}
+var columnOrder = [...]column{colDot, colName, colImage, colState, colHealth, colUptime, colPorts}
 
 // heading is a column's label, and "" for the status dot, which is its own
 // legend. minWidth is derived from it: a column narrower than its own heading
 // is what produced NAMEIMAGSTATHEALT... - lipgloss pads to Width but does not
 // truncate, so an over-long heading runs into the next column, and at the
 // narrowest widths wraps the header onto a second and third line.
-var heading = map[string]string{
-	"dot": "", "name": "NAME", "image": "IMAGE", "state": "STATE",
-	"health": "HEALTH", "uptime": "UPTIME", "ports": "PORTS",
+var heading = [numColumns]string{
+	colDot: "", colName: "NAME", colImage: "IMAGE", colState: "STATE",
+	colHealth: "HEALTH", colUptime: "UPTIME", colPorts: "PORTS",
 }
 
 // dropOrder is the order columns are given up in when the panel cannot hold
@@ -399,52 +426,12 @@ var heading = map[string]string{
 // what the table is for - and even then the status dot answers it in two
 // columns, which is why dot and name are absent here: they are the row's
 // identity and are never dropped.
-var dropOrder = []string{"ports", "image", "health", "uptime", "state"}
-
-func (c tableCols) get(name string) int {
-	switch name {
-	case "dot":
-		return c.dot
-	case "name":
-		return c.name
-	case "image":
-		return c.image
-	case "state":
-		return c.state
-	case "health":
-		return c.health
-	case "uptime":
-		return c.uptime
-	case "ports":
-		return c.ports
-	}
-
-	return 0
-}
-
-func (c *tableCols) set(name string, width int) {
-	switch name {
-	case "dot":
-		c.dot = width
-	case "name":
-		c.name = width
-	case "image":
-		c.image = width
-	case "state":
-		c.state = width
-	case "health":
-		c.health = width
-	case "uptime":
-		c.uptime = width
-	case "ports":
-		c.ports = width
-	}
-}
+var dropOrder = [...]column{colPorts, colImage, colHealth, colUptime, colState}
 
 func (c tableCols) total() int {
 	sum := 0
 	for _, name := range columnOrder {
-		sum += c.get(name)
+		sum += c[name]
 	}
 
 	return sum
@@ -452,8 +439,8 @@ func (c tableCols) total() int {
 
 // minWidth is the narrowest a column can be and still print its own heading
 // with a column of gap after it, so two headings never touch.
-func minWidth(name string) int {
-	if name == "dot" {
+func minWidth(name column) int {
+	if name == colDot {
 		return 2
 	}
 
@@ -464,7 +451,7 @@ func minWidth(name string) int {
 func (c tableCols) minTotal() int {
 	sum := 0
 	for _, name := range columnOrder {
-		if c.get(name) > 0 {
+		if c[name] > 0 {
 			sum += minWidth(name)
 		}
 	}
@@ -487,31 +474,32 @@ func computeCols(width int) tableCols {
 	}
 
 	c := tableCols{
-		dot: 2, name: 18, image: 16, state: 9, health: 8, uptime: 11, ports: 16,
+		colDot: 2, colName: 18, colImage: 16, colState: 9,
+		colHealth: 8, colUptime: 11, colPorts: 16,
 	}
 
 	for _, name := range dropOrder {
 		if c.minTotal() <= width {
 			break
 		}
-		c.set(name, 0)
+		c[name] = 0
 	}
 
 	// Shrink the widest column that still has room to give, until the row fits.
 	for c.total() > width {
-		widest := widestShrinkable(c)
-		if widest == "" {
+		widest, ok := widestShrinkable(c)
+		if !ok {
 			break
 		}
-		c.set(widest, c.get(widest)-1)
+		c[widest]--
 	}
 
 	// Expand the flexible columns to fill wide terminals, skipping any that
 	// were dropped - a panel with no ports column gives that share to the name.
 	if extra := width - c.total(); extra > 0 {
-		var flexible []string
-		for _, name := range []string{"ports", "name", "image"} {
-			if c.get(name) > 0 {
+		var flexible []column
+		for _, name := range [...]column{colPorts, colName, colImage} {
+			if c[name] > 0 {
 				flexible = append(flexible, name)
 			}
 		}
@@ -523,7 +511,7 @@ func computeCols(width int) tableCols {
 				// exactly rather than leaving a column or two unpainted.
 				share = extra - share*(len(flexible)-1)
 			}
-			c.set(name, c.get(name)+share)
+			c[name] += share
 		}
 	}
 
@@ -532,17 +520,19 @@ func computeCols(width int) tableCols {
 
 // widestShrinkable is the column with the most to give: the widest one still
 // above its own minimum, or "" when every surviving column is at its floor.
-func widestShrinkable(c tableCols) string {
-	widest, most := "", 0
+// The bool is what the zero value used to say: colDot is 0, so "no column can
+// give" and "shrink the dot column" are the same value once these are indexes.
+func widestShrinkable(c tableCols) (column, bool) {
+	widest, most := colDot, 0
 
 	for _, name := range columnOrder {
-		width := c.get(name)
+		width := c[name]
 		if width > minWidth(name) && width > most {
 			widest, most = name, width
 		}
 	}
 
-	return widest
+	return widest, most > 0
 }
 
 // renderPendingAction renders a spinner with the action description in the
