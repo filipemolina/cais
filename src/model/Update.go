@@ -138,6 +138,42 @@ func (m *AppModel) reportForegroundError(message string) tea.Cmd {
 	return m.rebroadcastBodyLayoutIfChanged()
 }
 
+// afterWrite is the tail every compose-file write shares: take the banner off
+// the poll, then either report the failure or clear the banner and reload, and
+// either way let the Files page and the layout catch up.
+//
+// It was written out at each call site, and two of them had drifted - in mirror
+// image. EditGroupMsg refreshed the layout but not the Files page;
+// CycleRestartPolicyMsg refreshed the Files page but not the layout. Both write
+// to the compose file, so both needed both: the Files page may be showing the
+// file that just changed, and clearing the banner on success gives back the
+// screen row it was costing. Neither omission was a rule, so neither survives
+// here.
+//
+// Both follow-ups run on the failure path too, as they always did. They are
+// each guarded on "did anything actually change", so on a failed write they
+// cost a comparison and return nil.
+func (m *AppModel) afterWrite(err error) []tea.Cmd {
+	m.lastErrorFromPoll = false
+
+	var out []tea.Cmd
+	if err != nil {
+		out = append(out, m.reportForegroundError(err.Error()))
+	} else {
+		m.lastError = ""
+		out = append(out, cmds.GetConfig(m.config.source))
+	}
+
+	if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
+		out = append(out, cfCmd)
+	}
+	if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
+		out = append(out, bodyCmd)
+	}
+
+	return out
+}
+
 // reportDockerError is reportForegroundError for an error that came from a
 // docker call: it reports message exactly as reportForegroundError would,
 // and alongside it kicks off a re-probe. See D4 in
@@ -835,19 +871,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		finalCmds = append(finalCmds, cmds.AddHealthcheck(m.config.configFileName, msg.ServiceName, msg.Template, msg.Port))
 
 	case cmds.AddHealthcheckMsg:
-		m.lastErrorFromPoll = false
-		if msg.Err != nil {
-			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
-		} else {
-			m.lastError = ""
-			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
-		}
-		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
-			finalCmds = append(finalCmds, cfCmd)
-		}
-		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
-			finalCmds = append(finalCmds, bodyCmd)
-		}
+		finalCmds = append(finalCmds, m.afterWrite(msg.Err)...)
 
 	case cmds.CycleRestartPolicyRequestMsg:
 		// The details panel knows the service name; AppModel knows the
@@ -860,16 +884,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case cmds.CycleRestartPolicyMsg:
-		m.lastErrorFromPoll = false
-		if msg.Err != nil {
-			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
-		} else {
-			m.lastError = ""
-			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
-		}
-		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
-			finalCmds = append(finalCmds, cfCmd)
-		}
+		finalCmds = append(finalCmds, m.afterWrite(msg.Err)...)
 
 	case cmds.OpenLogsModalMsg:
 		var members []string
@@ -1139,125 +1154,34 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		))
 
 	case cmds.EditGroupMsg:
-		m.lastErrorFromPoll = false
-		if msg.Err != nil {
-			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
-		} else {
-			m.lastError = ""
-			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
-		}
-		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
-			finalCmds = append(finalCmds, bodyCmd)
-		}
+		finalCmds = append(finalCmds, m.afterWrite(msg.Err)...)
 
 	case cmds.RenameGroupMsg:
-		m.lastErrorFromPoll = false
-		if msg.Err != nil {
-			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
-		} else {
-			m.lastError = ""
+		if msg.Err == nil {
 			// Keep the renamed group selected: configSyncCmds re-selects
 			// selection.groupName after the reload, and it still holds the
 			// old name until now. On failure the old selection stands.
 			m.selection.groupName = msg.NewName
-			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
 		}
-		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
-			finalCmds = append(finalCmds, cfCmd)
-		}
-		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
-			finalCmds = append(finalCmds, bodyCmd)
-		}
+		finalCmds = append(finalCmds, m.afterWrite(msg.Err)...)
 
 	case cmds.CreateGroupMsg:
-		m.lastErrorFromPoll = false
-		if msg.Err != nil {
-			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
-		} else {
-			m.lastError = ""
-			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
-		}
-		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
-			finalCmds = append(finalCmds, cfCmd)
-		}
-		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
-			finalCmds = append(finalCmds, bodyCmd)
-		}
+		finalCmds = append(finalCmds, m.afterWrite(msg.Err)...)
 
 	case cmds.DeleteGroupMsg:
-		m.lastErrorFromPoll = false
-		if msg.Err != nil {
-			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
-		} else {
-			m.lastError = ""
-			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
-		}
-		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
-			finalCmds = append(finalCmds, cfCmd)
-		}
-		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
-			finalCmds = append(finalCmds, bodyCmd)
-		}
+		finalCmds = append(finalCmds, m.afterWrite(msg.Err)...)
 
 	case cmds.AdoptUngroupedMsg:
-		m.lastErrorFromPoll = false
-		if msg.Err != nil {
-			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
-		} else {
-			m.lastError = ""
-			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
-		}
-		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
-			finalCmds = append(finalCmds, cfCmd)
-		}
-		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
-			finalCmds = append(finalCmds, bodyCmd)
-		}
+		finalCmds = append(finalCmds, m.afterWrite(msg.Err)...)
 
 	case cmds.ReleaseUngroupedMsg:
-		m.lastErrorFromPoll = false
-		if msg.Err != nil {
-			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
-		} else {
-			m.lastError = ""
-			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
-		}
-		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
-			finalCmds = append(finalCmds, cfCmd)
-		}
-		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
-			finalCmds = append(finalCmds, bodyCmd)
-		}
+		finalCmds = append(finalCmds, m.afterWrite(msg.Err)...)
 
 	case cmds.DeleteServiceMsg:
-		m.lastErrorFromPoll = false
-		if msg.Err != nil {
-			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
-		} else {
-			m.lastError = ""
-			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
-		}
-		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
-			finalCmds = append(finalCmds, cfCmd)
-		}
-		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
-			finalCmds = append(finalCmds, bodyCmd)
-		}
+		finalCmds = append(finalCmds, m.afterWrite(msg.Err)...)
 
 	case cmds.CreateComposeFileMsg:
-		m.lastErrorFromPoll = false
-		if msg.Err != nil {
-			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
-		} else {
-			m.lastError = ""
-			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
-		}
-		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
-			finalCmds = append(finalCmds, cfCmd)
-		}
-		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
-			finalCmds = append(finalCmds, bodyCmd)
-		}
+		finalCmds = append(finalCmds, m.afterWrite(msg.Err)...)
 
 	case cmds.ComposeFileContentsMsg:
 		// Only the active page's components see messages, and this one is

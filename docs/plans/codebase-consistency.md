@@ -23,7 +23,8 @@ work builds on.
 | T7 | Tidy `go.mod` and add the CI gate | `2dee327` | done |
 | T8 | Delete four dead symbols | `5777fcc` | done |
 | T9 | Remove the deselect concept | `8f6d436` | done |
-| D1 | One answer to "is this service running" | | done |
+| D4 | One `afterWrite` tail for every compose write | | done |
+| D1 | One answer to "is this service running" | `449368f` | done |
 | D6 | The member table's columns become an index | `2c6c7b9` | done |
 | D9 | Modals re-fit when the terminal resizes | `e1d888d` | done |
 | D8 | A seam for docker, and a hermetic test suite | `36c2bfc` | done |
@@ -1494,6 +1495,27 @@ windowing, so a long `.env` overflows the modal. Converting it to a `bubbles/lis
 a custom delegate fixes all three and uses the `termHeight` it already stores. This is
 the same conversion the backups list went through; see
 `docs/plans/backups-rework.md` for the traps.
+
+**D4 — Fifteen copies of the write-result tail in `Update.go`.** *(Done — see the status
+table. Decision taken by the owner: **both omissions are oversights**, so every write gets
+both follow-ups.)*
+
+Ten sites, not fifteen: seven carried the full form, one omitted the layout rebroadcast
+(`CycleRestartPolicyMsg`), one omitted the Files-page refresh (`EditGroupMsg`), and
+`RenameGroupMsg` carried the full form plus a line of its own. The other five the audit
+counted are error tails of a different shape and are untouched. Net −76 lines.
+
+Both follow-ups still run on the failure path, exactly as they did before. Each is
+guarded on "did anything actually change", so on a failed write they cost a comparison
+and return nil — folding them was not the moment to change that.
+
+Two tests pin it, and both were checked against the pre-fix code: one walks all nine
+write messages and asserts each re-reads the compose file when the Files page is on
+screen, so a new write cannot quietly rejoin the exception; the other asserts that a
+write clearing the error banner tells the panels the row is theirs again, which is the
+half `CycleRestartPolicyMsg` was missing.
+
+Original text follows.
 
 **D4 — Fifteen copies of the write-result tail in `Update.go`.** An
 `afterWrite(err error) []tea.Cmd` helper collapses about 120 lines. Deferred because two
