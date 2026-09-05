@@ -42,78 +42,22 @@ func (d GroupsListCustomDelegate) Render(w io.Writer, m list.Model, index int, l
 		return
 	}
 
-	isSelected := index == m.Index()
 	isActive := index == d.activeIndex
-	var titleColor color.Color
 
-	if isActive {
-		titleColor = appstyles.Active.TextPrimary
-	} else {
-		titleColor = appstyles.Active.TextMuted
-	}
-
+	// statusDot styles the glyph on the row's surface, so it needs the same
+	// background ListRow will use - ListRowBg is the shared answer rather
+	// than a second guess at it.
 	rowBg := chrome.ListRowBg(isActive)
 
-	// The row's left edge is the same solid bar the nav uses for its active
-	// tab ("▌"), so list rows and the nav agree on thickness. State is carried
-	// by color alone: accent = cursor row, primary = selected, muted = default.
-	barColor := appstyles.Active.TextMuted
-
-	if isActive {
-		barColor = appstyles.Active.Accent
-	} else if isSelected {
-		barColor = appstyles.Active.TextPrimary
-	}
-
-	wrapperStyle := lipgloss.NewStyle().
-		Width(m.Width() - 1).
-		Padding(1).
-		Background(rowBg)
-
-	// The title style only bolds the active row; the selected row's bold comes
-	// from the wrapper, which is why it is applied here rather than in the title.
-	if isSelected && !isActive {
-		wrapperStyle = wrapperStyle.Bold(true)
-	}
-
-	// The status dot rides the far right of the title line: a green full
-	// circle when every member service is running, an amber half circle when
-	// some but not all are, and nothing when the group is stopped. It uses
-	// the same glyphs and status colors as the member table's dot column, so
-	// the two read as one visual language.
-	dot := statusDot(item, rowBg)
-
-	// The wrapper's Width includes its Padding(1), so the content area is two
-	// columns narrower than the wrapper. The title and the dot must share that
-	// content area on one line: the title yields the dot's column and is
-	// truncated with an ellipsis when it does not fit, so a running or mixed
-	// group's dot always shows even at the cost of a shortened name.
-	contentWidth := max(0, (m.Width()-1)-2)
-	titleWidth := max(0, contentWidth-lipgloss.Width(dot))
-
-	titleStyle := lipgloss.NewStyle().
-		Bold(isActive).
-		Foreground(titleColor).
-		Background(rowBg).
-		Width(titleWidth)
-
-	title := titleStyle.Render(chrome.Truncate(item.Title(), titleWidth))
-
-	titleRow := lipgloss.JoinHorizontal(lipgloss.Left, title, dot)
-
-	content := wrapperStyle.Render(lipgloss.JoinVertical(lipgloss.Left, titleRow))
-
-	// The bar spans the row's full height, one ▌ per line, rather than a sliver
-	// at the top - the nav's single-line bar stretched to the row's height.
-	bar := chrome.BarColumn(barColor, rowBg, content)
-
-	// Seal the row against its own background before handing it to the list, so
-	// the active row keeps its lighter surface color instead of being flattened
-	// to the panel's when the list is sealed - see appstyles.FillBackground.
-	row := appstyles.FillBackground(rowBg, lipgloss.JoinHorizontal(lipgloss.Left, bar, content))
-
-	// Print the styled string to the Bubble Tea io.Writer
-	fmt.Fprint(w, row)
+	// No Body: the row is the title line alone, which is what Height() == 3
+	// counts. A description here would have to be paid for there too.
+	fmt.Fprint(w, chrome.ListRow(chrome.ListRowInput{
+		Title:      item.Title(),
+		Dot:        statusDot(item, rowBg),
+		Width:      m.Width(),
+		IsSelected: index == m.Index(),
+		IsActive:   isActive,
+	}))
 }
 
 // statusDot returns the styled status glyph for a group row: a green full

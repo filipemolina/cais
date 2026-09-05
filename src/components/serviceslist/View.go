@@ -33,83 +33,25 @@ func (d servicesListCustomDelegate) Render(w io.Writer, m list.Model, index int,
 		return
 	}
 
-	isSelected := index == m.Index()
 	isActive := index == d.activeIndex
-	var titleColor color.Color
 
-	if isActive {
-		titleColor = appstyles.Active.TextPrimary
-	} else {
-		titleColor = appstyles.Active.TextMuted
-	}
-
+	// The dot and the description are styled on the row's surface, so they
+	// need the same background ListRow will use - ListRowBg is the shared
+	// answer rather than a second guess at it.
 	rowBg := chrome.ListRowBg(isActive)
 
-	// The row's left edge is the same solid bar the nav uses for its active
-	// tab ("▌"), so list rows and the nav agree on thickness. State is carried
-	// by color alone: accent = cursor row, primary = selected, muted = default.
-	barColor := appstyles.Active.TextMuted
-
-	if isActive {
-		barColor = appstyles.Active.Accent
-	} else if isSelected {
-		barColor = appstyles.Active.TextPrimary
-	}
-
-	wrapperStyle := lipgloss.NewStyle().
-		Width(m.Width() - 1).
-		Padding(1).
-		Background(rowBg)
-
-	// The title style only bolds the active row; the selected row's bold comes
-	// from the wrapper, which is why it is applied here rather than in the title.
-	if isSelected && !isActive {
-		wrapperStyle = wrapperStyle.Bold(true)
-	}
-
-	// The status dot rides the far right of the title line, the same place
-	// the groups list puts its group dot, so the two panels read as one.
-	//
-	// It is always drawn, which is where it parts company with the groups
-	// list: a group has a third, partly-running state and hides its dot when
-	// nothing in it runs, but a service either runs or it does not and a
-	// missing dot would be indistinguishable from a missing answer.
-	dot := statusDot(item, rowBg)
-
-	// The wrapper's Width includes its Padding(1), so the content area is two
-	// columns narrower than the wrapper. The title and the dot share that
-	// content area on one line: the title yields the dot's column and is
-	// truncated with an ellipsis when it does not fit, so the dot always
-	// shows even at the cost of a shortened name.
-	contentWidth := max(0, (m.Width()-1)-2)
-	titleWidth := max(0, contentWidth-lipgloss.Width(dot))
-
-	titleStyle := lipgloss.NewStyle().
-		Bold(isActive).
-		Foreground(titleColor).
-		Background(rowBg).
-		Width(titleWidth)
-
-	title := titleStyle.Render(chrome.Truncate(item.Title(), titleWidth))
-
-	titleRow := lipgloss.JoinHorizontal(lipgloss.Left, title, dot)
-	description := item.Description(isActive)
-
-	content := wrapperStyle.Render(lipgloss.JoinVertical(lipgloss.Left, titleRow, description))
-
-	// The bar spans the row's full height, one ▌ per line, rather than a sliver
-	// at the top - the nav's single-line bar stretched to the row's height.
-	bar := chrome.BarColumn(barColor, rowBg, content)
-
-	// Seal the row against its own background before handing it to the list:
-	// JoinVertical pads the description out to the title's width with unstyled
-	// spaces, which would otherwise show the terminal background through the
-	// row. Sealing here (rather than over the whole list) is what keeps the
-	// active row's lighter surface color from being flattened to the panel's.
-	row := appstyles.FillBackground(rowBg, lipgloss.JoinHorizontal(lipgloss.Left, bar, content))
-
-	// Print the styled string to the Bubble Tea io.Writer
-	fmt.Fprint(w, row)
+	// The status dot is always drawn, which is where this parts company with
+	// the groups list: a group has a third, partly-running state and hides its
+	// dot when nothing in it runs, but a service either runs or it does not
+	// and a missing dot would be indistinguishable from a missing answer.
+	fmt.Fprint(w, chrome.ListRow(chrome.ListRowInput{
+		Title:      item.Title(),
+		Dot:        statusDot(item, rowBg),
+		Body:       []string{item.Description(isActive)},
+		Width:      m.Width(),
+		IsSelected: index == m.Index(),
+		IsActive:   isActive,
+	}))
 }
 
 func (m Model) View() tea.View {
