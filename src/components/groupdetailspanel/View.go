@@ -197,15 +197,9 @@ func (m Model) groupHeaderCard(name string, running, stopped, total int, width i
 	return lipgloss.JoinVertical(lipgloss.Left, nameRow, summaryRow, chrome.PanelRule(width))
 }
 
-// statusPill renders a filled pill whose color reflects the group's state:
-// green when every service is running, amber when mixed, red when none run.
-//
-// The pill's ink (fg) does not follow the app's theme: InkOnLight/InkOnDark
-// are fixed regardless of Dark, because the pill's own fill is a status color
-// rather than a surface tier. What the fill *is* varies per theme, though, so
-// appstyles.InkOn picks whichever of the two inks reads on it rather than
-// this call site guessing - see appstyles/Contrast_test.go, which holds every
-// theme's pill ink to 4.2:1.
+// statusPill picks the group's fill color: green when every service is
+// running, amber when mixed, red when none run. chrome.StatusPill does the
+// rest, including choosing ink that reads on the fill.
 func statusPill(running, total int) string {
 	var label string
 	var bg color.Color
@@ -218,14 +212,7 @@ func statusPill(running, total int) string {
 	default:
 		label, bg = "MIXED", appstyles.Active.StatusStarting
 	}
-	fg := appstyles.InkOn(bg)
-
-	return lipgloss.NewStyle().
-		Background(bg).
-		Foreground(fg).
-		Bold(true).
-		Padding(0, 1).
-		Render(label)
+	return chrome.StatusPill(label, bg)
 }
 
 // renderMemberTable renders the column headers, a separator, and one row per

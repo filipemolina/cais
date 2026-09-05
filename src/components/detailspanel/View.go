@@ -106,14 +106,7 @@ func (m Model) titlePill() string {
 	} else {
 		label, bg = "STOPPED", appstyles.Active.StatusError
 	}
-	fg := appstyles.InkOn(bg)
-
-	return lipgloss.NewStyle().
-		Background(bg).
-		Foreground(fg).
-		Bold(true).
-		Padding(0, 1).
-		Render(label)
+	return chrome.StatusPill(label, bg)
 }
 
 // isServiceRunning is apptypes.ServiceRunning, which is the app's one answer
@@ -558,14 +551,7 @@ func (m Model) validationPill() string {
 		label = "YAML ok"
 		bg = appstyles.Active.StatusRunning
 	}
-	fg := appstyles.InkOn(bg)
-
-	return lipgloss.NewStyle().
-		Background(bg).
-		Foreground(fg).
-		Bold(true).
-		Padding(0, 1).
-		Render(label)
+	return chrome.StatusPill(label, bg)
 }
 
 // renderEditorHints renders the editor key hints below the textarea.

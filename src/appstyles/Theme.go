@@ -79,7 +79,7 @@ type Theme struct {
 	// red/pink) is the same hue whichever theme is active, so the text that
 	// reads legibly on it can't follow Dark either - a bright pill needs
 	// dark ink and a dark pill needs light ink regardless of the *app's*
-	// theme. See GroupDetailsPanel.go's statusPill.
+	// theme. See chrome.StatusPill, which is where InkOn is called.
 	InkOnLight color.Color
 	InkOnDark  color.Color
 }

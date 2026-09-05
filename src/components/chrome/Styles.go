@@ -100,3 +100,22 @@ func BarColumn(fg color.Color, bg color.Color, content string) string {
 	bar := style.Render("▌")
 	return strings.Repeat(bar+"\n", lines-1) + bar
 }
+
+// StatusPill renders a filled, bold pill carrying label on the fill color bg.
+// Callers choose the label and the fill; this decides the ink and the shape,
+// which is the part all three pills were repeating.
+//
+// The pill's ink (fg) does not follow the app's theme: InkOnLight/InkOnDark
+// are fixed regardless of Dark, because the pill's own fill is a status color
+// rather than a surface tier. What the fill *is* varies per theme, though, so
+// appstyles.InkOn picks whichever of the two inks reads on it rather than the
+// call site guessing - see appstyles/Contrast_test.go, which holds every
+// theme's pill ink to 4.2:1.
+func StatusPill(label string, bg color.Color) string {
+	return lipgloss.NewStyle().
+		Background(bg).
+		Foreground(appstyles.InkOn(bg)).
+		Bold(true).
+		Padding(0, 1).
+		Render(label)
+}
