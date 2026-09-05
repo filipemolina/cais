@@ -29,6 +29,11 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+      # Catches a dependency that is imported directly but still recorded as
+      # indirect, which is how go-units and fuzzy drifted.
+      - name: Check go.mod is tidy
+        run: go mod tidy -diff
+
       # gofmt exits 0 whatever it finds and just lists the files, so the
       # listing itself has to be turned into the failure.
       - name: Check formatting

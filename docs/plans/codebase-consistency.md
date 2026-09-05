@@ -19,8 +19,8 @@ work builds on.
 | T3 | Fix the footer advertising dead keys | `a127bb9` | done |
 | T4 | Two error banners that forget the layout row | `467057a` | done |
 | T5 | Sort Networks and Depends-on before rendering | `e26cd45` | done |
-| T6 | Make `GetConfigMsg` a defined type | | done |
-| T7 | Tidy `go.mod` and add the CI gate | | todo |
+| T6 | Make `GetConfigMsg` a defined type | `4b6c9aa` | done |
+| T7 | Tidy `go.mod` and add the CI gate | | done |
 | T8 | Delete four dead symbols | | todo |
 | T9 | Remove the deselect concept | | todo |
 
