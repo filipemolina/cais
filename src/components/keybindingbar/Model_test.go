@@ -36,7 +36,7 @@ func TestFooterHints(t *testing.T) {
 	}{
 		{
 			name:  "groups list with groups",
-			model: Model{activePage: "Home"},
+			model: Model{keyContext: keys.Context{Page: apptypes.PageHome}},
 			want:  "s start · t stop · r restart · p pull · x remove · L logs · e edit · R rename · n new · d delete · / filter · ↑/↓ navigate",
 		},
 		{
@@ -44,71 +44,61 @@ func TestFooterHints(t *testing.T) {
 			// the list-management verbs leave the footer, and the row's own
 			// 'A' verb (adopt, while the row is derived) takes their place.
 			name:  "groups list with the ungrouped row selected",
-			model: Model{activePage: "Home", selectedGroup: apptypes.UngroupedGroup},
+			model: Model{keyContext: keys.Context{Page: apptypes.PageHome, ReadOnlyGroup: true}},
 			want:  "s start · t stop · r restart · p pull · x remove · L logs · e edit · R rename · n new · d delete · A adopt · / filter · ↑/↓ navigate",
 		},
 		{
 			// Once a real ungrouped profile backs the row, 'A' releases it.
 			name:  "groups list with the materialized ungrouped row selected",
-			model: Model{activePage: "Home", selectedGroup: apptypes.UngroupedGroup, ungroupedMaterialized: true},
+			model: Model{keyContext: keys.Context{Page: apptypes.PageHome, ReadOnlyGroup: true, UngroupedMaterialized: true}},
 			want:  "s start · t stop · r restart · p pull · x remove · L logs · e edit · R rename · n new · d delete · A release · / filter · ↑/↓ navigate",
 		},
 		{
 			// The list has the keyboard: every other key is a letter.
 			name:  "groups list while a filter is being typed",
-			model: Model{activePage: "Home", filterState: list.Filtering},
+			model: Model{keyContext: keys.Context{Page: apptypes.PageHome, Filter: list.Filtering}},
 			want:  "enter apply · esc cancel",
 		},
 		{
 			// The filter slot becomes the way out of the filter - and takes
 			// over the esc slot, since one key shows one row.
 			name:  "groups list with a filter applied",
-			model: Model{activePage: "Home", filterState: list.FilterApplied},
+			model: Model{keyContext: keys.Context{Page: apptypes.PageHome, Filter: list.FilterApplied}},
 			want:  "s start · t stop · r restart · p pull · x remove · L logs · e edit · R rename · n new · d delete · esc clear filter · ↑/↓ navigate",
 		},
 		{
 			name:  "groups list while empty",
-			model: Model{activePage: "Home", groupsListEmpty: true},
+			model: Model{keyContext: keys.Context{Page: apptypes.PageHome, ListEmpty: true}},
 			want:  "n new · ↑/↓ navigate",
 		},
 		{
-			name:  "groups list with a group selected",
-			model: Model{activePage: "Home", selectedGroup: "core"},
-			want:  "s start · t stop · r restart · p pull · x remove · L logs · e edit · R rename · n new · d delete · / filter · ↑/↓ navigate",
-		},
-		{
 			name:  "services list with services",
-			model: Model{activePage: "Services"},
+			model: Model{keyContext: keys.Context{Page: apptypes.PageServices}},
 			want:  "s start · t stop · r restart · p pull · x remove · L logs · H healthcheck · B boot · e edit · E open editor · y copy url · n new · d delete · / filter · ↑/↓ navigate",
 		},
 		{
 			name:  "services list while a filter is being typed",
-			model: Model{activePage: "Services", filterState: list.Filtering},
+			model: Model{keyContext: keys.Context{Page: apptypes.PageServices, Filter: list.Filtering}},
 			want:  "enter apply · esc cancel",
 		},
 		{
 			name:  "services list while empty",
-			model: Model{activePage: "Services", servicesListEmpty: true},
+			model: Model{keyContext: keys.Context{Page: apptypes.PageServices, ListEmpty: true}},
 			want:  "n new · ↑/↓ navigate",
 		},
 		{
-			name:  "services list with a service selected",
-			model: Model{activePage: "Services"},
-			want:  "s start · t stop · r restart · p pull · x remove · L logs · H healthcheck · B boot · e edit · E open editor · y copy url · n new · d delete · / filter · ↑/↓ navigate",
-		},
-		{
 			name:  "service details while inline editing",
-			model: Model{activePage: "Services", editing: true},
+			model: Model{keyContext: keys.Context{Page: apptypes.PageServices, Editing: true}},
 			want:  "ctrl+s save · ctrl+o editor · tab indent · shift+tab outdent · esc back",
 		},
 		{
 			name:  "the files page offers edit, browse and scroll",
-			model: Model{activePage: "Compose Files"},
+			model: Model{keyContext: keys.Context{Page: apptypes.PageComposeFiles}},
 			want:  "E open editor · b browse · ↑/↓ scroll",
 		},
 		{
 			name:  "an unknown page still offers a way back",
-			model: Model{activePage: "Nowhere"},
+			model: Model{keyContext: keys.Context{Page: "Nowhere"}},
 			want:  "esc back",
 		},
 	}
@@ -264,10 +254,13 @@ func TestFooterGlobalHints(t *testing.T) {
 func barAt(t *testing.T, width int) string {
 	t.Helper()
 
+	// Driven through Update, as AppModel drives it: the context arrives
+	// resolved, and a populated Home list is what puts the page's own verbs on
+	// the bar for the shedding order to work on.
 	var model tea.Model = New()
 	for _, msg := range []tea.Msg{
 		cmds.SetComposeFileMsg{Name: "/srv/homelab/compose.yaml"},
-		cmds.SetGroupsListMsg([]cmds.GroupStatus{{Name: "media"}, {Name: "infra"}, {Name: "downloads"}}),
+		cmds.SetKeyContextMsg(keys.Context{Page: apptypes.PageHome}),
 		tea.WindowSizeMsg{Width: width, Height: 24},
 	} {
 		model, _ = model.Update(msg)

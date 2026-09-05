@@ -23,7 +23,8 @@ work builds on.
 | T7 | Tidy `go.mod` and add the CI gate | `2dee327` | done |
 | T8 | Delete four dead symbols | `5777fcc` | done |
 | T9 | Remove the deselect concept | `8f6d436` | done |
-| D10 | Page identity becomes a type | | done |
+| D2 | One `keys.Context` builder, not two | | done |
+| D10 | Page identity becomes a type | `d7762de` | done |
 | D11 | Documentation drift | `cd94f13` | done |
 
 Tasks T10 and beyond are in *Deferred* and **must not be started** without being told to.
@@ -1429,14 +1430,41 @@ decision** about whether cais supports replicas, and the answer needs a comment.
 uncontroversial pieces sit next to it and could be shared once that is settled:
 `containerForService` and `renderPendingAction` are byte-identical across the two panels.
 
-**D2 — `keys.Context` has two builders.** `AppModel.helpContext()` derives it from
-state; `keybindingbar` rebuilds it from mirrored fields. T9 removes two of them
-(`Selected` from the context, `selectedService` from the bar), so this is smaller than
-the audit found it, but the shape is unchanged. T3 fixes the one place
-they currently disagree, but not the reason they *can*. The fix is to broadcast the
-resolved `keys.Context` from `AppModel` and delete the mirror — about sixty lines across
-two files, plus moving `keybindingbar`'s tests to drive through `Update` rather than
-building `Model` literals. Needs a capable model.
+**D2 — `keys.Context` has two builders.** *(Done — see the status table.)*
+`AppModel.helpContext()` derives it from state; `keybindingbar` rebuilds it from mirrored
+fields. T9 removes two of them (`Selected` from the context, `selectedService` from the
+bar), so this is smaller than the audit found it, but the shape is unchanged. T3 fixes
+the one place they currently disagree, but not the reason they *can*. The fix is to
+broadcast the resolved `keys.Context` from `AppModel` and delete the mirror — about sixty
+lines across two files, plus moving `keybindingbar`'s tests to drive through `Update`
+rather than building `Model` literals.
+
+How it went:
+
+- `helpContext()` is now `keyContext()` — it was never only the overlay's.
+- The bar's ten mirrored fields became one `keyContext keys.Context`. `composeFile`,
+  `composeFileOthers` and `terminalWidth` stay: they are the footer's other job and no
+  key depends on them.
+- The context is resolved at the **end** of `AppModel.Update`, after the page's panels
+  have seen the message, so the footer renders this frame's answer. The bar was
+  previously a frame behind on anything that arrived as a follow-up broadcast.
+- Net −135 lines.
+
+**Two broadcasts lost their only reader.** `SetUngroupedMaterializedMsg` had one producer
+and no consumer at all, so it went with the mirror. `SetListFilterStateMsg` is the open
+one: three list components still produce it, nothing in production consumes it any more
+(`keyContext()` reads filter state straight off the component through `filterStater`),
+and its only remaining readers are three tests — one of which,
+`backupslist.TestFilterStateIsBroadcast`, exists purely to assert the broadcast happens
+and whose premise ("the bar never sees the list itself") is now false. **Deleting it
+needs a decision**, because it is a live design question rather than a typo: is a
+component announcing its filter state a seam worth keeping, or is the single
+`filterStater` read the whole story? Left in place, not silently removed.
+
+**T3's regression test moved.** `keybindingbar.TestEmptyingTheServicesListClearsTheActionKeys`
+tested a bug the bar can no longer have, since it derives nothing. It is now
+`model.TestEmptyingTheServicesListClearsTheFooterActionKeys`, asserting on the rendered
+footer through the real path. Verified it fails when the hand-down is removed.
 
 **D3 — `envmodal` hand-rolls a list.** It keeps its own cursor index, declares thirteen
 key bindings inline instead of using `src/keys`, and renders every row with no

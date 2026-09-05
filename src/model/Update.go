@@ -216,7 +216,6 @@ func (m AppModel) configSyncCmds() []tea.Cmd {
 	// The footer advertises the ungrouped row's 'A' verb (adopt vs release)
 	// from this state, so it has to ride every reload the way the selection
 	// does.
-	syncCmds = append(syncCmds, cmds.SetUngroupedMaterialized(m.ungroupedMaterialized()))
 
 	return syncCmds
 }
@@ -278,10 +277,19 @@ type listEmptier interface {
 	ListEmpty() bool
 }
 
-// helpContext snapshots what the help overlay needs to dim the keys that do
-// nothing right now. A modal freezes the screen it opened from - panels see
-// no keys while one is up - so the snapshot cannot go stale.
-func (m AppModel) helpContext() keys.Context {
+// keyContext resolves what is pressable right now, once, for everyone who
+// needs to know: the help overlay dims its rows from it and the footer renders
+// its hints from it.
+//
+// There used to be two of these - this one, and a second inside keybindingbar
+// rebuilt from a dozen mirrored fields. Two derivations of one fact is two
+// answers, and they drifted: the footer advertised action keys over a list
+// whose last row had gone, and the panels ignored every one of them. The bar
+// now takes this value whole (cmds.SetKeyContextMsg) and derives nothing.
+//
+// A modal freezes the screen it opened from - panels see no keys while one is
+// up - so the snapshot cannot go stale under the overlay.
+func (m AppModel) keyContext() keys.Context {
 	ctx := keys.Context{
 		Page:          m.activePage,
 		Editing:       m.inlineEditing,
@@ -1031,7 +1039,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case cmds.OpenHelpModalMsg:
 		m.activeModal = helpoverlay.New(
-			m.helpContext(),
+			m.keyContext(),
 			m.config.configFiles,
 			m.config.terminalWidth,
 			m.config.terminalHeight,
@@ -1398,6 +1406,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.shouldForwardToComponents(msg) {
 		innerComponentsCmd = m.UpdateInnerComponent(m.activePage, msg)
 	}
+
+	// Resolved last, after every panel on the page has seen the message, so
+	// the footer renders this frame's answer rather than the previous one's.
+	// A list that just lost its last row has already lost it by here.
+	m.components.KeybindingBar, _ = m.components.KeybindingBar.Update(
+		cmds.SetKeyContextMsg(m.keyContext()),
+	)
+
 	finalCmds = append(finalCmds, mainMenuCmd, keybindingBarCmd, innerComponentsCmd)
 
 	return m, tea.Batch(finalCmds...)

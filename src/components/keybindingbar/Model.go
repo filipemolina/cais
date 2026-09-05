@@ -1,56 +1,45 @@
 package keybindingbar
 
 import (
-	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
+
 	"github.com/filipemolina/cais/src/apptypes"
+	"github.com/filipemolina/cais/src/keys"
 )
 
-// KeybindingBar is a single-line footer that shows the current page and the
-// keys available in that context. Both body panels are always active now, so
-// it no longer tracks a focused component — it listens for SetActivePageMsg to
-// track state, with no direct coupling to the AppModel.
+// KeybindingBar is a single-line footer that shows which compose file the app
+// resolved and the keys available right now.
+//
+// It does not decide what is available. AppModel resolves one keys.Context per
+// frame and sends it down as cmds.SetKeyContextMsg; the bar renders that and
+// nothing else. It used to mirror a dozen pieces of screen state and rebuild
+// the context itself, which is a second answer to a question that has one
+// right answer - and the two drifted.
 type Model struct {
-	activePage        apptypes.Page
-	terminalWidth     int
-	selectedGroup     string
-	groupsListEmpty   bool
-	servicesListEmpty bool
-	composeFile       string
+	// keyContext is what the footer renders from, resolved by AppModel and
+	// handed down whole. The bar deliberately keeps no state of its own that
+	// feeds it: mirroring the pieces and re-deriving the answer here is what
+	// let the footer and the panels disagree about what was pressable.
+	keyContext    keys.Context
+	terminalWidth int
+	composeFile   string
 	// composeFileOthers is how many candidates lost to composeFile. The
 	// winner is the whole story only when it is the only one, so a +N marks
 	// the rest; the help overlay names them.
+	//
+	// This and composeFile stay the bar's own: they are the other half of the
+	// footer's job, and no key depends on them.
 	composeFileOthers int
-	filterState       list.FilterState
-	// editing is true while the service details panel is in inline edit
-	// mode, so the footer can swap the action keys for the editor keys.
-	editing bool
-	// pendingAction is true while a docker action is running, so the footer
-	// can disable action key hints.
-	pendingAction bool
-	// ungroupedMaterialized is true when the reserved ungrouped row is backed
-	// by a written profile tag rather than derived, so the footer can
-	// advertise the row's 'A' verb (adopt vs release).
-	ungroupedMaterialized bool
-	// backupsListEmpty is whether the backup store has any stored versions,
-	// so the bar can drop the filter key on an empty one. It comes straight
-	// off cmds.BackupListMsg: the bar sees every message, and AppModel does
-	// not track the store's contents.
-	backupsListEmpty bool
-	// backupsFocus is which half of the Backups page the arrows are driving,
-	// so the bar says "navigate" over the list and "scroll" over the preview.
-	// It is the only page with focus left; see apptypes.BackupsFocus.
-	backupsFocus apptypes.BackupsFocus
 }
 
 func (m Model) Init() tea.Cmd { return nil }
 
 // New builds the footer keybinding bar.
 func New() tea.Model {
+	// The empty-list defaults are the honest starting point: nothing has been
+	// loaded yet, so no list has rows and no selection-dependent verb is
+	// offered. AppModel replaces the whole context on the first Update.
 	return Model{
-		activePage:        apptypes.PageHome,
-		groupsListEmpty:   true,
-		servicesListEmpty: true,
-		backupsListEmpty:  true,
+		keyContext: keys.Context{Page: apptypes.PageHome, ListEmpty: true},
 	}
 }

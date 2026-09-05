@@ -9,37 +9,16 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/filipemolina/cais/src/appstyles"
-	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/components/chrome"
 	"github.com/filipemolina/cais/src/keys"
 )
 
-// bindingsFor returns the keys live in the current page and focused component.
-// Which keys those are is keys.Active's decision, not the bar's: the bar only
-// supplies the screen state that decision needs, so the footer and the handlers
-// cannot disagree about what is pressable.
+// bindingsFor returns the keys live right now. Which keys those are is
+// keys.Active's decision from AppModel's context, and the bar neither builds
+// that context nor edits it - that is what makes the footer and the handlers
+// incapable of disagreeing about what is pressable.
 func (m Model) bindingsFor() []key.Binding {
-	listEmpty := m.groupsListEmpty
-
-	switch m.activePage {
-	case apptypes.PageServices:
-		listEmpty = m.servicesListEmpty
-	case apptypes.PageBackups:
-		// The version list has no "selected" beyond its cursor, so only
-		// emptiness matters here - it is what decides whether / is offered.
-		listEmpty = m.backupsListEmpty
-	}
-
-	return keys.Active(keys.Context{
-		Page:                  m.activePage,
-		ListEmpty:             listEmpty,
-		ReadOnlyGroup:         m.selectedGroup == apptypes.UngroupedGroup,
-		UngroupedMaterialized: m.ungroupedMaterialized,
-		Editing:               m.editing,
-		PendingAction:         m.pendingAction,
-		Filter:                m.filterState,
-		BackupsFocus:          m.backupsFocus,
-	})
+	return keys.Active(m.keyContext)
 }
 
 // hintsFor is bindingsFor as hints - the whole set, before the bar has decided

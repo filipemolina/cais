@@ -348,7 +348,7 @@ func TestInlineEditingOwnsTheKeyboard(t *testing.T) {
 	}
 
 	// The help context should advertise editor keys.
-	ctx := m.helpContext()
+	ctx := m.keyContext()
 	if !ctx.Editing {
 		t.Fatal("help context should report editing")
 	}

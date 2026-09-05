@@ -1,10 +1,10 @@
 package keybindingbar
 
 import (
-	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
-	"github.com/filipemolina/cais/src/apptypes"
+
 	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/keys"
 )
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -12,45 +12,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.terminalWidth = msg.Width
 
-	case cmds.SetActivePageMsg:
-		m.activePage = apptypes.Page(msg)
-
-	case cmds.SetSelectedGroupMsg:
-		m.selectedGroup = string(msg)
-
-	case cmds.SetGroupsListMsg:
-		m.groupsListEmpty = len(msg) == 0
-		if m.groupsListEmpty {
-			m.selectedGroup = ""
-		}
-
-	case cmds.SetServicesListMsg:
-		m.servicesListEmpty = len(msg) == 0
+	// The whole context arrives at once, already resolved. Everything the bar
+	// used to mirror to build it - the page, the selection, three list
+	// emptiness flags, the filter state, editing, pending actions, the
+	// ungrouped row's backing and the Backups focus - is inside this.
+	case cmds.SetKeyContextMsg:
+		m.keyContext = keys.Context(msg)
 
 	case cmds.SetComposeFileMsg:
 		m.composeFile = msg.Name
 		m.composeFileOthers = len(msg.Others)
-
-	case cmds.SetListFilterStateMsg:
-		m.filterState = list.FilterState(msg)
-
-	case cmds.SetEditingStateMsg:
-		m.editing = bool(msg)
-
-	case cmds.SetPendingActionMsg:
-		m.pendingAction = true
-
-	case cmds.ClearPendingActionMsg:
-		m.pendingAction = false
-
-	case cmds.SetUngroupedMaterializedMsg:
-		m.ungroupedMaterialized = bool(msg)
-
-	case cmds.SetBackupsFocusMsg:
-		m.backupsFocus = apptypes.BackupsFocus(msg)
-
-	case cmds.BackupListMsg:
-		m.backupsListEmpty = msg.Err != nil || len(msg.Entries) == 0
 	}
 	return m, nil
 }

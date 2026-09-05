@@ -150,7 +150,7 @@ func TestTheFooterSwapsNavigateForScrollOnFocus(t *testing.T) {
 // disagree about what is pressable.
 func footerHints(m AppModel) string {
 	var labels []string
-	for _, binding := range keys.Active(m.helpContext()) {
+	for _, binding := range keys.Active(m.keyContext()) {
 		labels = append(labels, binding.Help().Key+" "+binding.Help().Desc)
 	}
 
