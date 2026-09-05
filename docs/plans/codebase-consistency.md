@@ -33,14 +33,15 @@ work builds on.
 | D4 | One `afterWrite` tail for every compose write | `e26720f` | done |
 | D7 | Every compose write validates before it lands | `4ff4938` | done |
 | D3 | The env modal gets a real list | `e78ac45` | done |
-| D5 | Duplicated rendering | | **not started** |
+| D5 | Duplicated rendering | `a292e3b` `8315c38` `acad286` | done, except the picker modals |
 
-Everything above is done. **D5 is the only item left**, and it is the one the owner chose
-to leave: it consolidates code that currently works, against pixel-exact rendering tests.
+Everything above is done. D5 was taken on 2026-09-05 in three of its four parts; the
+two picker modals are deliberately left, and the reason is under D5 below.
 
-Four decisions were the owner's and were taken on 2026-09-05, recorded in each item
+Five decisions were the owner's and were taken on 2026-09-05, recorded in each item
 below: D1 (any running container means running), D4 (both omissions were oversights),
-D7 (validate every write), and D3 over D5 as the last piece of work.
+D7 (validate every write), D3 over D5 as the last piece of work, and D5's scope - the
+three consolidations that are contained, not the modal restructure.
 
 **One decision is still open**, raised by D2 rather than by the audit: `SetListFilterState`
 is produced by three list components and read by nothing in production — `keyContext()`
@@ -1565,6 +1566,34 @@ Original text follows.
 of the fifteen have drifted — `EditGroupMsg` omits `recomposeFilesCmdIfActive()` and
 `CycleRestartPolicyMsg` omits `rebroadcastBodyLayoutIfChanged()` — and **someone must
 decide whether those omissions are rules or oversights** before they can be folded in.
+
+**D5 — Duplicated rendering.** *(Three of four done — see the status table. Decision
+taken by the owner: do the three contained consolidations, leave the picker modals.)*
+
+- **`renderPendingAction`** was byte-identical in both details panels. It is
+  `chrome.RenderPendingAction`, beside the `PendingAction` type it already used.
+- **The status pill** was **three** sites, not the two the audit found:
+  `detailspanel.titlePill`, `detailspanel.validationPill` and
+  `groupdetailspanel.statusPill` all repeated the same tail — `InkOn` for the ink, then
+  bold padded text on the fill. `chrome.StatusPill(label, fill)` owns the ink and the
+  shape; each caller keeps the only part that was ever its own, which fill means what.
+- **The two body-list delegates** were the same ~50 lines down to the comments. They
+  differ in exactly three things, and those are all `chrome.ListRowInput` carries: the
+  item type each casts to, the dot each computes, and whether a description follows the
+  title. Net −114 lines from the two views.
+
+**On the pixel-exact worry, which is why this sat deferred.** Matching test assertions
+were not treated as sufficient. The delegate rows were rendered from the pre-refactor
+commit and the refactored one and diffed: byte-identical across three widths and the
+active, selected, default and name-truncated cases, in both lists.
+
+**Not done: the two picker modals.** `composefilepickermodal` and `themepickermodal` are
+the same modal twice, but consolidating them restructures two working components with
+their own test suites (227 and 178 lines) for the least duplication of the four. That is
+a different kind of change from the other three, which is why it is separable and why it
+was left. Still a real finding.
+
+Original text follows.
 
 **D5 — Duplicated rendering.** The two body-list delegates are the same ~50 lines twice;
 the two picker modals are the same modal twice; `renderPendingAction` and the status

@@ -1151,6 +1151,11 @@ picks whichever of the two fixed inks has better contrast on the fill at
 hand, and `Contrast_test.go` verifies the result clears 4.2:1 on every status
 pill, the accent chip, and the error banner for every registered theme.
 
+There is one pill renderer, `chrome.StatusPill(label, fill)`, and it is where
+`InkOn` is called. Callers choose what the fill means - the group panel's
+all-running/mixed/stopped, the details panel's running/stopped, the editor's
+YAML validation state - and none of them choose ink.
+
 ### Background tiers, and sealing them
 
 Sections are separated by background color rather than by borders. The tiers
