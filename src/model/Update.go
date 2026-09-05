@@ -931,8 +931,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case cmds.OpenEditorMsg:
 		if m.config.configFileName == "" {
-			m.lastError = "No compose file to edit"
-			m.lastErrorFromPoll = false
+			// Through reportForegroundError like every other user-action
+			// error: it returns the layout command the banner needs, and
+			// setting the field directly left the panels rendering a row
+			// taller than the space the banner had left them.
+			finalCmds = append(finalCmds, m.reportForegroundError("No compose file to edit"))
 			break
 		}
 
@@ -993,8 +996,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case cmds.OpenServiceEditorMsg:
 		if m.config.configFileName == "" {
-			m.lastError = "No compose file to edit"
-			m.lastErrorFromPoll = false
+			// See the note in OpenEditorMsg above.
+			finalCmds = append(finalCmds, m.reportForegroundError("No compose file to edit"))
 			break
 		}
 

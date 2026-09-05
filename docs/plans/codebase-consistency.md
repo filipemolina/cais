@@ -14,10 +14,10 @@ work builds on.
 
 | Task | What | Commit | |
 | --- | --- | --- | --- |
-| T1 | Move the ANSI decoder out of the shipped binary | | todo |
-| T2 | Stop the list tests blocking on the cursor-blink timer | | todo |
-| T3 | Fix the footer advertising dead keys | | todo |
-| T4 | Two error banners that forget the layout row | | todo |
+| T1 | Move the ANSI decoder out of the shipped binary | `d55be84` | done |
+| T2 | Stop the list tests blocking on the cursor-blink timer | `b06637f` | done |
+| T3 | Fix the footer advertising dead keys | `a127bb9` | done |
+| T4 | Two error banners that forget the layout row | | done |
 | T5 | Sort Networks and Depends-on before rendering | | todo |
 | T6 | Make `GetConfigMsg` a defined type | | todo |
 | T7 | Tidy `go.mod` and add the CI gate | | todo |
@@ -507,8 +507,16 @@ Then the full check from Rule 8.
 
 **Note on behaviour:** with no modal open, `reportForegroundError` opens an error modal
 rather than setting the banner. That is the intended behaviour and is what the other
-fifteen sites do. No existing test asserts on this message, so nothing should break. If
-a test does fail, STOP and report it.
+fifteen sites do.
+
+**Correction (this plan was wrong here).** The plan claimed no existing test asserts on
+this message. One does: `TestOpeningTheEditorWithoutAComposeFileReportsInstead` in
+`src/model/editor_test.go` asserted `m.lastError != ""`, which only held because the old
+code set the banner field directly. On the modal path the banner is deliberately left
+empty, so the test failed. It now asserts the error reached the user as an
+`errormodal.Model`, which is what the test was always checking for - that pressing `e`
+with no compose file reports instead of opening an editor on an unnamed buffer. That
+edit to `editor_test.go` is part of T4's commit.
 
 ### Commit
 

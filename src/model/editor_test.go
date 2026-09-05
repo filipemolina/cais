@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/components/errormodal"
 	"github.com/filipemolina/cais/src/utils"
 )
 
@@ -28,6 +29,10 @@ func TestOpeningTheEditorSuspendsBackgroundWork(t *testing.T) {
 
 // Nothing to hand the editor, and launching one on an empty path would open
 // an unnamed buffer that saves nowhere useful.
+//
+// The report goes through reportForegroundError, so with the screen free it
+// lands in a modal and the banner stays empty - asserting on lastError here
+// would only be asserting that a modal was already open.
 func TestOpeningTheEditorWithoutAComposeFileReportsInstead(t *testing.T) {
 	m := GetInitialModel(utils.ComposeSource{})
 
@@ -36,8 +41,8 @@ func TestOpeningTheEditorWithoutAComposeFileReportsInstead(t *testing.T) {
 	if m.externalEditorOpen {
 		t.Error("external editor should not be marked open with no compose file")
 	}
-	if m.lastError == "" {
-		t.Error("expected an error explaining there is no compose file")
+	if _, ok := m.activeModal.(errormodal.Model); !ok {
+		t.Errorf("activeModal is %T, want an errormodal.Model explaining there is no compose file", m.activeModal)
 	}
 }
 
