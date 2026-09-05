@@ -21,6 +21,13 @@ type Model struct {
 func (m Model) Init() tea.Cmd { return nil }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// Re-wrap to the new terminal rather than keep the width the modal was
+	// built with; see chrome.ModalBodyWidth.
+	if size, ok := msg.(tea.WindowSizeMsg); ok {
+		m.width = chrome.ModalBodyWidth(size.Width)
+		return m, nil
+	}
+
 	keyMsg, ok := msg.(tea.KeyPressMsg)
 	if !ok {
 		return m, nil
@@ -57,14 +64,8 @@ func (m Model) View() tea.View {
 
 // New creates a new error modal with the given message.
 func New(message string, terminalWidth int) tea.Model {
-	// Constrain the message width to half the terminal or 60, whichever is smaller.
-	width := min(60, terminalWidth/2)
-	if width < 20 {
-		width = 20
-	}
-
 	return Model{
 		message: message,
-		width:   width,
+		width:   chrome.ModalBodyWidth(terminalWidth),
 	}
 }

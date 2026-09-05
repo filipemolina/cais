@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/filipemolina/cais/src/appstyles"
@@ -145,6 +146,29 @@ const modalListChrome = 9
 // and a terminal that short cannot show the modal's own chrome either.
 func ModalListHeight(items, termHeight int) int {
 	return min(items, max(3, termHeight-modalListChrome))
+}
+
+// ResizeModalList re-fits a modal's list to a new terminal height.
+//
+// The height is chosen once at construction, which is right until the terminal
+// changes size underneath an open modal: a picker opened on a tall window and
+// then shrunk kept its old row count, so its bottom border - and the hint line
+// under it - ended up below the last row on screen, with no way to see them
+// short of closing the modal.
+//
+// Pagination is re-derived alongside, because whether the list needs it is a
+// function of the same height.
+func ResizeModalList(l *list.Model, items, termHeight int) {
+	visible := ModalListHeight(items, termHeight)
+	l.SetHeight(visible)
+	l.SetShowPagination(visible < items)
+}
+
+// ModalBodyWidth is how wide a modal's text body may be: half the terminal, or
+// 60 columns, whichever is smaller, and never less than 20 - below that a
+// message is unreadable whatever the terminal says.
+func ModalBodyWidth(termWidth int) int {
+	return max(20, min(60, termWidth/2))
 }
 
 // ModalHints renders a modal's own help line, in the footer bar's format but

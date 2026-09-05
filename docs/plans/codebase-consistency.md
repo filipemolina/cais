@@ -23,7 +23,8 @@ work builds on.
 | T7 | Tidy `go.mod` and add the CI gate | `2dee327` | done |
 | T8 | Delete four dead symbols | `5777fcc` | done |
 | T9 | Remove the deselect concept | `8f6d436` | done |
-| D8 | A seam for docker, and a hermetic test suite | | done |
+| D9 | Modals re-fit when the terminal resizes | | done |
+| D8 | A seam for docker, and a hermetic test suite | `36c2bfc` | done |
 | D2 | One `keys.Context` builder, not two | `e351927` | done |
 | D10 | Page identity becomes a type | `d7762de` | done |
 | D11 | Documentation drift | `cd94f13` | done |
@@ -1524,9 +1525,26 @@ So the suite is now hermetic with respect to docker, and 25% faster in `src/mode
 
 Not done: `src/cmds` coverage. The seam makes it reachable; raising it is separate work.
 
-**D9 — Modals never re-read the terminal size.** Six capture `termHeight` at
-construction and ignore the `WindowSizeMsg` they already receive, so shrinking the
-terminal with a picker open pushes its bottom border off screen.
+**D9 — Modals never re-read the terminal size.** *(Done — see the status table.)* Six
+capture `termHeight` at construction and ignore the `WindowSizeMsg` they already receive,
+so shrinking the terminal with a picker open pushes its bottom border off screen.
+
+Reproduced first: a theme picker built for a 60-row terminal renders 23 rows tall and
+stays 23 rows tall when the terminal becomes 20 rows. That is the regression test now.
+
+Five modals fixed — `themepickermodal`, `composefilepickermodal`,
+`healthcheckpickermodal` (list height, via a new `chrome.ResizeModalList`) and
+`errormodal`, `dockerstatusmodal` (body width, via a new `chrome.ModalBodyWidth` that
+replaces the copy of that `min(60, w/2)` clamp each of them carried).
+
+The other two size-carrying modals are deliberately untouched:
+
+- `envmodal` stores `termHeight` and windows nothing with it — that is D3's whole point.
+  A resize handler there would have nothing to resize.
+- `groupnamemodal` carries `termHeight` for its second step and does not use it itself.
+
+Both would need the resize handler the day their lists get windowed; neither has a
+list today.
 
 **D10 — Page identity is a bare string** switched on at nine sites across four packages,
 each falling through silently. A `type Page string` with constants makes a typo a

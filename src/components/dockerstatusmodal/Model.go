@@ -26,6 +26,12 @@ type Model struct {
 func (m Model) Init() tea.Cmd { return nil }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// See chrome.ModalBodyWidth: the terminal can change under an open modal.
+	if size, ok := msg.(tea.WindowSizeMsg); ok {
+		m.width = chrome.ModalBodyWidth(size.Width)
+		return m, nil
+	}
+
 	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
 		switch {
 		case key.Matches(keyMsg, keys.Overlay.Cancel), key.Matches(keyMsg, keys.Global.Quit):

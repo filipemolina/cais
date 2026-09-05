@@ -190,3 +190,38 @@ func TestThemeKeyInCatalog(t *testing.T) {
 		t.Error("T theme key not found in the help overlay catalog")
 	}
 }
+
+// A modal opened on a tall terminal and then shrunk has to shrink with it.
+// It did not: the list kept the row count chosen at construction, so the
+// modal's bottom border and its hint line ended up below the last row on
+// screen, with no way to reach them short of closing the modal.
+func TestThemePickerRefitsWhenTheTerminalShrinks(t *testing.T) {
+	m := New(60).(Model)
+
+	tall := lipgloss.Height(m.View().Content)
+
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 20})
+	m = updated.(Model)
+
+	short := lipgloss.Height(m.View().Content)
+
+	if short >= tall {
+		t.Errorf("modal height %d on a 20-row terminal, %d on a 60-row one: it did not shrink", short, tall)
+	}
+	if short > 20 {
+		t.Errorf("modal is %d rows tall on a 20-row terminal", short)
+	}
+}
+
+// And grow back, or a maximised window leaves the picker stuck at its
+// smallest.
+func TestThemePickerRefitsWhenTheTerminalGrows(t *testing.T) {
+	m := New(20).(Model)
+
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 60})
+	m = updated.(Model)
+
+	if got, want := lipgloss.Height(m.View().Content), lipgloss.Height(New(60).(Model).View().Content); got != want {
+		t.Errorf("after growing to 60 rows the modal is %d tall, want %d - the height a modal built at 60 gets", got, want)
+	}
+}

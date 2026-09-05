@@ -8,10 +8,18 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/components/chrome"
 	"github.com/filipemolina/cais/src/keys"
 )
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// The terminal can change size while the modal is open; see
+	// chrome.ResizeModalList.
+	if size, ok := msg.(tea.WindowSizeMsg); ok {
+		chrome.ResizeModalList(&m.list, len(m.list.Items()), size.Height)
+		return m, nil
+	}
+
 	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
 		switch {
 		case key.Matches(keyMsg, keys.Overlay.Cancel):
