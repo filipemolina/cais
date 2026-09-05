@@ -605,3 +605,53 @@ func TestGroupWriters_ExitRulePreservesComments(t *testing.T) {
 		t.Errorf("expected the # core services comment to survive, got:\n%s", raw)
 	}
 }
+
+// Every group-tag write validates by reloading before it replaces the file.
+// It did not use to: ServiceFragment.go validated from the start and this file
+// did not, so a group edit was the one way for the app to leave a compose file
+// on disk that the app itself could no longer load.
+//
+// writeComposeNode is the funnel all five write paths go through, so pinning
+// it here pins all of them.
+func TestGroupTagWritesAreValidatedBeforeTheyLand(t *testing.T) {
+	path := writeFixture(t, baseFixture)
+
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading fixture: %v", err)
+	}
+
+	// A services mapping whose entry is a bare string rather than a service
+	// definition. It is valid YAML and invalid compose, which is exactly the
+	// gap the reload closes.
+	var doc yaml.Node
+	if err := yaml.Unmarshal([]byte("services:\n  app: nonsense\n"), &doc); err != nil {
+		t.Fatalf("building the candidate: %v", err)
+	}
+
+	if err := writeComposeNode(path, &doc); err == nil {
+		t.Error("a document that does not load as compose was written anyway")
+	}
+
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading result: %v", err)
+	}
+	if string(after) != string(before) {
+		t.Errorf("the refused write still changed the file on disk:\n%s", string(after))
+	}
+}
+
+// The other half: a valid write still lands. A validation step that refuses
+// everything would pass the test above.
+func TestAValidGroupTagWriteStillLands(t *testing.T) {
+	path := writeFixture(t, baseFixture)
+
+	if err := AddGroupTag(path, "newgroup", []string{"app"}); err != nil {
+		t.Fatalf("a valid group tag was refused: %v", err)
+	}
+
+	if groups := readServiceGroups(t, path, "app"); !slices.Contains(groups, "newgroup") {
+		t.Errorf("app's groups = %v, want it to contain newgroup", groups)
+	}
+}

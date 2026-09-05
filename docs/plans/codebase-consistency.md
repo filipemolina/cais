@@ -23,7 +23,8 @@ work builds on.
 | T7 | Tidy `go.mod` and add the CI gate | `2dee327` | done |
 | T8 | Delete four dead symbols | `5777fcc` | done |
 | T9 | Remove the deselect concept | `8f6d436` | done |
-| D4 | One `afterWrite` tail for every compose write | | done |
+| D7 | Every compose write validates before it lands | | done |
+| D4 | One `afterWrite` tail for every compose write | `e26720f` | done |
 | D1 | One answer to "is this service running" | `449368f` | done |
 | D6 | The member table's columns become an index | `2c6c7b9` | done |
 | D9 | Modals re-fit when the terminal resizes | `e1d888d` | done |
@@ -1544,6 +1545,20 @@ were the whole point of the old keys and the tests format them.
 One thing the conversion surfaced: `widestShrinkable` returned `""` for "nothing can
 shrink". As an index that sentinel collides with `colDot`, which is 0, so it returns
 `(column, bool)` now.
+
+**D7 — Two families of compose-file writer.** *(Done — see the status table. Decision
+taken by the owner: **validate everywhere**.)*
+
+Cheaper than the audit expected: all five `GroupTags.go` write paths already funnel
+through one `writeComposeNode`, so the validate-by-reload went there rather than into
+five call sites.
+
+Confirmed the gap was real by removing the check again — a `services:` mapping whose
+entry is a bare string is valid YAML and invalid compose, and the old writer put it on
+disk. A group edit was the one way for the app to leave behind a compose file the app
+itself could no longer load.
+
+Original text follows.
 
 **D7 — Two families of compose-file writer.** `ServiceFragment.go` validates by
 reloading through compose-go before writing; `GroupTags.go` does not, on five paths.

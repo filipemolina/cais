@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/filipemolina/cais/src/apptypes"
 
@@ -109,10 +110,24 @@ func readComposeNode(fileName string) (*yaml.Node, error) {
 // writeComposeNode encodes doc into fileName, replacing it atomically. The
 // document is encoded into memory first, so an encoding failure never
 // reaches the user's compose file at all.
+//
+// It is the single funnel for every group-tag write, which is why the
+// validate-by-reload lives here rather than at each of the five call sites.
+// ServiceFragment.go validated before writing from the start; this file did
+// not, so a group edit was the one way to put a file on disk that the app
+// itself could no longer load. The two families now agree.
+//
+// The cost is a compose-go reload per write, 50-200ms. These are writes a
+// keypress asked for, one at a time - not a loop - and handing the user back a
+// compose file that no longer parses is the more expensive outcome.
 func writeComposeNode(fileName string, doc *yaml.Node) error {
 	contents, err := encodeNode(doc)
 	if err != nil {
 		return fmt.Errorf("failed encoding %s: %w", fileName, err)
+	}
+
+	if err := ValidateComposeCandidate(filepath.Dir(fileName), contents); err != nil {
+		return err
 	}
 
 	return ReplaceFileAtomically(fileName, contents)
