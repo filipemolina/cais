@@ -427,7 +427,7 @@ func ReadOnlyViewportKeyMap() viewport.KeyMap {
 // Context is what the footer knows about the screen: enough to decide which
 // bindings are live, and nothing more.
 type Context struct {
-	Page string
+	Page apptypes.Page
 	// ListEmpty reports whether the body list has any rows to act on. An
 	// empty list offers no selection-dependent verbs.
 	ListEmpty bool
@@ -494,7 +494,7 @@ func Active(ctx Context) []key.Binding {
 	}
 
 	switch ctx.Page {
-	case "Home", "Services":
+	case apptypes.PageHome, apptypes.PageServices:
 		var bindings []key.Binding
 		// A non-empty list always has a row under the cursor, and that row is
 		// the selection - there is no way to deselect. So "is there a subject
@@ -507,7 +507,7 @@ func Active(ctx Context) []key.Binding {
 			bindings = append(bindings,
 				Details.Start, Details.Stop, Details.Restart,
 				Details.Pull, Details.Remove, Details.Logs)
-			if ctx.Page == "Services" {
+			if ctx.Page == apptypes.PageServices {
 				// Only a single service has a healthcheck to set, a restart
 				// policy to cycle, a URL to copy or a compose definition of
 				// its own to edit - none of them apply to a group.
@@ -556,7 +556,7 @@ func Active(ctx Context) []key.Binding {
 
 	// The Files page has one always-focused panel, so the same keys apply
 	// regardless of which component id Tab last touched.
-	case "Compose Files":
+	case apptypes.PageComposeFiles:
 		return []key.Binding{Details.EditFile, Files.Browse, Files.Scroll}
 
 	// Backups is the one page with two focus stops, so tab is live here and
@@ -570,7 +570,7 @@ func Active(ctx Context) []key.Binding {
 	// and nothing else here - there is no selection on this page to clear, so
 	// with no filter standing the key is inert and the bar stays quiet about
 	// it.
-	case "Backups":
+	case apptypes.PageBackups:
 		arrows := Backup.Navigate
 		if ctx.BackupsFocus == apptypes.BackupsPreview {
 			arrows = Backup.Scroll
@@ -672,7 +672,7 @@ func Priority(binding key.Binding) int {
 // each page it lives on, never on two pages at once.
 type Scope struct {
 	Title   string
-	Page    string
+	Page    apptypes.Page
 	Entries []Entry
 }
 
@@ -698,7 +698,7 @@ func Catalog(ctx Context) []Scope {
 
 	// A row is pressable when its binding is live and, for a page scope,
 	// when that page is the one on screen.
-	entries := func(page string, bindings ...key.Binding) []Entry {
+	entries := func(page apptypes.Page, bindings ...key.Binding) []Entry {
 		out := make([]Entry, 0, len(bindings))
 		for _, b := range bindings {
 			out = append(out, Entry{
@@ -720,7 +720,7 @@ func Catalog(ctx Context) []Scope {
 	// Changing either binding's help text would quietly break it.
 	listNavigable := containsBinding(live, List.Navigate)
 
-	startEnd := func(page string) []Entry {
+	startEnd := func(page apptypes.Page) []Entry {
 		return []Entry{
 			{Binding: List.GoToStart, Available: page == ctx.Page && listNavigable},
 			{Binding: List.GoToEnd, Available: page == ctx.Page && listNavigable},
@@ -738,24 +738,24 @@ func Catalog(ctx Context) []Scope {
 			),
 		},
 		{
-			Title: apptypes.PageLabel("Home"),
-			Page:  "Home",
+			Title: apptypes.PageLabel(apptypes.PageHome),
+			Page:  apptypes.PageHome,
 			Entries: append(
-				entries("Home",
+				entries(apptypes.PageHome,
 					Details.Start, Details.Stop, Details.Restart,
 					Details.Pull, Details.Remove, Details.Logs,
 					List.New, List.Edit, List.Rename, List.Delete,
 					List.AdoptUngrouped, List.ReleaseUngrouped,
 					List.Filter, List.ClearFilter, List.Navigate,
 				),
-				startEnd("Home")...,
+				startEnd(apptypes.PageHome)...,
 			),
 		},
 		{
-			Title: apptypes.PageLabel("Services"),
-			Page:  "Services",
+			Title: apptypes.PageLabel(apptypes.PageServices),
+			Page:  apptypes.PageServices,
 			Entries: append(
-				entries("Services",
+				entries(apptypes.PageServices,
 					Details.Start, Details.Stop, Details.Restart,
 					Details.Pull, Details.Remove, Details.Logs,
 					Details.Healthcheck, Details.Boot,
@@ -763,29 +763,29 @@ func Catalog(ctx Context) []Scope {
 					List.New, List.Delete,
 					List.Filter, List.ClearFilter, List.Navigate,
 				),
-				startEnd("Services")...,
+				startEnd(apptypes.PageServices)...,
 			),
 		},
 		{
-			Title: apptypes.PageLabel("Compose Files"),
-			Page:  "Compose Files",
-			Entries: entries("Compose Files",
+			Title: apptypes.PageLabel(apptypes.PageComposeFiles),
+			Page:  apptypes.PageComposeFiles,
+			Entries: entries(apptypes.PageComposeFiles,
 				Details.EditFile, Files.Browse, Files.Scroll,
 			),
 		},
 		{
-			Title: apptypes.PageLabel("Backups"),
-			Page:  "Backups",
+			Title: apptypes.PageLabel(apptypes.PageBackups),
+			Page:  apptypes.PageBackups,
 			// Both arrow faces get a row: the overlay is the page's whole
 			// keymap, so it says the arrows navigate the list and scroll the
 			// preview, and dims whichever half is not focused right now.
 			Entries: append(
-				entries("Backups",
+				entries(apptypes.PageBackups,
 					Backup.Restore,
 					List.Filter, List.ClearFilter,
 					Backup.Navigate, Backup.Scroll,
 				),
-				startEnd("Backups")...,
+				startEnd(apptypes.PageBackups)...,
 			),
 		},
 		{

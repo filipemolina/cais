@@ -1,10 +1,14 @@
 package cmds
 
-import tea "charm.land/bubbletea/v2"
+import (
+	tea "charm.land/bubbletea/v2"
 
-type SetActivePageMsg string
+	"github.com/filipemolina/cais/src/apptypes"
+)
 
-func SetActivePage(pageTitle string) func() tea.Msg {
+type SetActivePageMsg apptypes.Page
+
+func SetActivePage(pageTitle apptypes.Page) func() tea.Msg {
 	return func() tea.Msg {
 		return SetActivePageMsg(pageTitle)
 	}

@@ -1,7 +1,10 @@
 package mainmenu
 
 import (
+	"slices"
+
 	tea "charm.land/bubbletea/v2"
+
 	"github.com/filipemolina/cais/src/apptypes"
 )
 
@@ -10,7 +13,7 @@ import (
 // rendering each tab's digit before its label. All it tracks is which page is
 // active, so it can highlight that tab.
 type Model struct {
-	items             []string
+	items             []apptypes.Page
 	selectedItemIndex int
 	terminalWidth     int
 }
@@ -21,13 +24,7 @@ func (m Model) Init() tea.Cmd {
 
 // New builds the top nav bar.
 func New() tea.Model {
-	items := []string{}
-
-	for _, page := range apptypes.PageTitles {
-		items = append(items, page)
-	}
-
-	m := Model{items: items}
+	m := Model{items: slices.Clone(apptypes.PageTitles)}
 
 	return m
 }

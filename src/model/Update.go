@@ -289,13 +289,13 @@ func (m AppModel) helpContext() keys.Context {
 	}
 
 	switch m.activePage {
-	case "Home":
+	case apptypes.PageHome:
 		ctx.ListEmpty = len(m.listedGroupNames()) == 0
 		ctx.ReadOnlyGroup = m.selection.groupName == apptypes.UngroupedGroup
 		ctx.UngroupedMaterialized = m.ungroupedMaterialized()
-	case "Services":
+	case apptypes.PageServices:
 		ctx.ListEmpty = m.config.configProject == nil || len(m.config.configProject.Services) == 0
-	case "Backups":
+	case apptypes.PageBackups:
 		// Which half the arrows are driving is the only thing focus changes
 		// about this page's keys; restore is live on either half.
 		ctx.BackupsFocus = m.backupsFocus
@@ -342,7 +342,7 @@ func (m AppModel) escKept() bool {
 // Everything here runs inside Update's keyboardOwned guard, so while a filter
 // is being typed a digit is a letter; and after the modal check, so typing in
 // a text field can never navigate away.
-func (m AppModel) pageForNavKey(msg tea.KeyPressMsg) string {
+func (m AppModel) pageForNavKey(msg tea.KeyPressMsg) apptypes.Page {
 	if page := pageForDigit(msg); page != "" {
 		return page
 	}
@@ -358,7 +358,7 @@ func (m AppModel) pageForNavKey(msg tea.KeyPressMsg) string {
 //
 // Matched on the key's code with no modifiers held, so shifted digits (which
 // arrive as the punctuation on that key) and ctrl+1 are left alone.
-func pageForDigit(msg tea.KeyPressMsg) string {
+func pageForDigit(msg tea.KeyPressMsg) apptypes.Page {
 	key := msg.Key()
 	if key.Mod != 0 {
 		return ""
@@ -375,7 +375,7 @@ func pageForDigit(msg tea.KeyPressMsg) string {
 // pageForStep returns the page [ or ] steps to from the active one: the next
 // or previous entry in apptypes.PageTitles, wrapping around. "" for any other
 // key, and the active page itself when it is the only one there is.
-func (m AppModel) pageForStep(msg tea.KeyPressMsg) string {
+func (m AppModel) pageForStep(msg tea.KeyPressMsg) apptypes.Page {
 	step := 0
 	switch {
 	case key.Matches(msg, keys.Global.NextPage):
@@ -399,7 +399,7 @@ func (m AppModel) pageForStep(msg tea.KeyPressMsg) string {
 // String() returns the printable text for a key ("g") and only falls back to
 // the keystroke form ("alt+g") when there is none. Requiring Mod to be exactly
 // ModAlt also means ctrl+alt+g and alt+shift+g are left alone.
-func pageForChord(msg tea.KeyPressMsg) string {
+func pageForChord(msg tea.KeyPressMsg) apptypes.Page {
 	key := msg.Key()
 
 	if key.Mod != tea.ModAlt {
@@ -488,7 +488,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// keys land here. Handling them once, up here, keeps a single owner
 		// for tab: two panels each deciding they now hold focus is how a page
 		// ends up with both halves lit or neither.
-		case m.activePage == "Backups" &&
+		case m.activePage == apptypes.PageBackups &&
 			(key.Matches(msg, keys.Global.NextPanel) || key.Matches(msg, keys.Global.PrevPanel)):
 			m.backupsFocus = m.backupsFocus.Toggled()
 			finalCmds = append(finalCmds, cmds.SetBackupsFocus(m.backupsFocus))
@@ -523,9 +523,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// it works regardless of which panel is focused.
 		case key.Matches(msg, keys.List.New):
 			switch m.activePage {
-			case "Home":
+			case apptypes.PageHome:
 				finalCmds = append(finalCmds, cmds.OpenCreateGroupModal())
-			case "Services":
+			case apptypes.PageServices:
 				finalCmds = append(finalCmds, cmds.OpenAddServiceModal())
 			}
 		}
@@ -543,7 +543,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Commands from the cmds folder
 	case cmds.SetActivePageMsg:
-		m.activePage = string(msg)
+		m.activePage = apptypes.Page(msg)
 
 		// Each page starts at its primary (left) panel. Set activePage first so
 		// the deferred focus message is routed to the page we just opened,

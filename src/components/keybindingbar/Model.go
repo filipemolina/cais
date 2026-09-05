@@ -11,7 +11,7 @@ import (
 // it no longer tracks a focused component — it listens for SetActivePageMsg to
 // track state, with no direct coupling to the AppModel.
 type Model struct {
-	activePage        string
+	activePage        apptypes.Page
 	terminalWidth     int
 	selectedGroup     string
 	groupsListEmpty   bool
@@ -48,7 +48,7 @@ func (m Model) Init() tea.Cmd { return nil }
 // New builds the footer keybinding bar.
 func New() tea.Model {
 	return Model{
-		activePage:        "Home",
+		activePage:        apptypes.PageHome,
 		groupsListEmpty:   true,
 		servicesListEmpty: true,
 		backupsListEmpty:  true,

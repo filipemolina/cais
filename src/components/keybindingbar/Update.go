@@ -13,7 +13,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.terminalWidth = msg.Width
 
 	case cmds.SetActivePageMsg:
-		m.activePage = string(msg)
+		m.activePage = apptypes.Page(msg)
 
 	case cmds.SetSelectedGroupMsg:
 		m.selectedGroup = string(msg)

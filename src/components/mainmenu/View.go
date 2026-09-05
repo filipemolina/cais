@@ -21,7 +21,7 @@ const versionGutter = 4
 // advertises the key in place rather than spending a footer hint on each page.
 // It replaced the first-letter underline when digits became the primary
 // scheme; the alt+<letter> chord remains as an alias (apptypes.PageShortcut).
-func tabLabel(page string, index int, fg color.Color, bold bool) string {
+func tabLabel(page apptypes.Page, index int, fg color.Color, bold bool) string {
 	digit := lipgloss.NewStyle().
 		Foreground(appstyles.Active.Accent).
 		Background(appstyles.Active.BackgroundContent).

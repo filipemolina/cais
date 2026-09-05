@@ -23,7 +23,8 @@ work builds on.
 | T7 | Tidy `go.mod` and add the CI gate | `2dee327` | done |
 | T8 | Delete four dead symbols | `5777fcc` | done |
 | T9 | Remove the deselect concept | `8f6d436` | done |
-| D11 | Documentation drift | | done |
+| D10 | Page identity becomes a type | | done |
+| D11 | Documentation drift | `cd94f13` | done |
 
 Tasks T10 and beyond are in *Deferred* and **must not be started** without being told to.
 
@@ -1476,7 +1477,24 @@ terminal with a picker open pushes its bottom border off screen.
 
 **D10 — Page identity is a bare string** switched on at nine sites across four packages,
 each falling through silently. A `type Page string` with constants makes a typo a
-compile error.
+compile error. *(Done — see the status table.)*
+
+The real count was 46 literal sites across six packages, not nine across four.
+`apptypes.BackupsFocus` was the precedent: same problem, same place, already solved that
+way.
+
+**What the type actually buys, precisely.** A typo'd *constant name*
+(`apptypes.PageHom`) is a compile error. A typo'd *string literal*
+(`m.activePage == "Hom"`) is **not** — an untyped constant still converts implicitly,
+which is what keeps every `Page: "Home"` in the tests compiling unchanged. So the claim
+"makes a typo a compile error" is half true, and the half that works is the half that
+matters: the constants are now the only spelling anyone writes, a bare literal in
+production stands out to a grep (there are none left outside `Pages.go`), and passing a
+`string` where a `Page` belongs — the actual mechanism behind the drift — is now
+rejected. That last one caught real call sites during the conversion.
+
+`backupslist` and `serviceslist` set `list.Title` to `"Backups"` and `"Services"`. Those
+stay strings: a list title is text on a header, not an identity.
 
 **D11 — Documentation drift.** *(Done — see the status table.)* `docs/DESIGN.md` names
 several identifiers that moved when `src/components` was split into one package per

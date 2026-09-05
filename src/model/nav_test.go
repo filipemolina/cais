@@ -46,10 +46,10 @@ func collect(cmd tea.Cmd) []tea.Msg {
 }
 
 // activePageFrom returns the page named by a SetActivePageMsg among msgs.
-func activePageFrom(msgs []tea.Msg) string {
+func activePageFrom(msgs []tea.Msg) apptypes.Page {
 	for _, msg := range msgs {
 		if page, ok := msg.(cmds.SetActivePageMsg); ok {
-			return string(page)
+			return apptypes.Page(page)
 		}
 	}
 
@@ -74,7 +74,7 @@ func TestAltLetterSwitchesPage(t *testing.T) {
 	for _, page := range apptypes.PageTitles {
 		letter := []rune(apptypes.PageShortcut(page))[0]
 
-		t.Run(page, func(t *testing.T) {
+		t.Run(string(page), func(t *testing.T) {
 			// Start somewhere else, so the chord has an actual switch to make.
 			from := apptypes.PageTitles[0]
 			if from == page {
@@ -105,7 +105,7 @@ func TestDigitSwitchesPage(t *testing.T) {
 	for i, page := range apptypes.PageTitles {
 		digit := rune('1' + i)
 
-		t.Run(page, func(t *testing.T) {
+		t.Run(string(page), func(t *testing.T) {
 			// Start somewhere else, so the key has an actual switch to make.
 			from := apptypes.PageTitles[0]
 			if from == page {
@@ -159,7 +159,7 @@ func TestDigitsWithoutAPageDoNothing(t *testing.T) {
 func TestBracketsStepThroughPages(t *testing.T) {
 	m := applyLayout(startup(120, 40))
 
-	step := func(stroke string) string {
+	step := func(stroke string) apptypes.Page {
 		t.Helper()
 
 		updated, cmd := m.Update(tea.KeyPressMsg{Code: rune(stroke[0]), Text: stroke})
@@ -173,7 +173,7 @@ func TestBracketsStepThroughPages(t *testing.T) {
 		return page
 	}
 
-	for _, want := range []string{"Services", "Compose Files", "Backups"} {
+	for _, want := range []apptypes.Page{apptypes.PageServices, apptypes.PageComposeFiles, apptypes.PageBackups} {
 		if got := step("]"); got != want {
 			t.Errorf("] stepped to %q, want %q", got, want)
 		}

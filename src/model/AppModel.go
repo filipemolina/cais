@@ -70,8 +70,8 @@ type AppModel struct {
 	config     configModel
 	containers containersModel
 	selection  selectionModel
-	pages      map[string][]tea.Model
-	activePage string
+	pages      map[apptypes.Page][]tea.Model
+	activePage apptypes.Page
 	components Components
 	lastError  string
 	// lastErrorFromPoll records whether the banner is showing an error from
@@ -106,7 +106,7 @@ type AppModel struct {
 	mouseDragging bool
 	mouseDragX    int
 	// backupsFocus is which half of the Backups page the arrows are driving.
-	// It is meaningful only while activePage is "Backups" - every other page's
+	// It is meaningful only while activePage is apptypes.PageBackups - every other page's
 	// panels gave up focus (docs/DESIGN.md), and this page kept it because its
 	// two halves are a cursor over metadata and a scrolling file rather than
 	// two views of one selection.
@@ -242,7 +242,7 @@ func (m AppModel) groupStatuses() []cmds.GroupStatus {
 // nil if the active page isn't Home. Call this whenever the underlying
 // container state changes so the groups list's status dots stay in sync.
 func (m AppModel) broadcastGroupsList() tea.Cmd {
-	if m.activePage != "Home" {
+	if m.activePage != apptypes.PageHome {
 		return nil
 	}
 	return cmds.SetGroupsList(m.groupStatuses())
@@ -253,7 +253,7 @@ func (m AppModel) broadcastGroupsList() tea.Cmd {
 // active. Called on page switch and after any write through the app, so
 // the viewport stays in sync with disk.
 func (m AppModel) recomposeFilesCmdIfActive() tea.Cmd {
-	if m.activePage != "Compose Files" || m.config.configFileName == "" {
+	if m.activePage != apptypes.PageComposeFiles || m.config.configFileName == "" {
 		return nil
 	}
 	return cmds.GetComposeFileContents(m.config.configFileName)
@@ -263,7 +263,7 @@ func (m AppModel) recomposeFilesCmdIfActive() tea.Cmd {
 // Backups page, or nil when the Backups page is not active or no compose file
 // is loaded. It lists both the compose file and the .env (when one is known).
 func (m AppModel) getBackupsCmdIfActive() tea.Cmd {
-	if m.activePage != "Backups" || m.config.configFileName == "" {
+	if m.activePage != apptypes.PageBackups || m.config.configFileName == "" {
 		return nil
 	}
 	return cmds.GetBackups(m.config.configFileName, m.config.envPath)
@@ -291,14 +291,14 @@ func (m AppModel) homeStats() (groups, services, running, ungrouped int) {
 // or nil if the active page isn't Home. Call this whenever the underlying
 // data changes so the status header stays in sync.
 func (m AppModel) broadcastHomeStats() tea.Cmd {
-	if m.activePage != "Home" {
+	if m.activePage != apptypes.PageHome {
 		return nil
 	}
 	groups, services, running, ungrouped := m.homeStats()
 	return cmds.SetHomeStats(groups, services, running, ungrouped)
 }
 
-func (m *AppModel) UpdateInnerComponent(activePage string, msg tea.Msg) tea.Cmd {
+func (m *AppModel) UpdateInnerComponent(activePage apptypes.Page, msg tea.Msg) tea.Cmd {
 	var finalCmds []tea.Cmd
 
 	innerComponents, ok := m.pages[activePage]
@@ -331,7 +331,7 @@ func (m AppModel) shouldForwardToComponents(msg tea.Msg) bool {
 // flags resolved to; the zero value means "the compose file in the current
 // directory", which is what a bare run gets.
 func GetInitialModel(source utils.ComposeSource) AppModel {
-	pages := make(map[string][]tea.Model)
+	pages := make(map[apptypes.Page][]tea.Model)
 
 	// Resolved once, here, rather than read from the environment inside
 	// utils.ResolveURL - the host cannot change during a run, and every
@@ -339,12 +339,12 @@ func GetInitialModel(source utils.ComposeSource) AppModel {
 	cfg, _ := config.LoadConfig()
 	urlHost := utils.URLHost(cfg, os.Getenv)
 
-	pages["Home"] = []tea.Model{
+	pages[apptypes.PageHome] = []tea.Model{
 		groupslist.New([]string{}, 0, 0),
 		groupdetailspanel.New(),
 	}
 
-	pages["Services"] = []tea.Model{
+	pages[apptypes.PageServices] = []tea.Model{
 		serviceslist.New([]types.ServiceConfig{}, 0, 0),
 		detailspanel.New(nil, urlHost),
 	}
@@ -352,11 +352,11 @@ func GetInitialModel(source utils.ComposeSource) AppModel {
 	// Every page in apptypes.PageTitles needs an entry here. A page missing
 	// from this map renders an empty body, which used to drop the app out of
 	// the alternate screen and look like a crash.
-	pages["Compose Files"] = []tea.Model{
+	pages[apptypes.PageComposeFiles] = []tea.Model{
 		composefilepanel.New(),
 	}
 
-	pages["Backups"] = []tea.Model{
+	pages[apptypes.PageBackups] = []tea.Model{
 		backupslist.New(),
 		backuppreviewpanel.New(),
 	}

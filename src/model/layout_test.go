@@ -1,6 +1,7 @@
 package model
 
 import (
+	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/cmds"
 	"github.com/filipemolina/cais/src/constants"
 	"github.com/filipemolina/cais/src/utils"
@@ -72,7 +73,7 @@ func TestBodyLayoutFillsTerminalWidthExactly(t *testing.T) {
 }
 
 func TestPanelsRenderAtTheirBroadcastSize(t *testing.T) {
-	for _, page := range []string{"Home", "Services"} {
+	for _, page := range []apptypes.Page{apptypes.PageHome, apptypes.PageServices} {
 		m := applyLayout(drive(startup(120, 40), cmds.SetActivePageMsg(page)))
 		layout := layoutMsg(m)
 
@@ -109,7 +110,7 @@ func TestRenderedViewNeverExceedsTerminalWidth(t *testing.T) {
 	sizes := []struct{ width, height int }{{120, 40}, {80, 24}, {64, 20}}
 
 	for _, size := range sizes {
-		for _, page := range []string{"Home", "Services"} {
+		for _, page := range []apptypes.Page{apptypes.PageHome, apptypes.PageServices} {
 			m := applyLayout(drive(startup(size.width, size.height), cmds.SetActivePageMsg(page)))
 
 			for i, line := range strings.Split(m.View().Content, "\n") {

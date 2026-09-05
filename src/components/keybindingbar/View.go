@@ -22,9 +22,9 @@ func (m Model) bindingsFor() []key.Binding {
 	listEmpty := m.groupsListEmpty
 
 	switch m.activePage {
-	case "Services":
+	case apptypes.PageServices:
 		listEmpty = m.servicesListEmpty
-	case "Backups":
+	case apptypes.PageBackups:
 		// The version list has no "selected" beyond its cursor, so only
 		// emptiness matters here - it is what decides whether / is offered.
 		listEmpty = m.backupsListEmpty

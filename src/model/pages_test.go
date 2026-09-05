@@ -17,7 +17,7 @@ import (
 // exactly like a crash. Every page must render a full frame.
 func TestEveryPageRendersAFullFrame(t *testing.T) {
 	for _, page := range apptypes.PageTitles {
-		t.Run(page, func(t *testing.T) {
+		t.Run(string(page), func(t *testing.T) {
 			m := applyLayout(drive(startup(120, 40), cmds.SetActivePageMsg(page)))
 
 			view := m.View()

@@ -408,7 +408,7 @@ func TestTabIsOfferedOnBackupsOnly(t *testing.T) {
 		t.Error("the Backups footer should offer tab: it is the one page with two focus stops")
 	}
 
-	for _, page := range []string{"Home", "Services", "Compose Files"} {
+	for _, page := range []apptypes.Page{apptypes.PageHome, apptypes.PageServices, apptypes.PageComposeFiles} {
 		if containsBinding(Active(Context{Page: page}), Global.NextPanel) {
 			t.Errorf("%s offers tab, which is dead there", page)
 		}
