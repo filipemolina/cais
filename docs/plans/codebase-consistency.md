@@ -23,7 +23,7 @@ work builds on.
 | T7 | Tidy `go.mod` and add the CI gate | `2dee327` | done |
 | T8 | Delete four dead symbols | `5777fcc` | done |
 | T9 | Remove the deselect concept | `8f6d436` | done |
-| D6 | The member table's columns become an index | | done |
+| D6 | The member table's columns become an index | `2c6c7b9` | done |
 | D9 | Modals re-fit when the terminal resizes | `e1d888d` | done |
 | D8 | A seam for docker, and a hermetic test suite | `36c2bfc` | done |
 | D2 | One `keys.Context` builder, not two | `e351927` | done |
