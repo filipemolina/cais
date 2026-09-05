@@ -18,8 +18,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cmds.SetSelectedGroupMsg:
 		m.selectedGroup = string(msg)
 
+	// The zero ServiceConfig is how the app says "nothing is selected" - esc on
+	// the Services page sends exactly that. Setting the flag unconditionally
+	// meant it could never go false, so the footer went on advertising the
+	// action keys over an empty details panel, and every one of them was then
+	// ignored by the panel that had nothing to act on.
 	case cmds.SetSelectedServiceMsg:
-		m.selectedService = true
+		m.selectedService = msg.Name != ""
 
 	case cmds.SetGroupsListMsg:
 		m.groupsListEmpty = len(msg) == 0
