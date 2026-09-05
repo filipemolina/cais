@@ -16,12 +16,20 @@ without re-litigating decisions, plus enough polish to publish a first alpha.
 
 ## Conventions
 
-Each phase is a feature branch of small commits, merged with `--no-ff` so a
-phase can be reverted as a unit. `go build ./... && go vet ./... && go test ./...`
-green at **every** commit, not just at the merge. The merge commit's hash then
-goes into the *Where we are* table as its `done` marker (a tiny "Pin the phase
-N merge hash" commit straight to main — the hash cannot exist before the
-merge does), and the phase branch is deleted.
+Each phase is one conventional-commit-prefixed commit landing straight on
+`main`. This used to be a feature branch merged with `--no-ff`; the practice
+changed during `component-package-restructure.md` (see the note on `56646b4`
+below), and `CLAUDE.md` is the standing rule. A phase is still revertible as a
+unit — that was the branch's purpose, and one commit per phase gives it
+directly.
+
+The hash then goes into the plan's own status table and, for a phase listed
+here, into the *Where we are* table below. That is still a small follow-up
+`docs:` commit, for the same reason it always was: a commit cannot contain its
+own hash.
+
+`go build ./... && go vet ./... && gofmt -l src/ && go test ./...` green at
+**every** commit. `gofmt -l src/` must print nothing.
 
 Behaviour that only shows up on screen gets checked in the real app with VHS
 (`vhs` is installed; write a tape with `Screenshot "name.png"` and run it from a

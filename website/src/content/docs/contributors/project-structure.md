@@ -60,7 +60,7 @@ The `Theme` type and the 13 registered themes, built by `newTheme` from a handfu
 
 ### `src/config` — persisted preferences
 
-`~/.config/cais/config.yaml`. One field today (`theme`), designed to absorb more without changing existing callers.
+`~/.config/cais/config.yaml`. Two fields today (`theme` and `url_host`), designed to absorb more without changing existing callers.
 
 ### `src/highlight` — YAML highlighting
 

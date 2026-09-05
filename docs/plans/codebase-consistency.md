@@ -23,6 +23,7 @@ work builds on.
 | T7 | Tidy `go.mod` and add the CI gate | `2dee327` | done |
 | T8 | Delete four dead symbols | `5777fcc` | done |
 | T9 | Remove the deselect concept | `8f6d436` | done |
+| D11 | Documentation drift | | done |
 
 Tasks T10 and beyond are in *Deferred* and **must not be started** without being told to.
 
@@ -1477,11 +1478,34 @@ terminal with a picker open pushes its bottom border off screen.
 each falling through silently. A `type Page string` with constants makes a typo a
 compile error.
 
-**D11 — Documentation drift.** `docs/DESIGN.md` names several identifiers that moved
-when `src/components` was split into one package per model. The contributor docs
-misstate the theme count (13 vs 14) and the config field count. `README.md` links a
-troubleshooting page that does not exist. `docs/ROADMAP.md` describes a `--no-ff` merge
-workflow that contradicts `CLAUDE.md`'s one-commit-on-main rule.
+**D11 — Documentation drift.** *(Done — see the status table.)* `docs/DESIGN.md` names
+several identifiers that moved when `src/components` was split into one package per
+model. The contributor docs misstate the theme count (13 vs 14) and the config field
+count. `README.md` links a troubleshooting page that does not exist. `docs/ROADMAP.md`
+describes a `--no-ff` merge workflow that contradicts `CLAUDE.md`'s one-commit-on-main
+rule.
+
+What was actually found, on checking each claim:
+
+- **`DESIGN.md` identifiers — confirmed, six sites.** `components.dockerActionFor` (x2)
+  and `components.renderKeyHints` are `chrome.DockerActionFor` and
+  `chrome.RenderKeyHints`; the three cited tests are in `groupslist` and `keybindingbar`,
+  not `components`; `utils.DockerLogs` is `utils.StreamDockerLogs`.
+  `constants.FocusableComponents` and `keys.Live` also fail a grep but are *correct* -
+  both sentences say the thing is gone, which is why it is gone. Left alone.
+- **Theme count — confirmed, two sites.** `appstyles.Themes` holds 14 (3 cais + 11
+  community). `theme-system.md`'s frontmatter and `overview.md`'s link text said 13;
+  `theme-system.md`'s own body already said 14, so the page contradicted itself.
+- **Config field count — confirmed, two sites.** `config.Config` has `Theme` and
+  `URLHost`; `architecture.md` and `project-structure.md` both still said "One field
+  today (`theme`)". The user-facing `configuration.md` table was already right.
+- **`README.md` troubleshooting link — not a defect.** It points at
+  `website/src/content/docs/users/troubleshooting.md`, which exists. Nothing changed.
+- **`ROADMAP.md` workflow — confirmed.** Its *Conventions* section described feature
+  branches merged `--no-ff`, and its check omitted `gofmt -l src/`. Rewritten to the
+  land-on-main rule, noting where the practice changed (`56646b4`, which the same file
+  already records as having landed straight on main) and keeping the follow-up `docs:`
+  commit that pins the hash, since a commit still cannot contain its own hash.
 
 ---
 

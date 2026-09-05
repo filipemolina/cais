@@ -29,7 +29,7 @@ Shared data types: list items (`ServiceListItem`, `GroupListItem`), `DockerConta
 
 ### 5. Configuration — `src/config`
 
-Persisted preferences (`~/.config/cais/config.yaml`). One field today (`theme`), designed to absorb more without changing existing callers: add a field, tag it, and `LoadConfig`/`SaveConfig` round-trip it automatically.
+Persisted preferences (`~/.config/cais/config.yaml`). Two fields today (`theme` and `url_host`), designed to absorb more without changing existing callers: add a field, tag it, and `LoadConfig`/`SaveConfig` round-trip it automatically.
 
 ### 6. Keybindings — `src/keys`
 

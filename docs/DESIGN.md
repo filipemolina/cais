@@ -288,7 +288,7 @@ still running. Pages that aren't implemented yet get a
 
 **The unified keymap.** Because the two panels share one selection, the docker
 verbs are the same on both screens and resolve through the same bindings in
-`src/keys` - `components.dockerActionFor` maps the key to the verb regardless of
+`src/keys` - `chrome.DockerActionFor` maps the key to the verb regardless of
 which screen is active. The group screen (Home) and the service screen
 (Services) share `s` start, `t` stop, `r` restart, `p` pull, `x` remove and `L`
 logs. `H` (healthcheck) and `B` (boot) are Services-only. The screens differ only in their
@@ -318,13 +318,13 @@ Two rules follow, and they are the reason the package exists:
 1. **One verb is one binding.** `s` starts a group and starts a service because
    both panels read `keys.Details.Start` — not because two switch statements
    happen to agree. The shared docker verbs resolve through
-   `components.dockerActionFor`.
+   `chrome.DockerActionFor`.
 2. **The footer asks the keymap; it does not keep a list.**
    `keys.Active(keys.Context{…})` takes the page, the focused component, whether
    the list is empty and whether anything is selected, and returns the bindings
    that are live, in display order. The bar supplies the screen state, the keymap
    makes the decision, so the two cannot disagree.
-   `components.TestFooterHints` pins every context.
+   `keybindingbar.TestFooterHints` pins every context.
 
 `Active` returns a *filtered slice* rather than calling `SetEnabled` on the
 bindings it wants to hide. `key.Binding.Enabled` gates matching as well as help,
@@ -387,7 +387,7 @@ one panel-scoped tier, and a `?` overlay listing both.
 
 Because an overlay hides the footer bar while it is open, **an overlay advertises
 its own keys**. It builds that line from the same bindings, through
-`components.renderKeyHints`, so a modal's help and the footer read alike; pass a
+`chrome.RenderKeyHints`, so a modal's help and the footer read alike; pass a
 lighter description color when the modal sits on a lighter surface than the bar.
 
 #### No child component keeps its library default keymap
@@ -401,7 +401,7 @@ paged the list out from under it.
 
 So the lists install `keys.ListKeyMap()` instead. It keeps only what the list
 alone can answer — cursor movement, `g`/`G`, and `/` — and leaves every key the
-app owns bound to nothing. `components.TestDeleteKeyDoesNotAlsoPageTheList` and
+app owns bound to nothing. `groupslist.TestDeleteKeyDoesNotAlsoPageTheList` and
 `TestPanelLettersDoNotPageTheList` fail against the default map.
 
 The same trap is not the lists' alone, so the rule is general:
@@ -482,7 +482,7 @@ What was missing is not a setting but an answer to "which file?", so
 `AppModel` broadcasts the name it resolved as `cmds.SetComposeFileMsg` and the
 footer reports it. It degrades as the terminal narrows — full path, then
 basename, then dropped — because the keys beside it are worth more than the
-name; `components.TestFooterComposeFile` pins that ladder, and
+name; `keybindingbar.TestFooterComposeFile` pins that ladder, and
 `TestFooterComposeFileNeverCrowdsOutTheKeys` pins the part that matters, that
 adding the name never costs the bar a line or a key. When several candidates
 exist the name alone is only half the answer: `utils.GetComposeFileName`
@@ -495,7 +495,7 @@ the losers by name.
 **The app resolves the file once and tells docker which one it picked.** Every
 invocation starts from `utils.ComposeFileArgs`, which opens the argument list
 with `compose --file <path>`, so `utils.DockerCompose`, `utils.DockerComposePs`
-and `utils.DockerLogs` act on exactly the file the panels are describing.
+and `utils.StreamDockerLogs` act on exactly the file the panels are describing.
 
 It was not always so. Each side used to resolve independently — the app through
 `GetComposeFileName`, docker through its own identical order — and they agreed

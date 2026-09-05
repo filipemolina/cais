@@ -39,7 +39,7 @@ flowchart TB
 - **[Project structure](/contributors/project-structure/)** — the `src/` tree with per-package responsibilities.
 - **[Core concepts](/contributors/core-concepts/)** — the mental model: message passing, the AppModel, the esc ladder.
 - **[Keybinding system](/contributors/keybinding-system/)** — the single source of truth design.
-- **[Theme system](/contributors/theme-system/)** — how the 13 themes are built from base colors.
+- **[Theme system](/contributors/theme-system/)** — how the 14 themes are built from base colors.
 - **[Backup system](/contributors/backup-system/)** — the write-safety architecture.
 - **[Testing](/contributors/testing/)** — the testing philosophy and how to test a TUI.
 - **[Development workflow](/contributors/development-workflow/)** — the build/test loop, CI, and releases.

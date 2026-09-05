@@ -1,6 +1,6 @@
 ---
 title: Theme System
-description: How the 13 themes are built from base colors, and the rules that keep them consistent.
+description: How the 14 themes are built from base colors, and the rules that keep them consistent.
 ---
 
 # Theme System
