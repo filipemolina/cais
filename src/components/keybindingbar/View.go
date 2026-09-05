@@ -20,23 +20,19 @@ import (
 // cannot disagree about what is pressable.
 func (m Model) bindingsFor() []key.Binding {
 	listEmpty := m.groupsListEmpty
-	selected := m.selectedGroup != ""
 
 	switch m.activePage {
 	case "Services":
 		listEmpty = m.servicesListEmpty
-		selected = m.selectedService
 	case "Backups":
 		// The version list has no "selected" beyond its cursor, so only
 		// emptiness matters here - it is what decides whether / is offered.
 		listEmpty = m.backupsListEmpty
-		selected = false
 	}
 
 	return keys.Active(keys.Context{
 		Page:                  m.activePage,
 		ListEmpty:             listEmpty,
-		Selected:              selected,
 		ReadOnlyGroup:         m.selectedGroup == apptypes.UngroupedGroup,
 		UngroupedMaterialized: m.ungroupedMaterialized,
 		Editing:               m.editing,

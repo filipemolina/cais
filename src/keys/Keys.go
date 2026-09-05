@@ -431,10 +431,6 @@ type Context struct {
 	// ListEmpty reports whether the body list has any rows to act on. An
 	// empty list offers no selection-dependent verbs.
 	ListEmpty bool
-	// Selected reports whether the panel has a subject to act on - a chosen
-	// group on Home, a chosen service on Services. Without one, the action
-	// keys do nothing and are not offered.
-	Selected bool
 	// ReadOnlyGroup is true when the selected group is the reserved
 	// apptypes.UngroupedGroup row. Its membership is derived and it has no
 	// profile tag, so the list-management verbs are not offered on it - the
@@ -500,7 +496,11 @@ func Active(ctx Context) []key.Binding {
 	switch ctx.Page {
 	case "Home", "Services":
 		var bindings []key.Binding
-		if ctx.Selected {
+		// A non-empty list always has a row under the cursor, and that row is
+		// the selection - there is no way to deselect. So "is there a subject
+		// to act on" and "does the list have rows" are the same question, and
+		// asking it once is what stops two callers answering it differently.
+		if !ctx.ListEmpty {
 			// The subject's docker verbs and the list-management verbs, in
 			// the order the footer reads them. s starts the selected group
 			// or service directly - there is no separate "select" key.
@@ -545,12 +545,12 @@ func Active(ctx Context) []key.Binding {
 
 		bindings = append(bindings, List.Navigate)
 
-		// Back is the esc ladder's second rung: deselect. It is only live
-		// when something is selected and the filter has not already claimed
-		// esc for itself.
-		if ctx.Selected && ctx.Filter != list.FilterApplied {
-			bindings = append(bindings, Global.Back)
-		}
+		// No Back rung here any more. esc used to deselect; with the selection
+		// permanent there is nothing left for it to do on this page that the
+		// footer is not already showing - an applied filter takes the slot
+		// above as "esc clear filter", and dismissing an error banner works
+		// but is unadvertised on every page, Files and Backups included. The
+		// bar does not advertise inert keys.
 
 		return bindings
 

@@ -21,8 +21,8 @@ work builds on.
 | T5 | Sort Networks and Depends-on before rendering | `e26cd45` | done |
 | T6 | Make `GetConfigMsg` a defined type | `4b6c9aa` | done |
 | T7 | Tidy `go.mod` and add the CI gate | `2dee327` | done |
-| T8 | Delete four dead symbols | | done |
-| T9 | Remove the deselect concept | | todo |
+| T8 | Delete four dead symbols | `5777fcc` | done |
+| T9 | Remove the deselect concept | | done |
 
 Tasks T10 and beyond are in *Deferred* and **must not be started** without being told to.
 
@@ -1315,6 +1315,15 @@ advertised, the same as on Files and Backups.
 ```
 
 Do not reword anything else in that paragraph.
+
+**Deviation.** The sentence quoted above is preceded by the lead-in "With no panel left
+to return focus to, what remains is the selection itself:", and the paragraph's next
+sentence is the old footer claim ("The footer offers `esc back` in those contexts
+only..."). Leaving either would have made the paragraph contradict itself, since the
+replacement says there is no deselect rung and gives the footer's new behaviour. The
+lead-in was trimmed to "With no panel left to return focus to," and the old footer
+sentence was replaced by the one in the block, with its closing "the bar does not
+advertise inert keys" kept.
 
 ### Verification
 

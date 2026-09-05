@@ -37,7 +37,7 @@ func TestFooterHints(t *testing.T) {
 		{
 			name:  "groups list with groups",
 			model: Model{activePage: "Home"},
-			want:  "n new · / filter · ↑/↓ navigate",
+			want:  "s start · t stop · r restart · p pull · x remove · L logs · e edit · R rename · n new · d delete · / filter · ↑/↓ navigate",
 		},
 		{
 			// The reserved ungrouped row is read-only: the docker verbs stay,
@@ -45,13 +45,13 @@ func TestFooterHints(t *testing.T) {
 			// 'A' verb (adopt, while the row is derived) takes their place.
 			name:  "groups list with the ungrouped row selected",
 			model: Model{activePage: "Home", selectedGroup: apptypes.UngroupedGroup},
-			want:  "s start · t stop · r restart · p pull · x remove · L logs · e edit · R rename · n new · d delete · A adopt · / filter · ↑/↓ navigate · esc back",
+			want:  "s start · t stop · r restart · p pull · x remove · L logs · e edit · R rename · n new · d delete · A adopt · / filter · ↑/↓ navigate",
 		},
 		{
 			// Once a real ungrouped profile backs the row, 'A' releases it.
 			name:  "groups list with the materialized ungrouped row selected",
 			model: Model{activePage: "Home", selectedGroup: apptypes.UngroupedGroup, ungroupedMaterialized: true},
-			want:  "s start · t stop · r restart · p pull · x remove · L logs · e edit · R rename · n new · d delete · A release · / filter · ↑/↓ navigate · esc back",
+			want:  "s start · t stop · r restart · p pull · x remove · L logs · e edit · R rename · n new · d delete · A release · / filter · ↑/↓ navigate",
 		},
 		{
 			// The list has the keyboard: every other key is a letter.
@@ -64,7 +64,7 @@ func TestFooterHints(t *testing.T) {
 			// over the esc slot, since one key shows one row.
 			name:  "groups list with a filter applied",
 			model: Model{activePage: "Home", filterState: list.FilterApplied},
-			want:  "n new · esc clear filter · ↑/↓ navigate",
+			want:  "s start · t stop · r restart · p pull · x remove · L logs · e edit · R rename · n new · d delete · esc clear filter · ↑/↓ navigate",
 		},
 		{
 			name:  "groups list while empty",
@@ -74,12 +74,12 @@ func TestFooterHints(t *testing.T) {
 		{
 			name:  "groups list with a group selected",
 			model: Model{activePage: "Home", selectedGroup: "core"},
-			want:  "s start · t stop · r restart · p pull · x remove · L logs · e edit · R rename · n new · d delete · / filter · ↑/↓ navigate · esc back",
+			want:  "s start · t stop · r restart · p pull · x remove · L logs · e edit · R rename · n new · d delete · / filter · ↑/↓ navigate",
 		},
 		{
 			name:  "services list with services",
 			model: Model{activePage: "Services"},
-			want:  "n new · / filter · ↑/↓ navigate",
+			want:  "s start · t stop · r restart · p pull · x remove · L logs · H healthcheck · B boot · e edit · E open editor · y copy url · n new · d delete · / filter · ↑/↓ navigate",
 		},
 		{
 			name:  "services list while a filter is being typed",
@@ -93,12 +93,12 @@ func TestFooterHints(t *testing.T) {
 		},
 		{
 			name:  "services list with a service selected",
-			model: Model{activePage: "Services", selectedService: true},
-			want:  "s start · t stop · r restart · p pull · x remove · L logs · H healthcheck · B boot · e edit · E open editor · y copy url · n new · d delete · / filter · ↑/↓ navigate · esc back",
+			model: Model{activePage: "Services"},
+			want:  "s start · t stop · r restart · p pull · x remove · L logs · H healthcheck · B boot · e edit · E open editor · y copy url · n new · d delete · / filter · ↑/↓ navigate",
 		},
 		{
 			name:  "service details while inline editing",
-			model: Model{activePage: "Services", selectedService: true, editing: true},
+			model: Model{activePage: "Services", editing: true},
 			want:  "ctrl+s save · ctrl+o editor · tab indent · shift+tab outdent · esc back",
 		},
 		{

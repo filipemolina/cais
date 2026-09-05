@@ -57,27 +57,6 @@ func TestEscClearsAnAppliedFilter(t *testing.T) {
 	}
 }
 
-// With a group selected and no banner or filter in the way, esc deselects the
-// current group - the "back" rung of the ladder now that there is no panel to
-// return focus to.
-func TestEscOnASelectedGroupDeselectsIt(t *testing.T) {
-	m := homeWithGroups(t)
-	m.selection.groupName = "core"
-
-	updated, cmd := m.Update(escKey())
-	m = updated.(AppModel)
-
-	if m.selection.groupName != "" {
-		t.Errorf("esc did not deselect the group: selection = %q", m.selection.groupName)
-	}
-	for _, msg := range collect(cmd) {
-		if _, ok := msg.(cmds.SetSelectedGroupMsg); ok {
-			return
-		}
-	}
-	t.Error("esc did not broadcast the deselection")
-}
-
 // On an unfiltered list with no selection, esc is nobody's key: it produces no
 // filter state change and no deselection.
 func TestEscOnAnUnfilteredListDoesNothing(t *testing.T) {

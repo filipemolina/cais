@@ -291,12 +291,10 @@ func (m AppModel) helpContext() keys.Context {
 	switch m.activePage {
 	case "Home":
 		ctx.ListEmpty = len(m.listedGroupNames()) == 0
-		ctx.Selected = m.selection.groupName != ""
 		ctx.ReadOnlyGroup = m.selection.groupName == apptypes.UngroupedGroup
 		ctx.UngroupedMaterialized = m.ungroupedMaterialized()
 	case "Services":
 		ctx.ListEmpty = m.config.configProject == nil || len(m.config.configProject.Services) == 0
-		ctx.Selected = m.selection.serviceName != ""
 	case "Backups":
 		// Which half the arrows are driving is the only thing focus changes
 		// about this page's keys; restore is live on either half.
@@ -516,15 +514,6 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.lastError = ""
 				m.lastErrorFromPoll = false
 				break
-			}
-			if !m.escKept() && !m.inlineEditing {
-				if m.activePage == "Home" && m.selection.groupName != "" {
-					m.selection.groupName = ""
-					finalCmds = append(finalCmds, cmds.SetSelectedGroup(""))
-				} else if m.activePage == "Services" && m.selection.serviceName != "" {
-					m.selection.serviceName = ""
-					finalCmds = append(finalCmds, cmds.SetSelectedService(types.ServiceConfig{}))
-				}
 			}
 
 		// n creates a group from either panel on Home, and adds a service from

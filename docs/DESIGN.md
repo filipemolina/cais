@@ -265,14 +265,13 @@ itself; a filter being typed owns the keyboard and esc abandons it; an applied
 filter on the list keeps esc, because esc is the only way back to the full rows
 - the list says so through `KeepsEsc()`, asked via `AppModel.escKept()` the same
 way `OwnsKeyboard()` is asked, because the answer has to be right on the
-keystroke that changes it. With no panel left to return focus to, what remains
-is the selection itself: esc clears the active filter first, then — if an error
-banner is showing — dismisses it, then clears the
-current selection (deselecting the group or service so the details panel
-returns to its empty state), and does nothing further once both are already
-clear. The footer offers `esc back` in those contexts only: everywhere else the
-key is either spoken for or does nothing, and the bar does not advertise inert
-keys.
+keystroke that changes it. With no panel left to return focus to, esc clears
+the active filter first, then — if an error banner is showing — dismisses it,
+and does nothing further. There is no deselect rung: a non-empty list always
+has a row under the cursor and that row is the selection, so there is no state
+to return to. The footer offers `esc` only as `esc clear filter`; dismissing a
+banner works but is not advertised, the same as on Files and Backups — the bar
+does not advertise inert keys.
 
 `tab` still does nothing while a filter is being typed: the filter input owns
 the keyboard, and `enter`/`esc` are the only ways out of it. Making `tab`

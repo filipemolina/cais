@@ -53,16 +53,18 @@ func TestCatalogAvailability(t *testing.T) {
 		if entryIn(t, groups, List.ClearFilter).Available {
 			t.Error("esc clear filter should be dimmed with no filter applied")
 		}
-		// Edit/Delete need a selection, which the list does not have here.
+		// Edit/Delete act on the row under the cursor, and a populated list
+		// always has one - there is no way to deselect. The dimmed case is an
+		// empty list, covered in its own subtest below.
 		for _, binding := range []key.Binding{List.Edit, List.Delete} {
-			if entryIn(t, groups, binding).Available {
-				t.Errorf("%q should be dimmed with no selection", binding.Help().Key)
+			if !entryIn(t, groups, binding).Available {
+				t.Errorf("%q should be available on a populated list", binding.Help().Key)
 			}
 		}
 
-		// The action keys need a selected subject.
-		if entryIn(t, groups, Details.Start).Available {
-			t.Error("s start should be dimmed with no selection")
+		// Same for the action keys: the subject is whatever the cursor is on.
+		if !entryIn(t, groups, Details.Start).Available {
+			t.Error("s start should be available on a populated list")
 		}
 		// The same binding on another page's scope is dimmed because that
 		// page is not the one on screen.
@@ -95,7 +97,7 @@ func TestCatalogAvailability(t *testing.T) {
 	})
 
 	t.Run("group details with a group selected", func(t *testing.T) {
-		catalog := Catalog(Context{Page: "Home", Selected: true})
+		catalog := Catalog(Context{Page: "Home"})
 
 		groups := scopeTitled(t, catalog, "Groups")
 		for _, binding := range []key.Binding{Details.Start, Details.Stop, Details.Restart, Details.Pull, Details.Remove, Details.Logs} {
@@ -119,9 +121,12 @@ func TestCatalogAvailability(t *testing.T) {
 			}
 		}
 
+		// esc is not offered on a body page any more: there is no deselect
+		// rung for it, and an applied filter takes the slot as "esc clear
+		// filter" when there is one.
 		global := scopeTitled(t, catalog, "Global")
-		if !entryIn(t, global, Global.Back).Available {
-			t.Error("esc back should be available with a selection")
+		if entryIn(t, global, Global.Back).Available {
+			t.Error("esc back should be dimmed on a body page")
 		}
 	})
 
@@ -157,7 +162,7 @@ func TestCatalogAvailability(t *testing.T) {
 	})
 
 	t.Run("service details while inline editing dims Global panel keys", func(t *testing.T) {
-		catalog := Catalog(Context{Page: "Services", Editing: true, Selected: true})
+		catalog := Catalog(Context{Page: "Services", Editing: true})
 
 		global := scopeTitled(t, catalog, "Global")
 		for _, binding := range []key.Binding{Global.NextPanel, Global.PrevPanel} {
@@ -193,7 +198,7 @@ func TestCatalogAvailability(t *testing.T) {
 	// The page scopes are the whole grouping now: a row is lit only while its
 	// own page is up, so the same binding on a sibling page's scope is dimmed.
 	t.Run("the services page lights its own scope only", func(t *testing.T) {
-		catalog := Catalog(Context{Page: "Services", Selected: true})
+		catalog := Catalog(Context{Page: "Services"})
 
 		services := scopeTitled(t, catalog, "Services")
 		if !entryIn(t, services, Details.Start).Available {
@@ -282,7 +287,7 @@ func TestEditorKeysAreLiveOnlyWhileEditing(t *testing.T) {
 	// making a separate availability claim.
 
 	// Without editing, all Editor scope entries are dimmed.
-	notEditingCtx := Context{Page: "Services", Selected: true}
+	notEditingCtx := Context{Page: "Services"}
 	catalog = Catalog(notEditingCtx)
 
 	editor = scopeTitled(t, catalog, "Editor")
@@ -324,7 +329,7 @@ func TestCatalogListsTheChordAliases(t *testing.T) {
 // the row is derived, release once a real ungrouped profile backs it. The
 // other face is dimmed, and neither is offered on a real group.
 func TestUngroupedAdoptReleaseAvailability(t *testing.T) {
-	derived := Catalog(Context{Page: "Home", Selected: true, ReadOnlyGroup: true})
+	derived := Catalog(Context{Page: "Home", ReadOnlyGroup: true})
 	groups := scopeTitled(t, derived, "Groups")
 	if !entryIn(t, groups, List.AdoptUngrouped).Available {
 		t.Error("A adopt should be available on the derived ungrouped row")
@@ -333,7 +338,7 @@ func TestUngroupedAdoptReleaseAvailability(t *testing.T) {
 		t.Error("A release should be dimmed while the row is derived")
 	}
 
-	materialized := Catalog(Context{Page: "Home", Selected: true, ReadOnlyGroup: true, UngroupedMaterialized: true})
+	materialized := Catalog(Context{Page: "Home", ReadOnlyGroup: true, UngroupedMaterialized: true})
 	groups = scopeTitled(t, materialized, "Groups")
 	if !entryIn(t, groups, List.ReleaseUngrouped).Available {
 		t.Error("A release should be available on the materialized ungrouped row")
@@ -342,7 +347,7 @@ func TestUngroupedAdoptReleaseAvailability(t *testing.T) {
 		t.Error("A adopt should be dimmed while the row is materialized")
 	}
 
-	realGroup := Catalog(Context{Page: "Home", Selected: true})
+	realGroup := Catalog(Context{Page: "Home"})
 	groups = scopeTitled(t, realGroup, "Groups")
 	if entryIn(t, groups, List.AdoptUngrouped).Available {
 		t.Error("A adopt should be dimmed on a real group")

@@ -39,11 +39,11 @@ func TestEscDismissesAPollErrorBanner(t *testing.T) {
 	}
 }
 
-// Esc dismisses the banner before it deselects the current group - the same
-// one-key-one-job ladder a filtered list clears on. The first esc clears the
-// banner; the second esc deselects the group (there is no panel to return
-// focus to anymore).
-func TestEscDismissesTheBannerBeforeDeselecting(t *testing.T) {
+// Esc dismisses the banner and leaves the selection alone. Dismissing is the
+// last rung of the ladder now: there is no deselect step under it, because a
+// populated list always has a row under the cursor and that row is the
+// selection. A second esc therefore does nothing.
+func TestEscDismissesTheBannerAndKeepsTheSelection(t *testing.T) {
 	m := withGroupsLoaded(t)
 	m.selection.groupName = "core"
 	m.lastError = "boom"
@@ -57,10 +57,11 @@ func TestEscDismissesTheBannerBeforeDeselecting(t *testing.T) {
 		t.Errorf("first esc deslected the group: %q", m.selection.groupName)
 	}
 
-	// Second esc: no banner in the way, so esc deselects the group.
+	// Second esc: nothing left for it to do, and in particular it must not
+	// clear the selection.
 	m = updateForTest(t, m, keyPress(teaKeyEsc()))
-	if m.selection.groupName != "" {
-		t.Errorf("second esc did not deselect the group: %q", m.selection.groupName)
+	if m.selection.groupName != "core" {
+		t.Errorf("second esc cleared the selection: %q", m.selection.groupName)
 	}
 }
 

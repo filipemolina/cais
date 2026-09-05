@@ -14,7 +14,6 @@ type Model struct {
 	activePage        string
 	terminalWidth     int
 	selectedGroup     string
-	selectedService   bool
 	groupsListEmpty   bool
 	servicesListEmpty bool
 	composeFile       string
