@@ -23,7 +23,8 @@ work builds on.
 | T7 | Tidy `go.mod` and add the CI gate | `2dee327` | done |
 | T8 | Delete four dead symbols | `5777fcc` | done |
 | T9 | Remove the deselect concept | `8f6d436` | done |
-| D7 | Every compose write validates before it lands | | done |
+| D3 | The env modal gets a real list | | done |
+| D7 | Every compose write validates before it lands | `4ff4938` | done |
 | D4 | One `afterWrite` tail for every compose write | `e26720f` | done |
 | D1 | One answer to "is this service running" | `449368f` | done |
 | D6 | The member table's columns become an index | `2c6c7b9` | done |
@@ -1489,6 +1490,33 @@ component announcing its filter state a seam worth keeping, or is the single
 tested a bug the bar can no longer have, since it derives nothing. It is now
 `model.TestEmptyingTheServicesListClearsTheFooterActionKeys`, asserting on the rendered
 footer through the real path. Verified it fails when the hand-down is removed.
+
+**D3 — `envmodal` hand-rolls a list.** *(Done — see the status table.)*
+
+All three problems, plus one the audit did not name.
+
+- **Windowing.** The table looped over every entry and drew them all, so a 61-line `.env`
+  ran off the bottom of the screen and took the modal's border and hint line with it.
+  It now renders the list's own view. Checked in the real app: 26 rows drawn from a
+  61-line file, hints on screen, no value in cleartext.
+- **The bindings.** Twelve `key.NewBinding` literals were built inline *on every
+  keystroke*, and the help catalog built its own copies beside them — so the modal could
+  advertise one thing and answer to another. There is a `keys.Env` now and both read it.
+  The `EnvKeys` doc comment already existed in `src/keys`; the type it described never
+  did, which is how this happened.
+- **The cursor.** The list owns it.
+- **`chrome.ModalListHeightWith`** is new: `modalListChrome` counts the chrome every list
+  modal has, and this one draws two rows more (the KEY/VALUE header and its rule). Fitting
+  it to the plain figure overflowed by exactly two — enough to push its own bottom border
+  off a short terminal, which is the bug this task exists to fix.
+
+**One trap worth recording for the next conversion.** The delegate carries the revealed
+row index, and it is built with the list — before anything is revealed. A zero value
+there is a *real row*, so the first version revealed row 0's value from the moment the
+modal opened. The delegate is now built fresh per frame from the model's state, and
+`TestNoValueIsRevealedOnOpen` pins it.
+
+Original text follows.
 
 **D3 — `envmodal` hand-rolls a list.** It keeps its own cursor index, declares thirteen
 key bindings inline instead of using `src/keys`, and renders every row with no

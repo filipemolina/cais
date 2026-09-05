@@ -6,6 +6,9 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
+
 	"github.com/filipemolina/cais/src/cmds"
 )
 
@@ -44,8 +47,8 @@ func TestEnvFileContentsMsgPopulatesTable(t *testing.T) {
 	if m.loading {
 		t.Error("model still loading after contents arrive")
 	}
-	if len(m.entries) != 2 {
-		t.Fatalf("entries: got %d, want 2", len(m.entries))
+	if len(m.Entries()) != 2 {
+		t.Fatalf("entries: got %d, want 2", len(m.Entries()))
 	}
 }
 
@@ -59,8 +62,8 @@ func TestSpaceRevealsAndCCopies(t *testing.T) {
 	m = down.(Model)
 	reveal, revealCmd := m.Update(tea.KeyPressMsg{Code: ' ', Text: " "})
 	m = reveal.(Model)
-	if m.revealedIdx != 1 {
-		t.Errorf("revealedIdx = %d, want 1", m.revealedIdx)
+	if m.revealed != 1 {
+		t.Errorf("revealed = %d, want 1", m.revealed)
 	}
 
 	// c copies the selected value.
@@ -188,4 +191,90 @@ func emitsMsg(cmd tea.Cmd, pred func(tea.Msg) bool) bool {
 		}
 	}
 	return false
+}
+
+// manyVars is a .env longer than any terminal will show at once.
+func manyVars(n int) []cmds.EnvEntry {
+	entries := make([]cmds.EnvEntry, 0, n)
+	for i := range n {
+		entries = append(entries, cmds.EnvEntry{
+			Key:    fmt.Sprintf("VAR_%02d", i),
+			Value:  "value",
+			Source: "var",
+		})
+	}
+
+	return entries
+}
+
+// A .env with more variables than the terminal has rows has to stay inside the
+// modal. It did not: the table looped over every entry and drew them all, so
+// the surplus ran off the bottom of the screen, taking the modal's border and
+// its hint line with it.
+func TestALongEnvFileStaysInsideTheTerminal(t *testing.T) {
+	const termHeight = 24
+
+	m := New("/tmp/example.env", termHeight).(Model)
+	m.SetEntries("/tmp/example.env", manyVars(80), 0)
+
+	if got := lipgloss.Height(m.View().Content); got > termHeight {
+		t.Errorf("the modal is %d rows tall on a %d-row terminal", got, termHeight)
+	}
+}
+
+// And it re-fits when the terminal changes under it, like every other modal.
+func TestTheEnvModalRefitsWhenTheTerminalShrinks(t *testing.T) {
+	m := New("/tmp/example.env", 60).(Model)
+	m.SetEntries("/tmp/example.env", manyVars(80), 0)
+
+	tall := lipgloss.Height(m.View().Content)
+
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 20})
+	m = updated.(Model)
+
+	short := lipgloss.Height(m.View().Content)
+	if short >= tall {
+		t.Errorf("modal is %d rows on a 20-row terminal and %d on a 60-row one: it did not shrink", short, tall)
+	}
+	if short > 20 {
+		t.Errorf("modal is %d rows tall on a 20-row terminal", short)
+	}
+}
+
+// Nothing is revealed until the user asks. The delegate carries the revealed
+// index, and an index's zero value is a real row - so a delegate built with
+// the list would have shown row 0's value from the moment the modal opened.
+func TestNoValueIsRevealedOnOpen(t *testing.T) {
+	m := withEntries(t)
+
+	if m.revealed != -1 {
+		t.Fatalf("revealed = %d on open, want -1", m.revealed)
+	}
+
+	rendered := ansi.Strip(m.View().Content)
+	if strings.Contains(rendered, "one") {
+		t.Errorf("the first row's value is showing before anyone asked:\n%s", rendered)
+	}
+}
+
+// Moving off a revealed row re-hides it: a value is revealed for as long as
+// you are looking at it and no longer.
+func TestMovingTheCursorRehidesARevealedValue(t *testing.T) {
+	m := withEntries(t)
+
+	revealed, _ := m.Update(tea.KeyPressMsg{Code: ' ', Text: " "})
+	m = revealed.(Model)
+	if m.revealed != 0 {
+		t.Fatalf("revealed = %d after space, want 0", m.revealed)
+	}
+
+	moved, _ := m.Update(tea.KeyPressMsg{Code: 'j'})
+	m = moved.(Model)
+
+	if m.revealed != -1 {
+		t.Errorf("revealed = %d after moving the cursor, want -1", m.revealed)
+	}
+	if rendered := ansi.Strip(m.View().Content); strings.Contains(rendered, "one") {
+		t.Errorf("the value stayed revealed behind the cursor:\n%s", rendered)
+	}
 }

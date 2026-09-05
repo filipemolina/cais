@@ -2,9 +2,10 @@ package envmodal
 
 import (
 	"fmt"
+	"io"
 	"strings"
 
-	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/filipemolina/cais/src/appstyles"
@@ -46,7 +47,7 @@ func (m Model) View() tea.View {
 		)
 		return tea.NewView(chrome.ModalSurface(appstyles.Active.ModalBg, content))
 
-	case len(m.entries) == 0:
+	case len(m.list.Items()) == 0:
 		content := lipgloss.JoinVertical(lipgloss.Left,
 			chrome.ModalTitle("Env"),
 			"This .env file has no variables yet.",
@@ -66,10 +67,10 @@ func (m Model) View() tea.View {
 		chrome.HintFor(keys.List.New),
 		chrome.HintFor(keys.List.Edit),
 		chrome.HintFor(keys.List.Delete),
-		chrome.HintFor(key.NewBinding(key.WithHelp("space", "reveal"))),
-		chrome.HintFor(key.NewBinding(key.WithKeys("c"), key.WithHelp("c", "copy"))),
-		chrome.HintFor(key.NewBinding(key.WithKeys("E"), key.WithHelp("E", "editor"))),
-		chrome.HintFor(key.NewBinding(key.WithKeys("o"), key.WithHelp("o", "raw"))),
+		chrome.HintFor(keys.Env.Reveal),
+		chrome.HintFor(keys.Env.Copy),
+		chrome.HintFor(keys.Details.EditFile),
+		chrome.HintFor(keys.Env.RawEdit),
 		chrome.HintFor(keys.Overlay.Cancel),
 	)
 
@@ -108,16 +109,21 @@ func keyColWidth(contentWidth int) (int, int) {
 }
 
 // renderTable renders the KEY / VALUE table for the loaded entries.
+//
+// The rows come from the list rather than a loop over every entry, which is
+// what keeps a long .env inside the modal: the loop drew all of them and the
+// surplus ran off the bottom of the screen.
 func (m Model) renderTable(contentWidth int) string {
-	parts := []string{
+	// m.list is a value, so this delegate swap is local to the frame being
+	// rendered and cannot leak the reveal into the model.
+	l := m.list
+	l.SetDelegate(envDelegate{revealed: m.revealed})
+
+	return lipgloss.JoinVertical(lipgloss.Left,
 		m.renderHeader(contentWidth),
 		chrome.PanelRule(contentWidth),
-	}
-	for i, entry := range m.entries {
-		parts = append(parts, m.renderRow(i, entry, contentWidth))
-	}
-
-	return lipgloss.JoinVertical(lipgloss.Left, parts...)
+		l.View(),
+	)
 }
 
 func (m Model) renderHeader(contentWidth int) string {
@@ -130,12 +136,36 @@ func (m Model) renderHeader(contentWidth int) string {
 	)
 }
 
-// renderRow renders one entry. Variable rows are a two-column key/value row;
+// envDelegate renders the rows. It is a struct rather than a closure because
+// bubbles calls Render per visible row and needs Height and Spacing first.
+//
+// revealed is set on a fresh delegate each frame rather than stored once. The
+// list is built before anything is revealed, so a delegate that kept whatever
+// it was constructed with would have revealed row 0 for the life of the modal -
+// the zero value of an index is a real row.
+type envDelegate struct {
+	revealed int
+}
+
+func (d envDelegate) Height() int  { return 1 }
+func (d envDelegate) Spacing() int { return 0 }
+
+func (d envDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
+
+func (d envDelegate) Render(w io.Writer, l list.Model, index int, listItem list.Item) {
+	item, ok := listItem.(envItem)
+	if !ok {
+		return
+	}
+
+	fmt.Fprint(w, renderEnvRow(item.EnvEntry, l.Width(), index == l.Index(), index == d.revealed))
+}
+
+// renderEnvRow renders one entry. Variable rows are a two-column key/value row;
 // comments, blank lines, and parse errors span the full width. The selected
 // row is lifted to the surface tier with an accent bar down its left edge -
 // the same selection language the env/file rows use.
-func (m Model) renderRow(idx int, entry cmds.EnvEntry, contentWidth int) string {
-	isSelected := idx == m.selectedIdx
+func renderEnvRow(entry cmds.EnvEntry, contentWidth int, isSelected, isRevealed bool) string {
 	rowBg := chrome.ListRowBg(isSelected)
 
 	var rowContent string
@@ -163,7 +193,7 @@ func (m Model) renderRow(idx int, entry cmds.EnvEntry, contentWidth int) string 
 		}
 
 		value := strings.Repeat("•", maskWidth)
-		if m.revealedIdx == idx {
+		if isRevealed {
 			value = entry.Value
 		}
 

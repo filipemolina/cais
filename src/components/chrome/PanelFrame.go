@@ -145,7 +145,18 @@ const modalListChrome = 9
 // The floor of 3 is deliberate: below about 12 rows there is no honest answer,
 // and a terminal that short cannot show the modal's own chrome either.
 func ModalListHeight(items, termHeight int) int {
-	return min(items, max(3, termHeight-modalListChrome))
+	return ModalListHeightWith(items, termHeight, 0)
+}
+
+// ModalListHeightWith is ModalListHeight for a modal that draws extra rows of
+// its own above or below the list - the env modal's column header and rule,
+// for instance. extra is how many.
+//
+// It exists because modalListChrome describes the chrome every list modal has,
+// and a modal with two rows more than that overflows by exactly two: enough to
+// push its own bottom border off a short terminal.
+func ModalListHeightWith(items, termHeight, extra int) int {
+	return min(items, max(3, termHeight-modalListChrome-extra))
 }
 
 // ResizeModalList re-fits a modal's list to a new terminal height.

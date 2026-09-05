@@ -284,9 +284,31 @@ var Backup = BackupKeys{
 	Restore:  key.NewBinding(key.WithKeys("r"), key.WithHelp("r", "restore")),
 }
 
-// EnvKeys act on the Env page's key/value table. Reveal, Copy and RawEdit
-// are new to this page; New, Edit, Delete and EditFile are reused from existing
+// EnvKeys act on the env modal's key/value table. Reveal, Copy and RawEdit
+// are the modal's own; New, Edit, Delete and EditFile are reused from existing
 // bindings to keep "one verb is one binding".
+//
+// This comment described a type that did not exist. The modal built twelve
+// bindings inline on every keystroke and the help catalog built its own copies
+// beside them, so the two could disagree about what the modal advertised and
+// what it answered to. They read the same three values now.
+type EnvKeys struct {
+	// Reveal moved off v - which is now the global opener - to space, so the
+	// two never collide. enter is accepted as the same verb because a table
+	// row is a thing you open.
+	Reveal key.Binding
+	Copy   key.Binding
+	// RawEdit opens the whole .env as text, for the edits the table cannot
+	// express: reordering, comments, multi-line values.
+	RawEdit key.Binding
+}
+
+var Env = EnvKeys{
+	Reveal:  key.NewBinding(key.WithKeys("space", "enter"), key.WithHelp("space", "reveal")),
+	Copy:    key.NewBinding(key.WithKeys("c"), key.WithHelp("c", "copy")),
+	RawEdit: key.NewBinding(key.WithKeys("o"), key.WithHelp("o", "raw edit")),
+}
+
 var Overlay = OverlayKeys{
 	Submit:     key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "confirm")),
 	Cancel:     key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "cancel")),
@@ -805,10 +827,9 @@ func Catalog(ctx Context) []Scope {
 			// binding); reveal (space) and copy (c) are modal-only.
 			Title: "Env",
 			Entries: entries("",
-				key.NewBinding(key.WithHelp("space", "reveal")),
-				key.NewBinding(key.WithKeys("c"), key.WithHelp("c", "copy")),
+				Env.Reveal, Env.Copy,
 				List.New, List.Edit, List.Delete,
-				key.NewBinding(key.WithKeys("o"), key.WithHelp("o", "raw edit")),
+				Env.RawEdit,
 				Details.EditFile,
 				Overlay.Cancel,
 			),

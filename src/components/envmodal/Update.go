@@ -3,12 +3,20 @@ package envmodal
 import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+
 	"github.com/filipemolina/cais/src/cmds"
 	"github.com/filipemolina/cais/src/keys"
 )
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		// The terminal can change size under an open modal; see
+		// chrome.ResizeModalList.
+		m.termHeight = msg.Height
+		resizeEnvList(&m.list, msg.Height)
+		return m, nil
+
 	case tea.KeyPressMsg:
 		return m.handleKey(msg)
 
@@ -38,10 +46,10 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		return m, nil
 	}
 
-	if len(m.entries) == 0 {
+	if len(m.list.Items()) == 0 {
 		// Empty state: only allow 'n' to add the first variable.
 		switch {
-		case key.Matches(msg, key.NewBinding(key.WithKeys("n"))):
+		case key.Matches(msg, keys.List.New):
 			return m, func() tea.Msg { return cmds.OpenEnvKeyModalMsg{} }
 		case key.Matches(msg, keys.Overlay.Cancel):
 			return m, cmds.CloseModal(nil)
@@ -49,49 +57,29 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// The modal's own verbs are matched before the list sees the keystroke,
+	// so a verb the list also claims resolves here. Everything unmatched
+	// falls through to the list, which owns cursor movement.
 	switch {
-	case key.Matches(msg, key.NewBinding(key.WithKeys("up", "k"))):
-		if m.selectedIdx > 0 {
-			m.selectedIdx--
-			m.revealedIdx = -1
-		}
-		return m, nil
-
-	case key.Matches(msg, key.NewBinding(key.WithKeys("down", "j"))):
-		if m.selectedIdx < len(m.entries)-1 {
-			m.selectedIdx++
-			m.revealedIdx = -1
-		}
-		return m, nil
-
-	case key.Matches(msg, key.NewBinding(key.WithKeys("home", "g"))):
-		m.selectedIdx = 0
-		m.revealedIdx = -1
-		return m, nil
-
-	case key.Matches(msg, key.NewBinding(key.WithKeys("end", "G"))):
-		m.selectedIdx = len(m.entries) - 1
-		m.revealedIdx = -1
-		return m, nil
-
-	// Reveal moved off 'v' (now the global opener) to space/enter so the two
-	// never collide. Reveal and Copy share the same verb shape as the page.
-	case key.Matches(msg, key.NewBinding(key.WithKeys("space", "enter"))):
+	case key.Matches(msg, keys.Env.Reveal):
 		if entry := m.selectedVar(); entry != nil {
-			m.revealedIdx = m.selectedIdx
+			m.revealed = m.list.Index()
 		}
 		return m, nil
 
-	case key.Matches(msg, key.NewBinding(key.WithKeys("c"))):
+	case key.Matches(msg, keys.Env.Copy):
 		if entry := m.selectedVar(); entry != nil {
 			return m, tea.SetClipboard(entry.Value)
 		}
 		return m, nil
 
-	case key.Matches(msg, key.NewBinding(key.WithKeys("n"))):
+	case key.Matches(msg, keys.Env.RawEdit):
+		return m, func() tea.Msg { return cmds.OpenEnvRawEditMsg{} }
+
+	case key.Matches(msg, keys.List.New):
 		return m, func() tea.Msg { return cmds.OpenEnvKeyModalMsg{} }
 
-	case key.Matches(msg, key.NewBinding(key.WithKeys("e"))):
+	case key.Matches(msg, keys.List.Edit):
 		if entry := m.selectedVar(); entry != nil {
 			return m, func() tea.Msg {
 				return cmds.OpenEnvEditModalMsg{Key: entry.Key, Value: entry.Value}
@@ -99,16 +87,13 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case key.Matches(msg, key.NewBinding(key.WithKeys("d"))):
+	case key.Matches(msg, keys.List.Delete):
 		if entry := m.selectedVar(); entry != nil {
 			return m, func() tea.Msg { return cmds.OpenEnvDeleteConfirmMsg{Key: entry.Key} }
 		}
 		return m, nil
 
-	case key.Matches(msg, key.NewBinding(key.WithKeys("o"))):
-		return m, func() tea.Msg { return cmds.OpenEnvRawEditMsg{} }
-
-	case key.Matches(msg, key.NewBinding(key.WithKeys("E"))):
+	case key.Matches(msg, keys.Details.EditFile):
 		// Open the .env file in $EDITOR. The modal closes so the editor
 		// takes the terminal, like the Files page does.
 		return m, cmds.CloseModal(cmds.OpenEditor())
@@ -117,5 +102,17 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		return m, cmds.CloseModal(nil)
 	}
 
-	return m, nil
+	before := m.list.Index()
+
+	var listCmd tea.Cmd
+	m.list, listCmd = m.list.Update(msg)
+
+	// Moving off a revealed row re-hides it. A value is revealed for as long
+	// as you are looking at it and no longer - leaving it revealed behind the
+	// cursor is how a secret ends up on someone else's screen.
+	if m.list.Index() != before {
+		m.revealed = -1
+	}
+
+	return m, listCmd
 }
