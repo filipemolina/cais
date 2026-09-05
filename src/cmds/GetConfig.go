@@ -9,7 +9,7 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 )
 
-type GetConfigMsg = struct {
+type GetConfigMsg struct {
 	FileName string
 	// Files is every compose-file candidate that exists in the directory, in
 	// Docker's priority order, so Files[0] is FileName. The rest are the
