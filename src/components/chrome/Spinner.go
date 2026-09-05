@@ -2,6 +2,7 @@ package chrome
 
 import (
 	"fmt"
+	"image/color"
 
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/lipgloss/v2"
@@ -53,4 +54,21 @@ func kindLabel(isGroup bool) string {
 // ActionDescription returns a full description of the pending action.
 func ActionDescription(action, target string, isGroup bool) string {
 	return fmt.Sprintf("%s %s %q...", actionLabel(action), kindLabel(isGroup), target)
+}
+
+// RenderPendingAction renders a spinner with the action description, centered
+// on the panel's footer row, while a docker action is in progress.
+//
+// Both details panels drew this identically. It lives here so the two footers
+// cannot drift apart the way the "is this service running" answers once did.
+func RenderPendingAction(s spinner.Model, action *PendingAction, width int, bg color.Color) string {
+	desc := ActionDescription(action.Action, action.Target, action.IsGroup)
+
+	style := lipgloss.NewStyle().
+		Foreground(appstyles.Active.TextPrimary).
+		Background(bg).
+		Width(width).
+		AlignHorizontal(lipgloss.Center)
+
+	return style.Render(s.View() + " " + desc)
 }

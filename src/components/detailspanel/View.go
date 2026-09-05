@@ -68,7 +68,7 @@ func (m Model) View() tea.View {
 	var footer string
 	switch {
 	case m.pendingAction != nil:
-		footer = m.renderPendingAction(bodyWidth, bg)
+		footer = chrome.RenderPendingAction(m.spinner, m.pendingAction, bodyWidth, bg)
 	case m.applyHint != "":
 		footer = lipgloss.NewStyle().
 			Foreground(appstyles.Active.StatusStarting).
@@ -585,18 +585,4 @@ func (m Model) renderEditorHints(width int) string {
 		Width(width).
 		MaxWidth(width).
 		Render(hints)
-}
-
-// renderPendingAction renders a spinner with the action description in the
-// panel's footer while a docker action is in progress.
-func (m Model) renderPendingAction(width int, bg color.Color) string {
-	desc := chrome.ActionDescription(m.pendingAction.Action, m.pendingAction.Target, m.pendingAction.IsGroup)
-
-	style := lipgloss.NewStyle().
-		Foreground(appstyles.Active.TextPrimary).
-		Background(bg).
-		Width(width).
-		AlignHorizontal(lipgloss.Center)
-
-	return style.Render(m.spinner.View() + " " + desc)
 }

@@ -168,7 +168,7 @@ func (m Model) renderBody() string {
 	// docs/DESIGN.md.
 	var footerParts []string
 	if m.pendingAction != nil {
-		footerParts = []string{m.renderPendingAction(bodyWidth, bg)}
+		footerParts = []string{chrome.RenderPendingAction(m.spinner, m.pendingAction, bodyWidth, bg)}
 	}
 
 	return chrome.PanelBodyWithFooter(bodyWidth, bodyAvail, bg,
@@ -522,18 +522,4 @@ func widestShrinkable(c tableCols) (column, bool) {
 	}
 
 	return widest, most > 0
-}
-
-// renderPendingAction renders a spinner with the action description in the
-// panel's footer while a docker action is in progress.
-func (m Model) renderPendingAction(width int, bg color.Color) string {
-	desc := chrome.ActionDescription(m.pendingAction.Action, m.pendingAction.Target, m.pendingAction.IsGroup)
-
-	style := lipgloss.NewStyle().
-		Foreground(appstyles.Active.TextPrimary).
-		Background(bg).
-		Width(width).
-		AlignHorizontal(lipgloss.Center)
-
-	return style.Render(m.spinner.View() + " " + desc)
 }
