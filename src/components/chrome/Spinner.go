@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"charm.land/bubbles/v2/spinner"
-	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
 	"github.com/filipemolina/cais/src/appstyles"
@@ -54,16 +53,4 @@ func kindLabel(isGroup bool) string {
 // ActionDescription returns a full description of the pending action.
 func ActionDescription(action, target string, isGroup bool) string {
 	return fmt.Sprintf("%s %s %q...", actionLabel(action), kindLabel(isGroup), target)
-}
-
-// HandleSpinnerTick updates the spinner and returns the next tick command.
-// Returns nil if no spinner is active.
-func HandleSpinnerTick(spinnerModel spinner.Model, pendingAction *PendingAction, msg tea.Msg) (spinner.Model, tea.Cmd) {
-	if pendingAction == nil {
-		return spinnerModel, nil
-	}
-
-	var cmd tea.Cmd
-	spinnerModel, cmd = spinnerModel.Update(msg)
-	return spinnerModel, cmd
 }

@@ -1,7 +1,6 @@
 package apptypes
 
 import (
-	"image/color"
 	"strings"
 
 	"charm.land/lipgloss/v2"
@@ -27,29 +26,6 @@ type ServiceListItem struct {
 
 func (s ServiceListItem) Title() string       { return s.Service.Name }
 func (s ServiceListItem) FilterValue() string { return s.Service.Name }
-
-// StatusPill returns a styled pill showing the service's current status.
-// It uses the same visual language as the group's statusPill in
-// GroupDetailsPanel, but for a single service.
-func (s ServiceListItem) StatusPill() string {
-	var label string
-	var bg color.Color
-
-	switch s.Status {
-	case "running":
-		label, bg = "RUNNING", appstyles.Active.StatusRunning
-	default:
-		label, bg = "STOPPED", appstyles.Active.StatusStopped
-	}
-	fg := appstyles.InkOn(bg)
-
-	return lipgloss.NewStyle().
-		Background(bg).
-		Foreground(fg).
-		Bold(true).
-		Padding(0, 1).
-		Render(label)
-}
 
 func (s ServiceListItem) Description(isActive bool) string {
 	wrapperStyle := lipgloss.NewStyle()

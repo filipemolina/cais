@@ -20,8 +20,8 @@ work builds on.
 | T4 | Two error banners that forget the layout row | `467057a` | done |
 | T5 | Sort Networks and Depends-on before rendering | `e26cd45` | done |
 | T6 | Make `GetConfigMsg` a defined type | `4b6c9aa` | done |
-| T7 | Tidy `go.mod` and add the CI gate | | done |
-| T8 | Delete four dead symbols | | todo |
+| T7 | Tidy `go.mod` and add the CI gate | `2dee327` | done |
+| T8 | Delete four dead symbols | | done |
 | T9 | Remove the deselect concept | | todo |
 
 Tasks T10 and beyond are in *Deferred* and **must not be started** without being told to.
@@ -796,6 +796,10 @@ REPLACE WITH:
 
 If `go build ./...` then reports an unused import in that file, remove exactly the
 import it names, and nothing else.
+
+It did: `tea "charm.land/bubbletea/v2"` was used only by this function. Removing it also
+left a trailing blank line that `gofmt -l` flagged, so the file was run through
+`gofmt -w`.
 
 ### Step 8.3 — `apptypes.ServiceListItem.StatusPill`
 

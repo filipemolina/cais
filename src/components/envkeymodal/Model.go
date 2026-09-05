@@ -66,16 +66,6 @@ func NewForEdit(key, value string) tea.Model {
 	}
 }
 
-// GetKey returns the entered key.
-func (m Model) GetKey() string {
-	return m.keyInput.Value()
-}
-
-// GetValue returns the entered value.
-func (m Model) GetValue() string {
-	return m.valueInput.Value()
-}
-
 // SetError sets an error message.
 func (m *Model) SetError(err error) {
 	m.err = err

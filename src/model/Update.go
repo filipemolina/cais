@@ -1051,9 +1051,6 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cmds.OpenAboutModalMsg:
 		m.activeModal = aboutmodal.New()
 
-	case cmds.OpenErrorModalMsg:
-		finalCmds = append(finalCmds, m.reportForegroundError(msg.Message))
-
 	case cmds.OpenThemePickerMsg:
 		m.activeModal = themepickermodal.New(m.config.terminalHeight)
 
