@@ -17,8 +17,8 @@ work builds on.
 | T1 | Move the ANSI decoder out of the shipped binary | `d55be84` | done |
 | T2 | Stop the list tests blocking on the cursor-blink timer | `b06637f` | done |
 | T3 | Fix the footer advertising dead keys | `a127bb9` | done |
-| T4 | Two error banners that forget the layout row | | done |
-| T5 | Sort Networks and Depends-on before rendering | | todo |
+| T4 | Two error banners that forget the layout row | `467057a` | done |
+| T5 | Sort Networks and Depends-on before rendering | | done |
 | T6 | Make `GetConfigMsg` a defined type | | todo |
 | T7 | Tidy `go.mod` and add the CI gate | | todo |
 | T8 | Delete four dead symbols | | todo |

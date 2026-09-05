@@ -3,6 +3,7 @@ package detailspanel
 import (
 	"fmt"
 	"image/color"
+	"slices"
 	"strings"
 
 	"github.com/filipemolina/cais/src/apptypes"
@@ -323,6 +324,10 @@ func (m Model) configRows(valWidth int) []propRow {
 		for name := range svc.Networks {
 			netNames = append(netNames, name)
 		}
+		// Sorted because this runs inside View, on every keystroke and every
+		// container poll, and Go randomises map iteration order per range - so
+		// without this the names reshuffle from frame to frame.
+		slices.Sort(netNames)
 		rows = append(rows, propRow{"Networks", []string{strings.Join(netNames, ", ")}})
 	}
 
@@ -377,6 +382,8 @@ func (m Model) configRows(valWidth int) []propRow {
 		for name := range svc.DependsOn {
 			deps = append(deps, name)
 		}
+		// Sorted for the same reason as Networks above.
+		slices.Sort(deps)
 		rows = append(rows, propRow{"Depends on", []string{strings.Join(deps, ", ")}})
 	}
 
