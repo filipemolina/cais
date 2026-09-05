@@ -29,7 +29,7 @@ flowchart LR
 ```
 
 - **The components** match with `key.Matches(msg, keys.Details.Start)`.
-- **The footer** (`KeybindingBar`) asks `keys.Active(ctx)` — it supplies the screen state, the keymap makes the decision, so the two cannot disagree. `components.TestFooterHints` pins every context.
+- **The footer** (`KeybindingBar`) asks `keys.Active(ctx)` with the context `AppModel` resolved and handed it — it supplies nothing of its own, so the two cannot disagree. It used to build its own context from mirrored state, and that is exactly how they did disagree. `keybindingbar.TestFooterHints` pins every context.
 - **The help overlay** renders `keys.Catalog(ctx)`: every binding grouped by scope, with availability resolved against a snapshot of the screen it opened from. A row that does nothing on that screen is dimmed.
 
 ## The binding groups
@@ -66,7 +66,7 @@ The footer bar sheds whole hints in a declared priority order rather than wrappi
 
 A bubbles `list.Model` installs `list.DefaultKeyMap()`, which is written for a list that *is* the whole program. It binds `d` and `f` to next-page, `h`, `b`, and `u` to previous-page, and takes `q`, `esc`, and `?` for itself. Both body lists hand every key to the inner list while active, *after* matching their own — so those keys did two jobs at once: `d` opened the delete-group confirm **and** paged the list out from under it.
 
-So the lists install `keys.ListKeyMap()` instead. It keeps only what the list alone can answer — cursor movement, `g`/`G`, and `/` — and leaves every key the app owns bound to nothing. `components.TestDeleteKeyDoesNotAlsoPageTheList` and `TestPanelLettersDoNotPageTheList` fail against the default map.
+So the lists install `keys.ListKeyMap()` instead. It keeps only what the list alone can answer — cursor movement, `g`/`G`, and `/` — and leaves every key the app owns bound to nothing. `groupslist.TestDeleteKeyDoesNotAlsoPageTheList` and `TestPanelLettersDoNotPageTheList` fail against the default map.
 
 ## A list being filtered is an overlay
 

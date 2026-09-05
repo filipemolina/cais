@@ -99,11 +99,11 @@ func DockerPreflight() DockerStatus {
 			return err == nil
 		},
 		composeVersion: func() (string, error) {
-			out, err := exec.Command("docker", "compose", "version", "--short").CombinedOutput()
+			out, err := dockerCommand("docker", "compose", "version", "--short").CombinedOutput()
 			return string(out), err
 		},
 		engineVersion: func() (string, error) {
-			out, err := exec.Command("docker", "version", "--format", "{{.Server.Version}}").CombinedOutput()
+			out, err := dockerCommand("docker", "version", "--format", "{{.Server.Version}}").CombinedOutput()
 			return string(out), err
 		},
 		endpoint: dockerEndpoint,
@@ -119,7 +119,7 @@ func dockerEndpoint() string {
 		return host
 	}
 
-	out, err := exec.Command("docker", "context", "inspect", "--format", "{{.Endpoints.docker.Host}}").CombinedOutput()
+	out, err := dockerCommand("docker", "context", "inspect", "--format", "{{.Endpoints.docker.Host}}").CombinedOutput()
 	if err != nil {
 		return ""
 	}

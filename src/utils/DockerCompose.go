@@ -2,7 +2,6 @@ package utils
 
 import (
 	"fmt"
-	"os/exec"
 )
 
 // composeActionArgs builds the argument list for a docker compose action
@@ -68,7 +67,7 @@ func RunDockerCompose(action string, target string, isGroup bool, composeFile st
 		return err
 	}
 
-	command := exec.Command("docker", args...)
+	command := dockerCommand("docker", args...)
 	output, err := command.CombinedOutput()
 
 	if err != nil {

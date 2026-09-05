@@ -23,7 +23,8 @@ work builds on.
 | T7 | Tidy `go.mod` and add the CI gate | `2dee327` | done |
 | T8 | Delete four dead symbols | `5777fcc` | done |
 | T9 | Remove the deselect concept | `8f6d436` | done |
-| D2 | One `keys.Context` builder, not two | | done |
+| D8 | A seam for docker, and a hermetic test suite | | done |
+| D2 | One `keys.Context` builder, not two | `e351927` | done |
 | D10 | Page identity becomes a type | `d7762de` | done |
 | D11 | Documentation drift | `cd94f13` | done |
 
@@ -74,9 +75,10 @@ These rules are not advice. Follow them exactly.
    `gofmt -l src/` must print **nothing**. `go test ./...` must end with no `FAIL`
    lines. If either is not true, STOP.
 
-9. **Docker must be installed and on `PATH`** or roughly 21 tests in `src/model` fail
-   for reasons unrelated to your change. Check with `docker --version` before you start.
-   If it is missing, STOP and report that.
+9. ~~**Docker must be installed and on `PATH`** or roughly 21 tests in `src/model` fail
+   for reasons unrelated to your change.~~ **No longer true as of D8.** `src/model`'s
+   `TestMain` puts a stub `docker` on `PATH`, and the suite passes with or without a real
+   one. Nothing to check before you start.
 
 10. **Do not run `git push`.** Do not create branches. Commit on the current branch.
 
@@ -1494,10 +1496,33 @@ reloading through compose-go before writing; `GroupTags.go` does not, on five pa
 Routing both through one function costs a reload (~50-200ms) on those paths — a
 deliberate trade someone should make explicitly.
 
-**D8 — No seam for `docker`.** `utils` calls `exec.Command("docker", …)` at nine sites,
-so about 21 tests fail without Docker installed and `src/cmds` sits at 4.9% coverage.
-The fix is a swappable `var dockerCommand = exec.Command`. The prerequisite should be
-documented in the contributor docs immediately regardless, since that costs nothing.
+**D8 — No seam for `docker`.** *(Done — see the status table.)* `utils` calls
+`exec.Command("docker", …)` at nine sites, so about 21 tests fail without Docker
+installed and `src/cmds` sits at 4.9% coverage. The fix is a swappable
+`var dockerCommand = exec.Command`. The prerequisite should be documented in the
+contributor docs immediately regardless, since that costs nothing.
+
+The seam landed as `dockerCommand` / `dockerCommandContext` in `src/utils`. But the seam
+alone fixes nothing at the model level, which is where the failures were: it is
+unexported, and the 19 failing tests are in `src/model`. Measured them by running the
+suite against a `PATH` with no docker on it — 19, not 21, all in `src/model`.
+
+**What fixed them was a `TestMain` stub, not the seam.** It writes a shell script named
+`docker` to a temp dir and prepends it to `PATH` for that package. It answers `ps` with
+`[]` and everything else with success.
+
+**The stub then failed three tests that had been passing for the wrong reason.**
+`TestEditGroupFailureShowsError`, `TestRenameFailureShowsErrorAndKeepsSelection` and
+`TestAdoptUngroupedFailureShowsError` all asserted `m.lastError != ""` after sending a
+message carrying an error. That was already true before their action: the failed docker
+poll had put an error in the banner. They would have passed whatever the handler did.
+They now assert an `errormodal.Model` — the same correction T4 made, and it is worth
+noting the plan produced this class of mistake twice.
+
+So the suite is now hermetic with respect to docker, and 25% faster in `src/model`
+(23.7s vs 31.9s) because the stub returns instantly. Rule 9 above is struck out.
+
+Not done: `src/cmds` coverage. The seam makes it reachable; raising it is separate work.
 
 **D9 — Modals never re-read the terminal size.** Six capture `termHeight` at
 construction and ignore the `WindowSizeMsg` they already receive, so shrinking the

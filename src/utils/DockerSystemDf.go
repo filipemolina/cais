@@ -3,7 +3,6 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
-	"os/exec"
 	"strings"
 
 	"github.com/docker/go-units"
@@ -11,7 +10,7 @@ import (
 
 // DockerSystemDf runs `docker system df --format json` and returns the raw NDJSON output.
 func DockerSystemDf() (string, error) {
-	command := exec.Command("docker", "system", "df", "--format", "json")
+	command := dockerCommand("docker", "system", "df", "--format", "json")
 	output, err := command.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("docker system df failed: %w: %s", err, string(output))

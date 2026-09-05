@@ -2,7 +2,6 @@ package utils
 
 import (
 	"fmt"
-	"os/exec"
 )
 
 // Executes `docker compose ps` scoped to composeFile (see ComposeFileArgs)
@@ -17,7 +16,7 @@ import (
 func DockerComposePs(composeFile string) (string, error) {
 	args := append(ComposeFileArgs(composeFile), "ps", "--format", "json")
 
-	command := exec.Command("docker", args...)
+	command := dockerCommand("docker", args...)
 	output, err := command.CombinedOutput()
 
 	if err != nil {

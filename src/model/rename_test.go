@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/components/errormodal"
 	"github.com/filipemolina/cais/src/components/groupnamemodal"
 
 	tea "charm.land/bubbletea/v2"
@@ -137,8 +138,8 @@ func TestRenameFailureShowsErrorAndKeepsSelection(t *testing.T) {
 	updated, _ := m.Update(cmds.RenameGroupMsg{Err: errBoom{}, NewName: "core2"})
 	m = updated.(AppModel)
 
-	if m.lastError == "" {
-		t.Error("a failed rename left no error")
+	if _, ok := m.activeModal.(errormodal.Model); !ok {
+		t.Errorf("a failed rename put up %T, want an errormodal.Model", m.activeModal)
 	}
 	if m.selection.groupName != "core" {
 		t.Errorf("selection after a failed rename = %q, want %q (unchanged)", m.selection.groupName, "core")

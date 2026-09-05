@@ -3,7 +3,6 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
-	"os/exec"
 	"strings"
 )
 
@@ -25,7 +24,7 @@ type DockerStatsContainer struct {
 // the parsed stats for all running containers. The output is NDJSON (one
 // JSON object per line).
 func DockerStats() ([]DockerStatsContainer, error) {
-	command := exec.Command("docker", "stats", "--no-stream", "--format", "{{json .}}")
+	command := dockerCommand("docker", "stats", "--no-stream", "--format", "{{json .}}")
 	output, err := command.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("docker stats failed: %w: %s", err, string(output))

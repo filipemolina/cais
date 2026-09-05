@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"os/exec"
 )
 
 // logTailCount is how many past lines `logs -f` replays before following.
@@ -51,7 +50,7 @@ func StreamDockerLogs(target string, isGroup bool, composeFile string, members [
 		return nil, nil, err
 	}
 
-	command := exec.CommandContext(ctx, "docker", args...)
+	command := dockerCommandContext(ctx, "docker", args...)
 
 	stdout, err := command.StdoutPipe()
 	if err != nil {

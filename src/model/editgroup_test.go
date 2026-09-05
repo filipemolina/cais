@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/components/errormodal"
 	"github.com/filipemolina/cais/src/components/servicechecklistmodal"
 
 	tea "charm.land/bubbletea/v2"
@@ -182,7 +183,7 @@ func TestEditGroupFailureShowsError(t *testing.T) {
 	updated, _ := m.Update(cmds.EditGroupMsg{Err: errBoom{}})
 	m = updated.(AppModel)
 
-	if m.lastError == "" {
-		t.Error("a failed edit left no error")
+	if _, ok := m.activeModal.(errormodal.Model); !ok {
+		t.Errorf("a failed edit put up %T, want an errormodal.Model", m.activeModal)
 	}
 }

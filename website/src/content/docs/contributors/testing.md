@@ -40,8 +40,8 @@ plain := ansi.Strip(model.View().Content)
 
 The test suite is the standing guard for the design decisions in `docs/DESIGN.md`:
 
-- `components.TestFooterHints` pins every footer context — the bar cannot drift from `keys.Active`.
-- `components.TestDeleteKeyDoesNotAlsoPageTheList` and `TestPanelLettersDoNotPageTheList` fail against the default bubbles list keymap.
+- `keybindingbar.TestFooterHints` pins every footer context — the bar cannot drift from `keys.Active`.
+- `groupslist.TestDeleteKeyDoesNotAlsoPageTheList` and `TestPanelLettersDoNotPageTheList` fail against the default bubbles list keymap.
 - `TestDetailsPanelsPinPendingActionToBottom` pins both details panels to the same footer line.
 - `TestNarrowPanelsStayInsideTheirBox`, `TestFooterNeverWraps`, and `TestMemberTableHeadingsNeverCollide` guard the narrow-terminal shedding rules.
 - `src/model/background_test.go` applies `appstyles.HasBackgroundBleed` to fully rendered frames across both pages and their empty, populated, narrow, and error-banner states — once per registered theme, via a `forEachTheme` helper.
@@ -55,7 +55,11 @@ go test ./...
 go test -race ./...   # CI runs this; run it locally too
 ```
 
+**No Docker required.** `src/model`'s `TestMain` puts a stub `docker` on `PATH` for that package. Nineteen rig tests used to need a real one and failed without it; worse, with one they passed only because the machine happened to have nothing running under a compose project named after the fixture. The stub answers `ps` with an empty array every time, which is the state those fixtures describe.
+
 Run the race detector locally if you touch anything that shells out or streams: the docker calls and the log stream each run on their own goroutine.
+
+Inside `src/utils`, every docker invocation goes through the package-level `dockerCommand` / `dockerCommandContext` variables rather than `exec.Command` directly, so a test there can point them at a fake binary. A test that swaps one must restore it and must not run in parallel with another that swaps it.
 
 ## VHS for what only shows on screen
 

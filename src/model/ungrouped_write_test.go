@@ -8,6 +8,7 @@ import (
 	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/cmds"
 	"github.com/filipemolina/cais/src/components/confirmmodal"
+	"github.com/filipemolina/cais/src/components/errormodal"
 
 	"charm.land/lipgloss/v2"
 )
@@ -173,8 +174,8 @@ func TestAdoptUngroupedFailureShowsError(t *testing.T) {
 	updated, _ := m.Update(cmds.AdoptUngroupedMsg{Err: errBoom{}})
 	m = updated.(AppModel)
 
-	if m.lastError == "" {
-		t.Error("a failed adopt left no error")
+	if _, ok := m.activeModal.(errormodal.Model); !ok {
+		t.Errorf("a failed adopt put up %T, want an errormodal.Model", m.activeModal)
 	}
 }
 
