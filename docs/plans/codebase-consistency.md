@@ -22,7 +22,7 @@ work builds on.
 | T6 | Make `GetConfigMsg` a defined type | `4b6c9aa` | done |
 | T7 | Tidy `go.mod` and add the CI gate | `2dee327` | done |
 | T8 | Delete four dead symbols | `5777fcc` | done |
-| T9 | Remove the deselect concept | | done |
+| T9 | Remove the deselect concept | `8f6d436` | done |
 
 Tasks T10 and beyond are in *Deferred* and **must not be started** without being told to.
 
