@@ -27,6 +27,13 @@ import (
 // This is deliberately PATH-level rather than a seam in utils: it fixes every
 // docker call these tests make at once, including the ones made from inside
 // goroutines the test never sees, and it needs no export.
+//
+// The stub answers the read-only probes and refuses anything that would change
+// state. It used to exit 0 for everything it did not recognise, which meant a
+// test could assert its way through a docker action that had never run - the
+// same shape as the three tests D8 caught passing for the wrong reason. Every
+// test in this package passes with mutations refused, so nothing was relying
+// on that fake success.
 func TestMain(m *testing.M) {
 	if runtime.GOOS == "windows" {
 		// The stub is a shell script. On Windows these tests keep whatever
@@ -40,15 +47,11 @@ func TestMain(m *testing.M) {
 		fmt.Fprintf(os.Stderr, "stub docker: %v\n", err)
 		os.Exit(1)
 	}
-	defer os.RemoveAll(dir)
 
-	// `ps --format json` is the call that matters; an empty array is a valid
-	// answer meaning no containers, and ParseContainers accepts it. Everything
-	// else succeeds silently, which is enough for the preflight probe to stop
-	// reporting docker as missing.
-	script := "#!/bin/sh\nfor a in \"$@\"; do\n  if [ \"$a\" = \"ps\" ]; then echo '[]'; exit 0; fi\ndone\nexit 0\n"
+	// No defer for the cleanup: every path out of here ends in os.Exit, which
+	// does not run deferred calls. Each one removes the directory itself.
 	stub := filepath.Join(dir, "docker")
-	if err := os.WriteFile(stub, []byte(script), 0o755); err != nil {
+	if err := os.WriteFile(stub, []byte(stubDockerScript), 0o755); err != nil {
 		fmt.Fprintf(os.Stderr, "stub docker: %v\n", err)
 		os.RemoveAll(dir)
 		os.Exit(1)
@@ -68,3 +71,29 @@ func TestMain(m *testing.M) {
 	os.RemoveAll(dir)
 	os.Exit(code)
 }
+
+// stubDockerScript answers the read-only probes and refuses everything else.
+const stubDockerScript = `#!/bin/sh
+# ps can appear at any position: the app reaches it both as ` + "`docker ps`" + ` and
+# as ` + "`docker compose ... ps`" + `. An empty array is a valid answer meaning no
+# containers, and ParseContainers accepts it.
+for a in "$@"; do
+  if [ "$a" = "ps" ]; then echo '[]'; exit 0; fi
+done
+
+# The read-only probes. These must succeed: the preflight check runs
+# ` + "`docker compose version`" + ` and ` + "`docker version`" + ` at startup, and a failure
+# there puts a "docker unavailable" modal over every test in the package.
+case "$1 $2" in
+  "compose version"|"context inspect"|"system df") exit 0 ;;
+esac
+case "$1" in
+  version|info|stats) exit 0 ;;
+esac
+
+# Everything else changes state. Refuse it loudly rather than reporting a
+# success that never happened - a fake success is how an error path stops
+# being tested without anyone noticing.
+echo "stub docker: refusing unstubbed command: $*" >&2
+exit 127
+`
