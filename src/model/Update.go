@@ -142,13 +142,19 @@ func (m *AppModel) reportForegroundError(message string) tea.Cmd {
 // the poll, then either report the failure or clear the banner and reload, and
 // either way let the Files page and the layout catch up.
 //
-// It was written out at each call site, and two of them had drifted - in mirror
-// image. EditGroupMsg refreshed the layout but not the Files page;
-// CycleRestartPolicyMsg refreshed the Files page but not the layout. Both write
-// to the compose file, so both needed both: the Files page may be showing the
-// file that just changed, and clearing the banner on success gives back the
-// screen row it was costing. Neither omission was a rule, so neither survives
-// here.
+// It was written out at all fourteen call sites, and six of them had drifted.
+// EditGroupMsg refreshed the layout but not the Files page and
+// CycleRestartPolicyMsg refreshed the Files page but not the layout - a mirror
+// image, which is what made the drift obvious. The other four omitted the
+// layout follow-up outright: ServiceEditedMsg and EditorClosedMsg (an external
+// editor can add, rename or delete a service), RestoreBackupMsg (a restore
+// replaces the entire file) and SaveEnvFileMsg (the reload re-interpolates
+// .env into the compose file).
+//
+// None of the omissions was a rule. A write that changes what services exist
+// has to reach the layout, or the body keeps the row count it had before;
+// the Files page may be showing the very file that changed; and clearing the
+// banner on success gives back the screen row it was costing.
 //
 // Both follow-ups run on the failure path too, as they always did. They are
 // each guarded on "did anything actually change", so on a failed write they
@@ -1018,39 +1024,23 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case cmds.ServiceEditedMsg:
 		m.externalEditorOpen = false
-		m.lastErrorFromPoll = false
 
-		if msg.Err != nil {
-			// The compose file is untouched. Carry the underlying message
-			// through - "invalid compose file" on its own tells the user
-			// nothing they can act on.
-			errMsg := fmt.Sprintf("Editing %s: %s", msg.ServiceName, msg.Err)
-			finalCmds = append(finalCmds, m.reportForegroundError(errMsg))
-			break
+		// The error is wrapped rather than reported raw: on failure the compose
+		// file is untouched, and "invalid compose file" on its own tells the
+		// user nothing they can act on.
+		err := msg.Err
+		if err != nil {
+			err = fmt.Errorf("Editing %s: %s", msg.ServiceName, msg.Err)
 		}
-
-		m.lastError = ""
-		finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
-		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
-			finalCmds = append(finalCmds, cfCmd)
-		}
+		finalCmds = append(finalCmds, m.afterWrite(err)...)
 
 	case cmds.EditorClosedMsg:
 		m.externalEditorOpen = false
-		m.lastErrorFromPoll = false
 
-		if msg.Err != nil {
-			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
-			break
-		}
-
-		// Reload unconditionally: the user may have saved anything, or
-		// nothing, and re-reading is cheaper than working out which.
-		m.lastError = ""
-		finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
-		if cfCmd := m.recomposeFilesCmdIfActive(); cfCmd != nil {
-			finalCmds = append(finalCmds, cfCmd)
-		}
+		// afterWrite reloads unconditionally on success, which is what this
+		// wants: the user may have saved anything, or nothing, and re-reading
+		// is cheaper than working out which.
+		finalCmds = append(finalCmds, m.afterWrite(msg.Err)...)
 
 	case cmds.OpenHelpModalMsg:
 		m.activeModal = helpoverlay.New(
@@ -1261,18 +1251,18 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds.RestoreBackup(msg.Source, msg.Name, m.config.configFileName, m.config.envPath))
 
 	case cmds.RestoreBackupMsg:
-		m.lastErrorFromPoll = false
-		if msg.Err != nil {
-			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
-			break
-		}
-		// Success: clear the error, reload so the page (and any .env-derived
-		// interpolation) reflects the restored file, and re-list backups so
-		// the page shows the new post-restore snapshot.
-		m.lastError = ""
-		finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
-		if backupsCmd := m.getBackupsCmdIfActive(); backupsCmd != nil {
-			finalCmds = append(finalCmds, backupsCmd)
+		// A restore replaces the whole file, so it can change the service list
+		// itself - the layout and Files-page follow-ups in afterWrite are the
+		// point here, not an extra.
+		finalCmds = append(finalCmds, m.afterWrite(msg.Err)...)
+
+		// Re-list backups on top: the restore took a snapshot of the outgoing
+		// file first, so the page is a row out of date. This one is the
+		// Backups page's own, which is why it is not in afterWrite.
+		if msg.Err == nil {
+			if backupsCmd := m.getBackupsCmdIfActive(); backupsCmd != nil {
+				finalCmds = append(finalCmds, backupsCmd)
+			}
 		}
 
 	case cmds.OpenEnvEditModalMsg:
@@ -1302,15 +1292,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}))
 
 	case cmds.SaveEnvFileMsg:
-		m.lastErrorFromPoll = false
-		if msg.Err != nil {
-			finalCmds = append(finalCmds, m.reportForegroundError(msg.Err.Error()))
-		} else {
-			m.lastError = ""
-			// After a successful write, reload the project to re-interpolate
-			// any .env changes into the compose file.
-			finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
-		}
+		// A .env write is not a compose write, but it has the same tail: the
+		// reload re-interpolates the new values into the compose file, so what
+		// the Files page renders changes even though no compose file was
+		// touched.
+		finalCmds = append(finalCmds, m.afterWrite(msg.Err)...)
 	}
 
 	if m.activeModal != nil {
