@@ -1173,6 +1173,13 @@ distinguishes, and `chrome.StateColor`/`StateGlyph` draw them:
 | Fault | `dead` | `Danger` `✕` |
 | Unknown | docker has not answered | dim `●` |
 
+**The states have to be fetched before they can be drawn.** `docker compose ps`
+reports only running, paused and restarting containers, so `DockerComposePs`
+passes `--all`. Without it the inert and fault tiers are unreachable - a
+created or dead container is not in the output at all, and falls back to the
+app's own "stopped". That also gives `ContainerForService` a stopped container
+to describe, which is what its running-preferred-with-fallback was written for.
+
 **The fault glyph is load-bearing, not decoration.** `StatusError` and `Danger`
 are the *same colour* in 9 of the 14 registered themes, so a dead container
 told apart by ink alone would be pixel-identical to an ordinary stopped one for
