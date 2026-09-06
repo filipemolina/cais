@@ -1153,8 +1153,38 @@ pill, the accent chip, and the error banner for every registered theme.
 
 There is one pill renderer, `chrome.StatusPill(label, fill)`, and it is where
 `InkOn` is called. Callers choose what the fill means - the group panel's
-all-running/mixed/stopped, the details panel's running/stopped, the editor's
+all-running/mixed/stopped, the details panel's container state, the editor's
 YAML validation state - and none of them choose ink.
+
+## Container states
+
+Docker reports seven container states. The app used to fold all of them into
+running-or-stopped, so a service that was restarting looked stopped and a
+container docker had given up on looked like one the user had stopped on
+purpose. `apptypes.ClassifyContainerState` sorts them into the tiers the UI
+distinguishes, and `chrome.StateColor`/`StateGlyph` draw them:
+
+| Tier | States | Drawn as |
+| --- | --- | --- |
+| Running | `running` | green `●` |
+| Transitional | `restarting`, `paused` | amber `●` — wants attention, not broken |
+| Inert | `created`, `removing` | muted `●` — exists, nobody need act |
+| Stopped | `exited`, no container | `StatusError` `●` — the ordinary stop |
+| Fault | `dead` | `Danger` `✕` |
+| Unknown | docker has not answered | dim `●` |
+
+**The fault glyph is load-bearing, not decoration.** `StatusError` and `Danger`
+are the *same colour* in 9 of the 14 registered themes, so a dead container
+told apart by ink alone would be pixel-identical to an ordinary stopped one for
+most users. The cross carries the distinction instead, and
+`chrome.StateDot_test.go` asserts dead ≠ stopped in every registered theme —
+it fails in exactly those 9 if the glyph is removed.
+
+The ordinary stop keeps `StatusError`'s red rather than `StatusStopped`'s grey:
+at the size of a single glyph the grey did not carry. That is also why an
+unrecognised state classifies as Stopped rather than Fault — a state docker
+adds later is likelier benign than broken, and a red cross on a healthy
+service is the worse failure.
 
 ### Background tiers, and sealing them
 

@@ -10,9 +10,12 @@ import (
 
 type ServiceListItem struct {
 	Service types.ServiceConfig
-	// Status reflects the docker container state for this service:
-	// "running", "stopped", or "" (unknown / no container yet). Set by
-	// ServicesListModel when a GetRunningContainersMsg arrives.
+	// Status is docker's own container state for this service - running,
+	// restarting, paused, created, removing, exited or dead - or "stopped"
+	// when the service has no container, or "" for unknown (docker has not
+	// answered yet). Set by ServicesListModel when a GetRunningContainersMsg
+	// arrives, and read through apptypes.ClassifyContainerState rather than
+	// compared directly.
 	Status string
 	// MemUsage is the real-time memory usage from docker stats, exactly as
 	// docker reports it: "21.71MiB / 31.02GiB". Empty when stats are

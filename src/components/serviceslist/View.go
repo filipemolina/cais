@@ -99,23 +99,5 @@ func (m Model) View() tea.View {
 // is what keeps that distinct from the third state. The dot is rendered on the
 // row background so it stays legible across selection and focus states.
 func statusDot(item apptypes.ServiceListItem, rowBg color.Color) string {
-	var dotColor color.Color
-
-	switch item.Status {
-	case "running":
-		dotColor = appstyles.Active.StatusRunning
-	case "stopped":
-		dotColor = appstyles.Active.StatusError
-	default:
-		// Unknown: docker has not answered yet, or cannot be reached. Dim
-		// rather than red, because a page of red dots on arrival reads as a
-		// page of dead services rather than as a page of unanswered
-		// questions. See Model.containersKnown.
-		dotColor = appstyles.Active.TextDim
-	}
-
-	return lipgloss.NewStyle().
-		Foreground(dotColor).
-		Background(rowBg).
-		Render("●")
+	return chrome.StateDot(item.Status, rowBg)
 }

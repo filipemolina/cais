@@ -121,8 +121,13 @@ func (m *Model) buildItems(services []types.ServiceConfig) []list.Item {
 	return items
 }
 
-// containerStatus returns "running", "stopped", or "" for a compose service,
-// where "" means unknown rather than absent.
+// containerStatus returns docker's state for a compose service's container,
+// "stopped" when it has none, or "" for unknown rather than absent.
+//
+// It reports the state verbatim - restarting, paused, dead and the rest -
+// rather than folding everything into running/stopped, so the row can draw
+// what is actually true. apptypes.ClassifyContainerState is what turns that
+// back into a rendering decision.
 //
 // A service with no container of its own is stopped, but only once docker has
 // been asked - before that every service looks container-less and reporting
@@ -133,8 +138,8 @@ func (m *Model) containerStatus(serviceName string) string {
 		return ""
 	}
 
-	if apptypes.ServiceRunning(m.containers, serviceName) {
-		return "running"
+	if state := apptypes.ContainerStateFor(m.containers, serviceName); state != "" {
+		return state
 	}
 
 	return "stopped"

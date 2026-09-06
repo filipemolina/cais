@@ -249,6 +249,7 @@ func (m Model) renderMemberRow(cols tableCols, width int, svc types.ServiceConfi
 	health := "-"
 	uptime := "-"
 	dotColor := appstyles.Active.StatusStopped
+	dotGlyph := chrome.StateGlyph(apptypes.TierStopped)
 
 	if has {
 		state = container.State
@@ -268,9 +269,11 @@ func (m Model) renderMemberRow(cols tableCols, width int, svc types.ServiceConfi
 		ports = strings.Join(published, ", ")
 	}
 
-	if state == "running" {
-		dotColor = appstyles.Active.StatusRunning
-	}
+	// The dot column carries the full tier, so a dead or restarting member is
+	// visible in the table and not just in the group's pill above it.
+	tier := apptypes.ClassifyContainerState(state)
+	dotColor = chrome.StateColor(tier)
+	dotGlyph = chrome.StateGlyph(tier)
 
 	// The cell's text and ink per column, walked in columnOrder so the row
 	// cannot drift from the header above it. A dropped column has width 0 and
@@ -279,7 +282,7 @@ func (m Model) renderMemberRow(cols tableCols, width int, svc types.ServiceConfi
 		text string
 		fg   color.Color
 	}{
-		colDot:    {"●", dotColor},
+		colDot:    {dotGlyph, dotColor},
 		colName:   {svc.Name, appstyles.Active.TextPrimary},
 		colImage:  {chrome.ShortImage(image, max(1, cols[colImage]-1)), appstyles.Active.TextMuted},
 		colState:  {state, stateColor(state)},
@@ -334,8 +337,11 @@ func renderTableHeader(cols tableCols, width int) string {
 	return lipgloss.NewStyle().Width(width).MaxHeight(1).Render(row)
 }
 
+// stateColor is the member table's text ink for a row, which is a softer
+// question than the dot's: the table greys a row that is not up rather than
+// colouring every cell by tier. Only running lifts it.
 func stateColor(state string) color.Color {
-	if state == "running" {
+	if apptypes.ClassifyContainerState(state) == apptypes.TierRunning {
 		return appstyles.Active.StatusRunning
 	}
 

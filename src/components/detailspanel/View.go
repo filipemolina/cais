@@ -98,15 +98,16 @@ func (m Model) titlePill() string {
 		return ""
 	}
 
-	var label string
-	var bg color.Color
+	// The pill says docker's own word rather than running-or-stopped: a
+	// service that is restarting, paused or dead was previously flattened
+	// into STOPPED, which is the one place the user would look to find out
+	// that it was none of those things.
+	state := apptypes.ContainerStateFor(m.containers, m.service.Name)
 
-	if m.isServiceRunning(m.service.Name) {
-		label, bg = "RUNNING", appstyles.Active.StatusRunning
-	} else {
-		label, bg = "STOPPED", appstyles.Active.StatusError
-	}
-	return chrome.StatusPill(label, bg)
+	return chrome.StatusPill(
+		chrome.StateLabel(state),
+		chrome.StateColor(apptypes.ClassifyContainerState(state)),
+	)
 }
 
 // isServiceRunning is apptypes.ServiceRunning, which is the app's one answer
