@@ -767,6 +767,14 @@ disk on selection; compose copies are shown syntax-highlighted through the same
 `src/highlight` layer the Files page uses, and `.env` copies are shown raw, so
 the preview is the exact bytes a restore would put back.
 
+The list marks the copy whose content matches the live file's right now with a
+dim `(current)` beside the filename. The page's one verb is restore, and the
+first question about a copy is whether restoring it would change anything at
+all - so the marker is the answer for the copies the user will never diff. The
+live file's bytes and hash are read once per list load, not per row and not per
+keystroke, and the marker never takes the accent: the bar carries cursor state,
+the marker carries content state.
+
 Restore goes through a confirm modal. `enter` or `r` on a row emits
 `RequestRestoreBackupMsg`; `AppModel` opens a `ConfirmModal` whose follow-up is
 `RestoreBackup`, which writes the chosen `.bak` back over the live file through

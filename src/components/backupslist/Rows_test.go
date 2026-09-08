@@ -9,8 +9,11 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	"github.com/filipemolina/cais/src/appstyles"
 	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/components/chrome"
 	"github.com/filipemolina/cais/src/utils"
 )
 
@@ -144,5 +147,79 @@ func TestPaginationIsStableAfterLoading(t *testing.T) {
 			t.Errorf("%s changed the page from %d rows to %d; pagination had not settled",
 				repaginate.name, perPage, got)
 		}
+	}
+}
+
+// listMarkedCurrent returns a sized panel whose row at markIndex matches the
+// live file's hash for its source, so the delegate draws it as current.
+func listMarkedCurrent(t *testing.T, n, markIndex int, leftWidth int) Model {
+	t.Helper()
+
+	entries := syntheticEntries(n)
+	sized, _ := New().Update(cmds.SetBodyLayoutMsg{LeftWidth: leftWidth, RightWidth: 60, Height: 24})
+	loaded, _ := sized.(Model).Update(cmds.BackupListMsg{
+		Entries: entries,
+		Live: []utils.LiveSource{{
+			Source: "compose",
+			File:   "compose.yaml",
+			SHA8:   entries[markIndex].SHA8,
+		}},
+	})
+
+	return loaded.(Model)
+}
+
+// The copy that matches the live file says so, on the title line, exactly
+// once: the page's one verb is restore, and the first question about a copy
+// is whether restoring it would change anything at all.
+func TestTheCurrentRowSaysSo(t *testing.T) {
+	m := listMarkedCurrent(t, 3, 0, 60)
+
+	frame := m.View().Content
+	plain := ansi.Strip(frame)
+
+	if !strings.Contains(plain, "compose.yaml (current)") {
+		t.Errorf("the copy matching the live file is not marked:\n%s", plain)
+	}
+	if n := strings.Count(plain, "(current)"); n != 1 {
+		t.Errorf("%d rows claim to be current, want 1:\n%s", n, plain)
+	}
+
+	// The marker is not part of the cursor row's bold run - the title
+	// carries the bold, the marker is a quiet suffix beside it.
+	if strings.Contains(frame, "\x1b[1m (current") || strings.Contains(frame, "\x1b[1m(current") {
+		t.Error("the (current) marker is inside the title's bold run")
+	}
+}
+
+// A marked row that is not under the cursor runs the marker one emphasis
+// step below the title, on the row's own background - never the accent,
+// which is the cursor bar's channel alone.
+func TestAnUnfocusedRowRunsTheMarkerDimmer(t *testing.T) {
+	m := listMarkedCurrent(t, 3, 2, 60)
+
+	rowBg := chrome.ListRowBgOn(false, chrome.PanelBgFor(true))
+	want := lipgloss.NewStyle().
+		Foreground(appstyles.Active.TextMuted).
+		Background(rowBg).
+		Render(" (current)")
+	if !strings.Contains(m.View().Content, want) {
+		t.Error("a marked row off the cursor does not run its marker one step below the title")
+	}
+}
+
+// On a panel too narrow for the filename and the marker, the marker is the
+// first thing to go, and it goes whole: the title is the row's identity, and
+// a partial "(curr…" is noise.
+func TestTheMarkerIsDroppedWholeBeforeTheTitle(t *testing.T) {
+	m := listMarkedCurrent(t, 1, 0, 20)
+
+	plain := ansi.Strip(m.View().Content)
+
+	if !strings.Contains(plain, "compose.yaml") {
+		t.Errorf("the title did not survive the narrow panel:\n%s", plain)
+	}
+	if strings.Contains(plain, "(current") {
+		t.Errorf("a marker the panel cannot fit whole was drawn anyway:\n%s", plain)
 	}
 }

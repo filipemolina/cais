@@ -81,12 +81,48 @@ func (d backupsListCustomDelegate) Render(w io.Writer, m list.Model, index int, 
 
 	// The filename is this row's title - the thing that names what would be
 	// restored - so it carries the cursor's bold, the way a service name does.
-	file := lipgloss.NewStyle().
+	title := item.Title()
+
+	// The copy that matches the live file right now says so, on the title's
+	// own line: the marker qualifies which file the row is a copy of, and
+	// the timestamp line is about when, not what. It is dropped whole when
+	// the two do not fit rather than truncated, because a partial
+	// "(curr…" is noise, and the title is the row's identity - the
+	// marker is the first thing to go.
+	marker := ""
+	if item.isCurrent {
+		marker = " (current)"
+		if lipgloss.Width(title)+lipgloss.Width(marker) > contentWidth {
+			marker = ""
+		}
+	}
+
+	titleStyle := lipgloss.NewStyle().
 		Bold(isSelected).
 		Foreground(appstyles.Active.TextPrimary).
-		Background(rowBg).
-		Width(contentWidth).
-		Render(chrome.Truncate(item.Title(), contentWidth))
+		Background(rowBg)
+
+	var file string
+	if marker == "" {
+		file = titleStyle.
+			Width(contentWidth).
+			Render(chrome.Truncate(title, contentWidth))
+	} else {
+		// The marker runs one emphasis step below the title and never takes
+		// the accent: the bar carries cursor state, this carries content
+		// state, and the two are different channels.
+		markerFg := appstyles.Active.TextMuted
+		if isSelected {
+			markerFg = appstyles.Active.TextPrimary
+		}
+		file = lipgloss.NewStyle().
+			Width(contentWidth).
+			Background(rowBg).
+			Render(lipgloss.JoinHorizontal(lipgloss.Left,
+				titleStyle.Render(title),
+				lipgloss.NewStyle().Foreground(markerFg).Background(rowBg).Render(marker),
+			))
+	}
 
 	when := lipgloss.NewStyle().
 		Foreground(appstyles.Active.TextDim).
