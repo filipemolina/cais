@@ -2,9 +2,9 @@
 
 ## Status
 
-Phases 0-4 have landed. **Phase 5 is next.** The codebase-consistency work
-(`docs/plans/codebase-consistency.md`) has since run to completion on top of
-Phase 3; the working tree is clean and the suite is green.
+Phases 0-5 have landed; the plan is complete. The codebase-consistency work
+(`docs/plans/codebase-consistency.md`) ran to completion on top of Phase 3;
+the working tree is clean and the suite is green.
 
 | Phase | Commit | |
 | --- | --- | --- |
@@ -13,7 +13,7 @@ Phase 3; the working tree is clean and the suite is green.
 | 2 — scroll the list | `8926ae1`, `074c0ad`, `c3f5c2b` | done |
 | 3 — focus, and the bubbles-list conversion | `4cb09ec` | done |
 | 4 — the diff engine | `d14ceda`, `33fba9d`, `687df98` | done |
-| 5 — render the diff | | **next** |
+| 5 — render the diff | `bd286c0`, `beab530` | done |
 
 ### Picking this up cold
 
@@ -101,6 +101,44 @@ Phase 4 landed as three commits, with four things worth recording:
   until Phase 5, because an empty state for a diff only makes sense once the
   viewport shows the diff. Phase 5 should render it from `lines` (or the
   panel's sha comparison) rather than re-derive the inputs.
+
+Phase 5 landed as two commits - the derived colors, then the rendering -
+with four things worth recording:
+
+- **`bd286c0` — the washes.** The plan called for deriving the colors via
+  `lipgloss.Blend1D`, which leaves the blend fraction to choose. 28% toward
+  the status color is where the two floors stop fighting: solarized-dark's
+  body text clears 4.5 on the wash (4.60, the tightest theme) while the
+  tightest wash stays visible against the elevated tier (everforest-dark, 8
+  channel units - the tier ladder's own floor). The contrast test pins text
+  on the wash, the wash against both tiers it renders on, and the gutter
+  glyph's status color on its wash - all per theme.
+- **`beab530` — the render.** Equal lines consume the copy's own highlighted
+  output in step with the diff (which is also what carries the YAML
+  colorizer's block-scalar state across); Insert and Delete lines render
+  raw, because a changed line's wash replaces its syntax colors. An Insert
+  initially took the styled text like an Equal line and would have put a
+  colored key inside a colored row - the exact collision *Decisions*
+  forbids; the render tests caught it before it landed. The gutter marker
+  takes the full status color on its wash, not the wash color itself -
+  DiffRemove on DiffRemove is one color, an invisible marker.
+- **The hooks are installed per render.** `StyleLineFunc` and
+  `LeftGutterFunc` close over the model, and a value model's Update return
+  is a copy - a hook stored on `m.vp` would read through a stale one. The
+  viewport is copied in `View` and the hooks installed there, so they always
+  see the frame's own lines.
+- **The trap measured.** `BenchmarkTheDiffRenders` drives both a cursor move
+  (selection, read, recompute) and a page keystroke at a 1000-line ceiling:
+  the frame cost is flat from 100 to 4000 lines and within ~0.2ms of the
+  pre-diff baseline - the per-line styling runs over the visible window, not
+  the file.
+
+The empty state came out of the same commit as the render, read off `lines`
+(all-Equal) as the Phase 4 note above anticipated, so it cannot disagree
+with what the viewport would have shown. The VHS recordings against the demo
+fixture stack caught one thing no unit test had: the `.env` diff's secrets
+sit in washes in both directions, plain text per the standing constraint
+DESIGN.md now records.
 
 What that bought: filtering (`/`, on the file, the timestamp *and* the sha,
 none of which the rows all show), pagination, `h`/`l`/`←`/`→` paging, and one
