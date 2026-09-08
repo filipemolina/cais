@@ -185,6 +185,47 @@ func TestWCAGContrastAgainstSurfaces(t *testing.T) {
 					t.Errorf("%s on recessed: ratio = %.2f, want ≥ %.1f", ink.label, ratio, ink.floor)
 				}
 			}
+
+			// The diff washes carry the Backups page's changed lines. Three
+			// properties, in the order they can fail:
+			//
+			//   - the text on a changed line is TextPrimary, body-size, so
+			//     4.5 - this is the floor the 28% blend fraction in newTheme
+			//     was chosen against (solarized-dark is the tightest theme);
+			//   - the wash must be visible against both panel tiers it
+			//     renders on - the version list's state bar was once drawn in
+			//     its row's own background and could not be seen at all
+			//     (074c0ad), so a tint within the elevation noise floor is a
+			//     regression, not a subtlety;
+			//   - the +/- marker glyph takes the status color on its own
+			//     wash. It is one decorative character sharing the tint's
+			//     signal, so its floor is under the statuses-as-text 2.6.
+			washes := []struct {
+				label  string
+				wash   color.Color
+				status color.Color
+			}{
+				{"DiffAdd", theme.DiffAdd, theme.StatusRunning},
+				{"DiffRemove", theme.DiffRemove, theme.Danger},
+			}
+			for _, w := range washes {
+				ratio := Contrast(theme.TextPrimary, w.wash)
+				if ratio < 4.5 {
+					t.Errorf("TextPrimary on %s: ratio = %.2f, want ≥ 4.5", w.label, ratio)
+				}
+
+				if d := channelDiff(w.wash, panel); d < 8 {
+					t.Errorf("%s vs panel: channelDiff = %d, want ≥ 8", w.label, d)
+				}
+				if d := channelDiff(w.wash, elevated); d < 8 {
+					t.Errorf("%s vs elevated: channelDiff = %d, want ≥ 8", w.label, d)
+				}
+
+				ratio = Contrast(w.status, w.wash)
+				if ratio < 2.4 {
+					t.Errorf("%s marker on %s: ratio = %.2f, want ≥ 2.4", w.label, w.label, ratio)
+				}
+			}
 		})
 	}
 }

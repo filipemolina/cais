@@ -74,6 +74,16 @@ type Theme struct {
 	// by coincidence.
 	Danger color.Color
 
+	// DiffAdd and DiffRemove are the changed-line washes on the Backups
+	// page's diff: a restore's Insert lines sit on DiffAdd, its Delete
+	// lines on DiffRemove. They are derived from StatusRunning/Danger -
+	// "a container is running" and "this line was added" are different
+	// concepts that happen to share a hue - but blended toward PanelBg so
+	// each theme gets a wash that sits on its own surface, with the text
+	// that renders on it still readable. See docs/DESIGN.md.
+	DiffAdd    color.Color
+	DiffRemove color.Color
+
 	// InkOnLight and InkOnDark are deliberately theme-invariant: a status
 	// pill's fill (StatusRunning green, StatusStarting amber, StatusError
 	// red/pink) is the same hue whichever theme is active, so the text that
@@ -141,10 +151,32 @@ func newTheme(p themeParams) Theme {
 
 		Danger: p.Danger,
 
+		DiffAdd:    diffTint(p.Panel, p.Running),
+		DiffRemove: diffTint(p.Panel, p.Danger),
+
 		// Fixed regardless of p.Dark - see the Theme field comment.
 		InkOnLight: lipgloss.Color("#151520"),
 		InkOnDark:  lipgloss.Color("#FAFAFA"),
 	}
+}
+
+// diffTint blends the status hue into the panel background for the diff's
+// changed-line washes.
+//
+// The fraction is not arbitrary: 28% toward the status color is where the
+// tightest theme (solarized-dark) still keeps TextPrimary on the wash above
+// the 4.5 body-text floor while the wash stays visible against the panel
+// tiers it renders on - the floors TestWCAGContrastAgainstSurfaces pins. A
+// hand-picked hex per theme would re-fight that balance fifteen times.
+//
+// Blend1D panics on a nil stop, and newTheme is legitimately called in tests
+// with a bare themeParams{Dark: ...}, so the guard is load-bearing.
+func diffTint(bg, status color.Color) color.Color {
+	if bg == nil || status == nil {
+		return nil
+	}
+	// Index 7 of 26 steps sits exactly 7/25 = 28% of the way along.
+	return lipgloss.Blend1D(26, bg, status)[7]
 }
 
 // InkOn returns whichever of the theme's two fixed inks reads better on fill.
