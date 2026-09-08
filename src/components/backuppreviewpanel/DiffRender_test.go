@@ -49,20 +49,9 @@ func seedCopy(tb testing.TB, filename, contents string) utils.BackupEntry {
 	return utils.BackupEntry{}
 }
 
-// listLive builds the live half of a list read, the way cmds.GetBackups
-// assembles it, for a single source.
-func listLive(source, contents string) cmds.BackupListMsg {
-	return cmds.BackupListMsg{
-		Live: []utils.LiveSource{{
-			Source:   source,
-			SHA8:     utils.ContentSHA8([]byte(contents)),
-			Contents: contents,
-		}},
-	}
-}
-
 // diffedPanel drives a panel the way the running app does for a copy whose
 // live file holds liveContents: layout, list read, selection, read back.
+// The list half of the read comes from Model_test.go's listMsgFor.
 func diffedPanel(t *testing.T, source, copy, live string) Model {
 	t.Helper()
 
@@ -71,7 +60,7 @@ func diffedPanel(t *testing.T, source, copy, live string) Model {
 	updated, _ := New().Update(cmds.SetBodyLayoutMsg{LeftWidth: 60, RightWidth: 60, Height: 30})
 	m := updated.(Model)
 
-	updated, _ = m.Update(listLive(source, live))
+	updated, _ = m.Update(listMsgFor(nil, source, live))
 	m = updated.(Model)
 
 	return selectAndLoad(t, m, entry)
@@ -101,14 +90,17 @@ func framed(t *testing.T, m Model) string {
 	return sized.(Model).View().Content
 }
 
-// textRun returns the styled run a wash carries its text in, without the
+// styledRun renders text in fg on bg (either may be nil) and drops the
 // trailing reset: the panel's FillBackground pass re-asserts the panel
 // background after every reset, so an expectation that continues past one
 // is not a substring of the frame even when the rendering is right.
 func styledRun(text string, fg, bg color.Color) string {
-	style := lipgloss.NewStyle().Background(bg)
+	style := lipgloss.NewStyle()
 	if fg != nil {
 		style = style.Foreground(fg)
+	}
+	if bg != nil {
+		style = style.Background(bg)
 	}
 	return strings.TrimSuffix(style.Render(text), ansi.ResetStyle)
 }
@@ -142,7 +134,7 @@ func TestTheDiffRendersWashesAndMarkers(t *testing.T) {
 
 	// ...and the wash pads past the text to the row's full width, so a
 	// changed line reads as a row and not as colored text on a plain panel.
-	pad := strings.Repeat(" ", min(20, contentWidth-6))
+	pad := strings.Repeat(" ", min(20, max(1, contentWidth-6)))
 	if !strings.Contains(frame, styledRun(pad, nil, theme.DiffRemove)) {
 		t.Errorf("the remove wash stops at the text instead of filling the row:\n%s", frame)
 	}
@@ -203,7 +195,7 @@ func TestAnIdenticalCopyGetsTheEmptyState(t *testing.T) {
 	updated, _ := New().Update(cmds.SetBodyLayoutMsg{LeftWidth: 60, RightWidth: 60, Height: 30})
 	m := updated.(Model)
 
-	updated, _ = m.Update(listLive("compose", "services:\n  app:\n    image: ONLY-IN-COPY\n"))
+	updated, _ = m.Update(listMsgFor(nil, "compose", "services:\n  app:\n    image: ONLY-IN-COPY\n"))
 	m = updated.(Model)
 	m = selectAndLoad(t, m, entry)
 
@@ -269,7 +261,7 @@ func TestARelistRescrollsToTheNewFirstChange(t *testing.T) {
 
 	updated, _ := New().Update(cmds.SetBodyLayoutMsg{LeftWidth: 60, RightWidth: 60, Height: 30})
 	m := updated.(Model)
-	updated, _ = m.Update(listLive("compose", strings.Join(live, "\n")+"\n"))
+	updated, _ = m.Update(listMsgFor(nil, "compose", strings.Join(live, "\n")+"\n"))
 	m = updated.(Model)
 	m = selectAndLoad(t, m, entry)
 
@@ -282,7 +274,7 @@ func TestARelistRescrollsToTheNewFirstChange(t *testing.T) {
 	// the top the offset clamps back to it.
 	newLive := append([]string(nil), copyLines...)
 	newLive[3] = "CHANGED-EARLIER"
-	updated, _ = m.Update(listLive("compose", strings.Join(newLive, "\n")+"\n"))
+	updated, _ = m.Update(listMsgFor(nil, "compose", strings.Join(newLive, "\n")+"\n"))
 	m = updated.(Model)
 
 	if got := m.vp.YOffset(); got != 0 {
@@ -336,6 +328,28 @@ func TestTheDiffFrameIsSealedAgainstBleeds(t *testing.T) {
 	}
 }
 
+// A file edited on Windows carries CRLF endings, and the engine trims only
+// the trailing \n - a \r would survive into every rendered row, where the
+// wash padding drawn after it repaints the row from column 0, over its own
+// text. The plain preview never saw this because its \r was last on the
+// row; both sides of the diff are normalized on arrival instead.
+func TestACRFLFileRendersWithoutCarriageReturns(t *testing.T) {
+	m := diffedPanel(t, "compose",
+		"services:\r\n  x: 1\r\n",
+		"services:\r\n  x: 9\r\n")
+
+	frame := framed(t, m)
+	if strings.ContainsRune(frame, '\r') {
+		t.Errorf("the diff frame carries a carriage return into the terminal:\n%s", frame)
+	}
+
+	// And the diff still aligns: the changed line is washed and marked on
+	// one row, not split by a stray \r.
+	if !strings.Contains(ansi.Strip(frame), "-   x: 9") {
+		t.Errorf("the CRLF file's diff lost its gutter marker or content:\n%s", ansi.Strip(frame))
+	}
+}
+
 // numberedLines builds n lines through f, which the auto-scroll fixtures
 // differ at one index.
 func numberedLines(n int, f func(int) string) []string {
@@ -363,7 +377,7 @@ func benchDiffPanel(b *testing.B) (Model, utils.BackupEntry) {
 
 	sized, _ := New().Update(cmds.SetBodyLayoutMsg{LeftWidth: 60, RightWidth: 60, Height: 30})
 	m := sized.(Model)
-	updated, _ := m.Update(listLive("compose", strings.Join(live, "\n")+"\n"))
+	updated, _ := m.Update(listMsgFor(nil, "compose", strings.Join(live, "\n")+"\n"))
 	m = updated.(Model)
 	m = selectAndLoad(b, m, entry)
 

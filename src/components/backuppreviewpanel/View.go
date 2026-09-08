@@ -94,6 +94,25 @@ func (m Model) renderContent(width, avail int, bg color.Color) string {
 	return chrome.PanelBodyWithFooter(width, avail, bg, content, "")
 }
 
+// gutterWidth is the marker column's width. gutterMarker must emit exactly
+// this many columns - the viewport measures its gutter to size its own
+// content area, and an inconsistent answer makes that math drift - and
+// lineStyle pads the wash to the viewport width minus it.
+const gutterWidth = 2
+
+// diffColors pairs a changed line's kind with the two theme colors that
+// draw it: the row's wash, and the gutter glyph's ink - the status color
+// the wash was blended from, since the wash on itself would be an invisible
+// marker. Pairing them once is what keeps lineStyle's row and
+// gutterMarker's glyph from drifting onto different answers for one kind.
+func diffColors(kind diff.Kind) (wash, ink color.Color) {
+	theme := appstyles.Active
+	if kind == diff.Insert {
+		return theme.DiffAdd, theme.StatusRunning
+	}
+	return theme.DiffRemove, theme.Danger
+}
+
 // lineStyle is the viewport's per-line style while a diff is showing: the
 // theme's wash behind the changed lines, nothing for the equal ones.
 //
@@ -112,45 +131,32 @@ func (m Model) lineStyle(i int) lipgloss.Style {
 		return lipgloss.Style{}
 	}
 
-	wash := appstyles.Active.DiffAdd
-	if m.lines[i].Kind == diff.Delete {
-		wash = appstyles.Active.DiffRemove
-	}
+	wash, _ := diffColors(m.lines[i].Kind)
 
 	return lipgloss.NewStyle().
 		Foreground(appstyles.Active.TextPrimary).
 		Background(wash).
-		Width(max(1, m.vp.Width()-2))
+		Width(max(1, m.vp.Width()-gutterWidth))
 }
 
 // gutterMarker draws the +/- column the git-style diff reads by: `+` for
 // content restoring would add to the live file, `-` for content it would
 // remove, blanks for what both agree on. It is drawn by the viewport's
 // gutter hook so it survives horizontal scrolling, and the marker cell sits
-// in the wash with the line's text so a changed row reads as one row.
-//
-// The glyph takes the status color the wash was blended from, not the wash
-// itself - DiffRemove on DiffRemove is one color, an invisible marker. The
-// status color on its wash is the pair TestWCAGContrastAgainstSurfaces
-// holds to 2.4, and it is what keeps the meaning legible where the wash is
-// too subtle to see.
-//
-// The marker text is always two columns wide - the gutter's real width has
-// to be consistent or the viewport's own width math drifts.
+// in the wash with the line's text so a changed row reads as one row. The
+// glyph's ink and the cell's wash are one pairing - see diffColors.
 func (m Model) gutterMarker(i int) string {
-	if i < 0 || i >= len(m.lines) {
-		return "  "
+	if i < 0 || i >= len(m.lines) || m.lines[i].Kind == diff.Equal {
+		return strings.Repeat(" ", gutterWidth)
 	}
 
-	theme := appstyles.Active
-	switch m.lines[i].Kind {
-	case diff.Insert:
-		return lipgloss.NewStyle().Foreground(theme.StatusRunning).Background(theme.DiffAdd).Render("+ ")
-	case diff.Delete:
-		return lipgloss.NewStyle().Foreground(theme.Danger).Background(theme.DiffRemove).Render("- ")
-	default:
-		return "  "
+	wash, ink := diffColors(m.lines[i].Kind)
+	marker := "- "
+	if m.lines[i].Kind == diff.Insert {
+		marker = "+ "
 	}
+
+	return lipgloss.NewStyle().Foreground(ink).Background(wash).Render(marker)
 }
 
 // diffContent builds the viewport's text for a diff: one string per diff

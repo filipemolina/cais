@@ -2,6 +2,7 @@ package backuppreviewpanel
 
 import (
 	"os"
+	"strings"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
@@ -48,6 +49,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		live := make(map[string]utils.LiveSource, len(msg.Live))
 		for _, src := range msg.Live {
+			src.Contents = normalizeContent(src.Contents)
 			live[src.Source] = src
 		}
 		m.live = live
@@ -132,39 +134,49 @@ func readBackupCmd(entry utils.BackupEntry) tea.Cmd {
 // refreshViewport's to decide - the same bytes render one way with a diff
 // available and another without, and the live side can still arrive and
 // flip that.
-//
-// "Raw" is about the bytes, not the colour. An .env copy still gets a
-// foreground - see plainText.
 func (m *Model) storeContents(contents []byte) {
 	m.read = true
-	m.content = string(contents)
+	m.content = normalizeContent(string(contents))
+}
+
+// normalizeContent settles CRLF files onto LF before anything renders them.
+//
+// The engine trims only the trailing \n, so a \r survives into every
+// Line.Content and into the colorizer's output - and in the diff view the
+// row's wash padding is drawn after the text, so a \r at the text's end
+// rewinds the cursor and lets the padding repaint the row from column 0,
+// over it. Before the diff existed the \r was the last byte on its row and
+// harmless, which is why this never bit the plain preview. The bytes a
+// restore writes come from the .bak on disk, not from here, so normalizing
+// the display side leaves the page's exact-bytes contract alone.
+func normalizeContent(content string) string {
+	return strings.ReplaceAll(content, "\r\n", "\n")
 }
 
 // recomputeDiff rebuilds the whole-file diff of the selected copy against
 // its live file. It runs when either side arrives: the .bak read and the
 // live bytes land in either order, and a re-list after a write replaces the
 // live side without moving the cursor - so a diff computed from the old
-// pair must not survive either arrival.
+// pair must not survive either arrival. Every path ends in the same
+// refreshViewport call, so the viewport is re-answered even when the diff
+// collapses to unavailable - a re-list that loses the live bytes must not
+// leave the old diff on screen.
 //
 // The direction is (live, copy): an Insert line is content restoring the
 // copy would add to the live file, a Delete line what it would remove.
 // See diff.Lines for the contract.
 func (m *Model) recomputeDiff() {
 	m.lines = nil
-	if !m.read || m.loadErr != nil {
-		m.refreshViewport()
-		return
+
+	if m.read && m.loadErr == nil {
+		if live, ok := m.live[m.entry.Source]; ok {
+			// No live bytes for a source means the file is gone from disk,
+			// or a .env that was never written: the diff stays unavailable
+			// and the preview keeps showing the copy's own bytes, which is
+			// all it showed before the diff existed.
+			m.lines = diff.Lines(live.Contents, m.content)
+		}
 	}
 
-	live, ok := m.live[m.entry.Source]
-	if !ok {
-		// No live bytes for this source - the file is gone from disk, or a
-		// .env that was never written. The preview keeps showing the copy's
-		// own bytes, which is all it showed before the diff existed.
-		m.refreshViewport()
-		return
-	}
-
-	m.lines = diff.Lines(live.Contents, m.content)
 	m.refreshViewport()
 }

@@ -140,6 +140,17 @@ fixture stack caught one thing no unit test had: the `.env` diff's secrets
 sit in washes in both directions, plain text per the standing constraint
 DESIGN.md now records.
 
+A review pass on top of the two commits fixed one real regression the unit
+tests had not thought to look for: a CRLF file. The engine trims only the
+trailing \n, so every rendered row carried a stray \r - harmless in the
+plain preview, where it was the last byte on its row, but in the diff view
+the row's wash padding is drawn after it and would repaint the row from
+column 0, over its own text. Both sides of the diff are normalized onto LF
+on arrival now, and a regression test pins the frame free of \r. The same
+pass folded the render-side duplication the phase had left behind: one
+helper builds the live half of a list read, one pairing decides both a
+kind's wash and its glyph ink, and the gutter's width is named once.
+
 What that bought: filtering (`/`, on the file, the timestamp *and* the sha,
 none of which the rows all show), pagination, `h`/`l`/`←`/`→` paging, and one
 keymap - `keys.ListKeyMap` - across all three lists, which is the rule Phase 0

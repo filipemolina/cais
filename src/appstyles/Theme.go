@@ -167,7 +167,7 @@ func newTheme(p themeParams) Theme {
 // tightest theme (solarized-dark) still keeps TextPrimary on the wash above
 // the 4.5 body-text floor while the wash stays visible against the panel
 // tiers it renders on - the floors TestWCAGContrastAgainstSurfaces pins. A
-// hand-picked hex per theme would re-fight that balance fifteen times.
+// hand-picked hex per theme would re-fight that balance fourteen times.
 //
 // Blend1D panics on a nil stop, and newTheme is legitimately called in tests
 // with a bare themeParams{Dark: ...}, so the guard is load-bearing.

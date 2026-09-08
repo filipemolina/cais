@@ -17,9 +17,12 @@ import (
 // owns the viewport is also the one that owns the read - the list stays a
 // cursor over metadata.
 //
-// Compose copies are syntax highlighted; .env copies are shown raw. That is
-// deliberate and is the page's standing contract: the preview is the exact
-// bytes a restore would write, secrets included. See docs/DESIGN.md.
+// What the viewport shows is the copy rendered one of two ways: as a
+// whole-file diff against the live file when one is computable (changed
+// lines washed, unchanged lines keeping the copy's own rendering - YAML for
+// compose, raw text for .env), or as the copy's plain bytes when no live
+// side exists to diff against. Both render the exact bytes a restore would
+// write, secrets included. See docs/DESIGN.md.
 type Model struct {
 	// entry is the copy being shown. The zero value means nothing is
 	// selected, which is the empty state.

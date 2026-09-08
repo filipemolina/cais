@@ -193,7 +193,7 @@ func TestAnEnvCopyIsRenderedWithAForeground(t *testing.T) {
 		t.Fatalf("the .env preview lost its content:\n%s", ansi.Strip(frame))
 	}
 
-	want := lipgloss.NewStyle().Foreground(appstyles.Active.TextPrimary).Render("SECRET=1")
+	want := styledRun("SECRET=1", appstyles.Active.TextPrimary, nil)
 	if !strings.Contains(frame, want) {
 		t.Error("the .env preview renders its text with no foreground of its own, so it falls back to the terminal's")
 	}

@@ -1161,7 +1161,7 @@ every theme. The fraction is the number two floors force at once - text on
 a washed line is body-size `TextPrimary` (4.5) and the wash must still be
 visible against the panel tiers it renders on (8 per channel, the tier
 ladder's own floor) - so a stronger tint reads the text away and a weaker
-one reads as nothing, per theme, fifteen times over if they were
+one reads as nothing, per theme, fourteen times over if they were
 hand-picked. `Contrast_test.go` holds every theme to both floors, plus the
 `+`/`-` gutter glyph's status color on its own wash.
 
