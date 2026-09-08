@@ -40,9 +40,10 @@ type Model struct {
 	// lines is the whole-file diff of the selected copy against its live
 	// file, rebuilt by recomputeDiff whenever either side changes. nil
 	// means "not available" - no live bytes, or the read has not landed -
-	// which the rendering phase answers by showing the copy's plain bytes.
-	// The rendering itself is Phase 5; until then the viewport keeps
-	// showing the copy exactly as before.
+	// and the viewport then shows the copy's plain bytes, which is all it
+	// showed before the diff existed. When lines are set they are the
+	// viewport's content: equal lines keep the copy's own rendering, and
+	// changed lines get a wash and a gutter marker (View.go).
 	lines []diff.Line
 
 	vp          viewport.Model
@@ -56,6 +57,67 @@ type Model struct {
 }
 
 func (m Model) Init() tea.Cmd { return nil }
+
+// refreshViewport is the one place that decides what the viewport holds,
+// because the answer changes on both arrivals a diff waits for:
+//
+//   - a diff is available - the viewport shows it, Equal lines keeping the
+//     copy's own rendering and changed lines washed (View.go installs the
+//     per-line styles, so nothing here needs to know the theme);
+//   - the copy is read but no diff is - the copy's own bytes, which is the
+//     pre-diff behavior and still what an unavailable diff must fall back to;
+//   - neither - nothing.
+//
+// It runs after every state change above, so the viewport is never left
+// showing one side's rendering under a header that names the other.
+func (m *Model) refreshViewport() {
+	switch {
+	case m.lines != nil:
+		m.vp.SetContentLines(diffContent(m.entry.Source, m.content, m.lines))
+		m.scrollToFirstChange()
+
+	case m.read:
+		m.vp.SetContent(renderCopy(m.entry.Source, m.content))
+		m.vp.GotoTop()
+
+	default:
+		m.vp.SetContent("")
+	}
+}
+
+// scrollToFirstChange puts the first changed line mid-screen, so the diff
+// opens on the part that matters instead of on the file's header lines.
+// SetYOffset clamps, so a change near the top - or a panel taller than the
+// change's position - lands at the top rather than at a negative offset.
+// SoftWrap is off, so line index maps 1:1 to viewport row. With no changes
+// there is nothing to scroll to: the identical empty state replaces the
+// viewport in View, and any offset a previous diff left is dropped.
+func (m *Model) scrollToFirstChange() {
+	for i, line := range m.lines {
+		if line.Kind != diff.Equal {
+			m.vp.SetYOffset(i - m.vp.Height()/2)
+			return
+		}
+	}
+	m.vp.GotoTop()
+}
+
+// identicalToLive reports whether the computed diff carries no changes -
+// the "restoring would change nothing" empty state. It is read off the
+// lines the panel already holds rather than re-derived from the shas: the
+// shas answer the list's (current) marker, and here the answer must be
+// consistent with what the viewport would have shown.
+func (m Model) identicalToLive() bool {
+	if m.lines == nil {
+		return false
+	}
+	for _, line := range m.lines {
+		if line.Kind != diff.Equal {
+			return false
+		}
+	}
+	return true
+}
 
 // New builds the preview panel. It starts with nothing selected; the list
 // publishes a selection as soon as the store has been read.

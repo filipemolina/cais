@@ -60,13 +60,13 @@ func entryFor(t *testing.T, source string) utils.BackupEntry {
 
 // selectAndLoad drives the panel the way the running app does: a selection
 // arrives, the panel answers with a read, and the read's result comes back.
-func selectAndLoad(t *testing.T, m Model, entry utils.BackupEntry) Model {
-	t.Helper()
+func selectAndLoad(tb testing.TB, m Model, entry utils.BackupEntry) Model {
+	tb.Helper()
 
 	updated, cmd := m.Update(cmds.SetSelectedBackupMsg(entry))
 	m = updated.(Model)
 	if cmd == nil {
-		t.Fatal("selecting a copy issued no read, so the panel stays blank")
+		tb.Fatal("selecting a copy issued no read, so the panel stays blank")
 	}
 
 	updated, _ = m.Update(cmd())

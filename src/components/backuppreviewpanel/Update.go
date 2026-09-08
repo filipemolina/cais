@@ -2,16 +2,12 @@ package backuppreviewpanel
 
 import (
 	"os"
-	"strings"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
-	"github.com/filipemolina/cais/src/appstyles"
 	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/cmds"
 	"github.com/filipemolina/cais/src/diff"
-	"github.com/filipemolina/cais/src/highlight"
 	"github.com/filipemolina/cais/src/utils"
 )
 
@@ -30,16 +26,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// old copy bytes.
 		m.read = false
 		m.lines = nil
+		m.content = ""
+		// The bytes are stale the moment the selection moves, so clear the
+		// viewport rather than leaving the previous copy on screen under the
+		// new row's header while the read is in flight.
+		m.refreshViewport()
 		if entry.Name == "" {
-			m.content = ""
-			m.vp.SetContent("")
 			return m, nil
 		}
-		// The bytes are stale the moment the selection moves, so clear them
-		// rather than leaving the previous copy on screen under the new
-		// row's header while the read is in flight.
-		m.content = ""
-		m.vp.SetContent("")
 		return m, readBackupCmd(entry)
 
 	// Focus is AppModel's to own - tab is handled once, up there - so this is
@@ -74,7 +68,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.loadErr = msg.Err
 			return m, nil
 		}
-		m.setContent(msg.Source, msg.Contents)
+		m.storeContents(msg.Contents)
 		m.recomputeDiff()
 		return m, nil
 	}
@@ -134,22 +128,16 @@ func readBackupCmd(entry utils.BackupEntry) tea.Cmd {
 	}
 }
 
-// setContent renders the copy for the viewport: compose copies get YAML
-// syntax highlighting, .env copies are shown raw so secrets are not masked
-// and the raw line is exactly what a restore would write.
+// storeContents records the read's bytes. What the viewport shows is
+// refreshViewport's to decide - the same bytes render one way with a diff
+// available and another without, and the live side can still arrive and
+// flip that.
 //
 // "Raw" is about the bytes, not the colour. An .env copy still gets a
 // foreground - see plainText.
-func (m *Model) setContent(source string, contents []byte) {
+func (m *Model) storeContents(contents []byte) {
 	m.read = true
-	raw := string(contents)
-	m.content = raw
-	if source == "compose" {
-		m.vp.SetContent(highlight.YAML(raw))
-	} else {
-		m.vp.SetContent(plainText(raw))
-	}
-	m.vp.GotoTop()
+	m.content = string(contents)
 }
 
 // recomputeDiff rebuilds the whole-file diff of the selected copy against
@@ -164,6 +152,7 @@ func (m *Model) setContent(source string, contents []byte) {
 func (m *Model) recomputeDiff() {
 	m.lines = nil
 	if !m.read || m.loadErr != nil {
+		m.refreshViewport()
 		return
 	}
 
@@ -172,38 +161,10 @@ func (m *Model) recomputeDiff() {
 		// No live bytes for this source - the file is gone from disk, or a
 		// .env that was never written. The preview keeps showing the copy's
 		// own bytes, which is all it showed before the diff existed.
+		m.refreshViewport()
 		return
 	}
 
 	m.lines = diff.Lines(live.Contents, m.content)
-}
-
-// plainText gives unhighlighted content an explicit foreground.
-//
-// Without one the text carries no SGR at all and lands on the terminal's own
-// default foreground, which has nothing to do with the active theme: on a
-// light theme the .env preview was pale grey on a pale panel and effectively
-// unreadable. Every other body of text in the app names its colour, and
-// highlight.YAML does it per line for compose copies; this is the same for the
-// copies that get no syntax highlighting.
-//
-// Styled per line rather than over the whole block because lipgloss closes
-// each styled run with a reset, so a single Render of a multi-line string
-// leaves everything after the first newline unstyled again.
-func plainText(content string) string {
-	if content == "" {
-		return content
-	}
-
-	style := lipgloss.NewStyle().Foreground(appstyles.Active.TextPrimary)
-
-	lines := strings.Split(content, "\n")
-	for i, line := range lines {
-		if line == "" {
-			continue
-		}
-		lines[i] = style.Render(line)
-	}
-
-	return strings.Join(lines, "\n")
+	m.refreshViewport()
 }

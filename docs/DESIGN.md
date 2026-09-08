@@ -775,6 +775,28 @@ live file's bytes and hash are read once per list load, not per row and not per
 keystroke, and the marker never takes the accent: the bar carries cursor state,
 the marker carries content state.
 
+The preview answers the same question for the copies the user will diff. The
+panel computes a whole-file diff of the copy against its live file in the
+restore's direction - `diff.Lines(live, copy)` - and renders it: a `-` in the
+gutter and the remove wash behind lines restoring would take out of the live
+file, a `+` and the add wash behind lines it would put in, unchanged lines
+keeping the copy's own rendering (the YAML colorizer for compose, plain text
+for `.env`). The wash replaces the syntax colors on a changed line - the
+line's meaning is "this changed", and a colored key inside a colored row is
+two kinds of signal fighting for one line. The diff opens with the first
+change mid-screen. A copy whose bytes are already the live file's gets an
+empty state instead of a rendered diff of nothing: *identical to the live
+file; restoring would change nothing* - the same answer the `(current)`
+marker gives, read off the computed lines rather than the shas so the two
+can never disagree. When no live bytes exist for the source - a `.env` that
+was never written, a live file gone from disk - there is no diff to show and
+the preview falls back to the copy's plain bytes.
+
+The `.env` contract survives the diff: the preview is the exact bytes a
+restore would write, secrets included, so an `.env` diff shows secret values
+in plain text behind the washes too. A future change that masks them breaks
+the contract this documents.
+
 Restore goes through a confirm modal. `enter` or `r` on a row emits
 `RequestRestoreBackupMsg`; `AppModel` opens a `ConfirmModal` whose follow-up is
 `RestoreBackup`, which writes the chosen `.bak` back over the live file through
@@ -1131,6 +1153,17 @@ A dark theme raises a tier's attention by lightening it, a light theme by
 darkening it; see the constructor's doc comment for why both directions use
 the same deltas. Adding a theme is choosing those base colors, not hand-
 tuning thirty derived ones.
+
+The diff washes (`DiffAdd`/`DiffRemove`, the Backups page's changed-line
+backgrounds) are derived too, and not by the tier ladder: they are
+`Blend1D` of the status hue into `PanelBg`, 28% of the way, one fraction for
+every theme. The fraction is the number two floors force at once - text on
+a washed line is body-size `TextPrimary` (4.5) and the wash must still be
+visible against the panel tiers it renders on (8 per channel, the tier
+ladder's own floor) - so a stronger tint reads the text away and a weaker
+one reads as nothing, per theme, fifteen times over if they were
+hand-picked. `Contrast_test.go` holds every theme to both floors, plus the
+`+`/`-` gutter glyph's status color on its own wash.
 
 **The asymmetry that drives every imported palette:** `Lighten` is additive
 (+10/+20/+31 per channel at the standard deltas) and `Darken` is
