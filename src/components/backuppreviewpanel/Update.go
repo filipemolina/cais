@@ -10,6 +10,7 @@ import (
 	"github.com/filipemolina/cais/src/appstyles"
 	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/diff"
 	"github.com/filipemolina/cais/src/highlight"
 	"github.com/filipemolina/cais/src/utils"
 )
@@ -24,6 +25,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		entry := utils.BackupEntry(msg)
 		m.entry = entry
 		m.loadErr = nil
+		// The previous copy's bytes and diff are not this row's; the read
+		// flag joins them so recomputeDiff cannot pair new live bytes with
+		// old copy bytes.
+		m.read = false
+		m.lines = nil
 		if entry.Name == "" {
 			m.content = ""
 			m.vp.SetContent("")
@@ -42,6 +48,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.focused = apptypes.BackupsFocus(msg) == apptypes.BackupsPreview
 		return m, nil
 
+	case cmds.BackupListMsg:
+		if msg.Err != nil {
+			return m, nil
+		}
+		live := make(map[string]utils.LiveSource, len(msg.Live))
+		for _, src := range msg.Live {
+			live[src.Source] = src
+		}
+		m.live = live
+		m.recomputeDiff()
+		return m, nil
+
 	case tea.KeyPressMsg:
 		return m.handleKey(msg)
 
@@ -57,6 +75,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.setContent(msg.Source, msg.Contents)
+		m.recomputeDiff()
 		return m, nil
 	}
 
@@ -122,6 +141,7 @@ func readBackupCmd(entry utils.BackupEntry) tea.Cmd {
 // "Raw" is about the bytes, not the colour. An .env copy still gets a
 // foreground - see plainText.
 func (m *Model) setContent(source string, contents []byte) {
+	m.read = true
 	raw := string(contents)
 	m.content = raw
 	if source == "compose" {
@@ -130,6 +150,32 @@ func (m *Model) setContent(source string, contents []byte) {
 		m.vp.SetContent(plainText(raw))
 	}
 	m.vp.GotoTop()
+}
+
+// recomputeDiff rebuilds the whole-file diff of the selected copy against
+// its live file. It runs when either side arrives: the .bak read and the
+// live bytes land in either order, and a re-list after a write replaces the
+// live side without moving the cursor - so a diff computed from the old
+// pair must not survive either arrival.
+//
+// The direction is (live, copy): an Insert line is content restoring the
+// copy would add to the live file, a Delete line what it would remove.
+// See diff.Lines for the contract.
+func (m *Model) recomputeDiff() {
+	m.lines = nil
+	if !m.read || m.loadErr != nil {
+		return
+	}
+
+	live, ok := m.live[m.entry.Source]
+	if !ok {
+		// No live bytes for this source - the file is gone from disk, or a
+		// .env that was never written. The preview keeps showing the copy's
+		// own bytes, which is all it showed before the diff existed.
+		return
+	}
+
+	m.lines = diff.Lines(live.Contents, m.content)
 }
 
 // plainText gives unhighlighted content an explicit foreground.

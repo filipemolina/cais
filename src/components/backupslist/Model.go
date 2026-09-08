@@ -19,6 +19,11 @@ import (
 // package needs the type, so the wrap costs nothing.
 type backupItem struct {
 	entry utils.BackupEntry
+	// isCurrent marks the copies whose content matches the live file's
+	// right now - "this is what you have now". It is decided when the rows
+	// are built, from the live hashes the list read carried, so the
+	// delegate never has to look past the item.
+	isCurrent bool
 }
 
 // Title is the live file's own name rather than the "compose" / ".env" tag

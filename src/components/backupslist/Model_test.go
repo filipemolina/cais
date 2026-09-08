@@ -451,3 +451,71 @@ func TestAReadErrorClearsTheSelection(t *testing.T) {
 		t.Errorf("a failed read published %q, want the cleared selection", sel.Name)
 	}
 }
+
+// A row is current when its own content hash matches its source's live hash
+// from the same read. Several rows can match at once - a restore re-uses
+// content that is already in the store - and every one of them is marked.
+func TestRowsMatchingTheLiveFileAreMarkedCurrent(t *testing.T) {
+	m := New().(Model)
+
+	envSHA := utils.ContentSHA8([]byte("SECRET=1\n"))
+	msg := cmds.BackupListMsg{
+		Entries: []utils.BackupEntry{
+			{Source: "compose", File: "compose.yaml", Name: "20260101T000000.aaaa1111.bak", SHA8: "aaaa1111"},
+			{Source: "compose", File: "compose.yaml", Name: "20260102T000000.aaaa1111.bak", SHA8: "aaaa1111"},
+			{Source: "compose", File: "compose.yaml", Name: "20260103T000000.bbbb2222.bak", SHA8: "bbbb2222"},
+			{Source: ".env", File: ".env", Name: "20260104T000000." + envSHA + ".bak", SHA8: envSHA},
+		},
+		Live: []utils.LiveSource{
+			{Source: "compose", File: "compose.yaml", SHA8: "aaaa1111"},
+			{Source: ".env", File: ".env", SHA8: envSHA},
+		},
+	}
+
+	updated, _ := m.Update(msg)
+	m = updated.(Model)
+
+	var marked []int
+	for i, item := range m.list.Items() {
+		if item.(backupItem).isCurrent {
+			marked = append(marked, i)
+		}
+	}
+	want := []int{0, 1, 3}
+	if len(marked) != len(want) {
+		t.Fatalf("rows marked current = %v, want %v", marked, want)
+	}
+	for i := range want {
+		if marked[i] != want[i] {
+			t.Fatalf("rows marked current = %v, want %v", marked, want)
+		}
+	}
+}
+
+// A row is only marked by its own source's live read. A lookup keyed on
+// anything less than the row's Source would mark a compose row by a .env
+// hash that happens to match, and the two files are different files.
+func TestARowIsOnlyMarkedByItsOwnSource(t *testing.T) {
+	m := New().(Model)
+
+	envSHA := utils.ContentSHA8([]byte("SECRET=1\n"))
+	msg := cmds.BackupListMsg{
+		// The compose row carries the .env's hash, and its own source has
+		// no live read at all.
+		Entries: []utils.BackupEntry{
+			{Source: "compose", File: "compose.yaml", Name: "20260101T000000." + envSHA + ".bak", SHA8: envSHA},
+		},
+		Live: []utils.LiveSource{
+			{Source: ".env", File: ".env", SHA8: envSHA},
+		},
+	}
+
+	updated, _ := m.Update(msg)
+	m = updated.(Model)
+
+	for i, item := range m.list.Items() {
+		if item.(backupItem).isCurrent {
+			t.Errorf("row %d was marked current by another source's hash", i)
+		}
+	}
+}

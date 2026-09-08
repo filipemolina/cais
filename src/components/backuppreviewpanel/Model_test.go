@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/filipemolina/cais/src/appstyles"
 	"github.com/filipemolina/cais/src/cmds"
+	"github.com/filipemolina/cais/src/diff"
 	"github.com/filipemolina/cais/src/utils"
 )
 
@@ -211,4 +212,159 @@ func TestAComposeCopyIsStillHighlighted(t *testing.T) {
 	if !strings.Contains(frame, keyed) {
 		t.Error("the compose preview is no longer syntax highlighted")
 	}
+}
+
+// seedHistory writes the live compose file through two snapshots, so the
+// store holds two copies with known contents, and leaves the live file
+// itself different from both. The oldest copy is what a "restore to the
+// beginning" would put back.
+func seedHistory(t *testing.T) (oldest utils.BackupEntry, live string) {
+	t.Helper()
+	dir := t.TempDir()
+	compose := filepath.Join(dir, "compose.yaml")
+
+	for _, contents := range []string{"a\nb\n", "a\nB\n"} {
+		if err := os.WriteFile(compose, []byte(contents), 0o644); err != nil {
+			t.Fatalf("writing compose: %v", err)
+		}
+		if err := utils.SnapshotFile(compose); err != nil {
+			t.Fatalf("snapshot compose: %v", err)
+		}
+	}
+	// The live file moves on after both copies were taken.
+	live = "a\nb\nc\n"
+	if err := os.WriteFile(compose, []byte(live), 0o644); err != nil {
+		t.Fatalf("writing live compose: %v", err)
+	}
+
+	entries, err := utils.ListBackups(compose)
+	if err != nil {
+		t.Fatalf("ListBackups: %v", err)
+	}
+	if len(entries) != 2 {
+		t.Fatalf("ListBackups: %d entries, want 2", len(entries))
+	}
+
+	// Both snapshots can land inside the same second, and entries written
+	// in the same second then sort by hash, not by write order - so the
+	// seeded copy is found by its content hash, never by its position.
+	want := utils.ContentSHA8([]byte("a\nb\n"))
+	for _, entry := range entries {
+		if entry.SHA8 == want {
+			return entry, live
+		}
+	}
+	t.Fatalf("seeded copy %s not in the store", want)
+	return utils.BackupEntry{}, ""
+}
+
+// listMsgFor builds the live half of a list read, the way cmds.GetBackups
+// assembles it.
+func listMsgFor(entries []utils.BackupEntry, source, contents string) cmds.BackupListMsg {
+	return cmds.BackupListMsg{
+		Entries: entries,
+		Live: []utils.LiveSource{{
+			Source:   source,
+			File:     "compose.yaml",
+			SHA8:     utils.ContentSHA8([]byte(contents)),
+			Contents: contents,
+		}},
+	}
+}
+
+// The preview diffs against the live file, in the restore direction:
+// Lines(live, copy). A line only the live file has is what restoring the
+// copy would remove from it; a line only the copy has is what it would add.
+// Everything below that renders the diff depends on this direction being
+// right, so it is pinned here where the bytes are known.
+func TestThePreviewDiffsAgainstTheLiveFile(t *testing.T) {
+	oldest, live := seedHistory(t)
+
+	updated, _ := New().Update(listMsgFor(nil, "compose", live))
+	m := updated.(Model)
+
+	m = selectAndLoad(t, m, oldest)
+
+	// live "a\nb\nc\n" against the copy "a\nb\n": restoring would remove c.
+	want := []diff.Line{
+		{Kind: diff.Equal, Content: "a"},
+		{Kind: diff.Equal, Content: "b"},
+		{Kind: diff.Delete, Content: "c"},
+	}
+	if !linesEqual(m.lines, want) {
+		t.Errorf("diff = %+v, want %+v", m.lines, want)
+	}
+}
+
+// A list read that lands without the live file's bytes - a .env that was
+// never written, a compose file gone from disk - leaves no diff to compute.
+// The panels answer for that; the panel here must not invent a diff out of
+// nothing.
+func TestNoLiveBytesMeansNoDiff(t *testing.T) {
+	m := selectAndLoad(t, New().(Model), entryFor(t, "compose"))
+
+	if m.lines != nil {
+		t.Errorf("diff computed with no live bytes on the message: %+v", m.lines)
+	}
+}
+
+// A live read landing before any copy is selected has nothing to diff
+// against either - and must not keep the previous copy's bytes as its other
+// side once the selection is cleared.
+func TestLiveBytesAloneDoNotDiffAnything(t *testing.T) {
+	_, live := seedHistory(t)
+
+	m := selectAndLoad(t, New().(Model), entryFor(t, "compose"))
+
+	updated, _ := m.Update(cmds.SetSelectedBackupMsg(utils.BackupEntry{}))
+	m = updated.(Model)
+	updated, _ = m.Update(listMsgFor(nil, "compose", live))
+	m = updated.(Model)
+
+	if m.lines != nil {
+		t.Errorf("a live read with nothing selected produced a diff: %+v", m.lines)
+	}
+}
+
+// A re-list after a write replaces the live side without moving the cursor,
+// so no new selection publish and no new .bak read fire. The diff must
+// follow the new live bytes anyway, or the panel keeps answering a question
+// about a file that no longer exists.
+func TestARelistRecomputesTheDiffAgainstTheNewLiveFile(t *testing.T) {
+	oldest, live := seedHistory(t)
+
+	updated, _ := New().Update(listMsgFor([]utils.BackupEntry{oldest}, "compose", live))
+	m := updated.(Model)
+	m = selectAndLoad(t, m, oldest)
+	if len(m.lines) == 0 {
+		t.Fatal("precondition: no diff after the first load")
+	}
+
+	newLive := "x\n"
+	updated, _ = m.Update(listMsgFor([]utils.BackupEntry{oldest}, "compose", newLive))
+	m = updated.(Model)
+
+	// live "x\n" against the copy "a\nb\n": restoring would empty it first.
+	want := []diff.Line{
+		{Kind: diff.Delete, Content: "x"},
+		{Kind: diff.Insert, Content: "a"},
+		{Kind: diff.Insert, Content: "b"},
+	}
+	if !linesEqual(m.lines, want) {
+		t.Errorf("diff after re-list = %+v, want %+v", m.lines, want)
+	}
+}
+
+// linesEqual compares field by field: diff.Line carries a slice, so it
+// cannot be compared with !=.
+func linesEqual(got, want []diff.Line) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	for i := range want {
+		if got[i].Kind != want[i].Kind || got[i].Content != want[i].Content {
+			return false
+		}
+	}
+	return true
 }

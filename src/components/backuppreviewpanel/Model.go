@@ -4,6 +4,7 @@ import (
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"github.com/filipemolina/cais/src/components/chrome"
+	"github.com/filipemolina/cais/src/diff"
 	"github.com/filipemolina/cais/src/keys"
 	"github.com/filipemolina/cais/src/utils"
 )
@@ -25,6 +26,24 @@ type Model struct {
 	entry   utils.BackupEntry
 	content string
 	loadErr error
+	// read is whether the current entry's read has landed. It distinguishes
+	// "nothing read yet" from "the copy is empty", which the diff needs: an
+	// empty copy against a non-empty live file is a real diff - restoring
+	// it would empty the file - not an absence of one.
+	read bool
+
+	// live is each source's current on-disk state, from BackupListMsg. The
+	// panel does not know which files are loaded - AppModel does, and
+	// resolves the paths - so the bytes arrive on the message rather than
+	// being read here. Keyed by the same Source label the entries carry.
+	live map[string]utils.LiveSource
+	// lines is the whole-file diff of the selected copy against its live
+	// file, rebuilt by recomputeDiff whenever either side changes. nil
+	// means "not available" - no live bytes, or the read has not landed -
+	// which the rendering phase answers by showing the copy's plain bytes.
+	// The rendering itself is Phase 5; until then the viewport keeps
+	// showing the copy exactly as before.
+	lines []diff.Line
 
 	vp          viewport.Model
 	panelWidth  int

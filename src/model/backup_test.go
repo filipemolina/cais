@@ -364,3 +364,52 @@ func TestSelectingABackupReachesThePreview(t *testing.T) {
 		t.Errorf("the preview is still showing its empty state:\n%s", frame)
 	}
 }
+
+// The list read carries each live file's current state - bytes and hash -
+// once per load. The list marks "this is what you have now" with the hash
+// and the preview diffs against the bytes; neither panel may read the live
+// files itself, because which file is loaded is AppModel's knowledge.
+func TestTheBackupsListCarriesTheLiveFiles(t *testing.T) {
+	m := withComposeLoaded(t)
+
+	_, cmd := m.Update(cmds.SetActivePageMsg("Backups"))
+
+	var listMsg *cmds.BackupListMsg
+	for _, c := range flattenCmds(cmd) {
+		if msg := c(); msg != nil {
+			if bl, ok := msg.(cmds.BackupListMsg); ok {
+				listMsg = &bl
+			}
+		}
+	}
+	if listMsg == nil {
+		t.Fatal("activating Backups issued no BackupListMsg")
+	}
+
+	var composeLive, envLive *utils.LiveSource
+	for i := range listMsg.Live {
+		switch listMsg.Live[i].Source {
+		case "compose":
+			composeLive = &listMsg.Live[i]
+		case ".env":
+			envLive = &listMsg.Live[i]
+		}
+	}
+	if composeLive == nil || envLive == nil {
+		t.Fatalf("the list read carried live state for %v, want both sources", listMsg.Live)
+	}
+
+	if composeLive.Contents != "services:\n  app:\n    image: nginx:alpine\n" {
+		t.Errorf("compose live bytes = %q", composeLive.Contents)
+	}
+	if envLive.Contents != "SECRET=1\n" {
+		t.Errorf(".env live bytes = %q", envLive.Contents)
+	}
+
+	// The one seeded copy was snapshotted from the live file, so its hash
+	// is the live hash - the row that would be marked current.
+	if len(listMsg.Entries) == 0 || listMsg.Entries[0].SHA8 != composeLive.SHA8 {
+		t.Errorf("the seeded copy's hash %v does not match the live hash %q",
+			listMsg.Entries, composeLive.SHA8)
+	}
+}

@@ -560,3 +560,31 @@ func TestListBackupsReportsTheLiveFileName(t *testing.T) {
 		}
 	}
 }
+
+// ContentSHA8 and the .bak filename carry the same hash: SnapshotFile
+// stamps the name and the live-file comparison computes it, and they only
+// agree on "this copy is the file I have now" if both ends hash the same
+// way. This is the seam between the two.
+func TestContentSHA8MatchesTheNameTheStoreStamps(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "compose.yaml")
+	contents := []byte("services:\n  app:\n    image: nginx:alpine\n")
+	if err := os.WriteFile(file, contents, 0o644); err != nil {
+		t.Fatalf("writing compose: %v", err)
+	}
+	if err := SnapshotFile(file); err != nil {
+		t.Fatalf("SnapshotFile: %v", err)
+	}
+
+	entries, err := ListBackups(file)
+	if err != nil {
+		t.Fatalf("ListBackups: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("ListBackups: %d entries, want 1", len(entries))
+	}
+
+	if got := ContentSHA8(contents); got != entries[0].SHA8 {
+		t.Errorf("ContentSHA8 = %q, but the snapshot's name carries %q", got, entries[0].SHA8)
+	}
+}

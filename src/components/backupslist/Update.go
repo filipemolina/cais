@@ -47,9 +47,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.loading = false
 		m.loadErr = nil
 
+		// Which copy is the live file's twin, decided once per read: a row
+		// is current when its own content hash matches its source's live
+		// hash. The lookup is keyed by Source, so a compose copy cannot
+		// match a .env's hash by coincidence.
+		currentBySource := make(map[string]string, len(msg.Live))
+		for _, live := range msg.Live {
+			currentBySource[live.Source] = live.SHA8
+		}
+
 		items := make([]list.Item, 0, len(msg.Entries))
 		for _, entry := range msg.Entries {
-			items = append(items, backupItem{entry: entry})
+			items = append(items, backupItem{
+				entry:     entry,
+				isCurrent: entry.SHA8 != "" && currentBySource[entry.Source] == entry.SHA8,
+			})
 		}
 
 		// A reload re-lists the store, so the cursor goes back to the newest

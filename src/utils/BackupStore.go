@@ -41,6 +41,16 @@ func EnsureBackupStore(composeDir string) error {
 	return nil
 }
 
+// ContentSHA8 is the 8-hex content hash a .bak filename carries.
+// SnapshotFile stamps it into the name it writes; the live-file reader
+// computes it to recognise the stored copy that matches what is on disk
+// right now. One helper for both, so the two ends of that comparison can
+// never drift apart.
+func ContentSHA8(contents []byte) string {
+	sum := sha256.Sum256(contents)
+	return hex.EncodeToString(sum[:])[:8]
+}
+
 // SnapshotFile captures the pre-write state of fileName into the backup
 // store, so a bad write can later be undone. It is called from inside the
 // atomic write, before the file is replaced, so it only ever runs for writes
@@ -67,8 +77,7 @@ func SnapshotFile(fileName string) error {
 		return fmt.Errorf("failed creating backup folder for %s: %w", fileName, err)
 	}
 
-	contentHash := sha256.Sum256(current)
-	sha8 := hex.EncodeToString(contentHash[:])[:8]
+	sha8 := ContentSHA8(current)
 
 	// Dedup: if the newest existing entry already holds this exact content,
 	// there is nothing new to preserve, so skip the write.
@@ -181,11 +190,33 @@ type BackupEntry struct {
 	Path string
 }
 
-// sourceLabel returns the user-facing source tag for a file: ".env" when
-// the basename is exactly .env, otherwise "compose". The backup store keys
-// on the slug, but a merged list is easier to read with a label that says
-// which live file the copy came from.
-func sourceLabel(fileName string) string {
+// LiveSource is the current state of one of the files the backup store
+// mirrors: the bytes on disk right now, plus the hash the store would give
+// them. It is read once per list load, not per row and not per keystroke.
+// The list needs the hash, to mark the stored copies that match the live
+// file; the preview needs the bytes, as the other side of the diff it
+// computes. One read serves both.
+//
+// Source and File use the same vocabulary as BackupEntry, so a merged list
+// can look a row's live counterpart up by the row's own routing key.
+type LiveSource struct {
+	Source string
+	File   string
+	SHA8   string
+	// Contents is the live file's text. It rides on the list message rather
+	// than being read by the panels: which file is loaded is AppModel's
+	// knowledge, not theirs (see DESIGN.md, "One resolution, passed down").
+	Contents string
+}
+
+// BackupSourceLabel returns the user-facing source tag for a file: ".env"
+// when the basename is exactly .env, otherwise "compose". The backup store
+// keys on the slug, but a merged list is easier to read with a label that
+// says which live file the copy came from. It is the vocabulary both a
+// stored copy and its live counterpart are keyed by, which is why the
+// live-file reader needs it too. (Not SourceLabel: that name is taken by a
+// URLSource constant in ServiceURL.go, an unrelated meaning.)
+func BackupSourceLabel(fileName string) string {
 	if filepath.Base(fileName) == ".env" {
 		return ".env"
 	}
@@ -208,7 +239,7 @@ func ListBackups(sourceFile string) ([]BackupEntry, error) {
 		return nil, fmt.Errorf("failed reading backup folder for %s: %w", sourceFile, err)
 	}
 
-	label := sourceLabel(sourceFile)
+	label := BackupSourceLabel(sourceFile)
 	base := filepath.Base(sourceFile)
 	var backups []BackupEntry
 	for _, entry := range entries {
