@@ -2,7 +2,7 @@
 
 ## Status
 
-Phases 0-3 have landed. **Phase 4 is next.** The codebase-consistency work
+Phases 0-4 have landed. **Phase 5 is next.** The codebase-consistency work
 (`docs/plans/codebase-consistency.md`) has since run to completion on top of
 Phase 3; the working tree is clean and the suite is green.
 
@@ -12,8 +12,8 @@ Phase 3; the working tree is clean and the suite is green.
 | 1 — split into two panels | `0ada178` | done |
 | 2 — scroll the list | `8926ae1`, `074c0ad`, `c3f5c2b` | done |
 | 3 — focus, and the bubbles-list conversion | `4cb09ec` | done |
-| 4 — the diff engine | | **next** |
-| 5 — render the diff | | |
+| 4 — the diff engine | `d14ceda`, `33fba9d`, `687df98` | done |
+| 5 — render the diff | | **next** |
 
 ### Picking this up cold
 
@@ -69,6 +69,38 @@ did not survive checking:
 - *the 39ms benchmark* (Phase 2). It measured a `viewport.Model` holding the
   whole rendered list. The bubbles list renders `items[start:end]` - one page -
   which is the same windowing Phase 2 hand-rolled.
+
+Phase 4 landed as three commits, with four things worth recording:
+
+- **`d14ceda` — the engine.** `src/diff` wraps go-udiff into the whole-file
+  line sequence. The plan's sketch named `udiff.ToUnifiedDiff` as producing a
+  string; in v0.4.1 it returns a structured `UnifiedDiff` (hunks and lines),
+  so the engine flattens the structured form instead of parsing a diff string
+  back. `Line.Content` loses its trailing newline - the renderer draws one
+  line per row, and a newline inside Content would be a blank row. Identical
+  inputs come back as all-Equal lines, which is what the list's "current"
+  marker is built on. A context count at least the file's own line count
+  merges every hunk into one spanning the whole file.
+- **`33fba9d` — the live reads.** `GetBackups` now reads each live file once
+  per list load and carries `utils.LiveSource` (bytes + the same sha8 the
+  `.bak` names use) on `BackupListMsg`; `SnapshotFile` and the reader share
+  `utils.ContentSHA8` so the two ends of the comparison cannot drift. The
+  preview computes the diff on whichever side arrives, and re-computes on a
+  re-list - a write while on the page re-lists through the `GetConfigMsg`
+  handler, replacing the live side without moving the cursor. The direction
+  is pinned at the panel: `diff.Lines(live, copy)`, so Insert is what
+  restoring would add to the live file and Delete what it would remove.
+- **`687df98` — the marker.** Rows whose content hash matches their source's
+  live hash carry a `(current)` marker beside the filename, one emphasis step
+  below the title, never the accent. It is dropped whole when the panel is
+  too narrow, and drawn by the version list's own (unfolded) row delegate.
+  DESIGN.md records it alongside the page's other behaviour.
+- **One interpretation of the plan, for the record:** the "identical to the
+  live file" empty state is *computed* in Phase 4 - the panel holds
+  `lines []diff.Line`, where nil means unavailable - but it is not *rendered*
+  until Phase 5, because an empty state for a diff only makes sense once the
+  viewport shows the diff. Phase 5 should render it from `lines` (or the
+  panel's sha comparison) rather than re-derive the inputs.
 
 What that bought: filtering (`/`, on the file, the timestamp *and* the sha,
 none of which the rows all show), pagination, `h`/`l`/`←`/`→` paging, and one
@@ -515,6 +547,21 @@ as a plausible-looking screen with the wrong content — not as an error. When a
 `WaitFor` fails and the screen dump looks garbled or is missing something the
 app plainly drew, check `r.Output()` for the raw bytes before believing the
 app is at fault.
+
+**Two snapshots inside the same second sort by hash, not by write order.**
+`.bak` names start with a UTC timestamp at second granularity, so two
+snapshots taken in the same second tie on the prefix and fall back to their
+sha8 - which is not write order. Any test that seeds two copies and then
+assumes "newest first" matches write order can pick the wrong one; find a
+seeded copy by its content hash (`utils.ContentSHA8`) instead of by position.
+Phase 4's preview tests hit this on their first run.
+
+**Rebuild before recording.** `make build` writes `cais` into `GOBIN`, and VHS
+records whatever binary is there. Recording with a stale binary looks exactly
+like the bug you fear most - the feature silently absent in the real app - and
+the version line in the footer names the commit it was stamped from, which is
+how to catch it. Phase 4's first recording ran `v0.6.0-50-g2306f84` against
+commits that had landed three commits earlier.
 
 ## Order and why
 
