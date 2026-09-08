@@ -2,8 +2,9 @@
 
 ## Status
 
-Phases 0-3 have landed. **Phase 4 is next.** Nothing is in flight: the working
-tree is clean at `4cb09ec` and the whole suite is green.
+Phases 0-3 have landed. **Phase 4 is next.** The codebase-consistency work
+(`docs/plans/codebase-consistency.md`) has since run to completion on top of
+Phase 3; the working tree is clean and the suite is green.
 
 | Phase | Commit | |
 | --- | --- | --- |
@@ -30,12 +31,14 @@ Phase 4 adds the diff and touches neither the list nor focus. It is scoped to
 `backuppreviewpanel` plus a new package for the diff itself, so the seam is
 clean.
 
-**One thing to settle before writing Phase 4 code:** an unrelated
-codebase-wide consistency audit was commissioned right after Phase 3 landed
-(duplication, divergent solutions, overengineering). Its findings may touch the
-preview panel or the highlighter. Check whether that report exists and has been
-acted on before starting, or you may write Phase 4 against code that is about
-to move.
+**The consistency-audit gate below is settled — Phase 4 may start.** The
+codebase-wide consistency audit commissioned right after Phase 3 landed ran,
+and its plan (`docs/plans/codebase-consistency.md`) has been acted on in full:
+every task landed, with its deliberate deferrals recorded there. Nothing Phase 4
+builds on is expected to move. One deliberate near-neighbour worth knowing
+about: the Backups version list keeps its own row delegate rather than the
+shared `chrome.ListRow` (its rows carry a focus tier), and Phase 4's list-row
+marker is drawn by that same delegate — this plan does not fold it either.
 
 Two corrections landed on top of Phase 2 that this plan did not call for,
 both from review rather than from the plan:
