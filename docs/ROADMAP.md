@@ -264,6 +264,24 @@ between `v0.4.0` and `v0.5.0`.
   (and `R` renames a group), and `space`/`enter` no longer start. A minor bump: it is a
   breaking change to keybindings.
 
+- **`v0.7.0`** (2026-09-08) rebuilds the Backups page around the diff. The
+  version list and the preview are two real panels with `tab`-switched focus;
+  the list scrolls, filters and pages like the groups and services lists, and
+  its rows carry the live file's own name, with a `(current)` marker on the
+  copies whose bytes match what is on disk right now. The preview renders the
+  selected copy as a git-style diff against the live file — red for what
+  restoring would remove, green for what it would add, unchanged lines
+  keeping the YAML colorizer — auto-scrolled to the first change, its washes
+  derived from each theme's own colors rather than hand-picked per theme, and
+  a copy identical to the live file answers with an "Identical to the live
+  file" card instead of a file rendered for nothing. Alongside it, the
+  container states are docker's own seven rather than a running/stopped
+  pairing: restarting, paused, created, removing and dead each render as what
+  they are, and `docker compose ps` is asked for every container, so a
+  created or exited one is no longer invisible. A minor bump: it adds
+  user-facing surface (the diff, the markers, and the container states). See
+  `docs/plans/backups-rework.md`.
+
 ### Done, and kept for the record
 
 The plans in `docs/plans/` that have already landed:
