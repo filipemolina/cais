@@ -50,7 +50,7 @@ The preview reads the chosen `.bak` from disk on selection; compose copies are s
 
 ## Restore is itself undoable
 
-Restore goes through a confirm modal. `enter` or `r` on a row emits `RequestRestoreBackupMsg`; `AppModel` opens a `ConfirmModal` whose follow-up is `RestoreBackup`, which writes the chosen `.bak` back over the live file through `utils.ReplaceFileAtomically`.
+Restore goes through a confirm modal. `r` on a row emits `RequestRestoreBackupMsg` (`enter` was dropped from the binding — too easy to hit by reflex while navigating for an action that overwrites a live file); `AppModel` opens a `ConfirmModal` whose follow-up is `RestoreBackup`, which writes the chosen `.bak` back over the live file through `utils.ReplaceFileAtomically`.
 
 Because the write is atomic, the live file is snapshotted into the store before it is replaced — so a restore is itself undoable: the copy you restored from still sits in the store, and a later restore of the post-restore snapshot brings the file you had back. A `.env` restore makes this explicit in the confirm text, because it brings the secrets back too.
 

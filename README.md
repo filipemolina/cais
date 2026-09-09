@@ -68,8 +68,10 @@ line-preserving, so comments and the variables you did not touch survive.
 **Your backups are browsable and restorable.** Every compose and `.env` write is
 snapshotted into `.cais/backups/` before it lands, so a bad edit is always
 reversible. Tab `4` (Backups) lists every stored copy of the compose file and the
-`.env`, newest first, with a live preview beside the list, and `enter` (or `r`)
-restores the chosen copy over the live file. The current file is snapshotted
+`.env`, newest first, with a live preview beside the list, and `r` restores the
+chosen copy over the live file — `enter` deliberately does nothing, being too
+easy to hit by reflex while navigating for an action that overwrites a live
+file. The current file is snapshotted
 first, so a restore is itself undoable, and a restore that brings back the `.env`
 also brings back its secrets, which the confirm makes clear.
 

@@ -797,8 +797,10 @@ restore would write, secrets included, so an `.env` diff shows secret values
 in plain text behind the washes too. A future change that masks them breaks
 the contract this documents.
 
-Restore goes through a confirm modal. `enter` or `r` on a row emits
-`RequestRestoreBackupMsg`; `AppModel` opens a `ConfirmModal` whose follow-up is
+Restore goes through a confirm modal. `r` on a row emits
+`RequestRestoreBackupMsg` — `enter` was dropped from the binding, being too
+easy to hit by reflex while navigating for an action that overwrites a live
+file — and `AppModel` opens a `ConfirmModal` whose follow-up is
 `RestoreBackup`, which writes the chosen `.bak` back over the live file through
 `utils.ReplaceFileAtomically`. Because the write is atomic, the live file is
 snapshotted into the store before it is replaced, so a restore is itself

@@ -62,7 +62,7 @@ Every action cais takes maps to something you could have typed. It just replaces
 | Tail logs for one service | `docker compose logs -f jellyfin` | `L` |
 | Restart one service | `docker compose restart jellyfin` | `r` |
 | Add a healthcheck to Postgres | edit `compose.yml` by hand | `H`, pick a template |
-| Undo a bad edit | `git diff && git checkout compose.yml` *(in a repo)* | `4`, `enter` |
+| Undo a bad edit | `git diff && git checkout compose.yml` *(in a repo)* | `4`, then `r` |
 | See a running service's URL | `docker compose ps` + guess | look at the `Web` row |
 | Copy that URL | mouse-select and copy | `y` |
 | Edit the `.env` beside compose | open in `$EDITOR` | `v` |
@@ -89,7 +89,7 @@ Ports, restart policy, networks, volumes, `depends_on`, healthcheck, image refer
 
 ### Browsable, restorable backups
 
-Every write is snapshotted into `.cais/backups/` first. Tab `4` lists every stored copy of the compose file and `.env`, newest first, with a live preview. `enter` restores; the current file is snapshotted first, **so a restore is itself undoable**.
+Every write is snapshotted into `.cais/backups/` first. Tab `4` lists every stored copy of the compose file and `.env`, newest first, with a live preview. `r` restores; the current file is snapshotted first, **so a restore is itself undoable**.
 
 ![The Backups page: every stored copy of the compose file and the .env, with a live preview](/screenshot-backups.png)
 

@@ -36,7 +36,7 @@ The inline editor refuses to write a fragment that would not parse as Compose, a
 
 ## I made a bad edit — how do I undo it?
 
-Every write is snapshotted into `.cais/backups/` before it lands. Tab `4` (Backups), pick the copy you want, `enter`/`r` to restore. A restore is itself undoable. See [Backups](/users/backups/).
+Every write is snapshotted into `.cais/backups/` before it lands. Tab `4` (Backups), pick the copy you want, `r` to restore. A restore is itself undoable. See [Backups](/users/backups/).
 
 ## A group won't start, and the error doesn't mention it
 

@@ -186,7 +186,7 @@ func diffTint(bg, status color.Color) color.Color {
 // chip - are not derived from the surface tiers. What *does* vary is which of
 // the two is correct, and that is a property of the fill, not of the call
 // site. Hard-coding it worked while one dark theme existed; with a light
-// theme and ten imported palettes in the registry, the same call site draws
+// theme and eleven imported palettes in the registry, the same call site draws
 // on a #BC3FBC magenta in one theme and a #A7C080 sage in another.
 func InkOn(fill color.Color) color.Color {
 	if Contrast(Active.InkOnLight, fill) >= Contrast(Active.InkOnDark, fill) {

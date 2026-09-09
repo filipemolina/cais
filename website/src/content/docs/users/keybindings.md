@@ -20,7 +20,7 @@ Work anywhere that no overlay owns the keyboard.
 | `1`–`4` | Switch page (Groups / Services / Files / Backups) |
 | `[` `]` | Previous / next page |
 | `alt+g` `alt+s` `alt+f` `alt+b` | Page aliases (letter derived from the tab label) |
-| `tab` / `shift+tab` | Inert on body pages; used only inside overlays (next field) and the inline YAML editor (indent / outdent) |
+| `tab` / `shift+tab` | Cycle focus on Backups (list ↔ preview) — the one body page with two focus stops; elsewhere inert on body pages, used only inside overlays (next field) and the inline YAML editor (indent / outdent) |
 | `esc` | Back — a ladder of claims: closes a modal, abandons a filter being typed, clears an applied filter, dismisses the error banner, then clears the current selection (deselect) |
 | `?` | Help overlay |
 | `a` | About overlay |
@@ -96,7 +96,7 @@ Act on the Backups page's version list.
 | Key | Action |
 | --- | --- |
 | `↑` `↓` | Navigate the list |
-| `enter` / `r` | Restore the selected copy (confirm-guarded) |
+| `r` | Restore the selected copy (confirm-guarded; `enter` deliberately does nothing) |
 
 ## Overlays
 

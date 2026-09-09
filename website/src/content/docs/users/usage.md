@@ -66,7 +66,7 @@ The Backups page answers "what did this file used to be, and can I have it back?
 ![The Backups page: every stored copy of the compose file and the .env, with a live preview](/screenshot-backups.png)
 
 - A list on the left of every stored copy of the compose file and the `.env` (when one sits next to the loaded compose file), newest first, with a live preview on the right — the exact bytes a restore would put back.
-- `enter` or `r` restores the chosen copy over the live file, through a confirm modal. Because the write is atomic, the live file is snapshotted first — so a restore is itself undoable.
+- `r` restores the chosen copy over the live file, through a confirm modal. Because the write is atomic, the live file is snapshotted first — so a restore is itself undoable.
 - A `.env` restore brings the secrets back too, which the confirm makes clear.
 
 See [Backups](/users/backups/) for how the store works.
