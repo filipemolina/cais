@@ -63,7 +63,7 @@ Escape
 Sleep 1s
 
 # --- Live logs -------------------------------------------------------------
-Type "l"
+Type "L"
 Sleep 4s
 Screenshot demo/screenshot-logs.png
 Escape

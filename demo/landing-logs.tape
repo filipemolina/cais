@@ -46,7 +46,7 @@ Down
 Down
 Down
 Sleep 2s
-Type "l"
+Type "L"
 Sleep 3s
 Screenshot demo/landing-logs.png
 Escape

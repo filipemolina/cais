@@ -78,7 +78,7 @@ Type "s"
 Sleep 8s
 
 # Tail every service in the group at once.
-Type "l"
+Type "L"
 Sleep 3500ms
 Escape
 Sleep 800ms
