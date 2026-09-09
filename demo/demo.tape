@@ -98,15 +98,12 @@ Down
 Sleep 2500ms
 
 # Edit the service's compose fragment in place — real YAML, validated live.
+# (No cursor walk inside the editor: an arrow key while the editor is open
+# moves the list cursor, which abandons the edit.)
 Tab
 Sleep 500ms
 Type "e"
-Sleep 1500ms
-Down
-Down
-Down
-Down
-Sleep 800ms
+Sleep 2s
 Escape
 Sleep 1s
 
@@ -119,15 +116,18 @@ Type "t"
 Sleep 6s
 
 # Open the Backups page (tab 4): the merged list of every stored copy of the
-# compose file and the .env, newest first, with a live preview beside it.
+# compose file and the .env, newest first. The newest copy is the live file
+# verbatim, so the page opens on it carrying the (current) marker with the
+# preview answering "Identical to the live file"; walking down reaches the
+# drafts beneath, whose previews are git-style diffs against the live file —
+# red for what restoring would remove, green for what it would add. The hold
+# on the draft is long enough to read a hunk in the recording.
 Type "4"
 Sleep 2000ms
-# Walk down the list so the preview follows, showing the copy beneath the
-# newest rather than only the top row.
 Down
 Sleep 1500ms
 Down
-Sleep 1500ms
+Sleep 2500ms
 Up
 Up
 Sleep 1200ms

@@ -52,18 +52,12 @@ Sleep 3s
 Screenshot demo/screenshot-service.png
 
 # --- The inline YAML editor -----------------------------------------------
-Tab
-Sleep 500ms
+# (No Tab and no cursor walk inside the editor: e fires from the list
+# selection, and an arrow key while the editor is open moves the list cursor,
+# which abandons the edit. The editor opens with the cursor at the end of the
+# fragment; the shot is the editor as it opens.)
 Type "e"
 Sleep 2s
-Down
-Down
-Down
-Down
-Down
-Down
-Down
-Sleep 1s
 Screenshot demo/screenshot-editor.png
 Escape
 Sleep 1s

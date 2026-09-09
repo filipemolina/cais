@@ -57,32 +57,34 @@ Down
 Sleep 3s
 Screenshot demo/landing-service.png
 
-# --- The inline YAML editor: navidrome's fragment, cursor in the healthcheck ---
+# --- The inline YAML editor: navidrome's fragment --------------------------
 # (Two Downs after the service shot move homeassistant on to kavita and then
 # navidrome while the sidebar still has focus. The editor opens with the
-# cursor at the end of the fragment, so Up walks it back into the healthcheck
-# block to rest on a real content line.)
+# cursor at the end of the fragment; an arrow key while it is open would move
+# the list cursor and abandon the edit, so there is no cursor walk here.)
 Down
 Down
 Sleep 1s
-Tab
-Sleep 500ms
 Type "e"
 Sleep 2s
-Up
-Up
-Up
-Up
-Sleep 1s
 Screenshot demo/landing-editor.png
 Escape
 Sleep 1s
 
-# --- Backups: stored compose + .env copies, newest selected, preview -------
-# The newest copy is selected by default and its preview is shown beside the
-# list. Hold a beat so the preview viewport settles, then capture.
+# --- Backups: stored compose + .env copies, and the diff -------------------
+# The page opens on the newest copy, which is the live file verbatim: its row
+# carries the (current) marker and the preview answers with the "Identical to
+# the live file" card. Hold a beat, then walk down to the draft beneath, and
+# capture there: the shot should show the feature, so the preview in frame is
+# the git-style diff against the live file — red for what restoring would
+# remove, green for what it would add — with the (current) markers still
+# visible on the rows above it.
 Type "4"
-Sleep 3s
+Sleep 2s
+Down
+Sleep 1s
+Down
+Sleep 2500ms
 Screenshot demo/landing-backups.png
 
 Type "q"
