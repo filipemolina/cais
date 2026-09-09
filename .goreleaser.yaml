@@ -49,4 +49,9 @@ release:
   draft: true
   # Drafted rather than published: the first releases want a human to read
   # the notes before they go out.
+  # The annotated tag message is the release notes: it is written for the
+  # release page (see CONTRIBUTING.md §Releases), and GoReleaser sets it as
+  # the body's header with the commit changelog underneath. .TagContents is
+  # the tag message verbatim, `git tag -l --format='%(contents)'`.
+  header: "{{ .TagContents }}"
   prerelease: auto

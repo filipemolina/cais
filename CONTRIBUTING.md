@@ -104,6 +104,17 @@ git tag -a v0.1.0 -m "v0.1.0"
 git push origin v0.1.0
 ```
 
+The annotated tag message is the release notes — that is the default, not a
+one-off: write the `git tag -a` message the way it should read on the release
+page, and GoReleaser sets it as the release body's header with the commit
+changelog underneath. A one-line tag makes a one-line release, which is
+honest. If a draft already exists with only the bare changelog, put the
+message back before publishing:
+
+```bash
+gh release edit v0.1.0 --notes-file <(git tag -l --format='%(contents)' v0.1.0)
+```
+
 `cais --version` reports the stamp. An unstamped local build reports
 its commit instead, which is what a bug report wants anyway.
 
