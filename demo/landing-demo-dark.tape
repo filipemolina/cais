@@ -62,7 +62,7 @@
 # this recording, which deliberately shows the stack fully running. Extract
 # it with:
 #
-#   ffmpeg -y -ss 0 -i demo/landing-demo-dark.mp4 -frames:v 1 demo/landing-demo-dark-poster.png
+#   ffmpeg -y -ss 0 -i demo/landing-demo-dark-web.mp4 -frames:v 1 demo/landing-demo-dark-poster.png
 
 Output demo/landing-demo-dark.mp4
 Output demo/landing-demo-dark.webm
