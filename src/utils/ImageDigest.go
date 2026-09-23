@@ -1,8 +1,11 @@
 package utils
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 )
 
 // ImageUpdateState is what a check concluded about one service's image.
@@ -132,6 +135,114 @@ func ClassifyImageUpdate(local, remote string) ImageUpdateState {
 	}
 
 	return ImageStale
+}
+
+// localInspectTimeout bounds one `docker image inspect`. The command is
+// milliseconds against a live daemon (R5); the timeout exists so a hung
+// daemon cannot hang the startup check, and is generous for that reason.
+const localInspectTimeout = 10 * time.Second
+
+// LocalImageDigests resolves refs through `docker image inspect` and returns,
+// per ref, the RepoDigests entry matching that repo — or "" when the image is
+// absent locally or carries none (a locally built image, R4). Never indexes
+// without a length check (R4).
+//
+// The inspects are per-reference rather than one batched call: docker writes
+// its errors for missing refs to stderr and only what it found to stdout, so
+// a batched call's stdout lines cannot be told apart once one ref is missing
+// (R8). Each inspect is milliseconds; the local half never touches the
+// network.
+func LocalImageDigests(refs []string) (map[string]string, error) {
+	digests := make(map[string]string, len(refs))
+	seen := make(map[string]bool, len(refs))
+
+	for _, ref := range refs {
+		if seen[ref] {
+			continue
+		}
+		seen[ref] = true
+
+		// A ref that does not parse is "" without an exec: the registry
+		// URL could not be built from it either, so both halves land in
+		// the same Unknown.
+		parsed, err := ParseImageRef(ref)
+		if err != nil {
+			digests[ref] = ""
+			continue
+		}
+
+		digest, err := localImageDigest(ref, parsed.Repo)
+		if err != nil {
+			return nil, err
+		}
+
+		digests[ref] = digest
+	}
+
+	return digests, nil
+}
+
+// localImageDigest runs one inspect and picks repo's entry out of the
+// RepoDigests it prints. A ref absent locally is "" and nil error — never
+// pulled, or a build-only image — because the classification already has a
+// name for that: Unknown. Any other failure aborts the batch: a daemon that
+// is down fails every ref the same way, so the first one reports and the
+// caller swallows it (D3) — DockerPreflight's existing surface says why,
+// elsewhere.
+func localImageDigest(ref string, repo string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), localInspectTimeout)
+	defer cancel()
+
+	command := dockerCommandContext(ctx, "docker", "image", "inspect", ref, "--format", "{{json .RepoDigests}}")
+	output, err := command.CombinedOutput()
+	if err != nil {
+		// docker exits 1 for a missing ref too; CombinedOutput carries the
+		// daemon's "No such image" line, which is how that case is told
+		// apart from a daemon that is not running at all.
+		if strings.Contains(strings.ToLower(string(output)), "no such image") {
+			return "", nil
+		}
+
+		return "", fmt.Errorf("docker image inspect %s failed: %w: %s", ref, err, string(output))
+	}
+
+	return digestForRepo(string(output), repo), nil
+}
+
+// digestForRepo picks the RepoDigests entry whose repo part is the same
+// image as repo, from one image's captured {{json .RepoDigests}} output.
+//
+// The entry's repo is normalized through ParseImageRef because the daemon
+// writes the repo as it was pulled — "alpine@…" for library/alpine, but
+// "ghcr.io/owner/app@…" with the host on — so neither side of the compare is
+// usable raw (R4). Entries naming a different repo belong to a different
+// pull and are skipped; the image this ref resolves to only carries entries
+// for the repos it was actually pulled through, so the first match is the
+// one. Malformed entries are skipped rather than fatal: the comparison
+// degrades to Unknown, which is the contract for a failed half.
+func digestForRepo(output string, repo string) string {
+	var entries []string
+	if err := json.Unmarshal([]byte(strings.TrimSpace(output)), &entries); err != nil {
+		return ""
+	}
+
+	for _, entry := range entries {
+		name, digest, ok := strings.Cut(entry, "@")
+		if !ok {
+			continue
+		}
+
+		parsed, err := ParseImageRef(name)
+		if err != nil {
+			continue
+		}
+
+		if parsed.Repo == repo {
+			return digest
+		}
+	}
+
+	return ""
 }
 
 // checkDigest validates the <alg>:<encoded> shape Docker's reference grammar

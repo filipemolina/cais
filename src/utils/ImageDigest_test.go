@@ -1,6 +1,11 @@
 package utils
 
-import "testing"
+import (
+	"context"
+	"os"
+	"os/exec"
+	"testing"
+)
 
 func TestParseImageRef(t *testing.T) {
 	tests := []struct {
@@ -116,4 +121,158 @@ func TestClassifyImageUpdate(t *testing.T) {
 			t.Errorf("ClassifyImageUpdate(%q, %q) = %v, want %v", tc.local, tc.remote, got, tc.want)
 		}
 	}
+}
+
+// The outputs are captured verbatim from `docker image inspect <ref>
+// --format '{{json .RepoDigests}}'` on 2026-09-23, engine 29.8.0. The
+// familiar-name forms are the R4 trap: the daemon writes alpine's entry as
+// "alpine@…" — no docker.io, no library/ — while a ghcr pull carries the
+// host, so neither side of the compare is usable raw.
+func TestDigestForRepo(t *testing.T) {
+	const alpineOutput = `["alpine@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6"]`
+	const redisOutput = `["redis@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99"]`
+	const ghcrOutput = `["ghcr.io/fallenbagel/jellyseerr@sha256:9cc9e9ee6cd5cf5a23feb45c37742ba34cfd6314d81d259cddb373a97ac92cdd"]`
+
+	tests := []struct {
+		name   string
+		output string
+		repo   string
+		want   string
+	}{
+		{"official image, familiar name", alpineOutput, "library/alpine", "sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6"},
+		{"official image, tag form", redisOutput, "library/redis", "sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99"},
+		{"host-prefixed repo", ghcrOutput, "fallenbagel/jellyseerr", "sha256:9cc9e9ee6cd5cf5a23feb45c37742ba34cfd6314d81d259cddb373a97ac92cdd"},
+		{"repo mismatch filters the entry", alpineOutput, "library/redis", ""},
+		{"host mismatch filters the entry", ghcrOutput, "library/alpine", ""},
+		// A locally built image prints [] — empty result, no error, no panic (R4).
+		{"empty array", `[]`, "library/alpine", ""},
+		{"garbage output", "Error: something went wrong", "library/alpine", ""},
+		{"empty output", "", "library/alpine", ""},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := digestForRepo(tc.output, tc.repo); got != tc.want {
+				t.Errorf("digestForRepo(%q, %q) = %q, want %q", tc.output, tc.repo, got, tc.want)
+			}
+		})
+	}
+}
+
+// An image pulled through two repos carries one entry per repo; the entry
+// for this ref's repo is picked, not "newest wins" — the order is the
+// daemon's, not a freshness signal.
+func TestDigestForRepoMultiEntry(t *testing.T) {
+	const multi = `["alpine@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6",` +
+		`"ghcr.io/fallenbagel/jellyseerr@sha256:9cc9e9ee6cd5cf5a23feb45c37742ba34cfd6314d81d259cddb373a97ac92cdd"]`
+
+	if got := digestForRepo(multi, "fallenbagel/jellyseerr"); got != "sha256:9cc9e9ee6cd5cf5a23feb45c37742ba34cfd6314d81d259cddb373a97ac92cdd" {
+		t.Errorf("digestForRepo multi-entry = %q, want the ghcr entry", got)
+	}
+}
+
+// The exec half runs the inspect once per ref, not batched, and prints what
+// it found. The fake binary is the same seam DockerComposePs's test uses.
+func TestLocalImageDigestsInspectsEachRef(t *testing.T) {
+	original := dockerCommandContext
+	t.Cleanup(func() { dockerCommandContext = original })
+
+	var calls [][]string
+	dockerCommandContext = func(ctx context.Context, name string, args ...string) *exec.Cmd {
+		calls = append(calls, append([]string{name}, args...))
+		script := "#!/bin/sh\n" +
+			`echo '["alpine@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6"]'` + "\n"
+		return fakeShellScript(t, script)
+	}
+
+	got, err := LocalImageDigests([]string{"alpine:latest", "alpine:latest", "redis:7-alpine"})
+	if err != nil {
+		t.Fatalf("LocalImageDigests: %v", err)
+	}
+
+	want := "sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6"
+	if got["alpine:latest"] != want {
+		t.Errorf("alpine:latest = %q, want %q", got["alpine:latest"], want)
+	}
+	// The fake prints alpine's entry for every call, but redis's repo filter
+	// must not match an alpine entry.
+	if got["redis:7-alpine"] != "" {
+		t.Errorf("redis:7-alpine = %q, want \"\" (repo filter)", got["redis:7-alpine"])
+	}
+
+	if len(calls) != 2 {
+		t.Errorf("inspect ran %d times, want 2 (one per unique ref)", len(calls))
+	}
+}
+
+func TestLocalImageDigestsAbsentRefIsEmpty(t *testing.T) {
+	original := dockerCommandContext
+	t.Cleanup(func() { dockerCommandContext = original })
+
+	// docker exits 1 and prints "Error: No such image: <ref>" for a ref
+	// that is not in the local store; that is the "" case, not an error.
+	script := "#!/bin/sh\necho 'Error: No such image: nosuchthing' >&2\nexit 1\n"
+	dockerCommandContext = func(ctx context.Context, name string, args ...string) *exec.Cmd {
+		return fakeShellScript(t, script)
+	}
+
+	got, err := LocalImageDigests([]string{"nosuchthing:latest"})
+	if err != nil {
+		t.Fatalf("LocalImageDigests: %v", err)
+	}
+
+	if got["nosuchthing:latest"] != "" {
+		t.Errorf("absent ref = %q, want \"\"", got["nosuchthing:latest"])
+	}
+}
+
+func TestLocalImageDigestsDaemonDownIsAnError(t *testing.T) {
+	original := dockerCommandContext
+	t.Cleanup(func() { dockerCommandContext = original })
+
+	script := "#!/bin/sh\necho 'Cannot connect to the Docker daemon at unix:///var/run/docker.sock' >&2\nexit 1\n"
+	dockerCommandContext = func(ctx context.Context, name string, args ...string) *exec.Cmd {
+		return fakeShellScript(t, script)
+	}
+
+	if _, err := LocalImageDigests([]string{"alpine:latest"}); err == nil {
+		t.Error("daemon-down inspect returned nil error, want an error the command swallows")
+	}
+}
+
+func TestLocalImageDigestsUnparseableRefSkipsExec(t *testing.T) {
+	original := dockerCommandContext
+	t.Cleanup(func() { dockerCommandContext = original })
+
+	ran := false
+	dockerCommandContext = func(ctx context.Context, name string, args ...string) *exec.Cmd {
+		ran = true
+		return exec.Command("true")
+	}
+
+	got, err := LocalImageDigests([]string{"redis@sha256:nothex!"})
+	if err != nil {
+		t.Fatalf("LocalImageDigests: %v", err)
+	}
+
+	if ran {
+		t.Error("an unparseable ref still ran an inspect")
+	}
+	if got["redis@sha256:nothex!"] != "" {
+		t.Errorf("unparseable ref = %q, want \"\"", got["redis@sha256:nothex!"])
+	}
+}
+
+// fakeShellScript writes a shell script standing in for the docker binary,
+// the way DockerCommand.go's seam intends: the test can exercise the code
+// that reads docker's output without docker being installed.
+func fakeShellScript(t *testing.T, script string) *exec.Cmd {
+	t.Helper()
+
+	path := t.TempDir() + "/fake-docker"
+	if err := os.WriteFile(path, []byte("#!/bin/sh\n"+script), 0o755); err != nil {
+		t.Fatalf("write fake docker: %v", err)
+	}
+
+	return exec.Command(path)
 }
