@@ -90,6 +90,25 @@ a whole group in an overlay, with follow mode and scrollback.
 
 ![Streaming logs for a service](./demo/screenshot-logs.png)
 
+**It knows when an image has moved.** Once at startup (and again on a file
+switch or a restore), Cais compares each service's local image digest with the
+one its registry currently serves for the tag, and a `↑` glyph appears beside
+the status dot of every service whose image moved — on the Services list, on
+group rows and in the member table. The check is anonymous and silent: offline,
+rate-limited or behind a private registry, nothing is drawn and nothing is
+reported; `↑` only ever means "the digests differ", never "the check failed".
+
+`U` on a stale service (confirm first) writes the new digest into the compose
+file as a pin — `image: redis:7-alpine@sha256:…` — then pulls and recreates the
+container running it. Because the pin is a compose write, it is snapshotted like
+every other one, and the Backups page can undo it: restore the pre-update copy
+and the container runs the previous image again. One honest caveat: the *first*
+time a service is updated from an unpinned tag, the backup it takes holds no
+digest to restore to, so restoring it re-resolves the (already moved) tag —
+from the second update on, every backup carries the previous digest and a
+restore is a true rollback. `p` remains the plain pull: it refreshes the image
+and clears the glyph without writing anything.
+
 <details>
 <summary>More features</summary>
 
@@ -174,6 +193,7 @@ one.
 | `n` | New: a group on the Groups page, a service on the Services page (name and image, then the inline editor opens on it), a variable from the env modal opened with `v` |
 | `d` | Delete: the group on the Groups page, or the service's whole entry in the compose file on the Services page (both confirm first) |
 | `B` | Boot: cycle the service's restart policy (boot persistence): none → `on-failure` → `unless-stopped` → `always`, written straight into the compose file (Services only) |
+| `U` | Update: the selected service's image is stale at the registry — pin the digest the registry serves into the compose file and recreate the container running it, confirm-guarded (Services only, offered only for a stale image) |
 | `A` | Adopt or release the `ungrouped` row: writes (or removes) `profiles: [ungrouped]` on every untagged service, confirm-guarded |
 | `/` | Filter the list by name |
 | `l` `h` | List pagination: next / previous page of rows (vim-style) |

@@ -1018,6 +1018,77 @@ condition (`AddHealthcheckMsg` and `CycleRestartPolicyMsg` both handled in
 `detailspanel.Update`) - one message shape, one hint, two write paths that
 share the same caveat.
 
+`B` reuses the same apply-gap hint `Healthcheck` sets: `restart:` is a
+container-level attribute, so a running container only picks up a new policy
+on the next `up -d`, not on `restart`. Rather than teach the panel a second
+hint, `CycleRestartPolicyMsg` sets `applyHint` through the identical
+condition (`AddHealthcheckMsg` and `CycleRestartPolicyMsg` both handled in
+`detailspanel.Update`) - one message shape, one hint, two write paths that
+share the same caveat.
+
+### Image updates: a digest pin behind a confirm, and a glyph that can only mean one thing
+
+Cais answers "is my `:latest` still the one it was?" by comparing two digests,
+once per load that changes the service set: the local image's RepoDigests entry
+and the digest the registry currently serves for the tag, read off a manifest
+GET's `Docker-Content-Digest` header. The check runs at startup, on a file
+switch and after a restore - the moments the service set can change - and
+never on a timer: a periodic re-check would buy minutes-fresh glyphs at twelve
+times the rate-limit cost, and cais does not run unattended work anyway.
+
+**A failed check renders as nothing, on every surface.** The check's answer is
+exactly three values - up-to-date, stale, unknown - and only a stale answer
+draws the `↑` glyph. Unknown is what an offline laptop, a rate limiter or a
+private registry all look like, and a flaky network must not produce a wall of
+false update glyphs, because a glyph that lies once is a glyph nobody acts on
+again. Unknown never reads as verified up-to-date either: the zero value is
+unknown, and every failure mode (DNS failure, 429, a 401 after the anonymous
+token, no RepoDigests on a locally built image) lands there silently. The same
+principle 03-drift-detection.md puts on drift: a status that can lie must not
+have a glyph.
+
+The glyph is `↑` in the amber the status vocabulary already uses for "wants
+attention, not broken", and it rides **beside** a status dot, never **on** one.
+State colors are a fixed vocabulary (green runs, red stops; the
+dead-vs-stopped distinction survives only because the fault carries its own
+glyph), and a second meaning on one dot would re-open an argument this
+document has settled. Placement: the services list's row tail reads `… ↑ ●`,
+the details header's status line says `update available ↑` in words too, group
+rows carry it when any member is stale (their updates table says which), and
+the member table's NAME cell carries it after the name - appended after
+truncation, because `chrome.Truncate` is not ANSI-aware.
+
+**The update is a digest pin, the only shape whose rollback is real.** `U`
+writes `image: <ref>@sha256:<digest>` and recreates the container. Three
+candidate shapes were weighed: pull without a write (the Backups page has
+nothing to restore), a tag bump (needs the tag-list API and semver compare -
+deferred, not rejected), and the pin. A pin restores to the exact previous
+reference. One caveat is documented rather than hidden: the first update of an
+unpinned service takes a backup whose image line has no digest, so restoring
+it and starting re-resolves the moved tag - from the second update on, every
+pre-update file carries the previous digest and a restore is a true rollback.
+Compose compares resolved images, not the image string, so a pin that lands on
+the digest already local is a no-op rather than churn.
+
+**The registry client is anonymous or nothing.** One generic bearer flow - a
+401's `WWW-Authenticate` names the token realm; the token is fetched from that
+realm; the manifest URL is retried - measured working unchanged against Docker
+Hub, ghcr.io and lscr.io (the LinuxServer proxy routes through ghcr for free).
+There is no per-registry branch anywhere. Shelling out to `buildx imagetools`
+would have inherited `~/.docker/config.json` and made private registries just
+work, and that was given up deliberately: reading the user's docker
+credentials is a secrets-scope decision, not an implementation detail. A
+registry that answers 401 after the anonymous token attempt is Unknown.
+`docker manifest inspect` is never reached for either - it reports one digest
+per platform, never the index digest RepoDigests carries, so comparing its
+output reports every image stale forever while looking like it works.
+
+One service per `U`. A group-level "update everything" is a different feature:
+fourteen pulls is minutes of network and gigabytes of disk, and the user has
+`U` per service. Unattended updating stays permanently out of scope - a
+feature that needs cais running while the user is not looking is out of scope
+permanently, and this is the same objection in its manual shape.
+
 ### The panel footer
 
 Both details panels reserve their body's last line for a footer, laid out by
