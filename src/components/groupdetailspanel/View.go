@@ -9,6 +9,7 @@ import (
 	"github.com/filipemolina/cais/src/appstyles"
 	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/components/chrome"
+	"github.com/filipemolina/cais/src/utils"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -161,6 +162,7 @@ func (m Model) renderBody() string {
 	content := lipgloss.JoinVertical(lipgloss.Left,
 		m.groupHeaderCard(m.selectedGroup, running, stopped, len(members), bodyWidth),
 		m.renderMemberTable(members, bodyWidth),
+		m.renderUpdatesTable(members, bodyWidth),
 	)
 
 	// The spinner is the panel's only footer content. An idle panel with
@@ -283,7 +285,7 @@ func (m Model) renderMemberRow(cols tableCols, width int, svc types.ServiceConfi
 		fg   color.Color
 	}{
 		colDot:    {dotGlyph, dotColor},
-		colName:   {svc.Name, appstyles.Active.TextPrimary},
+		colName:   {m.memberName(svc, max(1, cols[colName]-1)), appstyles.Active.TextPrimary},
 		colImage:  {chrome.ShortImage(image, max(1, cols[colImage]-1)), appstyles.Active.TextMuted},
 		colState:  {state, stateColor(state)},
 		colHealth: {health, chrome.HealthColor(health)},
@@ -301,9 +303,11 @@ func (m Model) renderMemberRow(cols tableCols, width int, svc types.ServiceConfi
 		// Truncated to one less than the column so there is always a column of
 		// gap after it. Truncating to the full width let a long name run flush
 		// into the next cell - `navidromedeluan/n…` - which reads as one value
-		// rather than two, the same collision the headings had.
+		// rather than two, the same collision the headings had. The name cell
+		// is exempt: memberName assembled it to its final width already, and
+		// a second truncation would cut through the styled glyph it carries.
 		text := cell[name].text
-		if name != colDot {
+		if name != colDot && name != colName {
 			text = chrome.Truncate(text, max(1, w-1))
 		}
 
@@ -335,6 +339,25 @@ func renderTableHeader(cols tableCols, width int) string {
 	// columns not even the name fits beside the dot, and a wrapped heading row
 	// would push the table's own rows down the panel.
 	return lipgloss.NewStyle().Width(width).MaxHeight(1).Render(row)
+}
+
+// memberName is the NAME cell's text: the service's name, with the update
+// glyph riding after it when the check found an update for it. The glyph is
+// appended after truncation rather than into the truncated string, because
+// chrome.Truncate is not ANSI-aware and cutting a styled glyph mid-sequence
+// would corrupt the row - so the name yields the glyph's column the same way
+// a list row's title yields the dot. width is what the cell's text may span;
+// the row still keeps its gap column after it.
+func (m Model) memberName(svc types.ServiceConfig, width int) string {
+	update, ok := m.imageUpdates[svc.Name]
+	if !ok || update.State != utils.ImageStale {
+		return chrome.Truncate(svc.Name, width)
+	}
+
+	glyph := chrome.UpdateGlyph(chrome.PanelBg())
+	room := max(0, width-lipgloss.Width(glyph)-1)
+
+	return chrome.Truncate(svc.Name, room) + " " + glyph
 }
 
 // stateColor is the member table's text ink for a row, which is a softer
@@ -515,4 +538,233 @@ func widestShrinkable(c tableCols) (column, bool) {
 	}
 
 	return widest, most > 0
+}
+
+// The updates table: one row per stale member of the selected group, under
+// the member table. It is the anchor the member table's glyph sheds against -
+// at narrow widths the member table's NAME cell sheds the glyph, and this
+// table is what still names the stale services on the screen. The whole unit
+// renders or none of it does: a heading with nothing under it is worse than
+// no table.
+//
+// A "unit is whole or absent" table, same as the member table's columns: the
+// columns are indexed, the widths computed by the same drop-then-shrink
+// arithmetic, and the row, the heading and the width arithmetic all walk one
+// column order so none of the three can drift from the others.
+
+type updateColumn int
+
+const (
+	upColService updateColumn = iota
+	upColImage
+	upColLocal
+	upColRemote
+	numUpCols
+)
+
+// String is the column's name in test failures, for the same reason the
+// member table's column has one.
+func (c updateColumn) String() string {
+	return [numUpCols]string{
+		upColService: "service", upColImage: "image",
+		upColLocal: "local", upColRemote: "remote",
+	}[c]
+}
+
+// updateCols holds the per-column widths for the updates table, zero meaning
+// dropped for want of room.
+type updateCols [numUpCols]int
+
+// upColumnOrder is the updates table's left-to-right order. The header, the
+// rows and the width arithmetic all walk it.
+var upColumnOrder = [...]updateColumn{upColService, upColImage, upColLocal, upColRemote}
+
+// upHeading is a column's label.
+var upHeading = [numUpCols]string{
+	upColService: "SERVICE", upColImage: "IMAGE",
+	upColLocal: "LOCAL", upColRemote: "REMOTE",
+}
+
+// upDropOrder is the order the updates table gives columns up in, lowest
+// first - declared as data like the member table's, deliberately not the
+// display order. Remote goes first: the local digest is the one this
+// machine runs, and the header row's staleness is already the fact the
+// remote value supports. Image next: the row is identified by its name.
+// SERVICE never drops - it is the row's identity, and the one thing every
+// other surface of this feature keys on.
+var upDropOrder = [...]updateColumn{upColRemote, upColLocal, upColImage}
+
+// upMinWidth is the narrowest a column can be and still print its own heading
+// with a column of gap after it - the member table's minWidth rule.
+func upMinWidth(name updateColumn) int {
+	return len(upHeading[name]) + 1
+}
+
+func (c updateCols) upTotal() int {
+	sum := 0
+	for _, name := range upColumnOrder {
+		sum += c[name]
+	}
+
+	return sum
+}
+
+func (c updateCols) upMinTotal() int {
+	sum := 0
+	for _, name := range upColumnOrder {
+		if c[name] > 0 {
+			sum += upMinWidth(name)
+		}
+	}
+
+	return sum
+}
+
+// upComputeCols distributes the available width across the updates table's
+// columns, the same way computeCols does for the member table: drop whole
+// columns in upDropOrder, then shrink the widest survivor to its floor, then
+// expand the flexible ones to fill a wide terminal.
+func upComputeCols(width int) updateCols {
+	if width < 1 {
+		width = 1
+	}
+
+	c := updateCols{upColService: 14, upColImage: 28, upColLocal: 14, upColRemote: 14}
+
+	for _, name := range upDropOrder {
+		if c.upMinTotal() <= width {
+			break
+		}
+		c[name] = 0
+	}
+
+	for c.upTotal() > width {
+		widest, most := upColService, 0
+		for _, name := range upColumnOrder {
+			if w := c[name]; w > upMinWidth(name) && w > most {
+				widest, most = name, w
+			}
+		}
+		if most == 0 {
+			break
+		}
+		c[widest]--
+	}
+
+	if extra := width - c.upTotal(); extra > 0 {
+		var flexible []updateColumn
+		for _, name := range [...]updateColumn{upColService, upColImage} {
+			if c[name] > 0 {
+				flexible = append(flexible, name)
+			}
+		}
+
+		for i, name := range flexible {
+			share := extra / len(flexible)
+			if i == len(flexible)-1 {
+				share = extra - share*(len(flexible)-1)
+			}
+			c[name] += share
+		}
+	}
+
+	return c
+}
+
+// staleMembers is the subset of members whose image check came back Stale,
+// the rows the updates table exists to name. An Unknown or UpToDate member
+// is not in it: the table is the answer to "what moved", not a report.
+func (m Model) staleMembers(members []types.ServiceConfig) []types.ServiceConfig {
+	var stale []types.ServiceConfig
+
+	for _, svc := range members {
+		if update, ok := m.imageUpdates[svc.Name]; ok && update.State == utils.ImageStale {
+			stale = append(stale, svc)
+		}
+	}
+
+	return stale
+}
+
+// renderUpdatesTable renders the table of stale members below the member
+// table, at its natural height. It renders NOTHING when the selected group
+// has no stale member - the whole unit is present or absent - and a blank
+// line before it, because two tables butting up against each other read as
+// one table that changed its mind about its headings halfway down.
+func (m Model) renderUpdatesTable(members []types.ServiceConfig, width int) string {
+	stale := m.staleMembers(members)
+	if len(stale) == 0 {
+		return ""
+	}
+
+	cols := upComputeCols(width)
+
+	parts := []string{
+		"",
+		renderUpTableHeader(cols, width),
+		chrome.PanelRule(width),
+	}
+
+	for _, svc := range stale {
+		parts = append(parts, m.renderUpRow(cols, svc))
+	}
+
+	return lipgloss.NewStyle().Width(width).Render(lipgloss.JoinVertical(lipgloss.Left, parts...))
+}
+
+func renderUpTableHeader(cols updateCols, width int) string {
+	dim := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Bold(true)
+
+	var cells []string
+	for _, name := range upColumnOrder {
+		if w := cols[name]; w > 0 {
+			cells = append(cells, dim.Width(w).Render(upHeading[name]))
+		}
+	}
+
+	row := lipgloss.JoinHorizontal(lipgloss.Left, cells...)
+
+	// MaxHeight is the backstop under the column dropping: a wrapped heading
+	// row would push the table's own rows down the panel, the same failure
+	// the member table's header got the backstop for.
+	return lipgloss.NewStyle().Width(width).MaxHeight(1).Render(row)
+}
+
+// renderUpRow builds one row of the updates table: the service name, the
+// reference as compose wrote it, and the two digests at twelve characters.
+// The full digests live in the service details panel; these cells are what
+// a row of the panel can afford.
+func (m Model) renderUpRow(cols updateCols, svc types.ServiceConfig) string {
+	update := m.imageUpdates[svc.Name]
+
+	cell := [numUpCols]struct {
+		text string
+		fg   color.Color
+	}{
+		upColService: {svc.Name, appstyles.Active.TextPrimary},
+		upColImage:   {chrome.ShortImage(update.Image, max(1, cols[upColImage]-1)), appstyles.Active.TextMuted},
+		upColLocal:   {chrome.ShortDigest(update.LocalDigest), appstyles.Active.TextMuted},
+		upColRemote:  {chrome.ShortDigest(update.RemoteDigest), appstyles.Active.StatusStarting},
+	}
+
+	var cells []string
+	for _, name := range upColumnOrder {
+		w := cols[name]
+		if w == 0 {
+			continue
+		}
+
+		text := cell[name].text
+		if name != upColService {
+			text = chrome.Truncate(text, max(1, w-1))
+		}
+
+		cells = append(cells, lipgloss.NewStyle().Foreground(cell[name].fg).Width(w).Render(text))
+	}
+
+	row := lipgloss.JoinHorizontal(lipgloss.Left, cells...)
+
+	// Clipped like the header above it: the row's own column dropping keeps
+	// it to one line at any width the table can hold a name in.
+	return lipgloss.NewStyle().MaxHeight(1).Render(row)
 }

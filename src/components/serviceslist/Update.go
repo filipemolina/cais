@@ -258,6 +258,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		finalCmds = append(finalCmds, cmd)
 		m.syncActiveIndex()
 
+	case cmds.SetImageUpdatesMsg:
+		// The delegate is a value copied into the list, so the map arrives
+		// through it and SetDelegate carries the copy across - the same
+		// hop syncActiveIndex uses for the cursor.
+		m.listDelegate.updates = msg.Updates
+		m.list.SetDelegate(m.listDelegate)
+
 	case cmds.GetRunningContainersMsg:
 		if msg.Err == nil {
 			m.containers = msg.Containers

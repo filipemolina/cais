@@ -158,6 +158,20 @@ func (m Model) renderServiceHeader(width int) string {
 	// uses. The double space this had before made the same line read as two.
 	sep := lipgloss.NewStyle().Foreground(appstyles.Active.TextDim).Render(" · ")
 
+	// The update note rides after the state label, in the amber the glyph
+	// vocabulary uses for "wants attention, not broken" - the same line the
+	// row tail's `↑ ●` answers on the list side. It names the fact as well
+	// as drawing it: the panel is where a reader goes to ask what the glyph
+	// on the row meant.
+	if update, ok := m.imageUpdates[name]; ok && update.State == utils.ImageStale {
+		attention := lipgloss.NewStyle().Foreground(appstyles.Active.StatusStarting)
+		statusParts = append(statusParts, sep,
+			attention.Render("update available"),
+			" ",
+			chrome.UpdateGlyph(chrome.PanelBg()),
+		)
+	}
+
 	if hasContainer && container.HealthStatus != "" && container.HealthStatus != "-" {
 		hl := lipgloss.NewStyle().Foreground(chrome.HealthColor(container.HealthStatus)).Render(container.HealthStatus)
 		statusParts = append(statusParts, sep, hl)
@@ -373,6 +387,20 @@ func (m Model) configRows(valWidth int) []propRow {
 	// Pull policy
 	if svc.PullPolicy != "" {
 		rows = append(rows, propRow{"Pull", []string{svc.PullPolicy}})
+	}
+
+	// The digests the check compared, at full length - this panel is where
+	// the updates table's twelve-character cells come from, and the place
+	// to read the whole value before pinning it into the file. Rows only
+	// for a stale answer: an equal pair is noise, and Unknown has no
+	// digests to show.
+	if update, ok := m.imageUpdates[svc.Name]; ok && update.State == utils.ImageStale {
+		if update.LocalDigest != "" {
+			rows = append(rows, propRow{"Local digest", []string{update.LocalDigest}})
+		}
+		if update.RemoteDigest != "" {
+			rows = append(rows, propRow{"Remote digest", []string{update.RemoteDigest}})
+		}
 	}
 
 	// PUID / PGID (common in self-hosted stacks)

@@ -11,6 +11,7 @@ import (
 	"github.com/filipemolina/cais/src/appstyles"
 	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/components/chrome"
+	"github.com/filipemolina/cais/src/utils"
 )
 
 /*
@@ -19,6 +20,23 @@ import (
 
 type servicesListCustomDelegate struct {
 	activeIndex int
+	// updates is the image update check's answer, keyed by service name. It
+	// rides the delegate because the row tail is drawn here, one glyph left
+	// of the trailing status dot for a service whose tag moved; only a
+	// Stale answer draws anything (chrome.UpdateGlyph for why).
+	updates map[string]utils.ImageUpdate
+}
+
+// rowTail is the row's trailing glyphs: the status dot always, and the update
+// glyph immediately left of it when the service's image moved - so the row
+// reads `…  ↑ ●` and the standing "rows end in ●" shape still holds.
+func (d servicesListCustomDelegate) rowTail(item apptypes.ServiceListItem, rowBg color.Color) string {
+	tail := statusDot(item, rowBg)
+	if update, ok := d.updates[item.Service.Name]; ok && update.State == utils.ImageStale {
+		tail = chrome.UpdateGlyph(rowBg) + " " + tail
+	}
+
+	return tail
 }
 
 func (d servicesListCustomDelegate) Height() int                             { return 4 }
@@ -46,7 +64,7 @@ func (d servicesListCustomDelegate) Render(w io.Writer, m list.Model, index int,
 	// and a missing dot would be indistinguishable from a missing answer.
 	fmt.Fprint(w, chrome.ListRow(chrome.ListRowInput{
 		Title:      item.Title(),
-		Dot:        statusDot(item, rowBg),
+		Dot:        d.rowTail(item, rowBg),
 		Body:       []string{item.Description(isActive)},
 		Width:      m.Width(),
 		IsSelected: index == m.Index(),

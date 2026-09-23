@@ -133,6 +133,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.containers = msg.Containers
 		}
 
+	case cmds.SetImageUpdatesMsg:
+		m.imageUpdates = msg.Updates
+
 	// A terminal paste arrives as its own message, not as key presses. It only
 	// means anything to the editor, and only while the editor is open: the
 	// panel's read-only mode has nothing to paste into.
@@ -182,6 +185,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		} else if key.Matches(msg, keys.Details.Healthcheck) {
 			finalCmds = append(finalCmds, cmds.OpenHealthcheckPicker(m.service.Name))
+		} else if key.Matches(msg, keys.Details.Update) {
+			// Live only for a service the check found stale - the guard is
+			// what makes the key a no-op for every other state, matching
+			// the footer's contextual advertisement. The confirm and the
+			// pin/pull/up chain live in AppModel, which owns the file the
+			// write lands in.
+			if update, ok := m.imageUpdates[m.service.Name]; ok && update.State == utils.ImageStale {
+				finalCmds = append(finalCmds, cmds.RequestUpdateImage(m.service.Name))
+			}
 		} else if key.Matches(msg, keys.Details.Boot) {
 			m.applyHint = ""
 			finalCmds = append(finalCmds, cmds.RequestCycleRestartPolicy(m.service.Name))

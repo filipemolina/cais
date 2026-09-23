@@ -8,6 +8,11 @@ type GroupStatus struct {
 	Name    string
 	Running int
 	Total   int
+	// Stale is true when any member service's image check came back with an
+	// update available. It rides the status broadcast because only AppModel
+	// knows which services belong to which group; the row cannot derive it
+	// from the update map alone.
+	Stale bool
 }
 
 type SetGroupsListMsg []GroupStatus

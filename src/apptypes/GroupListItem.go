@@ -7,6 +7,11 @@ type GroupListItem struct {
 	Name    string
 	Running int
 	Total   int
+	// Stale is true when any member service's image check found an update.
+	// The row draws the update glyph beside its status dot for this - a
+	// group's glyph means "something in here moved"; the group details
+	// panel's updates table says what.
+	Stale bool
 }
 
 func (s GroupListItem) Title() string       { return s.Name }

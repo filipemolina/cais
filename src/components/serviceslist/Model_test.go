@@ -12,6 +12,7 @@ import (
 
 	"github.com/filipemolina/cais/src/appstyles"
 	"github.com/filipemolina/cais/src/components/chrome"
+	"github.com/filipemolina/cais/src/utils"
 
 	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/cmds"
@@ -571,6 +572,72 @@ func TestEveryServiceRowCarriesAStatusDot(t *testing.T) {
 	for _, row := range titleRows {
 		if !strings.HasSuffix(row, "●") {
 			t.Errorf("row %q does not end in a status dot", row)
+		}
+	}
+}
+
+// A service whose check found an update carries the glyph immediately left of
+// its trailing dot - the row reads `↑ ●` - and every other state reads `●`
+// alone. The Unknown rows are the ones that matter: a check that never
+// answered must not draw the glyph, or a flaky network is a wall of false
+// updates.
+func TestAStaleServiceRowCarriesTheUpdateGlyph(t *testing.T) {
+	model := drive(t, New(servicesOf("alpha", "bravo"), 40, 24),
+		cmds.GetRunningContainersMsg{Containers: []apptypes.DockerContainer{
+			{Service: "alpha", State: "running"},
+			{Service: "bravo", State: "exited"},
+		}},
+		cmds.SetImageUpdatesMsg{Updates: map[string]utils.ImageUpdate{
+			"alpha": {Service: "alpha", State: utils.ImageStale},
+			"bravo": {Service: "bravo", State: utils.ImageUnknown},
+		}},
+	)
+
+	view := ansi.Strip(model.View().Content)
+
+	var alpha, bravo string
+	for _, line := range strings.Split(view, "\n") {
+		if strings.Contains(line, "alpha") && !strings.Contains(line, "bravo") {
+			alpha = line
+		}
+		if strings.Contains(line, "bravo") && !strings.Contains(line, "alpha") {
+			bravo = line
+		}
+	}
+	if alpha == "" || bravo == "" {
+		t.Fatalf("expected two service rows:\n%s", view)
+	}
+
+	if !strings.Contains(alpha, "↑ ●") {
+		t.Errorf("a stale service's row does not read `↑ ●`: %q", strings.TrimRight(alpha, " "))
+	}
+	if strings.Contains(bravo, "↑") {
+		t.Errorf("a service with no update answer drew the glyph: %q", strings.TrimRight(bravo, " "))
+	}
+	if !strings.HasSuffix(strings.TrimRight(bravo, " "), "●") {
+		t.Errorf("an unanswered row does not still end in its dot: %q", strings.TrimRight(bravo, " "))
+	}
+}
+
+// The glyph is amber, in the register the status vocabulary uses for
+// "wants attention, not broken", on every registered theme.
+func TestTheUpdateGlyphIsTheAttentionColour(t *testing.T) {
+	t.Cleanup(func() { appstyles.SetTheme(appstyles.DefaultTheme) })
+
+	for theme := range appstyles.Themes {
+		if !appstyles.SetTheme(theme) {
+			t.Fatalf("theme %q is in the registry but SetTheme rejected it", theme)
+		}
+
+		model := drive(t, New(servicesOf("alpha"), 40, 24),
+			cmds.SetImageUpdatesMsg{Updates: map[string]utils.ImageUpdate{
+				"alpha": {Service: "alpha", State: utils.ImageStale},
+			}},
+		)
+
+		want := chrome.UpdateGlyph(chrome.ListRowBg(false))
+		if got := model.View().Content; !strings.Contains(got, want) {
+			t.Errorf("theme %q: the update glyph is not the attention colour", theme)
 		}
 	}
 }

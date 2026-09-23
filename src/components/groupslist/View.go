@@ -53,11 +53,29 @@ func (d GroupsListCustomDelegate) Render(w io.Writer, m list.Model, index int, l
 	// counts. A description here would have to be paid for there too.
 	fmt.Fprint(w, chrome.ListRow(chrome.ListRowInput{
 		Title:      item.Title(),
-		Dot:        statusDot(item, rowBg),
+		Dot:        rowTail(item, rowBg),
 		Width:      m.Width(),
 		IsSelected: index == m.Index(),
 		IsActive:   isActive,
 	}))
+}
+
+// rowTail is the row's trailing glyphs: the status dot when the group has
+// running services, and the update glyph immediately left of it when any
+// member's image moved. A group's glyph means "something in here moved" -
+// the updates table beside the member table is where the answer lives.
+func rowTail(item apptypes.GroupListItem, rowBg color.Color) string {
+	dot := statusDot(item, rowBg)
+	if item.Stale {
+		glyph := chrome.UpdateGlyph(rowBg)
+		if dot == "" {
+			return glyph
+		}
+
+		return glyph + " " + dot
+	}
+
+	return dot
 }
 
 // statusDot returns the styled status glyph for a group row: a green full

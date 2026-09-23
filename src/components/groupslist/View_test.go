@@ -7,6 +7,7 @@ import (
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/filipemolina/cais/src/apptypes"
 	"github.com/filipemolina/cais/src/cmds"
 )
@@ -75,5 +76,25 @@ func TestTheListFillsThePanelHeight(t *testing.T) {
 			t.Errorf("panel height %d: %d blank rows between the last group and the paginator, want at most %d - the slack could have held another group",
 				panelHeight, gap, want)
 		}
+	}
+}
+
+// A group with a stale member carries the update glyph beside its status dot;
+// one with no stale member does not. A group's glyph means "something in here
+// moved" - the group details panel's updates table is where the answer lives.
+func TestAGroupWithAStaleMemberCarriesTheUpdateGlyph(t *testing.T) {
+	rows := func(stale bool) string {
+		var row strings.Builder
+		GroupsListCustomDelegate{}.Render(&row, list.New(nil, GroupsListCustomDelegate{}, 40, 20), 0,
+			apptypes.GroupListItem{Name: "core", Running: 2, Total: 3, Stale: stale})
+
+		return ansi.Strip(row.String())
+	}
+
+	if got := rows(true); !strings.Contains(got, "↑") {
+		t.Errorf("a group with a stale member carries no glyph: %q", strings.TrimRight(got, " "))
+	}
+	if got := rows(false); strings.Contains(got, "↑") {
+		t.Errorf("a group with no stale member drew the glyph: %q", strings.TrimRight(got, " "))
 	}
 }

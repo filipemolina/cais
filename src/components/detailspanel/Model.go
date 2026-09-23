@@ -8,6 +8,7 @@ import (
 	"charm.land/bubbles/v2/textarea"
 	tea "charm.land/bubbletea/v2"
 	"github.com/compose-spec/compose-go/v2/types"
+	"github.com/filipemolina/cais/src/utils"
 )
 
 type Model struct {
@@ -33,6 +34,12 @@ type Model struct {
 	// containers is the latest known container list, used to derive the
 	// RUNNING/STOPPED status pill in the panel title row.
 	containers []apptypes.DockerContainer
+
+	// imageUpdates is the image update check's answer, keyed by service
+	// name. It feeds the header's update note, the digest rows in the
+	// config table, and the U verb's guard. Only a Stale entry renders as
+	// anything at all - a failed check must never read as an update.
+	imageUpdates map[string]utils.ImageUpdate
 
 	// host is the address utils.ResolveURL builds every service URL
 	// against - resolved once, at startup, since it cannot change during a

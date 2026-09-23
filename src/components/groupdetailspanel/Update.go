@@ -59,6 +59,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.containers = msg.Containers
 		}
 
+	case cmds.SetImageUpdatesMsg:
+		m.imageUpdates = msg.Updates
+
 	case tea.KeyPressMsg:
 		// Both body panels are always active now, so the panel answers every
 		// key for the selected group.

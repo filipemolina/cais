@@ -229,6 +229,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				Name:    group.Name,
 				Running: group.Running,
 				Total:   group.Total,
+				Stale:   group.Stale,
 			}
 
 			groupsList = append(groupsList, newGroup)
