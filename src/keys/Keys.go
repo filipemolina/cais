@@ -129,6 +129,12 @@ type DetailsKeys struct {
 	// uppercase H, to leave b free for Files.Browse - the same shape as
 	// EditFile's E next to EditService's e.
 	Boot key.Binding
+	// Update pins the selected service's image to the digest the registry
+	// currently serves and recreates the container. Uppercase: lowercase u
+	// is Global.Usage. Live only when the selected service's check came
+	// back Stale - the bar does not advertise inert keys, and an update is
+	// only real when the digests differ.
+	Update key.Binding
 }
 
 // EditorKeys act inside the inline YAML editor, and only there. The editor
@@ -238,6 +244,10 @@ var Details = DetailsKeys{
 	// once.
 	Healthcheck: key.NewBinding(key.WithKeys("H"), key.WithHelp("H", "healthcheck")),
 	Boot:        key.NewBinding(key.WithKeys("B"), key.WithHelp("B", "boot")),
+	// Sits beside Pull on purpose: both are image-freshness verbs - p
+	// refreshes the local image without pinning anything, U pins the digest
+	// the registry serves and puts it to work.
+	Update: key.NewBinding(key.WithKeys("U"), key.WithHelp("U", "update image")),
 }
 
 var Editor = EditorKeys{
@@ -479,6 +489,11 @@ type Context struct {
 	// panels have no focus to hold; its zero value is the list, which is where
 	// the page opens.
 	BackupsFocus apptypes.BackupsFocus
+	// UpdateAvailable is true when the selected service's image check came
+	// back Stale. It is what makes Details.Update live on the Services page:
+	// without a stale answer the key does nothing, and the bar does not
+	// advertise inert keys.
+	UpdateAvailable bool
 }
 
 // Active returns the bindings the user can press right now, in the order they
@@ -535,6 +550,11 @@ func Active(ctx Context) []key.Binding {
 				// its own to edit - none of them apply to a group.
 				bindings = append(bindings, Details.Healthcheck, Details.Boot,
 					Details.EditService, Details.EditFile, Details.CopyURL)
+				// The update verb is contextual on top of the pull it sits
+				// beside: it is real only when the digests differ (D7).
+				if ctx.UpdateAvailable {
+					bindings = append(bindings, Details.Update)
+				}
 			} else {
 				bindings = append(bindings, List.Edit, List.Rename)
 			}
@@ -780,7 +800,7 @@ func Catalog(ctx Context) []Scope {
 				entries(apptypes.PageServices,
 					Details.Start, Details.Stop, Details.Restart,
 					Details.Pull, Details.Remove, Details.Logs,
-					Details.Healthcheck, Details.Boot,
+					Details.Update, Details.Healthcheck, Details.Boot,
 					Details.EditService, Details.EditFile, Details.CopyURL,
 					List.New, List.Delete,
 					List.Filter, List.ClearFilter, List.Navigate,

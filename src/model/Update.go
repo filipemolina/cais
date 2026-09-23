@@ -346,6 +346,13 @@ func (m AppModel) keyContext() keys.Context {
 		ctx.UngroupedMaterialized = m.ungroupedMaterialized()
 	case apptypes.PageServices:
 		ctx.ListEmpty = m.config.configProject == nil || len(m.config.configProject.Services) == 0
+		// The update verb is live only for a service the check found stale
+		// - every other state (or a check that never answered) renders no
+		// glyph and offers no verb, which is the same statement the bar
+		// makes about inert keys.
+		if update, ok := m.imageUpdates[m.selection.serviceName]; ok {
+			ctx.UpdateAvailable = update.State == utils.ImageStale
+		}
 	case apptypes.PageBackups:
 		// Which half the arrows are driving is the only thing focus changes
 		// about this page's keys; restore is live on either half.
