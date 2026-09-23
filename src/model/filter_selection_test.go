@@ -33,6 +33,14 @@ func filterProject() *types.Project {
 func pump(t *testing.T, m AppModel, msgs ...tea.Msg) AppModel {
 	t.Helper()
 
+	// The image update check now rides every config load (plan 05 D2), and
+	// it shells out to docker and a registry. The filter path does not
+	// depend on it, and pump must not spend network: stand in for it the
+	// way the check's own tests swap it.
+	original := checkImageUpdates
+	t.Cleanup(func() { checkImageUpdates = original })
+	checkImageUpdates = func(_ []types.ServiceConfig, _ bool) tea.Cmd { return nil }
+
 	queue := append([]tea.Msg{}, msgs...)
 	for range 500 {
 		if len(queue) == 0 {

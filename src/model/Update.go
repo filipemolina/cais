@@ -258,6 +258,7 @@ func (m AppModel) configSyncCmds() []tea.Cmd {
 	// The footer advertises the ungrouped row's 'A' verb (adopt vs release)
 	// from this state, so it has to ride every reload the way the selection
 	// does.
+	syncCmds = append(syncCmds, m.broadcastImageUpdates())
 
 	return syncCmds
 }
@@ -746,6 +747,59 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			finalCmds = append(finalCmds, bodyCmd)
 		}
 
+	case cmds.ImageUpdatesMsg:
+		// The whole check's answer lands at once. Entries that are not
+		// Stale render as nothing, so an offline session sees no change
+		// here (D3) - the map is still stored, because the next Stale
+		// answer has to be able to clear a previous session's glyph.
+		m.imageUpdates = msg.Updates
+		finalCmds = append(finalCmds, m.broadcastImageUpdates())
+
+	case cmds.RequestUpdateImageMsg:
+		// The confirm names both consequences (D7): the file gains a pin,
+		// the container is recreated. Cancel/esc runs nothing.
+		//
+		// pendingUpdate is set while the confirm is OPEN, and the modal
+		// owns the keyboard until it closes - so the CloseModalMsg that
+		// follows can only be this modal's, which is how confirm and
+		// cancel are told apart without tagging the modal itself.
+		m.pendingUpdate = msg.Service
+		finalCmds = append(finalCmds, cmds.OpenConfirmModal(
+			fmt.Sprintf("Update %q to the newest image?\n"+
+				"\nThe compose file gains a digest pin, and the\n"+
+				"container is recreated to run it.\n"+
+				"\nThe file is backed up first; the Backups page restores it.", msg.Service),
+			cmds.UpdateImage(m.config.configFileName, msg.Service, m.imageUpdates[msg.Service].RemoteDigest),
+		))
+
+	case cmds.ImageUpdatedMsg:
+		// The chain is over whether it succeeded or failed: the spinner has
+		// nothing left to report and the action keys are live again.
+		m.pendingUpdate = ""
+		m.pendingAction = nil
+		finalCmds = append(finalCmds, cmds.ClearPendingAction())
+
+		// Success reloads the file the pin changed, and the failure path
+		// reports foreground - afterWrite's shape for both, the same tail
+		// every compose write gets. The reload must NOT re-check: the
+		// glyph clears below, from the model's own map, with no registry
+		// call (D7) - the next remote check is the next file load.
+		finalCmds = append(finalCmds, m.afterWrite(msg.Err)...)
+
+		if msg.Err == nil {
+			if update, ok := m.imageUpdates[msg.Service]; ok {
+				update.LocalDigest = update.RemoteDigest
+				update.State = utils.ImageUpToDate
+				m.imageUpdates[msg.Service] = update
+			}
+			finalCmds = append(finalCmds, cmds.GetRunningContainers(m.config.configFileName))
+		}
+		finalCmds = append(finalCmds, m.broadcastImageUpdates())
+
+		if bodyCmd := m.rebroadcastBodyLayoutIfChanged(); bodyCmd != nil {
+			finalCmds = append(finalCmds, bodyCmd)
+		}
+
 	case cmds.DockerStatusMsg:
 		m.dockerStatus = msg.Status
 		if msg.Status.State != utils.DockerOK {
@@ -805,6 +859,22 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		finalCmds = append(finalCmds, cmds.SetComposeFile(msg.FileName, others))
 		finalCmds = append(finalCmds, m.configSyncCmds()...)
+
+		// Entries for services the reload removed have nothing to describe:
+		// a glyph keyed to a name the page no longer lists is a lie that
+		// survives until the next check.
+		m.pruneImageUpdates()
+
+		// The check runs on the loads that change what services exist -
+		// startup, a file switch, a restore - and skips the routine
+		// post-edit reloads (D2).
+		if m.imageCheckOnLoad {
+			m.imageCheckOnLoad = false
+			if checkCmd := m.checkImageUpdatesCmd(); checkCmd != nil {
+				finalCmds = append(finalCmds, checkCmd)
+			}
+		}
+
 		if homeStatsCmd := m.broadcastHomeStats(); homeStatsCmd != nil {
 			finalCmds = append(finalCmds, homeStatsCmd)
 		}
@@ -1118,6 +1188,21 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case cmds.CloseModalMsg:
 		m.activeModal = nil
+
+		// An update confirm closing: cancel runs nothing (the file and the
+		// container are untouched), confirm raises the pending-action
+		// spinner for the whole pin/pull/up chain - the apply runs inside
+		// the follow command, off Update's path, and this is its only
+		// visible state (D7).
+		if m.pendingUpdate != "" {
+			if msg.Follow == nil {
+				m.pendingUpdate = ""
+			} else {
+				m.pendingAction = &chrome.PendingAction{Action: "update", Target: m.pendingUpdate, IsGroup: false}
+				finalCmds = append(finalCmds, cmds.SetPendingAction("update", m.pendingUpdate, false))
+			}
+		}
+
 		if msg.Follow != nil {
 			finalCmds = append(finalCmds, msg.Follow)
 		}
@@ -1208,6 +1293,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// at the chosen path and reload. Every downstream consumer - the
 		// docker calls, the writers, the footer, the lists - already flows
 		// from the resolved file, so they follow without further work.
+		//
+		// The image check rides this load: a different file is a different
+		// service set, and its glyphs are unknown until checked (D2).
+		m.imageCheckOnLoad = true
 		m.config.source = utils.ComposeSource{File: msg.Path}
 		finalCmds = append(finalCmds, cmds.GetConfig(m.config.source))
 
@@ -1254,6 +1343,12 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// A restore replaces the whole file, so it can change the service list
 		// itself - the layout and Files-page follow-ups in afterWrite are the
 		// point here, not an extra.
+		//
+		// The image check rides this reload too (D2): the restored file's
+		// services, tags and pins are whatever the backup held.
+		if msg.Err == nil {
+			m.imageCheckOnLoad = true
+		}
 		finalCmds = append(finalCmds, m.afterWrite(msg.Err)...)
 
 		// Re-list backups on top: the restore took a snapshot of the outgoing

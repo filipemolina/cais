@@ -114,6 +114,23 @@ type AppModel struct {
 	// AppModel owns it so tab has a single handler; the panels and the footer
 	// receive it through cmds.SetBackupsFocus.
 	backupsFocus apptypes.BackupsFocus
+	// imageUpdates carries the image update check's answer, keyed by service
+	// name. Only a Stale entry renders as anything at all: UpToDate and
+	// Unknown both draw nothing, so an offline session is visually
+	// indistinguishable from an up-to-date one (D3 in the plan).
+	imageUpdates map[string]utils.ImageUpdate
+	// imageCheckOnLoad marks the next successful config load as one the
+	// image check should follow: startup, a file switch, a restore. It is
+	// deliberately NOT every reload - the check spends registry budget, and
+	// a post-edit reload has no business re-paying it (D2).
+	imageCheckOnLoad bool
+	// pendingUpdate names the service whose update confirm is open, or whose
+	// pin/pull/up chain is running. Set when the confirm opens, cleared when
+	// it closes: because the modal owns the keyboard until it closes, a
+	// CloseModalMsg arriving while this is set can only be this modal's
+	// close, which is what makes confirm (Follow non-nil) and cancel
+	// (Follow nil) distinguishable without tagging the modal itself.
+	pendingUpdate string
 }
 
 // allGroupNames returns every distinct group referenced by any service
@@ -245,6 +262,74 @@ func (m AppModel) broadcastGroupsList() tea.Cmd {
 	return cmds.SetGroupsList(m.groupStatuses())
 }
 
+// allServices is the merged list — Services and DisabledServices both — the
+// same merge configSyncCmds builds. A profiled service is not in Services
+// (02-dependency-guard.md §R2) and its image goes stale exactly like an
+// unprofiled one's, so the check must see it.
+func (m AppModel) allServices() []types.ServiceConfig {
+	if m.config.configProject == nil {
+		return nil
+	}
+
+	merged := make([]types.ServiceConfig, 0,
+		len(m.config.configProject.Services)+len(m.config.configProject.DisabledServices))
+	for _, service := range m.config.configProject.Services {
+		merged = append(merged, service)
+	}
+	for _, service := range m.config.configProject.DisabledServices {
+		merged = append(merged, service)
+	}
+
+	return merged
+}
+
+// checkImageUpdates is the seam the load-driven check dispatches through,
+// the same shape as utils' dockerCommand (src/utils/DockerCommand.go): the
+// real check shells out to docker and talks to a registry, and a model test
+// driving a load must run neither. A test that swaps it must restore it, and
+// must not run in parallel with another that swaps it.
+var checkImageUpdates = cmds.CheckImageUpdates
+
+// checkImageUpdatesCmd fires the whole image update check against the
+// services the merged list holds. It is nil without a loaded file: there is
+// nothing to check and nothing to key an answer to.
+func (m AppModel) checkImageUpdatesCmd() tea.Cmd {
+	if m.config.configProject == nil || m.config.configFileName == "" {
+		return nil
+	}
+
+	return checkImageUpdates(m.allServices(), true)
+}
+
+// broadcastImageUpdates hands the current update map to the active page's
+// panels. Both pages that show a glyph are covered: on Services the list and
+// the details panel receive it, on Home the groups list and the group
+// details panel. A page that was not active when the check answered gets its
+// map the next time it becomes active, because configSyncCmds broadcasts
+// again on every page switch.
+func (m AppModel) broadcastImageUpdates() tea.Cmd {
+	return cmds.SetImageUpdates(m.imageUpdates)
+}
+
+// pruneImageUpdates drops entries for services the current project no longer
+// names. Called on every config reload.
+func (m *AppModel) pruneImageUpdates() {
+	if m.config.configProject == nil {
+		m.imageUpdates = nil
+		return
+	}
+
+	for name := range m.imageUpdates {
+		if _, ok := m.config.configProject.Services[name]; ok {
+			continue
+		}
+		if _, ok := m.config.configProject.DisabledServices[name]; ok {
+			continue
+		}
+		delete(m.imageUpdates, name)
+	}
+}
+
 // recomposeFilesCmdIfActive returns a command that reads the raw compose
 // file for the Files page's viewport, or nil when the Files page is not
 // active. Called on page switch and after any write through the app, so
@@ -364,6 +449,9 @@ func GetInitialModel(source utils.ComposeSource) AppModel {
 			configFileName: "",
 			configProject:  nil,
 		},
+		// The very first load is a check moment (D2): the session's glyphs
+		// come from it.
+		imageCheckOnLoad: true,
 		components: Components{
 			MainMenu:      mainmenu.New(),
 			KeybindingBar: keybindingbar.New(),
