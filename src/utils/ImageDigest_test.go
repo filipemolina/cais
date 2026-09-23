@@ -2,9 +2,16 @@ package utils
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
+	"time"
 )
 
 func TestParseImageRef(t *testing.T) {
@@ -275,4 +282,250 @@ func fakeShellScript(t *testing.T, script string) *exec.Cmd {
 	}
 
 	return exec.Command(path)
+}
+
+// tlsClientFor returns a client that trusts the test server's own
+// certificate, so the check's TLS requirement (D4: HTTPS only) is exercised
+// in tests rather than bypassed with an http server.
+func tlsClientFor(t *testing.T, srv *httptest.Server) *http.Client {
+	t.Helper()
+
+	pool := x509.NewCertPool()
+	pool.AddCert(srv.Certificate())
+
+	return &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: pool}}}
+}
+
+// The flow is the one R1 measured working against Docker Hub, ghcr.io and
+// lscr.io: a manifest request without a token is answered 401 with a
+// WWW-Authenticate header naming the token realm; the token comes from that
+// realm; the same manifest URL is retried with the bearer. Assertions pin
+// each step, so a client that skips the token or guesses the realm fails
+// here rather than silently as Unknown.
+func TestBearerFlow(t *testing.T) {
+	var manifestAuths []string
+	var tokenQueries []string
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+		tokenQueries = append(tokenQueries, r.URL.RawQuery)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"token": "good"})
+	})
+	mux.HandleFunc("/v2/library/test/manifests/latest", func(w http.ResponseWriter, r *http.Request) {
+		manifestAuths = append(manifestAuths, r.Header.Get("Authorization"))
+		if manifestAuths[len(manifestAuths)-1] != "Bearer good" {
+			w.Header().Set("WWW-Authenticate", `Bearer realm="`+srvRealmHost(r)+`/token",service="testsrv",scope="repository:library/test:pull"`)
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		w.Header().Set("Docker-Content-Digest", "sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499")
+		w.WriteHeader(http.StatusOK)
+	})
+
+	srv := httptest.NewTLSServer(mux)
+	defer srv.Close()
+
+	digest := fetchRemoteDigest(tlsClientFor(t, srv), ImageRef{Host: "127.0.0.1:" + portOf(t, srv.URL), Repo: "library/test", Tag: "latest"}, time.Second)
+
+	want := "sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499"
+	if digest != want {
+		t.Errorf("digest = %q, want %q", digest, want)
+	}
+
+	if len(manifestAuths) != 2 || manifestAuths[0] != "" || manifestAuths[1] != "Bearer good" {
+		t.Errorf("manifest requests carried %v, want [\"\" then the bearer from the token]", manifestAuths)
+	}
+	if len(tokenQueries) != 1 {
+		t.Fatalf("token endpoint hit %d times, want 1", len(tokenQueries))
+	}
+	if !strings.Contains(tokenQueries[0], "service=testsrv") || !strings.Contains(tokenQueries[0], "scope=repository%3Alibrary%2Ftest%3Apull") {
+		t.Errorf("token request query = %q, want service and scope carried through", tokenQueries[0])
+	}
+}
+
+// A 401 on the retried attempt is that repo's Unknown — never Stale. This is
+// the private-registry shape (D4): the anonymous token is not good enough,
+// and the check must fall silent rather than report an update it could not
+// actually verify.
+func TestBearerFlowRetryStillUnauthorized(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(map[string]string{"token": "anonymous"})
+	})
+	mux.HandleFunc("/v2/library/test/manifests/latest", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("WWW-Authenticate", `Bearer realm="`+srvRealmHost(r)+`/token"`)
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+	})
+
+	srv := httptest.NewTLSServer(mux)
+	defer srv.Close()
+
+	digest := fetchRemoteDigest(tlsClientFor(t, srv), ImageRef{Host: "127.0.0.1:" + portOf(t, srv.URL), Repo: "library/test", Tag: "latest"}, time.Second)
+
+	if digest != "" {
+		t.Errorf("digest = %q, want \"\" — a 401 after the retry is Unknown, never an answer", digest)
+	}
+}
+
+func TestManifestDirectAnswer(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Docker-Content-Digest", "sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	digest := fetchRemoteDigest(tlsClientFor(t, srv), ImageRef{Host: "127.0.0.1:" + portOf(t, srv.URL), Repo: "library/test", Tag: "latest"}, time.Second)
+
+	if digest != "sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6" {
+		t.Errorf("digest = %q, want the header's value", digest)
+	}
+}
+
+// A 200 without the header is no answer at all: every classification rides
+// on the header, and accepting the body would re-open the exact trap R2
+// records for digest-taking shortcuts.
+func TestManifestWithoutDigestHeaderIsNoAnswer(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	if digest := fetchRemoteDigest(tlsClientFor(t, srv), ImageRef{Host: "127.0.0.1:" + portOf(t, srv.URL), Repo: "library/test", Tag: "latest"}, time.Second); digest != "" {
+		t.Errorf("digest = %q, want \"\"", digest)
+	}
+}
+
+func TestRemoteFailureIsSilent(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "nope", http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	ref := ImageRef{Host: "127.0.0.1:" + portOf(t, srv.URL), Repo: "library/test", Tag: "latest"}
+
+	if digest := fetchRemoteDigest(tlsClientFor(t, srv), ref, time.Second); digest != "" {
+		t.Errorf("5xx digest = %q, want \"\"", digest)
+	}
+
+	closed := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	closed.Close()
+	ref.Host = "127.0.0.1:" + portOf(t, closed.URL)
+	if digest := fetchRemoteDigest(tlsClientFor(t, closed), ref, time.Second); digest != "" {
+		t.Errorf("unreachable registry digest = %q, want \"\"", digest)
+	}
+}
+
+// A realm that is not HTTPS is refused before any request is sent to it.
+func TestBearerTokenRealmNotHTTPS(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/v2/library/test/manifests/latest", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("WWW-Authenticate", `Bearer realm="http://elsewhere/token"`)
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+	})
+	srv := httptest.NewTLSServer(mux)
+	defer srv.Close()
+
+	if digest := fetchRemoteDigest(tlsClientFor(t, srv), ImageRef{Host: "127.0.0.1:" + portOf(t, srv.URL), Repo: "library/test", Tag: "latest"}, time.Second); digest != "" {
+		t.Errorf("digest = %q, want \"\"", digest)
+	}
+}
+
+func TestBearerTokenWithoutTokenInResponse(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(map[string]string{"unrelated": "value"})
+	})
+	mux.HandleFunc("/v2/library/test/manifests/latest", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("WWW-Authenticate", `Bearer realm="`+srvRealmHost(r)+`/token"`)
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+	})
+	srv := httptest.NewTLSServer(mux)
+	defer srv.Close()
+
+	if digest := fetchRemoteDigest(tlsClientFor(t, srv), ImageRef{Host: "127.0.0.1:" + portOf(t, srv.URL), Repo: "library/test", Tag: "latest"}, time.Second); digest != "" {
+		t.Errorf("digest = %q, want \"\"", digest)
+	}
+}
+
+func TestParseAuthChallenge(t *testing.T) {
+	challenge := parseAuthChallenge(`Bearer realm="https://auth.docker.io/token",service="registry.docker.io",scope="repository:library/redis:pull"`)
+	if challenge == nil {
+		t.Fatal("parseAuthChallenge returned nil for a Bearer header")
+	}
+	if challenge.realm != "https://auth.docker.io/token" {
+		t.Errorf("realm = %q, want %q", challenge.realm, "https://auth.docker.io/token")
+	}
+	if challenge.service != "registry.docker.io" {
+		t.Errorf("service = %q, want %q", challenge.service, "registry.docker.io")
+	}
+	if challenge.scope != "repository:library/redis:pull" {
+		t.Errorf("scope = %q, want %q", challenge.scope, "repository:library/redis:pull")
+	}
+
+	for _, header := range []string{"", `Basic realm="https://x/token"`, `Bearer service="x"`} {
+		if challenge := parseAuthChallenge(header); challenge != nil {
+			t.Errorf("parseAuthChallenge(%q) = %v, want nil", header, challenge)
+		}
+	}
+}
+
+// The pool level: refs two services share are deduped into one registry
+// call, and the map files each unique ref under its ImageRefKey.
+func TestRemoteImageDigestsDedupesAndFilesByRefKey(t *testing.T) {
+	original := newRegistryClient
+	t.Cleanup(func() { newRegistryClient = original })
+
+	var manifests int
+	mux := http.NewServeMux()
+	mux.HandleFunc("/v2/library/test/manifests/", func(w http.ResponseWriter, r *http.Request) {
+		manifests++
+		w.Header().Set("Docker-Content-Digest", "sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499")
+		w.WriteHeader(http.StatusOK)
+	})
+	srv := httptest.NewTLSServer(mux)
+	defer srv.Close()
+
+	client := tlsClientFor(t, srv)
+	newRegistryClient = func() *http.Client { return client }
+
+	host := "127.0.0.1:" + portOf(t, srv.URL)
+	pinned, _ := ParseImageRef(host + "/library/test:latest")
+	implied, _ := ParseImageRef(host + "/library/test") // same ref, tag defaulted
+
+	updates := RemoteImageDigests([]ImageRef{pinned, implied, implied}, time.Second)
+
+	if manifests != 1 {
+		t.Errorf("registry hit %d times, want 1 — duplicate refs share the call", manifests)
+	}
+
+	key := ImageRefKey(ImageRef{Host: host, Repo: "library/test", Tag: "latest"})
+	got, ok := updates[key]
+	if !ok {
+		t.Fatalf("updates has no entry for %q (has %v)", key, updates)
+	}
+	if got.RemoteDigest != "sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499" {
+		t.Errorf("RemoteDigest = %q, want the served digest", got.RemoteDigest)
+	}
+	if got.Repo != "library/test" {
+		t.Errorf("Repo = %q, want %q", got.Repo, "library/test")
+	}
+}
+
+// srvRealmHost is the https://host:port the test server answers on, as a
+// WWW-Authenticate realm would name it.
+func srvRealmHost(r *http.Request) string {
+	return "https://" + r.Host
+}
+
+// portOf pulls the port out of an httptest server's URL.
+func portOf(t *testing.T, url string) string {
+	t.Helper()
+
+	i := strings.LastIndex(url, ":")
+	if i < 0 {
+		t.Fatalf("no port in %q", url)
+	}
+
+	return url[i+1:]
 }

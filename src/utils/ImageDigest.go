@@ -4,7 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -243,6 +248,271 @@ func digestForRepo(output string, repo string) string {
 	}
 
 	return ""
+}
+
+// remoteWorkers caps the concurrent registry connections (D6). Serial by
+// image is ~0.5 s each across a 24-service stack; unbounded invites Docker
+// Hub's limiter. Four bounds a 20-service stack at ~3 s typical, ~25 s worst
+// case.
+const remoteWorkers = 4
+
+// acceptedManifestTypes is the Accept header the manifest GET carries. Both
+// index types are named because the digest that matches RepoDigests — the
+// digest the registry serves for the tag — is the index digest (R2): asking
+// for a single platform manifest would return that platform's digest and
+// report every image stale forever.
+const acceptedManifestTypes = "application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.index.v1+json"
+
+// newRegistryClient is the seam that lets a test point the check at an
+// httptest server, the way dockerCommand lets a test stand in for the docker
+// binary (DockerCommand.go). The real client is plain net/http: the generic
+// anonymous bearer flow (D4) is the whole client, and no credential of any
+// kind is ever attached to it.
+var newRegistryClient = func() *http.Client {
+	return &http.Client{}
+}
+
+// ImageRefKey is the map key RemoteImageDigests files its answers under. Two
+// refs that normalize alike (alpine:latest, alpine) are one registry call,
+// and the key is what callers derive to read their ref's answer back.
+func ImageRefKey(ref ImageRef) string {
+	return ref.Host + "/" + ref.Repo + ":" + ref.Tag
+}
+
+// RemoteImageDigests returns the tag's current digest for each ref, using the
+// generic anonymous bearer flow (D4). It has no error return: failures are
+// per-ref and silent — a ref that failed carries "" and the caller's
+// classification reads Unknown.
+//
+// Refs that normalize to the same host/repo:tag are answered by one registry
+// call: two services on alpine:latest are one request, not two, and the
+// check spends the minimum against a limiter whose budget is per IP.
+func RemoteImageDigests(refs []ImageRef, timeout time.Duration) map[string]ImageUpdate {
+	unique := make([]ImageRef, 0, len(refs))
+	seen := make(map[string]bool, len(refs))
+	for _, ref := range refs {
+		key := ImageRefKey(ref)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		unique = append(unique, ref)
+	}
+
+	// Results land in a slice indexed by position, not in a shared map, so
+	// the workers never contend and the merge below is single-goroutine.
+	digests := make([]string, len(unique))
+	client := newRegistryClient()
+	sem := make(chan struct{}, remoteWorkers)
+
+	var wg sync.WaitGroup
+	for i, ref := range unique {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			digests[i] = fetchRemoteDigest(client, ref, timeout)
+		}()
+	}
+	wg.Wait()
+
+	updates := make(map[string]ImageUpdate, len(unique))
+	for i, ref := range unique {
+		updates[ImageRefKey(ref)] = ImageUpdate{
+			Repo:         ref.Repo,
+			RemoteDigest: digests[i],
+			State:        ImageUnknown,
+		}
+	}
+
+	return updates
+}
+
+// registryAPIBase maps the ref's host onto the base URL its v2 API answers
+// on. docker.io is a distribution name, not an API endpoint — the Hub's API
+// lives on registry-1.docker.io (R1); every other registry serves /v2/ on
+// the host it is named by, which is why there is no table of registries
+// here and no per-registry branch anywhere in this file.
+func registryAPIBase(host string) string {
+	if host == "docker.io" {
+		return "https://registry-1.docker.io"
+	}
+
+	return "https://" + host
+}
+
+// fetchRemoteDigest runs one ref's whole remote half: a manifest GET, and —
+// when the registry answers 401 with a bearer challenge — the anonymous
+// token fetch and the retry. There is no error return because there is no
+// caller to give one to: any failure is "" and the classification reads
+// Unknown (D3).
+func fetchRemoteDigest(client *http.Client, ref ImageRef, timeout time.Duration) string {
+	manifestURL := registryAPIBase(ref.Host) + "/v2/" + ref.Repo + "/manifests/" + ref.Tag
+
+	digest, challenge, err := manifestRequest(client, manifestURL, timeout, "")
+	if err == nil {
+		return digest
+	}
+	if challenge == nil {
+		return ""
+	}
+
+	token, err := bearerToken(client, challenge, timeout)
+	if err != nil || token == "" {
+		return ""
+	}
+
+	digest, _, err = manifestRequest(client, manifestURL, timeout, token)
+	if err != nil {
+		return ""
+	}
+
+	return digest
+}
+
+// manifestRequest GETs one manifest URL and reads its Docker-Content-Digest
+// header. A 401 answered with a bearer challenge comes back as the
+// challenge, for the caller to fetch a token and retry the same URL — the
+// one generic flow R1 measured working unchanged against Docker Hub, ghcr.io
+// and lscr.io.
+func manifestRequest(client *http.Client, manifestURL string, timeout time.Duration, bearer string) (string, *authChallenge, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, manifestURL, nil)
+	if err != nil {
+		return "", nil, err
+	}
+	req.Header.Set("Accept", acceptedManifestTypes)
+	if bearer != "" {
+		req.Header.Set("Authorization", "Bearer "+bearer)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", nil, err
+	}
+	defer func() {
+		// The body is never read — the digest rides the header — but an
+		// undrained body pins the connection instead of returning it.
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusUnauthorized {
+			return "", parseAuthChallenge(resp.Header.Get("WWW-Authenticate")), fmt.Errorf("registry %s answered %d", manifestURL, resp.StatusCode)
+		}
+		return "", nil, fmt.Errorf("registry answered %s: %d", manifestURL, resp.StatusCode)
+	}
+
+	digest := resp.Header.Get("Docker-Content-Digest")
+	if digest == "" {
+		return "", nil, fmt.Errorf("manifest %s carried no Docker-Content-Digest header", manifestURL)
+	}
+
+	return digest, nil, nil
+}
+
+// authChallenge is a WWW-Authenticate: Bearer challenge's useful parts.
+type authChallenge struct {
+	realm   string
+	service string
+	scope   string
+}
+
+// bearerToken fetches an anonymous token from the challenge's realm, passing
+// the service and scope the registry itself named. A realm that is not HTTPS
+// is refused: the flow was measured against HTTPS registries, and silently
+// following a challenge to some other scheme is not a behavior this client
+// should grow on its own.
+func bearerToken(client *http.Client, challenge *authChallenge, timeout time.Duration) (string, error) {
+	if !strings.HasPrefix(challenge.realm, "https://") {
+		return "", fmt.Errorf("token realm %q is not HTTPS", challenge.realm)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	u, err := url.Parse(challenge.realm)
+	if err != nil {
+		return "", err
+	}
+	q := u.Query()
+	if challenge.service != "" {
+		q.Set("service", challenge.service)
+	}
+	if challenge.scope != "" {
+		q.Set("scope", challenge.scope)
+	}
+	u.RawQuery = q.Encode()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("token endpoint answered %d", resp.StatusCode)
+	}
+
+	var token struct {
+		Token       string `json:"token"`
+		AccessToken string `json:"access_token"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&token); err != nil {
+		return "", err
+	}
+	if token.Token == "" && token.AccessToken == "" {
+		return "", fmt.Errorf("token response carried no token")
+	}
+	if token.Token != "" {
+		return token.Token, nil
+	}
+
+	return token.AccessToken, nil
+}
+
+// wwwAuthParam pulls key="value" pairs out of a WWW-Authenticate header.
+var wwwAuthParam = regexp.MustCompile(`(\w+)="([^"]*)"`)
+
+// parseAuthChallenge reads a Bearer challenge from a WWW-Authenticate
+// header. Anything else — no header, a Basic challenge, no realm — returns
+// nil: there is nothing to retry with, and the ref stays Unknown.
+func parseAuthChallenge(header string) *authChallenge {
+	if !strings.HasPrefix(strings.TrimSpace(header), "Bearer ") {
+		return nil
+	}
+
+	challenge := &authChallenge{}
+	for _, match := range wwwAuthParam.FindAllStringSubmatch(header, -1) {
+		switch match[1] {
+		case "realm":
+			challenge.realm = match[2]
+		case "service":
+			challenge.service = match[2]
+		case "scope":
+			challenge.scope = match[2]
+		}
+	}
+
+	if challenge.realm == "" {
+		return nil
+	}
+
+	return challenge
 }
 
 // checkDigest validates the <alg>:<encoded> shape Docker's reference grammar
