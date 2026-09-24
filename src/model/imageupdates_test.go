@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/compose-spec/compose-go/v2/types"
 
 	"github.com/filipemolina/cais/src/cmds"
@@ -360,5 +361,98 @@ func TestTheCheckSeesDisabledServices(t *testing.T) {
 	}
 	if !sawWeb || !sawDB {
 		t.Errorf("the check saw %d services, want both", len(*called))
+	}
+}
+
+// The bar offers U only when the selected service's check came back Stale -
+// every other state, or a check that never answered, leaves it off. The bar
+// does not advertise inert keys (D7). The 160-column terminal is wide enough
+// that the page's other verbs are not being shed: the assertion is about
+// advertising, not about the bar's degradation order.
+func TestTheUpdateKeyAdvertisesOnlyForAStaleSelection(t *testing.T) {
+	m := startup(160, 40)
+	updated, cmd := m.Update(cmds.SetActivePageMsg("Services"))
+	m = drive(updated, collect(cmd)...)
+	updated, cmd = m.Update(cmds.GetConfigMsg{FileName: "compose.yaml", Project: groupProject()})
+	m = applyLayout(drive(updated, collect(cmd)...))
+
+	name := m.selection.serviceName
+	if name == "" {
+		t.Fatal("precondition: no service selected on the Services page")
+	}
+
+	updated, _ = m.Update(cmds.ImageUpdatesMsg{Updates: map[string]utils.ImageUpdate{
+		name: {Service: name, State: utils.ImageStale},
+	}})
+	m = updated.(AppModel)
+
+	if !m.keyContext().UpdateAvailable {
+		t.Error("a stale selection did not arm the update context")
+	}
+	if footer := ansi.Strip(m.components.KeybindingBar.View().Content); !strings.Contains(footer, "update image") {
+		t.Errorf("the bar does not offer U for a stale selection: %q", footer)
+	}
+
+	updated, _ = m.Update(cmds.ImageUpdatesMsg{Updates: map[string]utils.ImageUpdate{
+		name: {Service: name, State: utils.ImageUnknown},
+	}})
+	m = updated.(AppModel)
+
+	if m.keyContext().UpdateAvailable {
+		t.Error("an Unknown answer armed the update context")
+	}
+	if footer := ansi.Strip(m.components.KeybindingBar.View().Content); strings.Contains(footer, "update image") {
+		t.Errorf("the bar offers U with no stale answer: %q", footer)
+	}
+}
+
+// U yields to whoever owns the keyboard: a filter being typed turns it into a
+// letter, and a modal gets it exclusively - the confirm on screen is the only
+// thing U can reach (D7's routing).
+func TestUYieldsToAFilterAndToAModal(t *testing.T) {
+	m := servicesPageWithProject(t)
+	name := m.selection.serviceName
+	m.imageUpdates = map[string]utils.ImageUpdate{name: {Service: name, State: utils.ImageStale}}
+
+	m = drive(m, letter('/'))
+	if !m.keyboardOwned() {
+		t.Fatal("precondition: / did not hand the keyboard to the list")
+	}
+
+	updated, cmd := m.Update(letterKey('U'))
+	m = updated.(AppModel)
+	for _, msg := range collect(cmd) {
+		switch msg.(type) {
+		case cmds.RequestUpdateImageMsg, cmds.OpenConfirmModalMsg:
+			t.Error("U reached the panel while a filter was being typed")
+		}
+	}
+
+	// With the update confirm open, U reaches the modal only: no second
+	// request, and the confirm on screen is still the same one.
+	updated, cmd = m.Update(cmds.RequestUpdateImageMsg{Service: name})
+	m = updated.(AppModel)
+	for _, msg := range collect(cmd) {
+		if open, ok := msg.(cmds.OpenConfirmModalMsg); ok {
+			next, _ := m.Update(open)
+			m = next.(AppModel)
+		}
+	}
+	if m.activeModal == nil {
+		t.Fatal("the confirm did not open")
+	}
+
+	updated, cmd = m.Update(letterKey('U'))
+	m = updated.(AppModel)
+	for _, msg := range collect(cmd) {
+		switch msg.(type) {
+		case cmds.RequestUpdateImageMsg, cmds.OpenConfirmModalMsg:
+			t.Error("U reached the panel while a modal was open")
+		}
+	}
+	// The confirm is still what holds the screen - U could neither dismiss
+	// it (a modal owns the keyboard) nor open anything over it.
+	if m.activeModal == nil {
+		t.Error("U while the confirm was open closed it")
 	}
 }

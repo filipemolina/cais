@@ -246,7 +246,18 @@ func (m AppModel) groupStatuses() []cmds.GroupStatus {
 			}
 		}
 
-		statuses = append(statuses, cmds.GroupStatus{Name: g, Running: running, Total: len(members)})
+		// A group's update glyph means "something in here moved": any
+		// member the check found stale lights the row, and the updates
+		// table beside the member table says which one.
+		stale := false
+		for _, member := range members {
+			if update, ok := m.imageUpdates[member]; ok && update.State == utils.ImageStale {
+				stale = true
+				break
+			}
+		}
+
+		statuses = append(statuses, cmds.GroupStatus{Name: g, Running: running, Total: len(members), Stale: stale})
 	}
 
 	return statuses
