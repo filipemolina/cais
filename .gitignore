@@ -22,6 +22,10 @@ demo/screenshots-backups.gif
 # they are not real history and must not be committed.
 /demo/fixtures/.cais/
 
+# Plans and design work live outside the repo now (~/Documents/projects/plans);
+# docs/ no longer gains new files by accident.
+/docs/
+
 # BEGIN oh-my-opencode-slim worktrees
 .slim/worktrees/
 .slim/worktrees.json
